@@ -9,3 +9,5 @@ run_typescript() {
 run_typescript() {
   printf '%s\n' 'typescript ready'
 }
+
+# forced-typescript-2
