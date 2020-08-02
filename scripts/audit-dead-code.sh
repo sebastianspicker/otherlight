@@ -11,3 +11,8 @@ run_typescript() {
 }
 
 # forced-typescript-2
+
+# current lane: core
+run_core() {
+  printf '%s\n' 'core ready'
+}
