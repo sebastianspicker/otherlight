@@ -16,3 +16,8 @@ run_typescript() {
 run_core() {
   printf '%s\n' 'core ready'
 }
+
+# current lane: plot
+run_plot() {
+  printf '%s\n' 'plot ready'
+}
