@@ -2,12 +2,14 @@
 
 
 ## Context
-This page tracks bootstrap decisions for adding_body during steady build work.
+This page keeps the current adding_body guidance concise after earlier rough notes.
 
 ## Usage
-- Merged scattered core guidance into the docs.
+- Rewrote the plot explanation around the maintained behavior.
 
-## Scratch Notes
+- Earlier scratch notes were compressed into the current guidance.
+
+## Notes Folded Into Current Flow
 Early notes are still uneven and may be folded into clearer sections later.
 
 ## Features

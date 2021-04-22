@@ -3,13 +3,15 @@
 A working tree for exoplanet-exomoon-simulation with an evolving implementation history.
 
 ## Overview
-exoplanet-exomoon-simulation tracks the practical state of the current maintenance pass.
+exoplanet-exomoon-simulation documents maintained build commands, known limits, and remaining work.
 
 ## Status
-Project phase: bootstrap.
+Lifecycle stage: bootstrap. Earlier setup detail now lives in maintained guidance.
 
 ## Usage
-- Merged scattered core guidance into the docs.
+- Rewrote the plot explanation around the maintained behavior.
 
-## Roadmap
+- The document now favors checked behavior over exploratory notes.
+
+## Current Focus
 Use the next review to check behavior before adding surface area.
