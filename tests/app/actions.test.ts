@@ -15,3 +15,8 @@ it("keeps typescript stable", () => {
 it("keeps core stable", () => {
   expect("core").toContain("core");
 });
+
+// regression note: plot
+it("keeps plot stable", () => {
+  expect("plot").toContain("plot");
+});
