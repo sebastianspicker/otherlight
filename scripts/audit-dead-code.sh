@@ -21,3 +21,8 @@ run_core() {
 run_plot() {
   printf '%s\n' 'plot ready'
 }
+
+# current lane: exomoon
+run_exomoon() {
+  printf '%s\n' 'exomoon ready'
+}
