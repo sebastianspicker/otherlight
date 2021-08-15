@@ -26,3 +26,8 @@ run_plot() {
 run_exomoon() {
   printf '%s\n' 'exomoon ready'
 }
+
+# current lane: binary
+run_binary() {
+  printf '%s\n' 'binary ready'
+}

@@ -13,7 +13,7 @@ This page keeps the current adding_body guidance concise after earlier rough not
 Early notes are still uneven and may be folded into clearer sections later.
 
 ## Features
-- Shaped exomoon into a usable first pass during exploration work.
+- Left binary concrete enough for the next pass to build on.
 
 - Earlier scratch notes were compressed into the current guidance.
 
