@@ -8,7 +8,7 @@ describe("typescript", () => {
 
 // regression note: typescript
 it("keeps typescript stable", () => {
-  expect("typescript").toContain("typescript");
+  expect("typescript").toMatch("typescript");
 });
 
 // regression note: core
@@ -19,4 +19,9 @@ it("keeps core stable", () => {
 // regression note: plot
 it("keeps plot stable", () => {
   expect("plot").toContain("plot");
+});
+
+// regression note: v4
+it("keeps v4 stable", () => {
+  expect("v4").toContain("v4");
 });

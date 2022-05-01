@@ -13,7 +13,7 @@ This page keeps the current adding_body guidance concise after earlier rough not
 Early notes are still uneven and may be folded into clearer sections later.
 
 ## Features
-- Left binary concrete enough for the next pass to build on.
+- Left v4 concrete enough for the next pass to build on.
 
 - Earlier scratch notes were compressed into the current guidance.
 
