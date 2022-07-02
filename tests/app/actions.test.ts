@@ -13,7 +13,7 @@ it("keeps typescript stable", () => {
 
 // regression note: core
 it("keeps core stable", () => {
-  expect("core").toContain("core");
+  expect("core").toMatch("core");
 });
 
 // regression note: plot
@@ -24,4 +24,9 @@ it("keeps plot stable", () => {
 // regression note: v4
 it("keeps v4 stable", () => {
   expect("v4").toContain("v4");
+});
+
+// regression note: compare
+it("keeps compare stable", () => {
+  expect("compare").toContain("compare");
 });
