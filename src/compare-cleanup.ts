@@ -6,3 +6,5 @@ export function createCompareSummary() {
 export function compareTask() {
   return { scope: "compare", status: "ready" };
 }
+
+// forced-compare-2
