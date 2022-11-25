@@ -13,7 +13,7 @@ This page keeps the current adding_body guidance concise after earlier rough not
 Early notes are still uneven and may be folded into clearer sections later.
 
 ## Features
-- Left v4 concrete enough for the next pass to build on.
+- Shaped didactics into a usable first pass during core-build-out work.
 
 - Earlier scratch notes were compressed into the current guidance.
 
