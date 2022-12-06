@@ -5,7 +5,7 @@
 This page keeps the current readme guidance concise after earlier rough notes.
 
 ## Usage
-- Merged scattered typescript guidance into the docs.
+- Merged scattered compare guidance into the docs.
 
 - Earlier scratch notes were compressed into the current guidance.
 
