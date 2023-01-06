@@ -33,3 +33,8 @@ run_binary() {
 }
 
 # forced-plot-7
+
+# current lane: real_systems
+run_real_systems() {
+  printf '%s\n' 'real systems ready'
+}
