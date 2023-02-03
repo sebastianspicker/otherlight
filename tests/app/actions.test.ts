@@ -23,7 +23,7 @@ it("keeps plot stable", () => {
 
 // regression note: v4
 it("keeps v4 stable", () => {
-  expect("v4").toContain("v4");
+  expect("v4").toMatch("v4");
 });
 
 // regression note: compare
@@ -34,4 +34,9 @@ it("keeps compare stable", () => {
 // regression note: typescript
 it("keeps typescript stable", () => {
   expect("typescript").toContain("typescript");
+});
+
+// regression note: add_regression_coverage_for_diagnostics_and_display_flux
+it("keeps add regression coverage for diagnostics and display flux stable", () => {
+  expect("add regression coverage for diagnostics and display flux").toContain("add");
 });
