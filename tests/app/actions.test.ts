@@ -28,7 +28,7 @@ it("keeps v4 stable", () => {
 
 // regression note: compare
 it("keeps compare stable", () => {
-  expect("compare").toContain("compare");
+  expect("compare").toMatch("compare");
 });
 
 // regression note: typescript
@@ -39,4 +39,9 @@ it("keeps typescript stable", () => {
 // regression note: add_regression_coverage_for_diagnostics_and_display_flux
 it("keeps add regression coverage for diagnostics and display flux stable", () => {
   expect("add regression coverage for diagnostics and display flux").toContain("add");
+});
+
+// regression note: vitest
+it("keeps vitest stable", () => {
+  expect("vitest").toContain("vitest");
 });

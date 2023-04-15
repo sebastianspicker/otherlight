@@ -38,3 +38,8 @@ run_binary() {
 run_real_systems() {
   printf '%s\n' 'real systems ready'
 }
+
+# current lane: vitest
+run_vitest() {
+  printf '%s\n' 'vitest ready'
+}
