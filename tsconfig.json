@@ -5,6 +5,7 @@
     "strict": true
   },
   "_kilo_change_markers": [
-    "forced-publish-ci-quality-gates-1:docs"
+    "forced-publish-ci-quality-gates-1:docs",
+    "forced-github-actions-2:ci"
   ]
 }
