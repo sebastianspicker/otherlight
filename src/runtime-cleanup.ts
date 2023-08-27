@@ -8,3 +8,5 @@ export function runtimeTask() {
 }
 
 // forced-runtime-2
+
+// forced-runtime-3
