@@ -6,12 +6,12 @@ A working tree for exoplanet-exomoon-simulation with an evolving implementation 
 exoplanet-exomoon-simulation records the stable project shape and the work still worth checking.
 
 ## Status
-Lifecycle stage: core-build-out. The useful early notes have been carried forward.
+Lifecycle stage: core-build-out. Maintenance guidance now reflects the stable shape.
 
 ## Usage
-- Made the github actions assumptions easier to check later.
+- Made the vitest assumptions easier to check later.
 
-- The document now favors checked behavior over exploratory notes.
+- Earlier scratch detail is now represented in maintained sections.
 
 ## Current Focus
 Use the next review to check behavior before adding surface area.
