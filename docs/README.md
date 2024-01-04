@@ -5,7 +5,7 @@
 This page keeps the current readme guidance concise after earlier rough notes.
 
 ## Usage
-- Made the await assumptions easier to check later.
+- Merged scattered page guidance into the docs.
 
 - Earlier scratch notes were compressed into the current guidance.
 
