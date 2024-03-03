@@ -5,7 +5,7 @@
 This page keeps the current adding_body guidance concise after earlier rough notes.
 
 ## Usage
-- Made the await assumptions easier to check later.
+- Made the name assumptions easier to check later.
 
 - Earlier scratch notes were compressed into the current guidance.
 
