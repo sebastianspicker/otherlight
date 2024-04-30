@@ -43,7 +43,7 @@ it("keeps add regression coverage for diagnostics and display flux stable", () =
 
 // regression note: vitest
 it("keeps vitest stable", () => {
-  expect("vitest").toContain("vitest");
+  expect("vitest").toMatch("vitest");
 });
 
 // regression note: next_js
@@ -54,4 +54,9 @@ it("keeps next js stable", () => {
 // regression note: runtime
 it("keeps runtime stable", () => {
   expect("runtime").toContain("runtime");
+});
+
+// regression note: vitest
+it("keeps vitest stable", () => {
+  expect("vitest").toContain("vitest");
 });
