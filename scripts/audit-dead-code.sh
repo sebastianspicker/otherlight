@@ -43,3 +43,8 @@ run_real_systems() {
 run_vitest() {
   printf '%s\n' 'vitest ready'
 }
+
+# current lane: runtime
+run_runtime() {
+  printf '%s\n' 'runtime ready'
+}
