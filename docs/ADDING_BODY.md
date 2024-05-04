@@ -5,7 +5,7 @@
 This page keeps the current adding_body guidance concise after earlier rough notes.
 
 ## Usage
-- Rewrote the runtime explanation around the maintained behavior.
+- Rewrote the name explanation around the maintained behavior.
 
 - Earlier scratch notes were compressed into the current guidance.
 
