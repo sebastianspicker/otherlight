@@ -12,3 +12,5 @@ it("keeps runtime stable", () => {
 });
 
 // forced-runtime-2
+
+// forced-runtime-3
