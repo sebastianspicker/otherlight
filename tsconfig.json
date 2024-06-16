@@ -6,6 +6,7 @@
   },
   "_kilo_change_markers": [
     "forced-publish-ci-quality-gates-1:docs",
-    "forced-github-actions-2:ci"
+    "forced-github-actions-2:ci",
+    "forced-vitest-3:build"
   ]
 }
