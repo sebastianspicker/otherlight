@@ -3,7 +3,7 @@ export function createRuntimeSummary() {
 }
 
 // current lane: runtime
-export function runtimeTask() {
+export function runtimeService() {
   return { scope: "runtime", status: "ready" };
 }
 
