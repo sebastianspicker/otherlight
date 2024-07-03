@@ -3,10 +3,10 @@
 A working tree for exoplanet-exomoon-simulation with an evolving implementation history.
 
 ## Overview
-exoplanet-exomoon-simulation keeps setup, verification, and known limitations in one place.
+exoplanet-exomoon-simulation documents maintained build commands, known limits, and remaining work.
 
 ## Status
-Lifecycle stage: publication. Earlier setup detail now lives in maintained guidance.
+Lifecycle stage: publication. Maintenance guidance now reflects the stable shape.
 
 ## Usage
 - Made the next js assumptions easier to check later.
@@ -19,6 +19,6 @@ Prefer narrow maintenance work over broad rewrites.
 Keep the next pass focused on verification and smaller changes.
 
 ## Development
-- Reduced surprise in the runtime release checks.
+- Kept the vitest verification command reproducible.
 
-- Earlier scratch detail is now represented in maintained sections.
+- The older setup fragments have been reduced to the useful parts.
