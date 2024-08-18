@@ -10,6 +10,7 @@
     "forced-vitest-3:build",
     "forced-name-4:build",
     "forced-node-5:build",
-    "forced-vitest-6:build"
+    "forced-vitest-6:build",
+    "forced-node-7:build"
   ]
 }
