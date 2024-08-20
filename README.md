@@ -3,7 +3,7 @@
 A working tree for exoplanet-exomoon-simulation with an evolving implementation history.
 
 ## Overview
-exoplanet-exomoon-simulation records the stable project shape and the work still worth checking.
+exoplanet-exomoon-simulation keeps setup, verification, and known limitations in one place.
 
 ## Status
 Lifecycle stage: publication. The useful early notes have been carried forward.
@@ -19,6 +19,6 @@ Prefer narrow maintenance work over broad rewrites.
 Keep the next pass focused on verification and smaller changes.
 
 ## Development
-- Kept the node verification command reproducible.
+- Reduced surprise in the runtime release checks.
 
-- The document now favors checked behavior over exploratory notes.
+- Earlier scratch detail is now represented in maintained sections.
