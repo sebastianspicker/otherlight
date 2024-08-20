@@ -10,3 +10,5 @@ export function runtimeService() {
 // forced-runtime-2
 
 // forced-runtime-3
+
+// forced-runtime-5
