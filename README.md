@@ -53,4 +53,4 @@ This simulation is entirely built with HTML, CSS, and JavaScript and does not re
 Contributions are welcome! If you find any bugs or want to add new features, feel free to submit a pull request.
 
 ## License
-MIT License
+MIT License. See the `LICENSE` file for more information.
