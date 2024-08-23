@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exoplanet and Exomoon Simulation</title>
+    <style>
+        #container {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            width: 250px;
+        }
+        #canvasContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #canvas {
+            background-color: black;
+            border: 1px solid black;
+        }
+        #lightCurveCanvas {
+            background-color: white;
+            border: 1px solid black;
+            margin-top: 20px;
+        }
+        label {
+            margin-top: 10px;
+        }
+        #zoomControls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <label for="sunMass">Sun Mass:</label>
+            <input type="range" id="sunMass" min="10" max="500" value="50">
+
+            <label for="sunLuminosity">Sun Luminosity:</label>
+            <input type="range" id="sunLuminosity" min="0" max="7" step="0.01" value="4">
+
+            <label for="planetMass">Planet Mass:</label>
+            <input type="range" id="planetMass" min="5" max="200" value="20">
+
+            <label for="planetInclinationXY">Planet Inclination (XY):</label>
+            <input type="range" id="planetInclinationXY" min="0" max="90" value="45">
+
+            <label for="planetInclinationXZ">Planet Inclination (XZ):</label>
+            <input type="range" id="planetInclinationXZ" min="0" max="90" value="45">
+
+            <label for="planetSemiMajorAxis">Planet Semi-Major Axis:</label>
+            <input type="range" id="planetSemiMajorAxis" min="100" max="500" value="200">
+
+            <label for="planetSemiMinorAxis">Planet Semi-Minor Axis:</label>
+            <input type="range" id="planetSemiMinorAxis" min="50" max="300" value="100">
+
+            <label for="planetSpeed">Planet Speed:</label>
+            <input type="range" id="planetSpeed" min="0.001" max="0.1" step="0.001" value="0.02">
+
+            <label for="moonMass">Moon Mass:</label>
+            <input type="range" id="moonMass" min="1" max="100" value="10">
+
+            <label for="moonInclinationXY">Moon Inclination (XY):</label>
+            <input type="range" id="moonInclinationXY" min="0" max="90" value="30">
+
+            <label for="moonInclinationXZ">Moon Inclination (XZ):</label>
+            <input type="range" id="moonInclinationXZ" min="0" max="90" value="30">
+
+            <label for="moonSemiMajorAxis">Moon Semi-Major Axis:</label>
+            <input type="range" id="moonSemiMajorAxis" min="20" max="200" value="50">
+
+            <label for="moonSemiMinorAxis">Moon Semi-Minor Axis:</label>
+            <input type="range" id="moonSemiMinorAxis" min="10" max="150" value="30">
+
+            <label for="moonSpeed">Moon Speed:</label>
+            <input type="range" id="moonSpeed" min="0.001" max="0.1" step="0.001" value="0.02">
+
+            <label for="showMoon">Show Moon:</label>
+            <input type="checkbox" id="showMoon" checked>
+
+            <button id="startStopButton">Start</button>
+            <button id="clearButton">Clear</button>
+        </div>
+
+        <div id="canvasContainer">
+            <canvas id="canvas" width="600" height="600"></canvas>
+            <canvas id="lightCurveCanvas" width="600" height="200"></canvas>
+
+            <div id="zoomControls">
+                <label for="xAxisZoom">X-Axis Zoom:</label>
+                <input type="range" id="xAxisZoom" min="1" max="10" step="1" value="1"><br>
+
+                <label for="yAxisZoom">Y-Axis Zoom:</label>
+                <input type="range" id="yAxisZoom" min="0.1" max="2" step="0.1" value="1">
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the script -->
+    <script src="script.js"></script>
+</body>
+</html>
