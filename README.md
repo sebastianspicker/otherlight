@@ -9,6 +9,8 @@ This project simulates the orbital motion of an exoplanet and its moon around a 
 - **Adjustable Parameters**: Allows the user to adjust parameters such as mass, inclination, and speed of the celestial bodies.
 - **Zoom and Pan**: Includes x-y zoom controls for better analysis of the light curve.
 
+[View the Exoplanet Simulation](./index.html)
+
 ## Known Issues
 
 - **XY-XZ Plane Representation**: The rendering of planets in the XY and XZ planes, as well as the corresponding light curve, is not entirely accurate and needs improvement.
