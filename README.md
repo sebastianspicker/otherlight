@@ -37,4 +37,18 @@ This simulation visualizes the dynamics of an exoplanet-exomoon system, focusing
 
 ### Running the Simulation
 
-1. **Clone the Repository**:
+1. **Clone the Repository**: git clone https://github.com/sebastianspicker/exoplanet-exomoon-simulation.git
+2. **Open `index.html` in a Web Browser**:
+- Navigate to the cloned directory.
+- Open `index.html` in your web browser to start the simulation.
+
+### Dependencies
+
+This simulation is entirely built with HTML, CSS, and JavaScript and does not require any external libraries or frameworks.
+
+## Contributing
+
+Contributions are welcome! If you find any bugs or want to add new features, feel free to submit a pull request.
+
+## License
+MIT License
