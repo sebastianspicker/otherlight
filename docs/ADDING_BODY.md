@@ -5,7 +5,7 @@
 This page keeps the current adding_body guidance concise after earlier rough notes.
 
 ## Usage
-- Rewrote the the main flow explanation around the maintained behavior.
+- Made the the main flow assumptions easier to check later.
 
 - Earlier scratch notes were compressed into the current guidance.
 
