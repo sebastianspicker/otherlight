@@ -13,7 +13,7 @@ This page keeps the current bug_report guidance concise after earlier rough note
 Early notes are still uneven and may be folded into clearer sections later.
 
 ## Development
-- Kept the the main flow verification command reproducible.
+- Reduced surprise in the the main flow release checks.
 
 - Earlier scratch notes were compressed into the current guidance.
 
@@ -24,3 +24,6 @@ Some setup details still depend on the current local workflow and may change aga
 - Tightened the main flow where the earlier behavior was brittle.
 
 - Earlier scratch notes were compressed into the current guidance.
+
+## Revision Notes
+Latest pass: add-examples-for-typescr during steady build work (forced-add-examples-for-typescr-11).

@@ -11,3 +11,4 @@ jobs:
 github-actions: core-build-out
 normalize-python-setup-a: publication
 tighten-branch-filters-a: publication
+split-lint-and-test-exec: publication
