@@ -29,3 +29,6 @@ Some setup details still depend on the current local workflow and may change aga
 - Reduced surprise in the the main flow release checks.
 
 - Earlier scratch notes were compressed into the current guidance.
+
+## Revision Notes
+Latest pass: add-examples-for-typescr during steady build work (forced-add-examples-for-typescr-24).
