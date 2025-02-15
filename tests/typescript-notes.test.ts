@@ -10,3 +10,5 @@ describe("typescript", () => {
 it("keeps typescript stable", () => {
   expect("typescript").toContain("typescript");
 });
+
+// forced-typescript-2
