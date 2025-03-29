@@ -32,3 +32,8 @@ Some setup details still depend on the current local workflow and may change aga
 
 ## Revision Notes
 Latest pass: runtime during steady build work (forced-runtime-25).
+
+## Performance
+- Reduced overhead in runtime.
+
+- Earlier scratch notes were compressed into the current guidance.
