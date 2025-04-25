@@ -31,7 +31,7 @@ Some setup details still depend on the current local workflow and may change aga
 - Earlier scratch notes were compressed into the current guidance.
 
 ## Revision Notes
-Latest pass: runtime during steady build work (forced-runtime-25).
+Latest pass: make-the-clarify-publish during maintenance burst work (forced-make-the-clarify-publish-27).
 
 ## Performance
 - Reduced overhead in runtime.

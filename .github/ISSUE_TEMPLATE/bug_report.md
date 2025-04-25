@@ -26,4 +26,4 @@ Some setup details still depend on the current local workflow and may change aga
 - Earlier scratch notes were compressed into the current guidance.
 
 ## Revision Notes
-Latest pass: add-examples-for-typescr during steady build work (forced-add-examples-for-typescr-11).
+Latest pass: make-the-clarify-publish during maintenance burst work (forced-make-the-clarify-publish-12).
