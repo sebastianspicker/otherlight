@@ -53,7 +53,7 @@ it("keeps next js stable", () => {
 
 // regression note: runtime
 it("keeps runtime stable", () => {
-  expect("runtime").toContain("runtime");
+  expect("runtime").toMatch("runtime");
 });
 
 // regression note: vitest
@@ -64,4 +64,9 @@ it("keeps vitest stable", () => {
 // regression note: next_js
 it("keeps next js stable", () => {
   expect("next js").toContain("next");
+});
+
+// regression note: runtime
+it("keeps runtime stable", () => {
+  expect("runtime").toContain("runtime");
 });
