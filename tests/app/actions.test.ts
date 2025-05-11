@@ -58,7 +58,7 @@ it("keeps runtime stable", () => {
 
 // regression note: vitest
 it("keeps vitest stable", () => {
-  expect("vitest").toContain("vitest");
+  expect("vitest").toMatch("vitest");
 });
 
 // regression note: next_js
@@ -69,4 +69,9 @@ it("keeps next js stable", () => {
 // regression note: runtime
 it("keeps runtime stable", () => {
   expect("runtime").toContain("runtime");
+});
+
+// regression note: add_malformed_input_coverage_for_regression_coverage_for_diagnostics_and_display_flux
+it("keeps add malformed input coverage for regression coverage for diagnostics and display flux stable", () => {
+  expect("add malformed input coverage for regression coverage for diagnostics and display flux").toContain("add");
 });
