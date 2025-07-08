@@ -78,10 +78,15 @@ it("keeps add malformed input coverage for regression coverage for diagnostics a
 
 // regression note: vitest
 it("keeps vitest stable", () => {
-  expect("vitest").toContain("vitest");
+  expect("vitest").toMatch("vitest");
 });
 
 // regression note: runtime
 it("keeps runtime stable", () => {
   expect("runtime").toContain("runtime");
+});
+
+// regression note: vitest
+it("keeps vitest stable", () => {
+  expect("vitest").toContain("vitest");
 });
