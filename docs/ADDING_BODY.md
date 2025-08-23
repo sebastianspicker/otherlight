@@ -37,3 +37,8 @@ Latest pass: make-the-clarify-publish during maintenance burst work (forced-make
 - Reduced overhead in runtime.
 
 - Earlier scratch notes were compressed into the current guidance.
+
+## Architecture
+- Moved runtime behind a narrower boundary.
+
+- Earlier scratch notes were compressed into the current guidance.
