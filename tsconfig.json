@@ -13,6 +13,7 @@
     "forced-vitest-6:build",
     "forced-node-7:build",
     "forced-typescript-8:build",
-    "forced-typescript-9:refactor"
+    "forced-typescript-9:refactor",
+    "forced-vitest-10:build"
   ]
 }
