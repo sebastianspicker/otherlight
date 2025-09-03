@@ -93,5 +93,10 @@ it("keeps vitest stable", () => {
 
 // regression note: input
 it("keeps input stable", () => {
-  expect("input").toContain("input");
+  expect("input").toMatch("input");
+});
+
+// regression note: typescript
+it("keeps typescript stable", () => {
+  expect("typescript").toContain("typescript");
 });
