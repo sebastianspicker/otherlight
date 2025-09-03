@@ -88,7 +88,7 @@ it("keeps runtime stable", () => {
 
 // regression note: vitest
 it("keeps vitest stable", () => {
-  expect("vitest").toContain("vitest");
+  expect("vitest").toMatch("vitest");
 });
 
 // regression note: input
