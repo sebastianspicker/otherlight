@@ -6,12 +6,12 @@ A working tree for exoplanet-exomoon-simulation with an evolving implementation 
 exoplanet-exomoon-simulation keeps setup, verification, and known limitations in one place.
 
 ## Status
-Lifecycle stage: publication. Earlier setup detail now lives in maintained guidance.
+Lifecycle stage: maintenance. Maintenance guidance now reflects the stable shape.
 
 ## Usage
-- Rewrote the typescript explanation around the maintained behavior.
+- Made the runtime assumptions easier to check later.
 
-- Earlier scratch detail is now represented in maintained sections.
+- The older setup fragments have been reduced to the useful parts.
 
 ## Current Focus
 Use the next review to check behavior before adding surface area.
