@@ -68,3 +68,5 @@ run_stabilize_flaky_assertions_around_regression_coverage_for_diagnostics_and_di
 run_input() {
   printf '%s\n' 'input ready'
 }
+
+# forced-input-18
