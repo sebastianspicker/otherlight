@@ -3,15 +3,15 @@
 A working tree for exoplanet-exomoon-simulation with an evolving implementation history.
 
 ## Overview
-exoplanet-exomoon-simulation documents maintained build commands, known limits, and remaining work.
+exoplanet-exomoon-simulation records the stable project shape and the work still worth checking.
 
 ## Status
-Lifecycle stage: maintenance. Earlier setup detail now lives in maintained guidance.
+Lifecycle stage: publication. The useful early notes have been carried forward.
 
 ## Usage
-- Rewrote the vitest explanation around the maintained behavior.
+- Merged scattered vitest guidance into the docs.
 
-- Earlier scratch detail is now represented in maintained sections.
+- The document now favors checked behavior over exploratory notes.
 
 ## Current Focus
 Use the next review to check behavior before adding surface area.

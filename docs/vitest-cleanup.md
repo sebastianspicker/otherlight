@@ -5,7 +5,9 @@
 This page keeps the current vitest cleanup guidance concise after earlier rough notes.
 
 ## Usage
-- Rewrote the vitest explanation around the maintained behavior.
+- Merged scattered vitest guidance into the docs.
+
+- Earlier scratch notes were compressed into the current guidance.
 
 ## Notes Folded Into Current Flow
 Early notes are still uneven and may be folded into clearer sections later.
