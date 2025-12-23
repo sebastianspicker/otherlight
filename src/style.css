@@ -1,0 +1,153 @@
+/* src/style.css
+ *
+ * UI styling for the simulation.
+ * Notes:
+ * - The canvases are sized responsively with aspect-ratio so the renderer can
+ *   derive a stable CSS pixel size for HiDPI backing-store scaling.
+ * - Keep layout stable to avoid continuous canvas resize churn.
+ */
+
+:root {
+  --bg: #0b0f14;
+  --panel: #111826;
+  --text: #e6edf3;
+  --muted: #a5b4c3;
+  --stroke: rgba(255, 255, 255, 0.18);
+
+  /* subtle focus ring that works on dark backgrounds */
+  --focus: rgba(76, 201, 240, 0.55);
+
+  /* Let the browser theme form controls consistently (paired with meta color-scheme). */
+  color-scheme: dark light;
+
+  /* Native control accent color (range slider, etc.) */
+  accent-color: #4cc9f0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.35;
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+button {
+  background: #1f2a3a;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.lbl {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  user-select: none;
+}
+
+.lbl input[type="range"] {
+  width: 220px;
+}
+
+.readout {
+  margin-left: auto;
+  display: flex;
+  gap: 18px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+canvas {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+
+  /* Hint for some browsers to keep rendering crisp when scaled */
+  image-rendering: auto;
+}
+
+/* Stable sizing for DPR-backed canvases via aspect-ratio */
+.canvas-sky {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  background: #000;
+}
+
+.canvas-lc {
+  aspect-ratio: 640 / 220;
+  height: auto;
+  background: #fff;
+}
+
+/* Reduced motion preference: keep UI snappy, but avoid future animation CSS. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
