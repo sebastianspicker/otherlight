@@ -1,110 +1,75 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exoplanet and Exomoon Simulation</title>
-    <style>
-        #container {
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-        }
-        #controls {
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            width: 250px;
-        }
-        #canvasContainer {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #canvas {
-            background-color: black;
-            border: 1px solid black;
-        }
-        #lightCurveCanvas {
-            background-color: white;
-            border: 1px solid black;
-            margin-top: 20px;
-        }
-        label {
-            margin-top: 10px;
-        }
-        #zoomControls {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div id="container">
-        <div id="controls">
-            <label for="sunMass">Sun Mass:</label>
-            <input type="range" id="sunMass" min="10" max="500" value="50">
+<!-- ./index.html -->
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-            <label for="sunLuminosity">Sun Luminosity:</label>
-            <input type="range" id="sunLuminosity" min="0" max="7" step="0.01" value="4">
+    <!-- Improve UA default styling for form controls & scrollbars in light/dark contexts -->
+    <meta name="color-scheme" content="dark light" />
 
-            <label for="planetMass">Planet Mass:</label>
-            <input type="range" id="planetMass" min="5" max="200" value="20">
+    <!-- Optional but useful on mobile: matches your dark UI -->
+    <meta name="theme-color" content="#0b0f14" />
 
-            <label for="planetInclinationXY">Planet Inclination (XY):</label>
-            <input type="range" id="planetInclinationXY" min="0" max="90" value="45">
+    <title>Exoplanet–Exomoon Simulation (scientific core)</title>
+  </head>
 
-            <label for="planetInclinationXZ">Planet Inclination (XZ):</label>
-            <input type="range" id="planetInclinationXZ" min="0" max="90" value="45">
+  <body>
+    <div id="app">
+      <div class="topbar">
+        <button id="btnStart" type="button">Start</button>
+        <button id="btnReset" type="button">Reset</button>
 
-            <label for="planetSemiMajorAxis">Planet Semi-Major Axis:</label>
-            <input type="range" id="planetSemiMajorAxis" min="100" max="500" value="200">
+        <label class="lbl" for="timeSpeed">
+          Time speed
+          <input
+            id="timeSpeed"
+            type="range"
+            min="1"
+            max="5000"
+            value="800"
+            step="1"
+            inputmode="numeric"
+            aria-label="Time speed multiplier"
+          />
+          <span id="timeSpeedVal" aria-live="polite">800×</span>
+        </label>
 
-            <label for="planetSemiMinorAxis">Planet Semi-Minor Axis:</label>
-            <input type="range" id="planetSemiMinorAxis" min="50" max="300" value="100">
+        <div class="readout" aria-live="polite">
+          <div>t = <span id="tVal">0</span> s</div>
+          <div>Flux = <span id="fluxVal">1.000000</span></div>
+        </div>
+      </div>
 
-            <label for="planetSpeed">Planet Speed:</label>
-            <input type="range" id="planetSpeed" min="0.001" max="0.1" step="0.001" value="0.02">
-
-            <label for="moonMass">Moon Mass:</label>
-            <input type="range" id="moonMass" min="1" max="100" value="10">
-
-            <label for="moonInclinationXY">Moon Inclination (XY):</label>
-            <input type="range" id="moonInclinationXY" min="0" max="90" value="30">
-
-            <label for="moonInclinationXZ">Moon Inclination (XZ):</label>
-            <input type="range" id="moonInclinationXZ" min="0" max="90" value="30">
-
-            <label for="moonSemiMajorAxis">Moon Semi-Major Axis:</label>
-            <input type="range" id="moonSemiMajorAxis" min="20" max="200" value="50">
-
-            <label for="moonSemiMinorAxis">Moon Semi-Minor Axis:</label>
-            <input type="range" id="moonSemiMinorAxis" min="10" max="150" value="30">
-
-            <label for="moonSpeed">Moon Speed:</label>
-            <input type="range" id="moonSpeed" min="0.001" max="0.1" step="0.001" value="0.02">
-
-            <label for="showMoon">Show Moon:</label>
-            <input type="checkbox" id="showMoon" checked>
-
-            <button id="startStopButton">Start</button>
-            <button id="clearButton">Clear</button>
+      <div class="grid">
+        <div class="panel">
+          <h3>Sky plane (XY)</h3>
+          <!-- width/height are a fallback "intrinsic" resolution; renderer handles HiDPI backing store -->
+          <canvas
+            id="skyCanvas"
+            class="canvas-sky"
+            width="640"
+            height="640"
+            aria-label="Sky-plane view (XY) of the system"
+            role="img"
+          ></canvas>
         </div>
 
-        <div id="canvasContainer">
-            <canvas id="canvas" width="600" height="600"></canvas>
-            <canvas id="lightCurveCanvas" width="600" height="200"></canvas>
-
-            <div id="zoomControls">
-                <label for="xAxisZoom">X-Axis Zoom:</label>
-                <input type="range" id="xAxisZoom" min="1" max="10" step="1" value="1"><br>
-
-                <label for="yAxisZoom">Y-Axis Zoom:</label>
-                <input type="range" id="yAxisZoom" min="0.1" max="2" step="0.1" value="1">
-            </div>
+        <div class="panel">
+          <h3>Light curve (normalized)</h3>
+          <canvas
+            id="lcCanvas"
+            class="canvas-lc"
+            width="640"
+            height="220"
+            aria-label="Normalized light curve"
+            role="img"
+          ></canvas>
         </div>
+      </div>
     </div>
 
-    <!-- Include the script -->
-    <script src="script.js"></script>
-</body>
+    <!-- Vite entry: valid in dev/build, index.html is part of the module graph -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
