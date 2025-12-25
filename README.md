@@ -10,15 +10,15 @@ The simulation is *kinematic* (Keplerian elements, not N-body integration) and u
 
 ### Coordinates and projection
 
-- Orbits are defined by classical Keplerian elements \($a, e, i, \Omega, \omega, P, t_0\$) and converted from perifocal (PQW) into an inertial frame, then projected into the observer’s sky plane. 
-- Observer direction `params.observer.dir` points from the star toward the observer; a body is considered “in front” (able to occult the star) when $\(r \cdot \hat{n}_\mathrm{obs} > 0\$). 
+- Orbits are defined by classical Keplerian elements $\(a, e, i, \Omega, \omega, P, t_0\)$ and converted from perifocal (PQW) into an inertial frame, then projected into the observer’s sky plane. 
+- Observer direction `params.observer.dir` points from the star toward the observer; a body is considered “in front” (able to occult the star) when $\(r \cdot \hat{n}_\mathrm{obs} > 0\)$. 
 - The sky-projection returns $\((x, y)\)$ coordinates and a depth `z` along the observer direction; larger `z` means closer to the observer. 
 
 ### Flux conventions
 
 - The core photometry returns a *multiplicative* stellar transit attenuation $\(F_\mathrm{transit}(t)\)$ in approximately $\([0,1]\)$. 
 - Additive components are expressed in “stellar flux units” and applied as:  
-  \(F_\mathrm{total}(t) = \left(F_0 + f_\mathrm{planet}(t) + f_\mathrm{moon}(t) + f_\mathrm{var}(t)\right)\,F_\mathrm{transit}(t)\), where `baselineFlux` defaults to 1.0 when not provided. 
+  $\(F_\mathrm{total}(t) = \left(F_0 + f_\mathrm{planet}(t) + f_\mathrm{moon}(t) + f_\mathrm{var}(t)\right)\,F_\mathrm{transit}(t)\)$, where `baselineFlux` defaults to 1.0 when not provided. 
 
 ### Transit photometry models
 
