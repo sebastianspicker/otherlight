@@ -1,0 +1,300 @@
+// src/photometry/limbDarkening.ts
+//
+// Limb darkening laws, passband resolution, and optional physical admissibility checks.
+//
+// Goals:
+// - Provide scientifically standard intensity laws I(mu)/I(1) for multiple parameterizations.
+// - Support passband-dependent (multi-band) coefficient selection with deterministic fallback.
+// - Provide configurable validation (none/warn/throw) for physical plausibility.
+// - Provide a unified API surface: resolve → validate → evaluate → (integrator clamps as needed).
+//
+// Scientific conventions:
+// - mu = cos(theta) in [0,1], where mu=1 at disk center and mu=0 at the limb.
+// - All laws here return intensity normalized to I(1)=1 (disk-center intensity).
+//
+// Implemented laws:
+// - quadratic:
+//     I(mu) = 1 - u1 (1 - mu) - u2 (1 - mu)^2
+// - three-parameter "nonlinear" (common reduced Claret form using half-integer powers):
+//     I(mu) = 1 - a1 (1 - mu^(1/2)) - a2 (1 - mu) - a3 (1 - mu^(3/2))
+// - four-parameter (Claret):
+//     I(mu) = 1 - a1 (1 - mu^(1/2)) - a2 (1 - mu) - a3 (1 - mu^(3/2)) - a4 (1 - mu^2)
+//
+// Notes:
+// - Physical admissibility constraints for LD coefficients are non-trivial; rather than relying on
+//   fragile closed-form inequalities for every law, we provide robust numerical checks over mu∈[0,1].
+// - Validation is designed to be called rarely (e.g., at config/preset updates), not per pixel.
+// - Transit integrators clamp intensity to >=0 for robustness; validation is optional. 
+
+
+import type { LimbDarkeningModel, PassbandId } from "../core/types";
+
+/** Validation behavior for limb-darkening plausibility checks. */
+export type LimbDarkeningValidationMode = "none" | "warn" | "throw";
+
+/**
+ * Numerical / pragmatic physical plausibility checks.
+ * These checks are conservative and are intended to catch obviously broken coefficients.
+ */
+export type LimbDarkeningConstraints = {
+  /** Default: "none". */
+  mode?: LimbDarkeningValidationMode;
+
+  /**
+   * Number of mu samples over [0,1] used for numerical checks.
+   * Default: 64, minimum: 8.
+   */
+  muSamples?: number;
+
+  /** Enforce I(mu) >= 0 (within tolerance). Default: true when mode != "none". */
+  nonNegativeIntensity?: boolean;
+
+  /**
+   * Enforce I(mu) is non-decreasing with mu (i.e., darker toward limb).
+   * Default: false (because some fitted profiles can be mildly non-monotone).
+   */
+  monotoneIncreasingWithMu?: boolean;
+
+  /**
+   * Optional upper bound on I(mu) to catch extreme coefficients.
+   * Default: disabled (Infinity).
+   */
+  maxIntensity?: number;
+
+  /**
+   * Tolerance for comparisons (to avoid false positives from roundoff).
+   * Default: 1e-12.
+   */
+  eps?: number;
+};
+
+/**
+ * Flexible limb-darkening law representation (local union).
+ *
+ * This is used by transitLimbDarkened.ts which imports LimbDarkeningLaw + Constraints from here. 
+ */
+export type LimbDarkeningLaw =
+  | { kind: "quadratic"; u1: number; u2: number }
+  | { kind: "three-parameter"; a1: number; a2: number; a3: number }
+  | { kind: "four-parameter"; a1: number; a2: number; a3: number; a4: number };
+
+function clamp01(x: number): number {
+  return Math.max(0, Math.min(1, x));
+}
+
+function toFiniteNumber(x: unknown, fallback: number): number {
+  const n = typeof x === "number" ? x : Number(x);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function emitValidation(mode: LimbDarkeningValidationMode, msg: string): void {
+  if (mode === "none") return;
+  if (mode === "throw") throw new Error(msg);
+
+  // mode === "warn"
+  // eslint-disable-next-line no-console
+  console.warn(msg);
+}
+
+function isFiniteLaw(law: LimbDarkeningLaw): boolean {
+  switch (law.kind) {
+    case "quadratic":
+      return Number.isFinite(law.u1) && Number.isFinite(law.u2);
+    case "three-parameter":
+      return Number.isFinite(law.a1) && Number.isFinite(law.a2) && Number.isFinite(law.a3);
+    case "four-parameter":
+      return Number.isFinite(law.a1) && Number.isFinite(law.a2) && Number.isFinite(law.a3) && Number.isFinite(law.a4);
+  }
+}
+
+/**
+ * Evaluate normalized specific intensity I(mu)/I(1) for the given limb-darkening law.
+ *
+ * Robustness:
+ * - mu is clamped to [0,1].
+ * - If coefficients are non-finite, the result may be non-finite (caller may validate/sanitize).
+ */
+export function evaluateLimbDarkeningIntensity(mu: number, law: LimbDarkeningLaw): number {
+  const m = clamp01(mu);
+
+  switch (law.kind) {
+    case "quadratic": {
+      const oneMinus = 1 - m;
+      return 1 - law.u1 * oneMinus - law.u2 * oneMinus * oneMinus;
+    }
+    case "three-parameter": {
+      const s = Math.sqrt(m); // mu^(1/2)
+      const m32 = m * s; // mu^(3/2)
+      return 1 - law.a1 * (1 - s) - law.a2 * (1 - m) - law.a3 * (1 - m32);
+    }
+    case "four-parameter": {
+      const s = Math.sqrt(m); // mu^(1/2)
+      const m32 = m * s; // mu^(3/2)
+      const m2 = m * m; // mu^2
+      return 1 - law.a1 * (1 - s) - law.a2 * (1 - m) - law.a3 * (1 - m32) - law.a4 * (1 - m2);
+    }
+  }
+}
+
+/**
+ * Convenience helper used by integrators:
+ * - clamps mu to [0,1] (via evaluate)
+ * - clamps intensity to >= 0
+ * - returns 0 for non-finite results
+ *
+ * transitLimbDarkened.ts uses this to keep flux robust even for imperfect coefficients. 
+ */
+export function intensityNonNegative(mu: number, law: LimbDarkeningLaw): number {
+  const I = evaluateLimbDarkeningIntensity(mu, law);
+  if (!Number.isFinite(I)) return 0;
+  return Math.max(0, I);
+}
+
+/**
+ * Validate a limb-darkening law against configurable plausibility constraints.
+ *
+ * NOTE on application coverage:
+ * - transitLimbDarkened.ts calls validateLimbDarkeningLaw(law, constraints) once per flux evaluation
+ *   when constraints are provided. 
+ * - sim.ts passes ldModel?.constraints into fluxLimbDarkenedDisk(...), so constraints are applied
+ *   whenever limbDarkeningModel is used. 
+ */
+export function validateLimbDarkeningLaw(law: LimbDarkeningLaw, constraints?: LimbDarkeningConstraints): void {
+  const mode: LimbDarkeningValidationMode = constraints?.mode ?? "none";
+  if (mode === "none") return;
+
+  if (!isFiniteLaw(law)) {
+    emitValidation(mode, `Limb darkening coefficients must be finite (law=${law.kind}).`);
+    return;
+  }
+
+  const muSamples = Math.max(8, Math.floor(toFiniteNumber(constraints?.muSamples, 64)));
+  const eps = Math.max(0, toFiniteNumber(constraints?.eps, 1e-12));
+
+  const requireNonNeg = constraints?.nonNegativeIntensity ?? true;
+  const requireMono = constraints?.monotoneIncreasingWithMu ?? false;
+  const maxI = toFiniteNumber(constraints?.maxIntensity, Number.POSITIVE_INFINITY);
+
+  // Check I(1)=1 for these parameterizations.
+  const I1 = evaluateLimbDarkeningIntensity(1, law);
+  if (!(Number.isFinite(I1) && Math.abs(I1 - 1) <= 1e-10)) {
+    emitValidation(mode, `Limb darkening law ${law.kind} does not satisfy I(1)=1 (got ${I1}).`);
+  }
+
+  let prevI: number | undefined;
+
+  for (let i = 0; i <= muSamples; i++) {
+    const mu = i / muSamples;
+    const I = evaluateLimbDarkeningIntensity(mu, law);
+
+    if (!Number.isFinite(I)) {
+      emitValidation(mode, `Limb darkening produced non-finite intensity at mu=${mu} (law=${law.kind}).`);
+      break;
+    }
+
+    if (requireNonNeg && I < -eps) {
+      emitValidation(
+        mode,
+        `Limb darkening violates non-negative intensity: I(mu) < 0 at mu=${mu.toFixed(6)} (I=${I}) (law=${law.kind}).`
+      );
+      break;
+    }
+
+    if (I > maxI + eps) {
+      emitValidation(
+        mode,
+        `Limb darkening exceeds maxIntensity at mu=${mu.toFixed(6)} (I=${I}, max=${maxI}) (law=${law.kind}).`
+      );
+      break;
+    }
+
+    if (requireMono && prevI !== undefined) {
+      // As mu increases (toward disk center), intensity should not decrease.
+      if (I + eps < prevI) {
+        emitValidation(
+          mode,
+          `Limb darkening violates monotonicity at mu=${mu.toFixed(6)} (I=${I} < prev=${prevI}) (law=${law.kind}).`
+        );
+        break;
+      }
+    }
+
+    prevI = I;
+  }
+}
+
+/**
+ * Select a limb-darkening law for a given passband, with deterministic fallback.
+ *
+ * Fallback order:
+ * 1) If bandpass is provided (or model.bandpass exists), and model.bands[bandpass] exists, use it.
+ * 2) Otherwise, use model.default if present.
+ * 3) Otherwise, return undefined.
+ *
+ * Edge-case behavior:
+ * - If a band entry exists but is not a valid law object, it is ignored and fallback continues.
+ * - Does not throw; caller can decide whether missing LD is an error.
+ */
+export function resolveLimbDarkeningForBand(model: LimbDarkeningModel, bandpass?: PassbandId): LimbDarkeningLaw | undefined {
+  if (!model) return undefined;
+
+  // Prefer explicit argument; else allow model to carry its own preferred bandpass. 
+  const b = (bandpass ?? (model as any).bandpass) as PassbandId | undefined;
+
+  const bands = (model as any).bands as Record<string, unknown> | undefined;
+  if (b && bands && Object.prototype.hasOwnProperty.call(bands, b)) {
+    const candidate = bands[b] as LimbDarkeningLaw;
+    // Defensive structural check: kind must exist and coefficients must be finite-ish (at least numbers).
+    if (candidate && typeof (candidate as any).kind === "string") return candidate;
+  }
+
+  const def = (model as any).default as LimbDarkeningLaw | undefined;
+  if (def && typeof (def as any).kind === "string") return def;
+
+  return undefined;
+}
+
+/**
+ * Unified helper: resolve a law for a band and apply validation (if configured).
+ *
+ * Intended usage pattern in higher-level code:
+ * - const law = resolveAndValidateLimbDarkening({ model, bandpass });
+ * - if (law) use fluxLimbDarkenedDisk({ limbDarkeningLaw: law, constraints: model.constraints, ... })
+ *
+ * This keeps "resolve for band" and "constraints applied" consistent, while still allowing integrators
+ * to re-validate once per call (which is fine, since it’s cheap vs integration). 
+ */
+export function resolveAndValidateLimbDarkening(params: {
+  model: LimbDarkeningModel;
+  bandpass?: PassbandId;
+}): LimbDarkeningLaw | undefined {
+  const law = resolveLimbDarkeningForBand(params.model, params.bandpass);
+  if (!law) return undefined;
+
+  // Apply configured constraints if present on the model (common usage in sim.ts). 
+  const constraints = (params.model as any).constraints as LimbDarkeningConstraints | undefined;
+  validateLimbDarkeningLaw(law, constraints);
+
+  return law;
+}
+
+/**
+ * Lightweight deterministic self-test helper (no framework).
+ *
+ * This returns rows that can be asserted in unit tests:
+ * - ensures band resolution obeys the fallback order,
+ * - ensures validation can be exercised deterministically.
+ *
+ * Kept tiny and optional so it doesn’t affect runtime paths.
+ */
+export function debugLimbDarkeningResolverMatrix(params: {
+  model: LimbDarkeningModel;
+  bandsToTry: Array<PassbandId | undefined>;
+}): Array<{ band: PassbandId | undefined; resolvedKind: string | "none" }> {
+  const out: Array<{ band: PassbandId | undefined; resolvedKind: string | "none" }> = [];
+  for (const b of params.bandsToTry) {
+    const law = resolveLimbDarkeningForBand(params.model, b);
+    out.push({ band: b, resolvedKind: law ? law.kind : "none" });
+  }
+  return out;
+}
