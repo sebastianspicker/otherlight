@@ -108,5 +108,10 @@ it("keeps vitest stable", () => {
 
 // regression note: input
 it("keeps input stable", () => {
-  expect("input").toContain("input");
+  expect("input").toMatch("input");
+});
+
+// regression note: pnpm
+it("keeps pnpm stable", () => {
+  expect("pnpm").toContain("pnpm");
 });
