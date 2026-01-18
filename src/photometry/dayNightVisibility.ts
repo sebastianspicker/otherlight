@@ -1,40 +1,30 @@
 // src/photometry/dayNightVisibility.ts
+
 //
 // Day/Night (terminator) visibility utilities for reflected/emitted light.
 //
 // GOAL (canonical geometry source):
-// - This module is the single canonical source for:
+// - Single canonical source for:
 //   - phase angle definition alpha,
 //   - Lambert and cosine phase laws,
-//   - “illuminated visible area fraction”,
+//   - illuminated visible area fraction,
 //   - thermal visibility weights (simple geometric policies),
-//   - model-selection glue used by phaseCurve.ts and sim.ts. 
+//   - model-selection glue used by phaseCurve.ts and sim.ts.
 //
 // Canonical phase geometry (repo-wide):
 // - Star is at origin.
 // - Body has inertial position rBody (vector from star -> body).
-// - observerDir points from the star toward the observer (observer at infinity). 
+// - observerDir points from the star toward the observer (observer at infinity).
 //
 // Phase angle alpha definition (MUST match phaseCurve.ts expectations):
-// - Define:
-//     sHat = unit vector from body -> star  = normalize(-rBody)
-//     oHat = unit vector from body -> observer ≈ normalize(observerDir)
-//     cos(alpha) = sHat · oHat
-//     alpha = acos(cos(alpha)) in [0, pi]
-// - Interpretation:
-//     alpha = 0    full phase (dayside facing observer; maximal reflected-light disk)
-//     alpha = pi   new phase  (nightside facing observer; minimal reflected light)
+// - sHat = unit vector from body -> star = normalize(-rBody)
+// - oHat = unit vector from body -> observer ≈ normalize(observerDir)
+// - cos(alpha) = sHat · oHat
+// - alpha = acos(cos(alpha)) in [0, pi]
 //
-// IMPORTANT: Avoid silent sign-convention divergence.
-// - Any module needing alpha or phase functions should import from here only. 
-//
-// Scientific notes:
-// - Lambert phase function below is the standard disk-integrated Lambertian sphere phase law,
-//   normalized so Phi(0)=1 and Phi(pi)=0.
-// - The “cosine phase function” ( (1+cos alpha)/2 ) equals the illuminated fraction of the visible disk area,
-//   but is not the Lambertian intensity-weighted reflected-light law.
-// - Thermal “visibility” is model-dependent; this file provides simple, explicit geometric weight policies,
-//   leaving amplitudes, offsets, and physical scaling to phaseCurve.ts.
+// Interpretation:
+// - alpha = 0   full phase (dayside facing observer; maximal reflected light)
+// - alpha = pi  new phase  (nightside facing observer; minimal reflected light)
 //
 // Robustness:
 // - Finite checks on vectors.
@@ -42,8 +32,8 @@
 // - Dot products clamped to [-1,1] to keep acos safe.
 // - Outputs clamped to valid ranges.
 
-import type { Vec3 } from "../physics/vec3"; // 
-import { vDot, vIsFinite, vNormalizeOrThrow } from "../physics/vec3"; // 
+import type { Vec3 } from "../physics/vec3";
+import { vDot, vIsFinite, vNormalizeOrThrow } from "../physics/vec3";
 
 export type ReflectedPhaseModel = "lambert" | "cosine";
 
@@ -72,9 +62,12 @@ function clamp01(x: number): number {
 
 /**
  * Compute the canonical phase angle alpha in [0, pi] for a body at position rBody (star at origin),
- * given observerDir (direction from star to observer). 
+ * given observerDir (direction from star to observer).
  *
- * This is the ONLY canonical alpha definition in the repo.
+ * CONTRACT / POLICY:
+ * - No other module is allowed to define its own "alpha" (phase-angle) convention.
+ * - All phase-angle computations MUST call phaseAngleRadFromBodyPos(...) from this file to avoid
+ *   sign/geometry drift (observerDir convention, star/body vectors, and acos clamping policy).
  *
  * Returns alpha [rad] where:
  * - alpha = 0  => full phase
@@ -92,7 +85,11 @@ export function phaseAngleRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number
   );
 
   // Direction from body -> observer (observer at infinity): ~observerDir.
-  const oHat = vNormalizeOrThrow(observerDir, 1e-15, "phaseAngleRadFromBodyPos: observerDir must be non-zero.");
+  const oHat = vNormalizeOrThrow(
+    observerDir,
+    1e-15,
+    "phaseAngleRadFromBodyPos: observerDir must be non-zero."
+  );
 
   const cosAlpha = clamp11(vDot(sHat, oHat));
   return Math.acos(cosAlpha);
@@ -105,24 +102,20 @@ export function phaseAngleRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number
  *   Phi(alpha) = [sin(alpha) + (pi - alpha) cos(alpha)] / pi
  *
  * Properties:
- * - Phi(0)   = 1
- * - Phi(pi)  = 0
+ * - Phi(0) = 1
+ * - Phi(pi) = 0
  * - Smooth and monotone decreasing on [0, pi]
  */
 export function lambertPhaseFunction(alphaRad: number): number {
   const a = clamp(alphaRad, 0, Math.PI);
-
   const s = Math.sin(a);
   const c = Math.cos(a);
   const phi = (s + (Math.PI - a) * c) / Math.PI;
-
   return clamp01(phi);
 }
 
 /**
- * Cosine phase approximation.
- *
- * Common lightweight approximation:
+ * Cosine phase approximation:
  *   Phi_cos(alpha) = (1 + cos(alpha)) / 2
  *
  * Note:
@@ -146,7 +139,7 @@ export function illuminatedVisibleAreaFraction(alphaRad: number): number {
 
 /**
  * Reflected-light geometric weight from alpha and model choice.
- * Caller typically multiplies this by reflAmp and any additional scaling (radius^2, albedo, etc.) in phaseCurve.ts.
+ * Caller typically multiplies this by reflAmp and additional scaling in phaseCurve.ts.
  */
 export function reflectedLightGeometricWeight(alphaRad: number, model: ReflectedPhaseModel): number {
   return model === "lambert" ? lambertPhaseFunction(alphaRad) : cosinePhaseFunction(alphaRad);
@@ -154,7 +147,7 @@ export function reflectedLightGeometricWeight(alphaRad: number, model: Reflected
 
 /**
  * Reflected-light geometric weight from body position.
- * Convenient entry-point for phaseCurve.ts and sim.ts to avoid duplicating alpha conventions. 
+ * Convenient entry-point to avoid duplicating alpha conventions.
  */
 export function reflectedLightWeightFromBodyPos(params: {
   rBody: Vec3;
@@ -171,8 +164,7 @@ export function reflectedLightWeightFromBodyPos(params: {
  *
  * Scientific intent:
  * - "constant": isotropic thermal emission (no phase dependence).
- * - "cosine"/"lambert": toy dayside-weighted emission; physically, thermal emission depends on temperature maps,
- *   heat redistribution, viewing geometry, etc., which are handled at the phase-curve layer.
+ * - "cosine"/"lambert": toy dayside-weighted emission.
  */
 export function thermalLightGeometricWeight(alphaRad: number, model: ThermalPhaseModel): number {
   if (model === "constant") return 1.0;
@@ -181,7 +173,7 @@ export function thermalLightGeometricWeight(alphaRad: number, model: ThermalPhas
 
 /**
  * Thermal visibility geometric weight from body position.
- * Kept here so phaseCurve.ts does not re-implement alpha or visibility conventions.
+ * Kept here so phaseCurve.ts does not re-implement alpha conventions.
  */
 export function thermalLightWeightFromBodyPos(params: {
   rBody: Vec3;
@@ -194,11 +186,7 @@ export function thermalLightWeightFromBodyPos(params: {
 }
 
 /**
- * Utility: apply an optional phase offset (radians) to alpha and wrap into [0, pi].
- *
- * Rationale:
- * - Some phenomenological models allow shifting the peak brightness away from full phase.
- * - Offsets should be applied consistently, so we provide a shared helper.
+ * Utility: apply an optional phase offset (radians) to alpha and clamp into [0, pi].
  *
  * NOTE:
  * - Offsetting alpha is a toy model; physically, hotspot offsets are longitudinal and should be applied
@@ -212,10 +200,23 @@ export function applyPhaseOffset(alphaRad: number, offsetRad: number): number {
   return clamp(a + offsetRad, 0, Math.PI);
 }
 
+/**
+ * Compute geometric visibility factors for reflected and thermal light based on phase angle.
+ * Added for compatibility with other modules expecting a unified calculator.
+ */
+export function computeDayNightVisibility(
+  alphaRad: number,
+  reflModel: ReflectedPhaseModel = "lambert",
+  thermModel: ThermalPhaseModel = "constant"
+): { reflected: number; thermal: number } {
+  const reflected = reflectedLightGeometricWeight(alphaRad, reflModel);
+  const thermal = thermalLightGeometricWeight(alphaRad, thermModel);
+  return { reflected, thermal };
+}
+
 // ---------------------------
 // Minimal built-in tests
 // ---------------------------
-//
 // These tests are dependency-free and only run if runDayNightVisibilitySelfTests() is called.
 // They mainly guard against sign-convention divergence and ensure basic endpoint properties.
 
@@ -238,7 +239,7 @@ function in01(x: number): boolean {
  *   If rBody is +z and observerDir is +z, then sHat = -z, oHat=+z => alpha=pi (new phase).
  *   If rBody is -z and observerDir is +z, then sHat = +z, oHat=+z => alpha=0 (full phase).
  *
- * This matches the repo’s convention observerDir points star->observer. 
+ * This matches the repo’s convention observerDir points star->observer.
  */
 export function runDayNightVisibilitySelfTests(): void {
   // Phase function endpoints:

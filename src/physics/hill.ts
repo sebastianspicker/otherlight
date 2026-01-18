@@ -12,25 +12,10 @@
 // Common simplification when m << M:
 //   R_H(r) ≈ r * ( m / (3 M) )^(1/3)
 //
-// This is an approximation that is most appropriate for:
-// - near-circular orbits, or when using periapsis r_p = a(1-e) as a conservative minimum,
-// - hierarchical systems where m << M,
-// - stability *warnings* and rule-of-thumb guidance, not a hard physical constraint.
-//
-// UI vs hard constraint decision
-// ------------------------------
-// This module provides *validation warnings* only.
-// Enforcing hard constraints belongs in the UI layer (main.ts) because:
-// - the simulation is intentionally exploratory,
-// - many “unstable” configurations are still visually/educationally useful,
-// - strict constraints would surprise users and can invalidate saved presets.
-//
-// Therefore:
-// - validateSystemParamsPhysics(p) returns warnings suitable for display,
-// - main.ts may optionally clamp/disable the moon if you choose to enforce constraints later.
+// This module provides *validation warnings* only; it does not enforce constraints.
 
 import type { SystemParams } from "../core/types";
-import { clamp } from "../core/units"; 
+import { clamp } from "../core/units";
 
 export type HillRadiusOptions = {
   /**
@@ -41,19 +26,17 @@ export type HillRadiusOptions = {
   usePeriapsis?: boolean;
 };
 
-function assertFinitePositive(x: number, name: string) {
+function assertFinitePositive(x: number, name: string): void {
   if (!Number.isFinite(x) || x <= 0) throw new Error(`${name} must be a positive finite number.`);
 }
 
-function assertEccentricity(e: number, name: string) {
+function assertEccentricity(e: number, name: string): void {
   if (!Number.isFinite(e) || e < 0 || e >= 1) throw new Error(`${name} must be in [0, 1).`);
 }
 
 /**
  * Hill radius at instantaneous separation r between primary and secondary:
  *   R_H(r) ≈ r * cbrt( mSecondary / (3 (mPrimary + mSecondary)) )
- *
- * Return domain: positive finite length.
  */
 export function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: number): number {
   assertFinitePositive(r, "r");
@@ -68,10 +51,7 @@ export function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: nu
  * Hill radius approximation for a planet (secondary) orbiting a star (primary).
  *
  * For eccentric orbits, Hill radius varies; for stability checks it is common to use
- * the periapsis distance (minimum Hill radius):
- *   r_p = a (1 - e)
- *
- * Return domain: positive finite length.
+ * the periapsis distance (minimum Hill radius): r_p = a (1 - e).
  */
 export function hillRadius(
   aPlanet: number,
@@ -95,9 +75,6 @@ export function hillRadius(
 /**
  * Simple rule-of-thumb for maximum stable prograde satellite semi-major axis:
  *   a_moon,max ≈ fraction * R_H
- *
- * Default fraction=0.5 is a common conservative choice for prograde moons.
- * Return domain: positive finite length.
  */
 export function maxStableProgradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.5): number {
   assertFinitePositive(hillR, "hillR");
@@ -111,11 +88,7 @@ export function maxStableProgradeMoonAxisRuleOfThumb(hillR: number, fraction = 0
  * Prograde stability limit using a common empirical fit form (Domingos et al.-style heuristic):
  *   a_crit ≈ 0.4895 * (1 - 1.0305 e_p - 0.2738 e_s) * R_H
  *
- * Notes:
- * - This is a heuristic fit; it can become negative at large eccentricities.
- * - Output is clamped to [0, R_H] for interactive robustness.
- *
- * Return domain: [0, hillR].
+ * Output is clamped to [0, R_H] for robustness.
  */
 export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eSat = 0): number {
   assertFinitePositive(hillR, "hillR");
@@ -132,8 +105,6 @@ export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eS
 /**
  * Retrograde satellites can remain stable farther out than prograde.
  * A conservative rule-of-thumb is ~0.67 R_H for retrograde.
- *
- * Return domain: positive finite length.
  */
 export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.67): number {
   assertFinitePositive(hillR, "hillR");
@@ -146,8 +117,6 @@ export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction =
 /**
  * Mutual Hill radius for two bodies orbiting the same primary:
  *   R_H,mut ≈ ((a1 + a2)/2) * cbrt( (m1 + m2) / (3 M_primary) )
- *
- * Return domain: positive finite length.
  */
 export function mutualHillRadius(a1: number, a2: number, m1: number, m2: number, mPrimary: number): number {
   assertFinitePositive(a1, "a1");
@@ -168,37 +137,24 @@ export type PhysicsValidationMessage = {
   severity: PhysicsValidationSeverity;
   code: string;
   message: string;
-  details?: Record<string, number | string | boolean | null | undefined>;
+  details?: Record<string, unknown>;
 };
 
 /**
  * Validate a SystemParams object for simple physics plausibility checks.
- *
- * This does NOT throw and does NOT mutate params; it returns warnings suitable for UI display.
- *
- * Current checks (best-effort, limited by available fields):
- * - If moon exists and both planet.m and moon.m exist:
- *   - Check that moon semi-major axis is within a conservative fraction of planet Hill radius.
- * - If masses are missing, emit info that Hill checks cannot be evaluated.
- *
- * Important: In this codebase, masses are optional (Body.m?), and defaults may omit star mass.
- * If star mass is missing, Hill radius cannot be computed meaningfully -> info warning only.
+ * Returns warnings suitable for UI display (never throws).
  */
 export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationMessage[] {
   const out: PhysicsValidationMessage[] = [];
 
   if (!p?.planet?.orbit || !p?.planet) return out;
-
-  // Only meaningful if there is a moon configured.
-  if (!p.moon) return out;
+  if (!p.moon) return out; // only meaningful if there is a moon configured
 
   const aP = p.planet.orbit.a;
   const eP = p.planet.orbit.e;
-
   const aM = p.moon.orbitAroundPlanet?.a;
   const eM = p.moon.orbitAroundPlanet?.e ?? 0;
 
-  // Mass availability:
   const mStar = p.star?.m;
   const mPlanet = p.planet?.m;
   const mMoon = p.moon?.m;
@@ -212,6 +168,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     });
     return out;
   }
+
   if (!Number.isFinite(aM) || aM <= 0 || !Number.isFinite(eM) || eM < 0 || eM >= 1) {
     out.push({
       severity: "warn",
@@ -229,6 +186,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     });
     return out;
   }
+
   if (!(typeof mPlanet === "number" && Number.isFinite(mPlanet) && mPlanet > 0)) {
     out.push({
       severity: "info",
@@ -237,6 +195,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     });
     return out;
   }
+
   if (!(typeof mMoon === "number" && Number.isFinite(mMoon) && mMoon > 0)) {
     out.push({
       severity: "info",
@@ -263,7 +222,6 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   const aMaxPrograde = maxStableProgradeMoonAxisDomingos(RH, eP, eM);
   const fracOfHill = aM / RH;
 
-  // Provide a useful UI-oriented message.
   if (Number.isFinite(aMaxPrograde) && aM > aMaxPrograde) {
     out.push({
       severity: "warn",

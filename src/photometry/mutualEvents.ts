@@ -3,42 +3,32 @@
 // Mutual-event utilities for two luminous/opaque disks in the sky plane.
 //
 // Purpose in this codebase:
-// - The stellar transit photometry already handles multiple occulters as a union over the star disk. 
+// - Stellar transit photometry already handles multiple occulters as a union over the star disk.
 // - Mutual events (moon in front of planet / planet in front of moon) primarily matter for
-//   *planetary / lunar self-flux* terms (phase curves, thermal emission). 
+//   planetary/lunar self-flux terms (phase curves, thermal emission).
 // - This module provides robust geometry for scaling an object's additive flux by the fraction of
-//   its projected disk that remains visible when another disk occults it. 
+//   its projected disk that remains visible when another disk occults it.
 //
-// Scientific model (minimal but geometrically correct):
-// - Both bodies are modeled as *opaque* circles on the sky plane.
-// - The visible fraction of a target disk is:
+// Model (minimal but geometrically correct):
+// - Both bodies are modeled as opaque circles on the sky plane.
+// - Visible fraction of a target disk:
 //     f_visible = 1 - A_overlap / (π R_target^2)
-//   where A_overlap is the area of intersection of two circles.
 //
 // Z-order / depth convention (CRITICAL):
-// - sim.ts assumes: “larger z = closer to the observer” for projectToSky output. 
-// - visibleFractionWhenOcculted uses the same rule: the occulter blocks the target only if
-//   occulterSky.z > targetSky.z. 
-// - If projectToSky.z semantics ever change, BOTH sim.ts and this function must be updated together. 
+// - sim.ts assumes: larger z = closer to the observer for projectToSky output.
+// - visibleFractionWhenOcculted uses the same rule: occulter blocks target only if occulterSky.z > targetSky.z.
 //
-// What this module does *not* do (by design):
-// - No limb darkening / brightness gradients on the planet/moon.
-// - No terminator weighting (day/night boundary) for reflected/thermal flux.
-// - No partial transparency.
-// - No handling of the star occulting the planet (secondary eclipse), which is handled in sim.ts. 
+// Robustness:
+// - Numerically stable circle intersection area formula with clamped acos arguments.
+// - Guards against tiny negative values in the sqrt term due to rounding.
+// - Invalid inputs return safe defaults (mostly 0 overlap / 1 visible).
 //
-// IMPORTANT usage note (also per sim.ts):
-// - visibleFractionWhenOcculted is intended to scale ONLY additive self-flux terms (planet/moon phase/thermal). 
-// - It must NOT be applied to the stellar transit attenuation; that is handled by the transit integrators. 
-//
-// Notes on correctness / robustness:
-// - Uses numerically stable circle intersection area formula with clamped acos arguments.
-// - Guards against tiny negative values in the sqrt term due to floating-point rounding.
-// - Preserves backwards compatibility: existing exports keep their names and behavior,
-//   while additional aliases/helpers are added.
+// Compatibility:
+// - Existing exports keep names and behavior; helper aliases are provided.
 
+import { clamp, clamp01 } from "../core/units";
 
-import { clamp, clamp01 } from "../core/units"; // 
+export type SkyPoint3 = { x: number; y: number; z: number };
 
 /** Local finite-positive check (avoid pulling other modules). */
 function isFinitePositive(x: number): boolean {
@@ -81,6 +71,7 @@ export function circleIntersectionArea(d: number, r1: number, r2: number): numbe
   if (d <= R - r) return Math.PI * r * r;
 
   // Partial overlap (two sectors minus kite area).
+  // Here we have: 0 < d < R + r and d > R - r, so denominators below are safe.
   const dSq = d * d;
   const RSq = R * R;
   const rSq = r * r;
@@ -104,11 +95,6 @@ export function circleIntersectionArea(d: number, r1: number, r2: number): numbe
  * Fraction of the target disk area that is occulted by an occulter disk, based on sky-plane geometry.
  *
  * Returns a value in [0,1].
- *
- * Inputs:
- * - d: center distance in sky plane
- * - rTarget: radius of the target (the body whose flux you want to scale)
- * - rOcculter: radius of the occulting body
  */
 export function occultedAreaFraction(d: number, rTarget: number, rOcculter: number): number {
   if (!Number.isFinite(d) || d < 0) return 0;
@@ -118,9 +104,7 @@ export function occultedAreaFraction(d: number, rTarget: number, rOcculter: numb
   if (!(targetArea > 0) || !Number.isFinite(targetArea)) return 0;
 
   const overlap = circleIntersectionArea(d, rTarget, rOcculter);
-  const frac = overlap / targetArea;
-
-  return clamp01(frac);
+  return clamp01(overlap / targetArea);
 }
 
 /**
@@ -136,22 +120,16 @@ export function visibleAreaFraction(d: number, rTarget: number, rOcculter: numbe
 /**
  * Convenience helper for use in sim.ts when you already have sky-projected positions.
  *
- * Inputs:
- * - targetSky: target center coordinates (x,y,z)
- * - occulterSky: occulter center coordinates (x,y,z)
- * - rTarget: target radius
- * - rOcculter: occulter radius
- *
  * Behavior:
  * - If occulterSky is not in front of targetSky (occulterSky.z <= targetSky.z), returns 1 (no dimming).
  * - Otherwise returns visibleAreaFraction(d_xy, rTarget, rOcculter).
  *
  * Convention (must match sim.ts / projectToSky):
- * - Larger z means closer to the observer. 
+ * - Larger z means closer to the observer.
  */
 export function visibleFractionWhenOcculted(params: {
-  targetSky: { x: number; y: number; z: number };
-  occulterSky: { x: number; y: number; z: number };
+  targetSky: SkyPoint3;
+  occulterSky: SkyPoint3;
   rTarget: number;
   rOcculter: number;
 }): number {
@@ -170,7 +148,7 @@ export function visibleFractionWhenOcculted(params: {
 
   if (!isFinitePositive(rTarget) || !isFinitePositive(rOcculter)) return 1;
 
-  // Occulter must be closer to the observer to block the target. 
+  // Occulter must be closer to the observer to block the target.
   if (occulterSky.z <= targetSky.z) return 1;
 
   const d = Math.hypot(occulterSky.x - targetSky.x, occulterSky.y - targetSky.y);
@@ -179,8 +157,7 @@ export function visibleFractionWhenOcculted(params: {
 
 /**
  * Alias for clarity in higher-level code:
- * - "visibleFractionWhenOcculted" already returns a visible *area* fraction for uniform-brightness disks.
- * - This alias helps when reading code that combines it with additive self-flux terms.
+ * visibleFractionWhenOcculted already returns a visible *area* fraction for uniform-brightness disks.
  */
 export const visibleDiskFractionWhenOcculted = visibleFractionWhenOcculted;
 
@@ -189,8 +166,6 @@ export const visibleDiskFractionWhenOcculted = visibleFractionWhenOcculted;
  *
  * Use-case:
  * - Caller already checked which object is in front (or wants purely geometric overlap).
- *
- * Returns visibleAreaFraction(d_xy, rTarget, rOcculter) with basic input validation.
  */
 export function visibleFractionNoDepthCheck(params: {
   dx: number;
@@ -199,8 +174,10 @@ export function visibleFractionNoDepthCheck(params: {
   rOcculter: number;
 }): number {
   const { dx, dy, rTarget, rOcculter } = params;
+
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return 1;
   if (!isFinitePositive(rTarget) || !isFinitePositive(rOcculter)) return 1;
+
   const d = Math.hypot(dx, dy);
   return visibleAreaFraction(d, rTarget, rOcculter);
 }
@@ -213,8 +190,8 @@ export function visibleFractionNoDepthCheck(params: {
  * - otherwise 1 - visibleFractionWhenOcculted(...)
  */
 export function occultedFractionWhenOcculting(params: {
-  targetSky: { x: number; y: number; z: number };
-  occulterSky: { x: number; y: number; z: number };
+  targetSky: SkyPoint3;
+  occulterSky: SkyPoint3;
   rTarget: number;
   rOcculter: number;
 }): number {
@@ -225,9 +202,6 @@ export function occultedFractionWhenOcculting(params: {
 // ---------------------------
 // Minimal built-in tests
 // ---------------------------
-//
-// These tests are dependency-free and only run if runMutualEventsSelfTests() is called.
-// They validate overlap geometry and z-order behavior, including edge/tangency cases.
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(`mutualEvents self-test failed: ${msg}`);
@@ -242,79 +216,67 @@ function in01(x: number): boolean {
 }
 
 /**
- * Self-tests for:
+ * Self-tests:
  * - circleIntersectionArea edge cases (no overlap, tangency, containment).
  * - visibleFractionWhenOcculted z-order rule (occulter blocks only if z is larger).
- * - symmetry/consistency checks on overlap fractions.
+ * - consistency checks on overlap fractions.
  */
 export function runMutualEventsSelfTests(): void {
   // No overlap (separated):
-  {
-    const a = circleIntersectionArea(10, 1, 1);
-    assert(approxEq(a, 0), "No-overlap area should be 0.");
-  }
+  let a = circleIntersectionArea(10, 1, 1);
+  assert(approxEq(a, 0), "No-overlap area should be 0.");
 
   // External tangency (measure-zero overlap):
-  {
-    const a = circleIntersectionArea(2, 1, 1);
-    assert(approxEq(a, 0), "External tangency area should be 0.");
-  }
+  a = circleIntersectionArea(2, 1, 1);
+  assert(approxEq(a, 0), "External tangency area should be 0.");
 
   // Complete containment:
-  {
-    const a = circleIntersectionArea(0.5, 2, 1);
-    assert(approxEq(a, Math.PI * 1 * 1, 1e-10), "Containment should equal smaller circle area.");
-  }
+  a = circleIntersectionArea(0.5, 2, 1);
+  assert(approxEq(a, Math.PI * 1 * 1, 1e-10), "Containment should equal smaller circle area.");
 
   // Identical circles, perfect overlap:
-  {
-    const a = circleIntersectionArea(0, 1, 1);
-    assert(approxEq(a, Math.PI, 1e-10), "Coincident circles should overlap fully.");
-    const fOcc = occultedAreaFraction(0, 1, 1);
-    const fVis = visibleAreaFraction(0, 1, 1);
-    assert(approxEq(fOcc, 1, 1e-12), "Occulted fraction should be 1 for identical coincident disks.");
-    assert(approxEq(fVis, 0, 1e-12), "Visible fraction should be 0 for identical coincident disks.");
-  }
+  a = circleIntersectionArea(0, 1, 1);
+  assert(approxEq(a, Math.PI, 1e-10), "Coincident circles should overlap fully.");
 
-  // Fraction bounds:
-  {
-    const f = occultedAreaFraction(0.8, 1, 1);
-    assert(in01(f), "Occulted fraction must be in [0,1].");
-    const v = visibleAreaFraction(0.8, 1, 1);
-    assert(in01(v), "Visible fraction must be in [0,1].");
-    assert(approxEq(f + v, 1, 1e-12), "Visible+occulted should sum to 1 (area fractions).");
-  }
+  // Symmetry check:
+  const a12 = circleIntersectionArea(0.8, 1.2, 0.9);
+  const a21 = circleIntersectionArea(0.8, 0.9, 1.2);
+  assert(approxEq(a12, a21, 1e-12), "circleIntersectionArea must be symmetric in (r1, r2).");
+
+  const fOcc = occultedAreaFraction(0, 1, 1);
+  const fVis = visibleAreaFraction(0, 1, 1);
+  assert(approxEq(fOcc, 1, 1e-12), "Occulted fraction should be 1 for identical coincident disks.");
+  assert(approxEq(fVis, 0, 1e-12), "Visible fraction should be 0 for identical coincident disks.");
+
+  // Fraction bounds and complementarity:
+  const f = occultedAreaFraction(0.8, 1, 1);
+  assert(in01(f), "Occulted fraction must be in [0,1].");
+
+  const v = visibleAreaFraction(0.8, 1, 1);
+  assert(in01(v), "Visible fraction must be in [0,1].");
+
+  assert(approxEq(f + v, 1, 1e-12), "Visible+occulted should sum to 1 (area fractions).");
 
   // Z-order: occulter must have strictly larger z to block:
-  {
-    const targetSky = { x: 0, y: 0, z: 1 };
-    const occulterSameDepth = { x: 0, y: 0, z: 1 };
-    const occulterBehind = { x: 0, y: 0, z: 0.9 };
-    const occulterInFront = { x: 0, y: 0, z: 1.1 };
+  const targetSky = { x: 0, y: 0, z: 1 };
+  const occulterSameDepth = { x: 0, y: 0, z: 1 };
+  const occulterBehind = { x: 0, y: 0, z: 0.9 };
+  const occulterInFront = { x: 0, y: 0, z: 1.1 };
+  const rTarget = 1;
+  const rOcc = 1;
 
-    const rTarget = 1;
-    const rOcc = 1;
+  assert(
+    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterSameDepth, rTarget, rOcculter: rOcc }), 1),
+    "Same depth should not occult (returns 1)."
+  );
 
-    assert(
-      approxEq(
-        visibleFractionWhenOcculted({ targetSky, occulterSky: occulterSameDepth, rTarget, rOcculter: rOcc }),
-        1
-      ),
-      "Same depth should not occult (returns 1)."
-    );
-    assert(
-      approxEq(
-        visibleFractionWhenOcculted({ targetSky, occulterSky: occulterBehind, rTarget, rOcculter: rOcc }),
-        1
-      ),
-      "Occulter behind should not occult (returns 1)."
-    );
-    assert(
-      approxEq(
-        visibleFractionWhenOcculted({ targetSky, occulterSky: occulterInFront, rTarget, rOcculter: rOcc }),
-        0
-      ),
-      "Occulter in front with same center and equal radius should fully occult (returns 0)."
-    );
-  }
+  assert(
+    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterBehind, rTarget, rOcculter: rOcc }), 1),
+    "Occulter behind should not occult (returns 1)."
+  );
+
+  assert(
+    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterInFront, rTarget, rOcculter: rOcc }), 0),
+    "Occulter in front with same center and equal radius should fully occult (returns 0)."
+  );
 }

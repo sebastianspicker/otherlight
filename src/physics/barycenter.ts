@@ -2,61 +2,36 @@
 //
 // Barycentric utilities for two-body systems (e.g. planet–moon).
 //
-// Explicit role definitions (used by sim.ts)
-// -----------------------------------------
-// In this repo’s simulation, when splitting a planet–moon pair:
+// Scientific intent:
+// - Given a barycentric position rBary (e.g. barycenter orbiting the star) and a relative vector
+//   rRel pointing from primary -> secondary (i.e. rSecondary - rPrimary), compute absolute positions:
 //
-// - primary   = planet
-// - secondary = moon
+//   rPrimary   = rBary - (mSecondary / (mPrimary + mSecondary)) * rRel
+//   rSecondary = rBary + (mPrimary   / (mPrimary + mSecondary)) * rRel
 //
-// The relative vector MUST be defined as:
-//   rRel = rSecondary - rPrimary
-// i.e. "primary -> secondary" (planet -> moon).
+// - These satisfy the barycenter definition:
+//   rBary = (mPrimary*rPrimary + mSecondary*rSecondary) / (mPrimary + mSecondary)
 //
-// This matches sim.ts usage where rRel is computed from the moon orbit-around-planet elements
-// (a Keplerian relative orbit), and then trySplitBarycentricPair(...) is called to obtain:
-// - rPrimary   (planet absolute position)
-// - rSecondary (moon absolute position)
-//
-// Core equations
-// --------------
-// Given barycenter position rBary (absolute), masses mP, mS, and rRel = rS - rP:
-//
-//   rP = rBary - (mS / (mP + mS)) * rRel
-//   rS = rBary + (mP / (mP + mS)) * rRel
-//
-// These satisfy the barycenter identity:
-//   rBary = (mP*rP + mS*rS) / (mP + mS)
-//
-// Robustness / design
-// -------------------
+// Robustness / design:
 // - Side-effect free.
-// - No unit assumptions (simulation units).
-// - "try" helper returns null (no throw) when masses are missing/invalid so sim.ts can fall back
-//   to non-barycentric behavior.
-//
-// Optional self-test helpers are included but not run automatically.
+// - Does not assume units.
+// - try* helpers return null instead of throwing for UI/sim resilience.
 
 import type { Vec3 } from "./vec3";
-import { vAddScaled, vIsFinite, vScale, vSub, vDist } from "./vec3";
+import { vAddScaled, vIsFinite, vScale } from "./vec3";
 
 export type BarySplit = {
-  /** Absolute position of primary (planet). */
   rPrimary: Vec3;
-
-  /** Absolute position of secondary (moon). */
   rSecondary: Vec3;
 
-  /** Fraction applied to +rRel to obtain the secondary offset from rBary: mPrimary/(mP+mS). */
+  // Fraction applied to +rRel for secondary: mPrimary / (mP+mS)
   muPrimary: number;
 
-  /** Fraction applied to -rRel to obtain the primary offset from rBary: mSecondary/(mP+mS). */
+  // Fraction applied to -rRel for primary: mSecondary / (mP+mS)
   muSecondary: number;
 };
 
-/**
- * Returns true if m is a usable positive finite mass.
- */
+/** Returns true if m is a usable positive finite mass. */
 export function isValidMass(m: unknown): m is number {
   return typeof m === "number" && Number.isFinite(m) && m > 0;
 }
@@ -64,21 +39,15 @@ export function isValidMass(m: unknown): m is number {
 /**
  * Compute barycentric split for a two-body system.
  *
- * Definitions:
- * - primary   = planet
- * - secondary = moon
- * - rRel      = rSecondary - rPrimary (planet -> moon)
- *
  * Inputs:
- * - rBary: barycenter absolute position (e.g. orbit about star)
+ * - rBary: barycenter absolute position
  * - rRel: relative position from primary to secondary (rSecondary - rPrimary)
  * - mPrimary, mSecondary: positive masses
  *
  * Output:
  * - absolute positions rPrimary and rSecondary, plus mass fractions.
  *
- * Throws:
- * - if vectors are non-finite or masses are invalid.
+ * Throws if vectors are non-finite or masses are invalid.
  */
 export function splitBarycentricPair(params: {
   rBary: Vec3;
@@ -95,20 +64,20 @@ export function splitBarycentricPair(params: {
 
   const mTot = mPrimary + mSecondary;
   if (!Number.isFinite(mTot) || mTot <= 0) {
-    throw new Error("splitBarycentricPair: mPrimary+mSecondary must be finite and > 0.");
+    throw new Error("splitBarycentricPair: mPrimary+mSecondary must be finite.");
   }
 
-  // Fractions (explicit for clarity).
-  // muSecondary is applied with a negative sign for rPrimary.
-  const muSecondary = mSecondary / mTot; // in (0,1)
-  const muPrimary = mPrimary / mTot; // in (0,1)
+  // Fractions; use both explicitly for numerical clarity.
+  const muSecondary = mSecondary / mTot; // multiplies rRel for primary offset (negative sign)
+  const muPrimary = mPrimary / mTot; // multiplies rRel for secondary offset (positive sign)
 
-  // rPrimary   = rBary - muSecondary * rRel
+  // rPrimary = rBary - muSecondary * rRel
   const rPrimary = vAddScaled(rBary, rRel, -muSecondary);
 
   // rSecondary = rBary + muPrimary * rRel
   const rSecondary = vAddScaled(rBary, rRel, muPrimary);
 
+  // Extra guard: if numeric overflow produced non-finite vectors, fail loudly.
   if (!vIsFinite(rPrimary) || !vIsFinite(rSecondary)) {
     throw new Error("splitBarycentricPair: numerical overflow produced non-finite positions.");
   }
@@ -119,15 +88,10 @@ export function splitBarycentricPair(params: {
 /**
  * Non-throwing helper: returns null if inputs are invalid.
  *
- * Intended for sim.ts where masses are optional:
- * - If mPrimary/mSecondary are missing or invalid, return null and let caller fall back to:
- *     rPrimary   = rBary
- *     rSecondary = rBary + rRel
- *
- * Definitions (same as splitBarycentricPair):
- * - primary   = planet
- * - secondary = moon
- * - rRel      = rSecondary - rPrimary (planet -> moon)
+ * Intended for sim code paths where masses are optional:
+ * - If mPrimary/mSecondary are missing or invalid, return null and let the caller fall back to:
+ *   rPrimary = rBary
+ *   rSecondary = rBary + rRel
  */
 export function trySplitBarycentricPair(params: {
   rBary: Vec3;
@@ -156,7 +120,6 @@ export function trySplitBarycentricPair(params: {
 
 /**
  * Convenience: compute the barycenter from absolute positions.
- * Useful for sanity checks / tests.
  *
  * rBary = (mP*rP + mS*rS) / (mP+mS)
  */
@@ -183,39 +146,67 @@ export function barycenterOfPair(params: {
   const rBary = vAddScaled(vScale(rPrimary, wP), rSecondary, wS);
 
   if (!vIsFinite(rBary)) throw new Error("barycenterOfPair: numerical overflow produced non-finite barycenter.");
+
   return rBary;
 }
 
 /**
- * Internal consistency check: verify rRel = rSecondary - rPrimary.
- * Returns true if consistent to within eps; false otherwise.
+ * Micro-optimized consistency check (no sqrt):
+ * Verifies that (rSecondary - rPrimary) ≈ rRel within a tolerance.
  */
-export function isSplitConsistentWithRel(split: BarySplit, rRel: Vec3, eps = 1e-10): boolean {
-  if (!Number.isFinite(eps) || eps < 0) throw new Error("isSplitConsistentWithRel: eps must be finite and >= 0.");
-  const relRecon = vSub(split.rSecondary, split.rPrimary);
-  return vDist(relRecon, rRel) <= eps;
+export function isSplitConsistentWithRel(
+  split: Pick<BarySplit, "rPrimary" | "rSecondary">,
+  rRel: Vec3,
+  tol = 1e-9,
+): boolean {
+  if (!vIsFinite(split.rPrimary) || !vIsFinite(split.rSecondary) || !vIsFinite(rRel)) return false;
+
+  const t = Number.isFinite(tol) ? Math.max(0, tol) : 0;
+  const tolSq = t * t;
+
+  const dx = (split.rSecondary.x - split.rPrimary.x) - rRel.x;
+  const dy = (split.rSecondary.y - split.rPrimary.y) - rRel.y;
+  const dz = (split.rSecondary.z - split.rPrimary.z) - rRel.z;
+
+  const distSq = dx * dx + dy * dy + dz * dz;
+  return distSq <= tolSq;
 }
 
-/**
- * Optional self-test helper (does not run automatically).
- *
- * Test requested:
- *   barycenterOfPair(splitBarycentricPair(...)) ≈ rBary
- */
-export function _barycenterSelfTest(): void {
-  const rBary: Vec3 = { x: 10, y: -3, z: 2 };
-  const rRel: Vec3 = { x: 4, y: 1, z: -2 }; // primary->secondary
-  const mP = 5;
-  const mS = 2;
+/* -----------------------------
+ * Minimal built-in tests
+ * ----------------------------- */
 
-  const split = splitBarycentricPair({ rBary, rRel, mPrimary: mP, mSecondary: mS });
-  const rBary2 = barycenterOfPair({ rPrimary: split.rPrimary, rSecondary: split.rSecondary, mPrimary: mP, mSecondary: mS });
+function assert(cond: unknown, msg: string): void {
+  if (!cond) throw new Error(`barycenter self-test failed: ${msg}`);
+}
 
-  if (vDist(rBary2, rBary) > 1e-10) {
-    throw new Error("_barycenterSelfTest: barycenter reconstruction failed.");
-  }
+function approxEq(a: number, b: number, eps = 1e-12): boolean {
+  return Math.abs(a - b) <= eps;
+}
 
-  if (!isSplitConsistentWithRel(split, rRel, 1e-10)) {
-    throw new Error("_barycenterSelfTest: rRel sign/definition mismatch.");
-  }
+export function runBarycenterSelfTests(): void {
+  const rBary: Vec3 = { x: 0, y: 0, z: 0 };
+  const rRel: Vec3 = { x: 1, y: 0, z: 0 };
+  const mPrimary = 2;
+  const mSecondary = 1;
+
+  const s = splitBarycentricPair({ rBary, rRel, mPrimary, mSecondary });
+
+  assert(approxEq(s.muSecondary, 1 / 3), "muSecondary should be 1/3 for mP=2,mS=1.");
+  assert(approxEq(s.muPrimary, 2 / 3), "muPrimary should be 2/3 for mP=2,mS=1.");
+
+  // Expected: rPrimary = (-1/3,0,0), rSecondary = (2/3,0,0)
+  assert(approxEq(s.rPrimary.x, -1 / 3), "rPrimary.x mismatch.");
+  assert(approxEq(s.rSecondary.x, 2 / 3), "rSecondary.x mismatch.");
+
+  // Check rel consistency.
+  assert(isSplitConsistentWithRel(s, rRel, 1e-12), "Split must be consistent with rRel.");
+
+  // Barycenter must reconstruct.
+  const rB = barycenterOfPair({ rPrimary: s.rPrimary, rSecondary: s.rSecondary, mPrimary, mSecondary });
+  assert(approxEq(rB.x, 0, 1e-12) && approxEq(rB.y, 0, 1e-12) && approxEq(rB.z, 0, 1e-12), "Barycenter reconstruction failed.");
+
+  // trySplit: invalid masses should return null (no-throw path).
+  const t1 = trySplitBarycentricPair({ rBary, rRel, mPrimary: -1, mSecondary: 1 });
+  assert(t1 === null, "trySplit must return null for invalid masses.");
 }
