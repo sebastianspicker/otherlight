@@ -1,36 +1,42 @@
 // src/physics/vec3.ts
 //
-// Minimal, dependency-free 3D vector utilities used across physics, photometry, simulation, and render.
+// Minimal, dependency-free 3D vector utilities used across physics, photometry,
+// simulation, and render.
 //
-// Goals:
-// - Provide a complete set of commonly used operations to avoid ad-hoc re-implementations.
+// Goals
+// - Provide a small but complete set of common operations (avoid ad-hoc copies).
 // - Enforce a consistent numerical robustness policy for normalization:
-//   - vNormalizeOrZero(): returns zero vector if length is too small / non-finite.
-//   - vNormalizeOrThrow(): throws if length is too small / non-finite.
-// - Keep functions side-effect free (no mutation of input vectors).
+//   - vNormalizeOrZero(): returns the canonical zero vector if too small / non-finite.
+//   - vNormalizeOrThrow(): throws if too small / non-finite.
+// - Side-effect free: never mutate input vectors.
 //
-// Conventions:
-// - Vec3 is plain-data for easy serialization and debugging.
-// - No units are assumed; the caller’s coordinate system defines meaning.
+// Conventions
+// - Vec3 is plain-data.
+// - No units are assumed.
 
 export type Vec3 = { x: number; y: number; z: number };
 
 /** Canonical zero vector constant. Treat as immutable. */
-export const VEC3_ZERO: Vec3 = { x: 0, y: 0, z: 0 };
+export const VEC3ZERO: Vec3 = Object.freeze({ x: 0, y: 0, z: 0 }) as Vec3;
+
+/** Backwards-compatible alias (some older code may import VEC3_ZERO). */
+export const VEC3_ZERO: Vec3 = VEC3ZERO;
 
 /** Construct a Vec3. */
 export function v3(x: number, y: number, z: number): Vec3 {
   return { x, y, z };
 }
 
-/** Type guard-ish finite check. */
+/** True iff all components are finite (rejects NaN and ±Infinity). */
 export function vIsFinite(v: Vec3): boolean {
   return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 }
 
 /** Strict finiteness assertion with a helpful message. */
 export function vAssertFinite(v: Vec3, name = "v"): void {
-  if (!vIsFinite(v)) throw new Error(`${name} must be finite (got x=${v.x}, y=${v.y}, z=${v.z}).`);
+  if (!vIsFinite(v)) {
+    throw new Error(`${name} must be finite (got x=${v.x}, y=${v.y}, z=${v.z}).`);
+  }
 }
 
 /** Exact equality (mostly useful for tests). */
@@ -40,7 +46,9 @@ export function vEq(a: Vec3, b: Vec3): boolean {
 
 /** Component-wise approximate equality. */
 export function vApproxEq(a: Vec3, b: Vec3, eps = 1e-12): boolean {
-  if (!Number.isFinite(eps) || eps < 0) throw new Error("vApproxEq: eps must be a finite number >= 0.");
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vApproxEq: eps must be a finite number >= 0.");
+  }
   return (
     Math.abs(a.x - b.x) <= eps &&
     Math.abs(a.y - b.y) <= eps &&
@@ -99,6 +107,7 @@ export function vLenSq(v: Vec3): number {
 }
 
 export function vLen(v: Vec3): number {
+  // hypot() is robust and avoids some overflow/underflow pitfalls vs manual sqrt(x*x+...).
   return Math.hypot(v.x, v.y, v.z);
 }
 
@@ -119,41 +128,51 @@ export function vDist(a: Vec3, b: Vec3): number {
  * Policy:
  * - If length is non-finite or < eps -> return (0,0,0).
  * - Otherwise return v / |v|.
- *
- * Use this when "best-effort" behavior is desired without throwing.
  */
 export function vNormalizeOrZero(v: Vec3, eps = 1e-15): Vec3 {
-  const L = vLen(v);
-  if (!Number.isFinite(L) || L < eps) return VEC3_ZERO;
-  return vScale(v, 1 / L);
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vNormalizeOrZero: eps must be a finite number >= 0.");
+  }
+
+  // Use squared length to avoid an unnecessary sqrt on the reject path.
+  const L2 = vLenSq(v);
+  const eps2 = eps * eps;
+
+  if (!Number.isFinite(L2) || L2 < eps2) return VEC3ZERO;
+
+  const invL = 1 / Math.sqrt(L2);
+  // Guard against rare overflow/underflow edge cases.
+  if (!Number.isFinite(invL)) return VEC3ZERO;
+
+  return vScale(v, invL);
 }
 
 /**
  * Return a unit vector in the direction of v, or throw if v is too small/non-finite.
- *
- * Policy:
- * - If length is non-finite or < eps -> throw Error(msg).
- * - Otherwise return v / |v|.
- *
- * Use this when a valid non-zero direction is required (e.g. observer direction).
  */
 export function vNormalizeOrThrow(
   v: Vec3,
   eps = 1e-15,
-  msg = "vNormalizeOrThrow: vector length too small"
+  msg = "vNormalizeOrThrow: vector length too small",
 ): Vec3 {
-  const L = vLen(v);
-  if (!Number.isFinite(L) || L < eps) throw new Error(msg);
-  return vScale(v, 1 / L);
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vNormalizeOrThrow: eps must be a finite number >= 0.");
+  }
+
+  const L2 = vLenSq(v);
+  const eps2 = eps * eps;
+
+  if (!Number.isFinite(L2) || L2 < eps2) throw new Error(msg);
+
+  const invL = 1 / Math.sqrt(L2);
+  if (!Number.isFinite(invL)) throw new Error(msg);
+
+  return vScale(v, invL);
 }
 
 /**
  * Backwards compatible alias for earlier code that used vNormalize().
- * Kept to avoid breaking existing imports/call-sites.
- *
- * Note:
- * - This function matches the old behavior: normalize-or-zero.
- * - Prefer vNormalizeOrZero / vNormalizeOrThrow in new code for clarity.
+ * Matches normalize-or-zero behavior.
  */
 export function vNormalize(v: Vec3, eps = 1e-15): Vec3 {
   return vNormalizeOrZero(v, eps);
@@ -161,22 +180,32 @@ export function vNormalize(v: Vec3, eps = 1e-15): Vec3 {
 
 /** True if ||v|| < eps (using squared length). */
 export function vNearlyZero(v: Vec3, eps = 1e-15): boolean {
-  if (!Number.isFinite(eps) || eps < 0) throw new Error("vNearlyZero: eps must be a finite number >= 0.");
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vNearlyZero: eps must be a finite number >= 0.");
+  }
   return vLenSq(v) < eps * eps;
 }
 
 /**
  * Clamp vector length to <= maxLen.
- *
  * If v is tiny/non-finite -> return zero.
- * If maxLen is 0 -> returns zero (unless v is NaN -> still returns zero via L check).
  */
 export function vClampLen(v: Vec3, maxLen: number, eps = 1e-15): Vec3 {
   if (!Number.isFinite(maxLen) || maxLen < 0) {
     throw new Error("vClampLen: maxLen must be a finite number >= 0.");
   }
-  const L = vLen(v);
-  if (!Number.isFinite(L) || L < eps) return VEC3_ZERO;
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vClampLen: eps must be a finite number >= 0.");
+  }
+
+  const L2 = vLenSq(v);
+  const eps2 = eps * eps;
+
+  if (!Number.isFinite(L2) || L2 < eps2) return VEC3ZERO;
+
+  const L = Math.sqrt(L2);
+  if (!Number.isFinite(L) || L < eps) return VEC3ZERO;
+
   if (L <= maxLen) return v;
   return vScale(v, maxLen / L);
 }
@@ -186,8 +215,13 @@ export function vClampLen(v: Vec3, maxLen: number, eps = 1e-15): Vec3 {
  * Returns zero if n is too small/non-finite.
  */
 export function vProjectOnto(v: Vec3, n: Vec3, eps = 1e-15): Vec3 {
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vProjectOnto: eps must be a finite number >= 0.");
+  }
+
   const nn = vLenSq(n);
-  if (!Number.isFinite(nn) || nn < eps * eps) return VEC3_ZERO;
+  if (!Number.isFinite(nn) || nn < eps * eps) return VEC3ZERO;
+
   const s = vDot(v, n) / nn;
   return vScale(n, s);
 }
@@ -197,8 +231,13 @@ export function vProjectOnto(v: Vec3, n: Vec3, eps = 1e-15): Vec3 {
  * Returns v if n is too small/non-finite.
  */
 export function vRejectFrom(v: Vec3, n: Vec3, eps = 1e-15): Vec3 {
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vRejectFrom: eps must be a finite number >= 0.");
+  }
+
   const nn = vLenSq(n);
   if (!Number.isFinite(nn) || nn < eps * eps) return v;
+
   const s = vDot(v, n) / nn;
   return vAddScaled(v, n, -s);
 }
@@ -208,35 +247,49 @@ export function vRejectFrom(v: Vec3, n: Vec3, eps = 1e-15): Vec3 {
  * Returns NaN if either vector is non-finite or too small.
  */
 export function vAngle(a: Vec3, b: Vec3, eps = 1e-15): number {
-  const la = vLen(a);
-  const lb = vLen(b);
-  if (!Number.isFinite(la) || !Number.isFinite(lb) || la < eps || lb < eps) return NaN;
-  let c = vDot(a, b) / (la * lb);
-  // Clamp for numerical safety.
+  if (!Number.isFinite(eps) || eps < 0) {
+    throw new Error("vAngle: eps must be a finite number >= 0.");
+  }
+
+  const la2 = vLenSq(a);
+  const lb2 = vLenSq(b);
+
+  if (!Number.isFinite(la2) || !Number.isFinite(lb2)) return NaN;
+
+  const eps2 = eps * eps;
+  if (la2 < eps2 || lb2 < eps2) return NaN;
+
+  const denom = Math.sqrt(la2 * lb2);
+  if (!Number.isFinite(denom) || denom === 0) return NaN;
+
+  let c = vDot(a, b) / denom;
+
+  // Numerical safety clamp to avoid NaN from acos due to roundoff.
   if (c > 1) c = 1;
   if (c < -1) c = -1;
+
   return Math.acos(c);
 }
 
 /**
  * Returns a unit vector orthogonal to v (arbitrary but deterministic),
  * or zero if v is too small/non-finite.
- *
- * This is occasionally useful for building frames/bases.
  */
 export function vAnyOrthogonalUnit(v: Vec3, eps = 1e-15): Vec3 {
   const u = vNormalizeOrZero(v, eps);
-  if (vEq(u, VEC3_ZERO)) return VEC3_ZERO;
+  if (vEq(u, VEC3ZERO)) return VEC3ZERO;
 
-  // Choose a helper axis least aligned with u to avoid degeneracy.
+  // Pick helper axis least aligned with u (maximizes cross-product magnitude).
   const ax = Math.abs(u.x);
   const ay = Math.abs(u.y);
   const az = Math.abs(u.z);
 
   const helper: Vec3 =
-    az < 0.9 ? { x: 0, y: 0, z: 1 } :
-    ay < 0.9 ? { x: 0, y: 1, z: 0 } :
-               { x: 1, y: 0, z: 0 };
+    ax <= ay && ax <= az
+      ? { x: 1, y: 0, z: 0 }
+      : ay <= az
+        ? { x: 0, y: 1, z: 0 }
+        : { x: 0, y: 0, z: 1 };
 
   return vNormalizeOrZero(vCross(u, helper), eps);
 }

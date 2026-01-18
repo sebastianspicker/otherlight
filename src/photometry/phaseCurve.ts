@@ -4,29 +4,30 @@
 //
 // Scientific scope (intentionally simple, robust, and simulator-friendly):
 // - Computes an additive body flux contribution (reflection + thermal + constant floor) in
-//   **stellar baseline flux units** (dimensionless), suitable for adding to a normalized stellar flux. 
-// - Uses the canonical phase-geometry and phase functions (alpha/Lambert/cosine/thermal weights)
-//   from dayNightVisibility.ts so that sign conventions cannot silently diverge. 
+//   stellar baseline flux units (dimensionless), suitable for adding to a normalized stellar flux.
+// - Uses canonical phase-geometry + phase functions from dayNightVisibility.ts so that sign
+//   conventions cannot silently diverge.
 //
 // IMPORTANT physical meaning of amplitudes (reflAmp/thermAmp/constant):
-// - reflAmp and thermAmp are purely phenomenological scaling knobs in *stellar flux units*. 
-// - No automatic scaling by body radius, albedo, phase integral, emissivity, distance, etc. is applied here. 
-// - If physically motivated scaling is desired, it must be encoded by the caller when choosing reflAmp/thermAmp. 
+// - If physicalScaling is enabled (default):
+//   * reflAmp is treated like a geometric-albedo-like scale and is multiplied by (R_body / r)^2.
+//   * thermAmp and constant are multiplied by (R_body / R_star)^2.
+// - If physicalScaling is disabled: amplitudes are interpreted as raw stellar-flux units.
 //
 // Conventions (consistent with sim.ts):
-// - observerDir points from the star toward the observer. 
-// - rBody (rPlanet/rMoon) is the body position vector in inertial coordinates (star at origin). 
-// - Secondary eclipse gating (body hidden by star) is not applied here; sim.ts has sky-plane information and
-//   already gates additive flux when behind the star. 
+// - observerDir points from the star toward the observer.
+// - rBody is the body position vector in inertial coordinates (star at origin).
+// - Secondary eclipse gating (body hidden by star) is not applied here; sim.ts handles that.
 //
-// Design goals / repo-state:
+// Design goals:
 // - bodyPhaseFlux(...) is the primary API.
-// - planetPhaseFlux(...) remains as a backwards-compatible wrapper (same signature).
-// - This file intentionally does NOT re-implement alpha/Lambert/cosine; it delegates to dayNightVisibility.ts. 
+// - planetPhaseFlux(...) is a backwards-compatible wrapper.
+// - This file does NOT re-implement phase angle or phase functions; it delegates to dayNightVisibility.ts.
 
-import type { Vec3 } from "../physics/vec3"; // 
-import { vIsFinite } from "../physics/vec3"; // 
-import { clamp01 } from "../core/units"; // 
+import type { DayNightVisibilityParams } from "../core/types";
+import type { Vec3 } from "../physics/vec3";
+import { vIsFinite, vLen } from "../physics/vec3";
+import { clamp01 } from "../core/units";
 
 import type { ReflectedPhaseModel, ThermalPhaseModel } from "./dayNightVisibility";
 import {
@@ -44,12 +45,12 @@ function isFiniteNumber(x: unknown): x is number {
  * Phase-curve configuration (phenomenological).
  *
  * All flux amplitudes are in stellar baseline units (dimensionless):
- * - reflAmp: reflected-light amplitude knob (no automatic radius/albedo scaling). 
- * - thermAmp: thermal emission amplitude knob (no automatic radius/temperature scaling). 
- * - constant: additive constant floor in stellar units. 
+ * - reflAmp: reflected-light amplitude knob (no automatic radius/albedo scaling).
+ * - thermAmp: thermal emission amplitude knob (no automatic radius/temperature scaling).
+ * - constant: additive constant floor in stellar units.
  *
  * Backwards-compatibility:
- * - Fields mirror coretypes.PhaseCurveParams to keep JSON presets stable. 
+ * - Fields mirror coretypes.PhaseCurveParams to keep JSON presets stable.
  */
 export type PhaseCurveModel = {
   enabled?: boolean;
@@ -75,6 +76,13 @@ export type PhaseCurveModel = {
    * Note: amplitudes are still applied multiplicatively afterwards.
    */
   clamp?: boolean;
+
+  /**
+   * If true (default), apply physical scaling:
+   * - Reflected: (R_body / r_star-body)^2
+   * - Thermal/constant: (R_body / R_star)^2
+   */
+  physicalScaling?: boolean;
 };
 
 /**
@@ -92,6 +100,7 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   reflModel?: ReflectedPhaseModel;
   thermalModel?: ThermalPhaseModel;
   clamp: boolean;
+  physicalScaling: boolean;
 } {
   const enabled = Boolean(model?.enabled);
 
@@ -102,12 +111,14 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   const thermOffset = isFiniteNumber(model?.thermOffset) ? (model!.thermOffset as number) : 0;
 
   const lambertian = Boolean(model?.lambertian);
+
   const constant = isFiniteNumber(model?.constant) ? Math.max(0, model!.constant as number) : 0;
 
   const reflModel = model?.reflModel;
   const thermalModel = model?.thermalModel;
 
   const clamp = model?.clamp !== false;
+  const physicalScaling = model?.physicalScaling !== false;
 
   return {
     enabled,
@@ -120,6 +131,7 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
     reflModel,
     thermalModel,
     clamp,
+    physicalScaling,
   };
 }
 
@@ -127,7 +139,7 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
  * Reflected-light contribution (stellar units):
  *   f_refl = reflAmp * Φ(alpha_eff)
  *
- * where Φ is chosen by the reflected phase model (Lambert or cosine) and alpha_eff is optionally offset.
+ * where Φ is chosen by the reflected phase model and alpha_eff is optionally offset.
  */
 export function reflectedFluxTerm(params: {
   alpha: number;
@@ -155,7 +167,7 @@ export function reflectedFluxTerm(params: {
  *   f_therm = thermAmp * W(alpha_eff)
  *
  * - For model="constant", W=1.
- * - Otherwise uses the same geometric weight family as reflected light (toy but explicit).
+ * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
  */
 export function thermalFluxTerm(params: {
   alpha: number;
@@ -180,65 +192,109 @@ export function thermalFluxTerm(params: {
 
 /**
  * Primary API: generic body phase-curve contribution (reflection + thermal + constant),
- * in stellar baseline flux units (dimensionless). 
+ * in stellar baseline flux units (dimensionless).
  *
- * This function should be used by sim.ts for both planet and moon. 
+ * Intended for sim.ts for both planet and moon.
  */
-export function bodyPhaseFlux(params: { rBody: Vec3; observerDir: Vec3; model?: PhaseCurveModel }): number {
+export function bodyPhaseFlux(params: {
+  rBody: Vec3;
+  rBodyRadius?: number;
+  rStarRadius?: number;
+  observerDir: Vec3;
+  model?: PhaseCurveModel;
+  dayNightVisibility?: DayNightVisibilityParams;
+}): number {
   const norm = normalizePhaseCurveModel(params.model);
   if (!norm.enabled) return 0;
 
-  // Keep robustness: return 0 if geometry is invalid.
+  // Robustness: return 0 if geometry is invalid.
   if (!vIsFinite(params.rBody) || !vIsFinite(params.observerDir)) return 0;
 
-  // Canonical alpha from dayNightVisibility.ts (single source of truth). 
+  // Canonical alpha from dayNightVisibility.ts (single source of truth).
   const alpha = phaseAngleRadFromBodyPos(params.rBody, params.observerDir);
   if (!Number.isFinite(alpha)) return 0;
 
+  const dn = params.dayNightVisibility;
+  const dnEnabled = Boolean(dn?.enabled);
+
   // Choose reflected model:
-  // - reflModel overrides legacy lambertian
+  // - dayNightVisibility overrides if enabled
+  // - else reflModel overrides legacy lambertian
   // - else legacy: lambertian ? "lambert" : "cosine"
-  const reflModel: ReflectedPhaseModel = (norm.reflModel ?? (norm.lambertian ? "lambert" : "cosine")) as ReflectedPhaseModel;
+  const reflModel: ReflectedPhaseModel = (dnEnabled
+    ? dn?.reflectedModel ?? "lambert"
+    : norm.reflModel ?? (norm.lambertian ? "lambert" : "cosine")) as ReflectedPhaseModel;
 
   // Choose thermal model:
-  // - If omitted, keep legacy behavior as a cosine-like dayside visibility (matches older “0.5*(1+cos)” default).
-  const thermalModel: ThermalPhaseModel = (norm.thermalModel ?? "cosine") as ThermalPhaseModel;
+  // - dayNightVisibility overrides if enabled
+  // - else model override or legacy default: cosine
+  const thermalModel: ThermalPhaseModel = (dnEnabled
+    ? dn?.thermalModel ?? "constant"
+    : norm.thermalModel ?? "cosine") as ThermalPhaseModel;
+
+  // Clamp policy for geometric weights.
+  const clampWeights = dnEnabled ? dn?.clamp !== false : norm.clamp;
+
+  // Optional physical scaling.
+  let reflScale = 1;
+  let thermScale = 1;
+  if (norm.physicalScaling) {
+    const rBodyRadius = params.rBodyRadius;
+    const rStarRadius = params.rStarRadius;
+    const r = vLen(params.rBody);
+
+    if (!(Number.isFinite(rBodyRadius) && rBodyRadius > 0)) {
+      // If radii are missing, fall back to the legacy unscaled behavior.
+      reflScale = 1;
+      thermScale = 1;
+    } else {
+      reflScale = r > 0 ? (rBodyRadius * rBodyRadius) / (r * r) : 0;
+      thermScale =
+        Number.isFinite(rStarRadius) && rStarRadius! > 0
+          ? (rBodyRadius * rBodyRadius) / (rStarRadius! * rStarRadius!)
+          : 1;
+    }
+  }
 
   const refl = reflectedFluxTerm({
     alpha,
-    reflAmp: norm.reflAmp,
+    reflAmp: norm.reflAmp * reflScale,
     model: reflModel,
     reflOffset: norm.reflOffset,
-    clamp: norm.clamp,
+    clamp: clampWeights,
   });
 
   const therm = thermalFluxTerm({
     alpha,
-    thermAmp: norm.thermAmp,
+    thermAmp: norm.thermAmp * thermScale,
     model: thermalModel,
     thermOffset: norm.thermOffset,
-    clamp: norm.clamp,
+    clamp: clampWeights,
   });
 
-  const total = refl + therm + norm.constant;
+  const constant = norm.physicalScaling ? norm.constant * thermScale : norm.constant;
+  const total = refl + therm + constant;
 
   // Enforce non-negativity (physical for these toy additive terms).
   return Number.isFinite(total) ? Math.max(0, total) : 0;
 }
 
-/**
- * Backwards-compatible wrapper: existing call sites can keep using planetPhaseFlux(...). 
- */
-export function planetPhaseFlux(params: { rPlanet: Vec3; observerDir: Vec3; model?: PhaseCurveModel }): number {
-  return bodyPhaseFlux({ rBody: params.rPlanet, observerDir: params.observerDir, model: params.model });
+/** Backwards-compatible wrapper: existing call sites can keep using planetPhaseFlux(...). */
+export function planetPhaseFlux(params: {
+  rPlanet: Vec3;
+  observerDir: Vec3;
+  model?: PhaseCurveModel;
+}): number {
+  return bodyPhaseFlux({
+    rBody: params.rPlanet,
+    observerDir: params.observerDir,
+    model: params.model,
+  });
 }
 
 // ---------------------------
 // Minimal built-in tests
 // ---------------------------
-//
-// These tests are dependency-free and only run if runPhaseCurveSelfTests() is called.
-// They primarily ensure the code path uses dayNightVisibility alpha/weights consistently.
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(`phaseCurve self-test failed: ${msg}`);
@@ -248,16 +304,32 @@ function approxEq(a: number, b: number, eps = 1e-12): boolean {
   return Math.abs(a - b) <= eps;
 }
 
+/**
+ * Self-tests (dependency-free, only run if called):
+ * - Ensures alpha convention matches dayNightVisibility.
+ * - Ensures bodyPhaseFlux is non-negative and scales with amplitudes.
+ */
 export function runPhaseCurveSelfTests(): void {
   const observerDir = { x: 0, y: 0, z: 1 };
 
-  // alpha sanity (delegated to dayNightVisibility; this guards accidental re-introduction of a local convention):
-  const alphaFull = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: -10 }, observerDir);
-  const alphaNew = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: 10 }, observerDir);
-  assert(approxEq(alphaFull, 0, 1e-12), "alpha(full) should be 0 for rBody=-z with observerDir=+z.");
-  assert(approxEq(alphaNew, Math.PI, 1e-12), "alpha(new) should be pi for rBody=+z with observerDir=+z.");
+  const alphaFull = phaseAngleRadFromBodyPos(
+    { x: 0, y: 0, z: -10 },
+    observerDir
+  );
+  const alphaNew = phaseAngleRadFromBodyPos(
+    { x: 0, y: 0, z: 10 },
+    observerDir
+  );
 
-  // bodyPhaseFlux basic behavior: non-negative and scales with amps.
+  assert(
+    approxEq(alphaFull, 0, 1e-12),
+    "alpha(full) should be 0 for rBody=-z with observerDir=+z."
+  );
+  assert(
+    approxEq(alphaNew, Math.PI, 1e-12),
+    "alpha(new) should be pi for rBody=+z with observerDir=+z."
+  );
+
   const f0 = bodyPhaseFlux({
     rBody: { x: 0, y: 0, z: -10 },
     observerDir,

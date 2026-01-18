@@ -1,4 +1,4 @@
-// src/photometry/occultationMaps.ts
+// src/experimental/photometry/occultationMaps.ts
 //
 // Generic 2D occultation / attenuation maps for projected (sky-plane) simulations.
 //
@@ -6,46 +6,39 @@
 // - Hard circular disks are sufficient for solid-body transits, but exospheres, dust tails,
 //   rings, and comet-like structures require spatially varying optical depth / transmission.
 // - This module provides a small, dependency-light framework to evaluate 2D transmission maps
-//   T(x,y) on the sky plane, suitable for:
-//   - multiplicative stellar attenuation: I_star(x,y) * T_total(x,y)
-//   - additive scattered-light models (handled elsewhere) that still need a density map.
+//   T(x,y) on the sky plane.
 //
 // Scientific conventions
 // - Optical depth τ(x,y) is dimensionless, τ >= 0.
 // - Transmission is T(x,y) = exp(-τ(x,y)), thus T ∈ (0,1] for τ>=0.
-// - Multiple absorbing structures multiply transmissions:
-//     T_total = Π_i T_i = exp(-Σ_i τ_i).
+// - Multiple absorbing structures combine as:
+//     τ_total = Σ_i τ_i
+//     T_total = exp(-τ_total) = Π_i exp(-τ_i)
 //
 // Coordinate conventions
-// - All geometry is defined in the sky plane of the star (same as transit modules):
-//   star centered at (0,0).
+// - All geometry is defined in the sky plane of the star: star centered at (0,0).
 // - Each map has its own local coordinate transform (translation + rotation).
 // - Units are the simulation’s length units (same as rStar, planet.r, etc.).
 //
 // Design goals
 // - Robust: safe guards against NaN/Inf and pathological parameters.
 // - Composable: multiple maps can be combined without branching in the integrator.
-// - Minimal: no external dependencies; import paths match this repo.
+// - Minimal: no external dependencies.
 //
 // Integration usage
-// - Pair with disk integrators by sampling T(x,y) in the same midpoint grid used for transits.
-// - For hard disks: a tauInside→∞ map combined via SUM(τ) is equivalent to union-of-occulters
-//   in the sense that transmission becomes 0 if inside ANY occulter (see notes below).
-//
-// Consistency with union-of-occulters
-// - If each opaque occulter is represented as τ=tauInside (very large) inside its disk and 0 outside,
-//   and τ maps are summed, then T=exp(-Στ) ≈ 0 inside the union of occulters and 1 outside.
-// - This preserves the “blocked if inside ANY occulter” assumption used elsewhere.
+// - Sample T(x,y) in the same midpoint grid used for disk integrators.
+// - For hard disks: a tauInside→∞ map combined via SUM(τ) approximates union-of-occulters
+//   (T≈0 if inside ANY occulter).
 
-import { clamp, clamp01 } from "../core/units";
+import { clamp, clamp01 } from "../../core/units";
 
 export type SkyXY = { x: number; y: number };
 
 /**
  * A 2D transmission map on the sky plane.
  *
- * Implementations must return transmission T in [0,1] (best-effort).
- * - Returning NaN/Inf is treated as "no effect" by the safe wrappers.
+ * Implementations should return transmission T in [0,1] (best-effort).
+ * Returning NaN/Inf is treated as "no effect" by the safe wrappers.
  */
 export type TransmissionMap2D = {
   /** Optional name/identifier for UI/debugging. */
@@ -86,13 +79,10 @@ function safeExpMinusTau(tau: number): number {
  */
 function safeTransmission(T: number, doClamp: boolean): number {
   if (!Number.isFinite(T)) return 1;
-  if (!doClamp) return T;
-  return clamp01(T);
+  return doClamp ? clamp01(T) : T;
 }
 
-/**
- * Convert an optical depth map τ(x,y) into a transmission map T(x,y)=exp(-τ(x,y)).
- */
+/** Convert an optical depth map τ(x,y) into a transmission map T(x,y)=exp(-τ(x,y)). */
 export function opticalDepthToTransmissionMap(map: OpticalDepthMap2D): TransmissionMap2D {
   return {
     name: map.name,
@@ -104,28 +94,26 @@ export function opticalDepthToTransmissionMap(map: OpticalDepthMap2D): Transmiss
 
 /**
  * Combine multiple optical depth maps by summing τ.
- *
- * Scientific meaning:
- * - Independent absorbers add optical depth: τ_total = Σ τ_i.
- * - This implies T_total = exp(-τ_total) = Π exp(-τ_i), consistent with multiplicative transmission.
+ * Scientific meaning: independent absorbers add optical depth: τ_total = Σ τ_i.
  */
-export function sumOpticalDepthMaps(
-  maps: OpticalDepthMap2D[],
-  opts?: { clampNonNegative?: boolean }
-): OpticalDepthMap2D {
+export function sumOpticalDepthMaps(maps: OpticalDepthMap2D[], opts?: { clampNonNegative?: boolean }): OpticalDepthMap2D {
   const clampNonNeg = opts?.clampNonNegative !== false;
 
   return {
     name: "sumOpticalDepthMaps",
     tauAt(x: number, y: number): number {
       let tau = 0;
+
       for (const m of maps ?? []) {
         if (!m) continue;
         const t = m.tauAt(x, y);
         if (!Number.isFinite(t)) continue;
         tau += t;
+
+        // If it blows up, treat as "no effect" instead of propagating NaN/Inf.
+        if (!Number.isFinite(tau)) return 0;
       }
-      if (!Number.isFinite(tau)) return 0;
+
       return clampNonNeg ? Math.max(0, tau) : tau;
     },
   };
@@ -133,34 +121,30 @@ export function sumOpticalDepthMaps(
 
 /**
  * Combine multiple transmission maps by multiplying T.
- *
- * Scientific meaning:
- * - This is equivalent to summing optical depths if each T_i = exp(-τ_i).
+ * Scientific meaning: independent transmissions multiply: T_total = Π T_i.
  */
-export function multiplyTransmissionMaps(
-  maps: TransmissionMap2D[],
-  opts?: { clamp01?: boolean }
-): TransmissionMap2D {
+export function multiplyTransmissionMaps(maps: TransmissionMap2D[], opts?: { clamp01?: boolean }): TransmissionMap2D {
   const doClamp = opts?.clamp01 !== false;
 
   return {
     name: "multiplyTransmissionMaps",
     transmissionAt(x: number, y: number): number {
       let T = 1;
+
       for (const m of maps ?? []) {
         if (!m) continue;
         const Ti = safeTransmission(m.transmissionAt(x, y), doClamp);
         T *= Ti;
         if (T === 0) return 0;
+        if (!Number.isFinite(T)) return 1; // fail-safe
       }
+
       return doClamp ? clamp01(T) : T;
     },
   };
 }
 
-/**
- * Rigid transform (translation + rotation) helper for maps.
- */
+/** Rigid transform (translation + rotation) helper for maps. */
 export type MapTransform2D = {
   /** Translation of the map origin in global coordinates. */
   x0: number;
@@ -176,7 +160,7 @@ export type MapTransform2D = {
 function toLocal(x: number, y: number, tr: MapTransform2D): SkyXY {
   const x0 = tr.x0;
   const y0 = tr.y0;
-  const a = isFiniteNumber(tr.angle) ? (tr.angle as number) : 0;
+  const a = isFiniteNumber(tr.angle) ? tr.angle : 0;
 
   const dx = x - x0;
   const dy = y - y0;
@@ -187,17 +171,14 @@ function toLocal(x: number, y: number, tr: MapTransform2D): SkyXY {
   // Global -> local: rotate by -a
   const xl = ca * dx + sa * dy;
   const yl = -sa * dx + ca * dy;
+
   return { x: xl, y: yl };
 }
 
 /**
  * A circular "hard disk" optical depth map (opaque body) with τ=tauInside inside radius.
  *
- * Map/normalization note:
- * - To emulate an opaque occulter, tauInside should be large (default 1e6),
- *   giving T=exp(-tauInside) ~ 0.
- * - When multiple such disks overlap and optical depths are summed, the result stays ~0
- *   (consistent with union-of-occulters: blocked if inside ANY disk).
+ * To emulate an opaque occulter, tauInside should be large (default 1e6), giving T≈0.
  */
 export function hardDiskOpticalDepthMap(params: {
   name?: string;
@@ -207,10 +188,11 @@ export function hardDiskOpticalDepthMap(params: {
 }): OpticalDepthMap2D {
   const r = params.r;
   if (!(isFiniteNumber(r) && r > 0)) throw new Error("hardDiskOpticalDepthMap: r must be > 0 and finite.");
+
   const r2 = r * r;
 
   // tauInside is "effectively infinite"; keep finite to avoid NaN in sums.
-  const tauInside = isFiniteNumber(params.tauInside) ? Math.max(0, params.tauInside as number) : 1e6;
+  const tauInside = isFiniteNumber(params.tauInside) ? Math.max(0, params.tauInside) : 1e6;
 
   return {
     name: params.name ?? "hardDisk",
@@ -228,11 +210,7 @@ export function hardDiskOpticalDepthMap(params: {
  *
  * Model:
  * - For ρ <= r0: τ = tauCore (large -> opaque)
- * - For ρ >  r0: τ(ρ) = tau0 * exp(-(ρ - r0)/H)
- *
- * Notes:
- * - Phenomenological proxy for extended atmospheres/exospheres.
- * - Continuous at ρ=r0 only if tauCore == tau0; by default tauCore is large to emulate an opaque core.
+ * - For ρ > r0:  τ(ρ) = tau0 * exp(-(ρ - r0)/H)
  */
 export function exponentialHaloOpticalDepthMap(params: {
   name?: string;
@@ -248,10 +226,9 @@ export function exponentialHaloOpticalDepthMap(params: {
 
   if (!(isFiniteNumber(r0) && r0 > 0)) throw new Error("exponentialHaloOpticalDepthMap: r0 must be > 0 and finite.");
   if (!(isFiniteNumber(H) && H > 0)) throw new Error("exponentialHaloOpticalDepthMap: H must be > 0 and finite.");
-  if (!(isFiniteNumber(tau0) && tau0 >= 0))
-    throw new Error("exponentialHaloOpticalDepthMap: tau0 must be >= 0 and finite.");
+  if (!(isFiniteNumber(tau0) && tau0 >= 0)) throw new Error("exponentialHaloOpticalDepthMap: tau0 must be >= 0 and finite.");
 
-  const tauCore = isFiniteNumber(params.tauCore) ? Math.max(0, params.tauCore as number) : 1e6;
+  const tauCore = isFiniteNumber(params.tauCore) ? Math.max(0, params.tauCore) : 1e6;
 
   return {
     name: params.name ?? "exponentialHalo",
@@ -269,13 +246,12 @@ export function exponentialHaloOpticalDepthMap(params: {
 }
 
 /**
- * Elliptical Gaussian optical depth blob (useful as a building block for asymmetric exospheres).
+ * Elliptical Gaussian optical depth blob.
  *
- * Model in local coordinates:
+ * Local model:
  * - τ(x,y) = tauPeak * exp(-0.5 * [ (x/σx)^2 + (y/σy)^2 ])
  *
- * Sampling / cutoff note:
- * - cutoffSigma defaults to 6 (~exp(-18) ~ 1.5e-8 factor), avoiding wasted evaluations in integrators.
+ * cutoffSigma defaults to 6 (~exp(-18) ~ 1.5e-8 factor).
  */
 export function ellipticalGaussianOpticalDepthMap(params: {
   name?: string;
@@ -291,13 +267,12 @@ export function ellipticalGaussianOpticalDepthMap(params: {
 
   if (!(isFiniteNumber(sx) && sx > 0)) throw new Error("ellipticalGaussianOpticalDepthMap: sigmaX must be > 0.");
   if (!(isFiniteNumber(sy) && sy > 0)) throw new Error("ellipticalGaussianOpticalDepthMap: sigmaY must be > 0.");
-  if (!(isFiniteNumber(tauPeak) && tauPeak >= 0))
-    throw new Error("ellipticalGaussianOpticalDepthMap: tauPeak must be >= 0.");
+  if (!(isFiniteNumber(tauPeak) && tauPeak >= 0)) throw new Error("ellipticalGaussianOpticalDepthMap: tauPeak must be >= 0.");
 
   const invSx2 = 1 / (sx * sx);
   const invSy2 = 1 / (sy * sy);
 
-  const cut = isFiniteNumber(params.cutoffSigma) ? Math.max(0, params.cutoffSigma as number) : 6;
+  const cut = isFiniteNumber(params.cutoffSigma) ? Math.max(0, params.cutoffSigma) : 6;
   const maxX = cut * sx;
   const maxY = cut * sy;
 
@@ -321,17 +296,16 @@ export function ellipticalGaussianOpticalDepthMap(params: {
 /**
  * Comet-like exponential tail optical depth model.
  *
- * Local coordinates convention:
- * - +x is "downstream" along the tail direction.
- * - y is cross-tail direction.
+ * Local coordinates:
+ * - +x is downstream along tail direction
+ * - y is cross-tail direction
  *
  * Model:
- * - τ(x,y) = tau0 * exp(-x/L) * exp(-0.5*(y/σ)^2)  for x >= 0
+ * - τ(x,y) = tau0 * exp(-x/L) * exp(-0.5*(y/σ)^2) for x >= 0
  * - τ(x,y) = 0 for x < 0
  *
- * Sampling / cutoff note:
+ * Performance cutoffs:
  * - cutoffSigmaY defaults to 6, cutoffL defaults to 12 (in units of L).
- * - These are performance-oriented cutoffs for disk integrators.
  */
 export function cometTailOpticalDepthMap(params: {
   name?: string;
@@ -352,10 +326,10 @@ export function cometTailOpticalDepthMap(params: {
 
   const invSy2 = 1 / (sY * sY);
 
-  const cutY = isFiniteNumber(params.cutoffSigmaY) ? Math.max(0, params.cutoffSigmaY as number) : 6;
+  const cutY = isFiniteNumber(params.cutoffSigmaY) ? Math.max(0, params.cutoffSigmaY) : 6;
   const maxY = cutY * sY;
 
-  const cutL = isFiniteNumber(params.cutoffL) ? Math.max(0, params.cutoffL as number) : 12;
+  const cutL = isFiniteNumber(params.cutoffL) ? Math.max(0, params.cutoffL) : 12;
   const maxX = cutL * L;
 
   return {
@@ -365,7 +339,6 @@ export function cometTailOpticalDepthMap(params: {
 
       // Tail exists only for x >= 0 (downstream).
       if (p.x < 0) return 0;
-
       if (p.x > maxX) return 0;
       if (Math.abs(p.y) > maxY) return 0;
 
@@ -379,8 +352,7 @@ export function cometTailOpticalDepthMap(params: {
 }
 
 /**
- * Evaluate a total transmission at (x,y) from a list of optical depth maps, without allocations.
- * Useful in hot loops (disk integrators).
+ * Evaluate total transmission at (x,y) from a list of optical depth maps, without allocations.
  */
 export function transmissionFromOpticalDepthMapsAt(
   maps: OpticalDepthMap2D[],
@@ -391,11 +363,18 @@ export function transmissionFromOpticalDepthMapsAt(
   const doClamp = opts?.clamp01 !== false;
 
   let tau = 0;
+
   for (const m of maps ?? []) {
     if (!m) continue;
     const t = m.tauAt(x, y);
     if (!Number.isFinite(t)) continue;
     tau += t;
+
+    if (!Number.isFinite(tau)) {
+      // Treat numerical blow-ups as "no effect" to keep integrators stable.
+      tau = 0;
+      break;
+    }
   }
 
   const T = safeExpMinusTau(tau);
@@ -403,7 +382,7 @@ export function transmissionFromOpticalDepthMapsAt(
 }
 
 /**
- * Evaluate a total transmission at (x,y) from a list of transmission maps, without allocations.
+ * Evaluate total transmission at (x,y) from a list of transmission maps, without allocations.
  */
 export function transmissionFromTransmissionMapsAt(
   maps: TransmissionMap2D[],
@@ -414,19 +393,19 @@ export function transmissionFromTransmissionMapsAt(
   const doClamp = opts?.clamp01 !== false;
 
   let T = 1;
+
   for (const m of maps ?? []) {
     if (!m) continue;
     const Ti = safeTransmission(m.transmissionAt(x, y), doClamp);
     T *= Ti;
     if (T === 0) return 0;
+    if (!Number.isFinite(T)) return 1;
   }
 
   return doClamp ? clamp01(T) : T;
 }
 
-/**
- * Utility: clamp a parameter intended to represent an optical depth.
- */
+/** Utility: clamp a parameter intended to represent an optical depth. */
 export function sanitizeTau(tau: unknown, fallback = 0): number {
   if (!isFiniteNumber(tau)) return fallback;
   return Math.max(0, tau);
@@ -443,9 +422,9 @@ export function sanitizeLengthScale(x: unknown, fallback: number): number {
 
 /**
  * Utility: clamp an angle to a finite number (no wrap policy enforced here).
+ * Bounded to avoid huge sin/cos argument growth in some JS engines.
  */
 export function sanitizeAngleRad(x: unknown, fallback = 0): number {
   if (!isFiniteNumber(x)) return fallback;
-  // Keep it bounded to avoid huge sin/cos argument growth in some JS engines.
   return clamp(x, -1e6, 1e6);
 }

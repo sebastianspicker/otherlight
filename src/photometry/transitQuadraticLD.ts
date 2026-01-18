@@ -2,55 +2,43 @@
 //
 // Quadratic limb-darkened stellar transit photometry (numerical, robust).
 //
-// Decision / architecture (no removals):
-// - This remains a thin, backwards-compatible wrapper around the generic integrator in
-//   transitLimbDarkened.ts. 
-// - It should be kept ONLY as a convenience/compat entry-point and *not* as a separate integrator,
-//   unless a proven, significantly faster, well-tested fast-path is implemented.
-// - Current implementation delegates to fluxLimbDarkenedDisk(...), so it is not faster than generic;
-//   thus it is effectively an API wrapper (recommended). 
+// Architecture:
+// - Thin wrapper around the generic integrator in transitLimbDarkened.ts.
+// - Intentionally does not duplicate integration logic.
+//
+// IMPORTANT "soft wrapper" policy:
+// - This module is intentionally permissive: it clamps coefficients into a broad range
+//   to keep the simulation stable for UI sliders / legacy presets.
+// - This does NOT guarantee physical admissibility of the quadratic coefficients.
+// - If you need physical plausibility enforcement (e.g. non-negative intensity across mu ∈ [0,1]),
+//   pass `constraints` below (or call fluxLimbDarkenedDisk(...) directly).
 //
 // Scientific correctness / normalization:
 // - Quadratic law: I(mu)/I(1) = 1 - u1(1-mu) - u2(1-mu)^2, with I(1)=1 at disk center.
-// - The generic integrator computes totalIntensity = ∫_disk I(mu)*P(x,y) dA and blockedIntensity over
-//   the union of occulters, then returns (total - blocked)/total, ensuring correct disk-integrated
-//   normalization even when limb darkening and patches are present. 
-// - Intensity is clamped to be non-negative in limbDarkening.ts via intensityNonNegative(...),
-//   preventing unphysical negative contributions from extreme coefficients. 
-//
+// - The generic integrator normalizes to the unocculted flux of the same (possibly patchy) star.
 
-
-import type { BrightnessPatch, LimbDarkeningQuadratic } from "../core/types";
-import type { Occulter } from "./transitUniform";
+import type { BrightnessPatch, LimbDarkeningConstraints, LimbDarkeningLawQuadratic } from "../core/types";
+import { clamp, isFinitePositive } from "../core/units";
 
 import type { LimbDarkeningLaw } from "./limbDarkening";
-import { fluxLimbDarkenedDisk } from "./transitLimbDarkened";
+import { fluxLimbDarkenedDiskDetailed } from "./transitLimbDarkened";
 
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function isFinitePositive(x: number): boolean {
-  return Number.isFinite(x) && x > 0;
-}
+import type { CircleOcculter } from "./occulterCircle";
 
 /**
- * Ensure coefficients are finite. We do not strictly enforce physical admissibility here,
- * but keep values within a broad range to avoid extreme pathological cases.
+ * Sanitize quadratic LD coefficients for "soft" usage.
  *
- * Physical plausibility and safety are ensured by:
- * - optional validateLimbDarkeningLaw(...) inside the generic integrator when constraints are passed
- * - always clamping I(mu) >= 0 via intensityNonNegative(...) in limbDarkening.ts. 
- *
- * NOTE:
- * - The broad clamp range is preserved for backwards compatibility.
- * - If stricter behavior is desired, pass constraints via transitLimbDarkened.ts entry-point directly. 
+ * Notes:
+ * - Coefficients are clamped to a deliberately wide interval to prevent numerical pathologies.
+ * - This is not a physical admissibility check.
+ * - For strict validation, use the `constraints` pass-through (which calls validateLimbDarkeningLaw).
  */
-function sanitizeQuadraticLD(ld: LimbDarkeningQuadratic): LimbDarkeningQuadratic {
-  const u1 = Number.isFinite(ld?.u1) ? ld.u1 : 0;
-  const u2 = Number.isFinite(ld?.u2) ? ld.u2 : 0;
+function sanitizeQuadraticLD(ld: LimbDarkeningLawQuadratic): LimbDarkeningLawQuadratic {
+  const u1 = Number.isFinite(ld?.u1) ? (ld.u1 as number) : 0;
+  const u2 = Number.isFinite(ld?.u2) ? (ld.u2 as number) : 0;
 
   return {
+    kind: "quadratic",
     u1: clamp(u1, -2, 2),
     u2: clamp(u2, -2, 2),
   };
@@ -61,24 +49,26 @@ function sanitizeQuadraticLD(ld: LimbDarkeningQuadratic): LimbDarkeningQuadratic
  * and optional brightness patches (spots/faculae).
  *
  * Returns F in [0,1], where 1 is unobscured (relative to the same patchy star).
- *
- * Backwards-compatibility notes:
- * - Signature is unchanged.
- * - Behavior remains deterministic and robust.
- * - Internally delegates to the generic limb-darkened integrator to avoid duplication. 
  */
 export function fluxLimbDarkenedDiskQuadratic(params: {
   rStar: number;
-  rOcculters: Occulter[];
-  limbDarkening: LimbDarkeningQuadratic;
+  rOcculters: CircleOcculter[];
+  limbDarkening: LimbDarkeningLawQuadratic;
   brightnessPatches?: BrightnessPatch[];
-  /**
-   * Resolution parameter for the disk integral.
-   * Roughly corresponds to samples across the stellar diameter in y-direction.
-   */
+  /** Resolution parameter for the disk integral; roughly samples across the stellar diameter (y). */
   gridRes?: number;
+
+  /**
+   * Optional: request physical plausibility checks for the selected coefficients.
+   * - mode: "none" | "warn" | "throw"
+   * - See core/types.ts for available checks.
+   *
+   * If omitted, this wrapper keeps legacy "soft" behavior (no strict validation).
+   */
+  constraints?: LimbDarkeningConstraints;
 }): number {
   const rStar = params.rStar;
+
   if (!isFinitePositive(rStar)) {
     throw new Error("fluxLimbDarkenedDiskQuadratic: rStar must be a positive finite number.");
   }
@@ -86,19 +76,25 @@ export function fluxLimbDarkenedDiskQuadratic(params: {
     throw new Error("fluxLimbDarkenedDiskQuadratic: limbDarkening must be provided.");
   }
 
-  const ld = sanitizeQuadraticLD(params.limbDarkening);
+  // Soft sanitize.
+  const q = sanitizeQuadraticLD(params.limbDarkening);
 
-  // Quadratic law normalized to I(1)=1 (disk center). The generic integrator normalizes to the
-  // disk-integrated flux of this same law (and patches), so the returned F is physically correct. 
-  const law: LimbDarkeningLaw = { kind: "quadratic", u1: ld.u1, u2: ld.u2 };
+  // Feed into the generic integrator.
+  const law: LimbDarkeningLaw = { kind: "quadratic", u1: q.u1, u2: q.u2 };
 
-  return fluxLimbDarkenedDisk({
+  // Note: we use the detailed version internally but return only the flux number
+  // to match the simpler exported signature.
+  const result = fluxLimbDarkenedDiskDetailed({
     rStar,
     rOcculters: params.rOcculters ?? [],
     limbDarkeningLaw: law,
     brightnessPatches: params.brightnessPatches,
     gridRes: params.gridRes,
-    // No explicit constraints here to preserve legacy “soft” behavior; callers that want strict
-    // physics checks should call fluxLimbDarkenedDisk(...) directly with constraints. 
+    constraints: params.constraints,
   });
+
+  return result.flux;
 }
+
+// Backwards-compat: keep the old exported name if any code imported Occulter indirectly.
+export type Occulter = CircleOcculter;

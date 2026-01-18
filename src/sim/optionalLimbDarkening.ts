@@ -1,0 +1,113 @@
+// src/sim/optionalLimbDarkening.ts
+//
+// Optional limb-darkening support loaded via dynamic import.
+// This keeps the core build functional even if optional photometry modules are absent.
+
+import type { SystemParams } from "../core/types";
+import type { CircleOcculter } from "../photometry/occulterCircle";
+
+// Keep these types intentionally structural/local to avoid importing optional photometry types here.
+export type FluxLimbDarkenedDiskFn = (args: {
+  rStar: number;
+  rOcculters: CircleOcculter[];
+  limbDarkeningLaw: unknown;
+  constraints?: unknown;
+  brightnessPatches?: unknown;
+  gridRes?: number;
+  patchCombineMode?: unknown;
+  earlyExitFluxEps?: number;
+}) => number;
+
+export type ResolveLimbDarkeningForBandFn = (model: unknown, bandpass?: unknown) => unknown;
+
+export type OptionalLdIntegrators = {
+  fluxLimbDarkenedDisk: FluxLimbDarkenedDiskFn;
+  resolveLimbDarkeningForBand: ResolveLimbDarkeningForBandFn;
+};
+
+let integrators: OptionalLdIntegrators | null = null;
+
+// True once at least one load attempt finished (successfully or not).
+let optionalLdTried = false;
+
+// Shared in-flight promise for concurrency safety.
+let loadPromise: Promise<void> | null = null;
+
+export function hasLdIntegrators(): boolean {
+  return integrators !== null;
+}
+
+export function getLdIntegrators(): OptionalLdIntegrators | null {
+  return integrators;
+}
+
+/**
+ * Idempotent loader for optional limb-darkening modules.
+ * Safe to call repeatedly; never throws if the optional modules are missing.
+ *
+ * Concurrency policy:
+ * - Multiple concurrent callers await the same in-flight promise.
+ * - On completion, `optionalLdTried` is set and `integrators` is either populated or null.
+ */
+export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
+  if (integrators) {
+    optionalLdTried = true;
+    return;
+  }
+
+  if (loadPromise) {
+    await loadPromise;
+    return;
+  }
+
+  loadPromise = (async (): Promise<void> => {
+    try {
+      const m1: any = await import("../photometry/transitLimbDarkened");
+      const fluxFn = (m1?.fluxLimbDarkenedDisk ?? m1?.default ?? null) as FluxLimbDarkenedDiskFn | null;
+
+      const m2: any = await import("../photometry/limbDarkening");
+      const resolveFn = (m2?.resolveLimbDarkeningForBand ?? null) as ResolveLimbDarkeningForBandFn | null;
+
+      if (fluxFn && resolveFn) {
+        integrators = {
+          fluxLimbDarkenedDisk: fluxFn,
+          resolveLimbDarkeningForBand: resolveFn,
+        };
+      } else {
+        integrators = null;
+      }
+    } catch {
+      // Optional module absent or failed to load: keep simulation functional.
+      integrators = null;
+    } finally {
+      optionalLdTried = true;
+      loadPromise = null;
+    }
+  })();
+
+  await loadPromise;
+}
+
+/** Convenience wrapper used by prepareSimulation(). */
+export async function preloadOptionalLimbDarkening(): Promise<void> {
+  await ensureOptionalLimbDarkeningLoaded();
+}
+
+/**
+ * Fire-and-forget background loading if LD is configured but prepareSimulation() wasn't awaited.
+ * This is safe: it never throws and does not block stepSystem().
+ */
+export function kickoffOptionalLimbDarkeningIfRequested(params: SystemParams): void {
+  const ldModel = params.star?.photometry?.limbDarkeningModel;
+  if (!ldModel) return;
+
+  // If already loaded or currently loading, do nothing.
+  if (integrators || loadPromise) return;
+
+  // If it was tried before and failed, do not keep retrying every step.
+  if (optionalLdTried) return;
+
+  void ensureOptionalLimbDarkeningLoaded().catch(() => {
+    // Deliberately swallow: optional module absent must not break core sim.
+  });
+}

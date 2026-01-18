@@ -1,0 +1,160 @@
+// src/sim/kinematics.ts
+
+import type {
+  ExomoonTimingShapeParams,
+  SkyPoint,
+  SystemParams,
+} from "../core/types";
+import { toFiniteNumber } from "../core/units";
+import type { Vec3 } from "../physics/vec3";
+import { vAdd, vAddScaled } from "../physics/vec3";
+import { buildSkyBasis, projectToSky } from "../physics/frames";
+import { trySplitBarycentricPair } from "../physics/barycenter";
+import { applyOrientationEvolution } from "../physics/exomoonTiming";
+import { posFromElements, resolveOrbitElements } from "./orbits";
+
+export type BodyKinematics = {
+  rBary: Vec3;
+  rPlanetAbs: Vec3;
+  rMoonAbs?: Vec3;
+  planetSky: SkyPoint;
+  moonSky?: SkyPoint;
+};
+
+export type MoonStateAt = {
+  rBary: Vec3;
+  rPlanetAbs: Vec3;
+  rMoonAbs: Vec3;
+  rMoonRel: Vec3;
+  moonSky: SkyPoint;
+  driftY: number;
+};
+
+export function getExomoonConfig(
+  params: SystemParams
+): ExomoonTimingShapeParams | undefined {
+  return params.dynamics?.exomoonTimingShape;
+}
+
+export function computeMoonSkyDriftY(
+  exo: ExomoonTimingShapeParams | undefined,
+  t: number
+): number {
+  const enabled = Boolean(exo?.enabled);
+  if (!enabled) return 0;
+  const tRef = toFiniteNumber(exo?.tRef, 0);
+  const yDot = toFiniteNumber(exo?.moonImpactYDot, 0);
+
+  // Toy model: linear sky-plane y drift (units/s) relative to tRef.
+  // This is phenomenological and not strictly Kepler-consistent.
+  if (!Number.isFinite(yDot) || yDot === 0) return 0;
+  return (t - tRef) * yDot;
+}
+
+/**
+ * Compute moon absolute state at time t (including optional orbit orientation evolution,
+ * barycentric splitting, and optional sky-plane y drift).
+ *
+ * Returns undefined if no moon is configured.
+ */
+export function getMoonStateAt(
+  params: SystemParams,
+  t: number,
+  observerDir: Vec3,
+  rBaryOverride?: Vec3
+): MoonStateAt | undefined {
+  if (!params.moon) return undefined;
+  if (!Number.isFinite(t))
+    throw new Error("getMoonStateAt: t must be finite.");
+  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0)
+    throw new Error("moon.r must be > 0");
+
+  const exo = getExomoonConfig(params);
+  const exoEnabled = Boolean(exo?.enabled);
+  const tRef = toFiniteNumber(exo?.tRef, 0);
+  const driftY = computeMoonSkyDriftY(exo, t);
+
+  // Planet "orbit" is interpreted as barycenter orbit if a valid planet+moon mass pair exists.
+  // Otherwise it is treated as the planet orbit directly, and the moon is placed relative to it.
+  // OPTIMIZATION: Use rBaryOverride if provided to avoid re-calculating Kepler orbit.
+  const rBary =
+    rBaryOverride ??
+    posFromElements(params.planet.orbit, t, "planet.orbit");
+
+  const moonOrbitBaseEl = resolveOrbitElements(
+    params.moon.orbitAroundPlanet,
+    t,
+    "moon.orbitAroundPlanet"
+  );
+  const moonOrbitEvolvedEl = exoEnabled
+    ? applyOrientationEvolution(moonOrbitBaseEl, t, {
+        enabled: true,
+        tRef,
+        OmegaDot: exo?.moonOmegaDot,
+        incDot: exo?.moonIncDot,
+        omegaDot: exo?.moonOmegaSmallDot,
+        Omega0: exo?.moonOmega0,
+        inc0: exo?.moonInc0,
+        omega0: exo?.moonOmegaSmall0,
+        wrapAngles: "2pi",
+        clampInc01Pi: true,
+      })
+    : moonOrbitBaseEl;
+
+  const rMoonRel = posFromElements(
+    moonOrbitEvolvedEl,
+    t,
+    "moon.orbitAroundPlanet"
+  );
+
+  const split = trySplitBarycentricPair({
+    rBary,
+    rRel: rMoonRel, // vector from planet -> moon
+    mPrimary: params.planet.m,
+    mSecondary: params.moon.m,
+  });
+
+  const rPlanetAbs = split ? split.rPrimary : rBary;
+  const rMoonAbsBase = split ? split.rSecondary : vAdd(rBary, rMoonRel);
+
+  // Apply optional sky-plane drift to the inertial position so phase-curve geometry matches.
+  let rMoonAbs = rMoonAbsBase;
+  if (driftY !== 0) {
+    const { ey } = buildSkyBasis(observerDir);
+    rMoonAbs = vAddScaled(rMoonAbsBase, ey, driftY);
+  }
+
+  const ms = projectToSky(rMoonAbs, observerDir);
+  const moonSky = ms;
+
+  return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
+}
+
+export function computeBodyKinematics(
+  params: SystemParams,
+  t: number,
+  observerDir: Vec3
+): BodyKinematics {
+  if (!Number.isFinite(t))
+    throw new Error("computeBodyKinematics: t must be finite.");
+
+  // Base: planet orbit (or barycenter orbit if masses exist and splitting is possible).
+  const rBary = posFromElements(params.planet.orbit, t, "planet.orbit");
+
+  let rPlanetAbs: Vec3 = rBary;
+  let rMoonAbs: Vec3 | undefined;
+  let moonSky: SkyPoint | undefined;
+
+  // Pass rBary to avoid re-calculation inside getMoonStateAt
+  const moonState = getMoonStateAt(params, t, observerDir, rBary);
+
+  if (moonState) {
+    rPlanetAbs = moonState.rPlanetAbs;
+    rMoonAbs = moonState.rMoonAbs;
+    moonSky = moonState.moonSky;
+  }
+
+  const planetSky = projectToSky(rPlanetAbs, observerDir);
+
+  return { rBary, rPlanetAbs, rMoonAbs, planetSky, moonSky };
+}
