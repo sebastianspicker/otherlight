@@ -51,6 +51,7 @@ Open `http://localhost:5173` in your browser.
 ## Documentation map
 
 - Physics overview: `docs/physics/overview.md`
+- Full derivation (implemented + ideal): `docs/physics/full-derivation.md`
 - Orbits and Kepler elements: `docs/physics/orbits.md`
 - N-body dynamics: `docs/physics/nbody.md`
 - Relativity and timing: `docs/physics/relativity.md`
