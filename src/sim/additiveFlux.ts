@@ -10,8 +10,54 @@ import {
 } from "../photometry/stellarVariability";
 import { computeForwardScatteringFlux } from "../photometry/forwardScattering";
 import { visibleFractionWhenOcculted } from "../photometry/mutualEvents";
+import { fluxUniformDisk } from "../photometry/transitUniform";
+import type { CircleOcculter } from "../photometry/occulterCircle";
 import type { BodyKinematics } from "./kinematics";
 import { resolveOrbitElements } from "./orbits";
+
+const MUTUAL_OCCULTER_GRID_RES = 120;
+
+function addOcculterIfFront(
+  occulters: CircleOcculter[],
+  targetSky: { x: number; y: number; z: number },
+  occulterSky: { x: number; y: number; z: number },
+  rOcculter: number
+): void {
+  if (!Number.isFinite(rOcculter) || rOcculter <= 0) return;
+  if (
+    !Number.isFinite(targetSky.x) ||
+    !Number.isFinite(targetSky.y) ||
+    !Number.isFinite(targetSky.z) ||
+    !Number.isFinite(occulterSky.x) ||
+    !Number.isFinite(occulterSky.y) ||
+    !Number.isFinite(occulterSky.z)
+  ) {
+    return;
+  }
+
+  if (!(occulterSky.z > targetSky.z)) return;
+
+  occulters.push({
+    dx: occulterSky.x - targetSky.x,
+    dy: occulterSky.y - targetSky.y,
+    r: rOcculter,
+  });
+}
+
+function visibleFractionWithOcculters(rTarget: number, occulters: CircleOcculter[]): number {
+  if (!Number.isFinite(rTarget) || rTarget <= 0) return 1;
+  if (occulters.length === 0) return 1;
+
+  try {
+    return fluxUniformDisk({
+      rStar: rTarget,
+      rOcculters: occulters,
+      gridRes: MUTUAL_OCCULTER_GRID_RES,
+    });
+  } catch {
+    return 1;
+  }
+}
 
 export type AdditiveFluxComponents = {
   fluxPlanetOnly: number;
@@ -31,7 +77,8 @@ export function computeAdditiveFluxComponents(
   const phot = params.star.photometry;
   const starRadius = params.star.r;
 
-  const orbit = resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
+  const orbit =
+    kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
 
   // Phase / self-reflected light terms (additive).
   // Planet phase is always computed.
@@ -40,6 +87,7 @@ export function computeAdditiveFluxComponents(
     rBodyRadius: params.planet.r,
     rStarRadius: starRadius,
     observerDir,
+    orbitPeriodSec: orbit.period,
     model: phot?.phaseCurve,
     dayNightVisibility: phot?.dayNightVisibility,
   });
@@ -52,42 +100,19 @@ export function computeAdditiveFluxComponents(
       rBodyRadius: params.moon.r,
       rStarRadius: starRadius,
       observerDir,
+      orbitPeriodSec: orbit.period,
       model: phot?.moonPhaseCurve,
       dayNightVisibility: phot?.dayNightVisibility,
     });
   }
 
-  // Secondary eclipse: star occults the *additive* body disk when the body is behind the star.
-  // (Toy model: uniform-brightness disk for the body.)
-  const STAR_SKY = { x: 0, y: 0, z: 0 };
-
-  if (fluxPlanetOnly !== 0 && kin.planetSky.z < 0) {
-    const visP = visibleFractionWhenOcculted({
-      targetSky: kin.planetSky,
-      occulterSky: STAR_SKY,
-      rTarget: params.planet.r,
-      rOcculter: params.star.r,
-    });
-    if (Number.isFinite(visP)) fluxPlanetOnly *= visP;
-  }
-
-  if (fluxMoonOnly !== 0 && params.moon && kin.moonSky && kin.moonSky.z < 0) {
-    const visM = visibleFractionWhenOcculted({
-      targetSky: kin.moonSky,
-      occulterSky: STAR_SKY,
-      rTarget: params.moon.r,
-      rOcculter: params.star.r,
-    });
-    if (Number.isFinite(visM)) fluxMoonOnly *= visM;
-  }
-
-  // Mutual events: scale additive self-flux by visible fraction if occulted by the other body.
+  // Mutual events: compute visible fractions for diagnostics.
   // Limitation: Mutual events assume uniform disks for the bodies, ignoring phase geometry overlap (crescent-on-crescent effects).
   let planetVisibleFraction: number | undefined;
   let moonVisibleFraction: number | undefined;
 
   if (params.moon && kin.moonSky) {
-    // Moon in front of planet => reduce planet's additive term.
+    // Moon in front of planet => diagnostic visible fraction.
     if (fluxPlanetOnly !== 0 && kin.moonSky.z > kin.planetSky.z) {
       const visPlanet = visibleFractionWhenOcculted({
         targetSky: kin.planetSky,
@@ -97,11 +122,10 @@ export function computeAdditiveFluxComponents(
       });
       if (Number.isFinite(visPlanet)) {
         planetVisibleFraction = visPlanet;
-        fluxPlanetOnly *= visPlanet;
       }
     }
 
-    // Planet in front of moon => reduce moon's additive term.
+    // Planet in front of moon => diagnostic visible fraction.
     if (fluxMoonOnly !== 0 && kin.planetSky.z > kin.moonSky.z) {
       const visMoon = visibleFractionWhenOcculted({
         targetSky: kin.moonSky,
@@ -111,9 +135,30 @@ export function computeAdditiveFluxComponents(
       });
       if (Number.isFinite(visMoon)) {
         moonVisibleFraction = visMoon;
-        fluxMoonOnly *= visMoon;
       }
     }
+  }
+
+  // Secondary eclipse + mutual events combined: use union-of-occulters for accurate visible fraction.
+  // (Toy model: uniform-brightness disk for the body.)
+  const STAR_SKY = { x: 0, y: 0, z: 0 };
+
+  if (fluxPlanetOnly !== 0) {
+    const planetOcculters: CircleOcculter[] = [];
+    addOcculterIfFront(planetOcculters, kin.planetSky, STAR_SKY, starRadius);
+    if (params.moon && kin.moonSky) {
+      addOcculterIfFront(planetOcculters, kin.planetSky, kin.moonSky, params.moon.r);
+    }
+    const planetVis = visibleFractionWithOcculters(params.planet.r, planetOcculters);
+    if (Number.isFinite(planetVis)) fluxPlanetOnly *= planetVis;
+  }
+
+  if (fluxMoonOnly !== 0 && params.moon && kin.moonSky) {
+    const moonOcculters: CircleOcculter[] = [];
+    addOcculterIfFront(moonOcculters, kin.moonSky, STAR_SKY, starRadius);
+    addOcculterIfFront(moonOcculters, kin.moonSky, kin.planetSky, params.planet.r);
+    const moonVis = visibleFractionWithOcculters(params.moon.r, moonOcculters);
+    if (Number.isFinite(moonVis)) fluxMoonOnly *= moonVis;
   }
 
   // Stellar variability is an emitted stellar term (added to baseline) that will be multiplied by F_transit upstream.

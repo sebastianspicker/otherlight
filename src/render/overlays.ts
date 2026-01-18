@@ -9,6 +9,7 @@
 //   observer.dir points from star to observer; larger sky.z means closer to observer. [file:100][file:119]
 
 import type { StepResult, SystemParams } from "../core/types";
+import { clamp, toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../physics/vec3";
 import type { SizeInfo } from "./canvasUtil";
@@ -86,16 +87,6 @@ const DEFAULT_THEME: OverlayTheme = {
   font: "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   fontSmall: "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
 };
-
-function finitePositive(n: unknown, fallback: number): number {
-  const x = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(x) || x <= 0) return fallback;
-  return x;
-}
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
 
 export function defaultDebugOverlayToggles(): RequiredDebugOverlayToggles {
   return {
@@ -194,7 +185,7 @@ export function drawObserverMarkerMainView(
   const dy = Number.isFinite(observerDir.y) ? observerDir.y : 0;
   const ang = Math.atan2(dy, dx);
 
-  const radiusMinPx = finitePositive(opts.radiusMinPx, 30);
+  const radiusMinPx = toFinitePositiveOr(opts.radiusMinPx, 30);
   const radiusFactor = clamp(typeof opts.radiusFactor === "number" ? opts.radiusFactor : 0.48, 0.05, 0.95);
   const radius = Math.max(radiusMinPx, Math.min(size.cssW, size.cssH) * radiusFactor);
 
@@ -373,7 +364,7 @@ export function drawDebugOverlay(
 
   const x0 = typeof opts.textX === "number" ? opts.textX : 10;
   const yStart = typeof opts.textY0 === "number" ? opts.textY0 : 18;
-  const lineH = finitePositive(opts.lineHeight, 16);
+  const lineH = toFinitePositiveOr(opts.lineHeight, 16);
 
   ctx.save();
   ctx.fillStyle = th.textColor;

@@ -32,6 +32,7 @@
 // - Dot products clamped to [-1,1] to keep acos safe.
 // - Outputs clamped to valid ranges.
 
+import { clamp, clamp01, clamp11 } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vDot, vIsFinite, vNormalizeOrThrow } from "../physics/vec3";
 
@@ -44,21 +45,6 @@ export type ReflectedPhaseModel = "lambert" | "cosine";
  * - "lambert" : sometimes used as a smoother alternative (still a toy for thermal).
  */
 export type ThermalPhaseModel = "constant" | ReflectedPhaseModel;
-
-/** Clamp x into [lo, hi]. */
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-/** Clamp x into [-1,1]. */
-function clamp11(x: number): number {
-  return clamp(x, -1, 1);
-}
-
-/** Clamp x into [0,1]. */
-function clamp01(x: number): number {
-  return clamp(x, 0, 1);
-}
 
 /**
  * Compute the canonical phase angle alpha in [0, pi] for a body at position rBody (star at origin),

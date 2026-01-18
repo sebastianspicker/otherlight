@@ -35,6 +35,10 @@ import { getObserverDir } from "./observer";
 import { computeBodyKinematics } from "./kinematics";
 import { buildOcculters } from "./occulters";
 import { computeTransitFlux } from "./transitFlux";
+import {
+  evolveBrightnessPatches,
+  spotFluxFactorFromPatches,
+} from "../photometry/transitUniformSpots";
 import { computeAdditiveFluxComponents } from "./additiveFlux";
 import { computeExoDiagnostics } from "./diagnostics";
 
@@ -52,20 +56,32 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
   const kin = computeBodyKinematics(params, t, observerDir);
   const occulters = buildOcculters(params, kin);
 
+  const phot = params.star.photometry;
+  const spotModel = phot?.spotEvolution;
+  const spotPatches =
+    spotModel?.enabled && Array.isArray(phot?.brightnessPatches) && phot.brightnessPatches.length > 0
+      ? evolveBrightnessPatches({ patches: phot.brightnessPatches, t, model: spotModel })
+      : undefined;
+  const spotFluxFactor =
+    spotModel?.enabled && spotPatches && spotPatches.length > 0
+      ? spotFluxFactorFromPatches({ rStar: params.star.r, patches: spotPatches, gridRes: phot?.gridRes })
+      : 1;
+
   // Multiplicative stellar attenuation factor in [0,1].
-  const fluxTransitFactor = computeTransitFlux(params, occulters, kin);
+  const fluxTransitFactor = computeTransitFlux(params, occulters, kin, {
+    brightnessPatchesOverride: spotPatches,
+  });
 
   // Additive (non-stellar-surface) terms and stellar variability term.
   const additive = computeAdditiveFluxComponents(params, t, observerDir, kin);
 
-  const phot = params.star.photometry;
   const baselineFluxUsed = toFiniteNumber(phot?.baselineFlux, 1.0);
   const fluxStellarVar = additive.fluxStellarVarOnly;
   const fluxPlanetPhase = additive.fluxPlanetOnly;
   const fluxMoonPhase = additive.fluxMoonOnly;
   const fluxForwardScattering = additive.fluxForwardScatteringOnly;
 
-  const fluxStellarPreTransit = baselineFluxUsed + fluxStellarVar;
+  const fluxStellarPreTransit = baselineFluxUsed * spotFluxFactor + fluxStellarVar;
 
   // Physically consistent composition: stellar term is attenuated, additive terms are not.
   // Assumption: Stellar variability is photospheric.

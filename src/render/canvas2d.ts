@@ -15,6 +15,7 @@
 //   (via starDisk.ts); it is display-only and does not affect flux computations.
 
 import type { StepResult, SystemParams } from "../core/types";
+import { clamp, toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 
 import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
@@ -54,16 +55,6 @@ type Drawable = {
   kind: DrawableKind;
   z: number; // depth along observer direction; larger => closer to observer
 };
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function finitePositive(n: unknown, fallback: number): number {
-  const x = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(x) || x <= 0) return fallback;
-  return x;
-}
 
 export type Canvas2DRendererOptions = {
   /**
@@ -194,7 +185,7 @@ export class Canvas2DRenderer {
   private drawBodyDisk(x: number, y: number, r: number, z: number, baseColor: string): void {
     const ctx = this.ctx;
     const p = this.toPx(x, y);
-    const rr = finitePositive(r, 1e-6) * this.pixelsPerUnit;
+    const rr = toFinitePositiveOr(r, 1e-6) * this.pixelsPerUnit;
 
     // Visual-only depth cue; must not affect physics/flux.
     const shade = clamp(0.35 + 0.65 * (1 / (1 + Math.abs(z) * 0.002)), 0.25, 1.0);
@@ -223,12 +214,12 @@ export class Canvas2DRenderer {
     // Optional didactic hint: dashed outline when a body is behind the star plane
     // while still overlapping the projected stellar disk.
     const behindStarPlane = zBody < 0;
-    const centerInsideStarDisk = Math.hypot(x, y) < finitePositive(rStar, 1);
+    const centerInsideStarDisk = Math.hypot(x, y) < toFinitePositiveOr(rStar, 1);
 
     if (behindStarPlane && centerInsideStarDisk) {
       const ctx = this.ctx;
       const p = this.toPx(x, y);
-      const R = finitePositive(rBody, 1e-6) * this.pixelsPerUnit;
+      const R = toFinitePositiveOr(rBody, 1e-6) * this.pixelsPerUnit;
 
       ctx.save();
       ctx.globalAlpha = 0.6;

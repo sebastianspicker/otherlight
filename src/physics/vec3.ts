@@ -293,3 +293,31 @@ export function vAnyOrthogonalUnit(v: Vec3, eps = 1e-15): Vec3 {
 
   return vNormalizeOrZero(vCross(u, helper), eps);
 }
+
+/* -----------------------------
+ * Minimal built-in tests
+ * ----------------------------- */
+
+function assert(cond: unknown, msg: string): void {
+  if (!cond) throw new Error(`vec3 self-test failed: ${msg}`);
+}
+
+function approxEq(a: number, b: number, eps = 1e-12): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+export function runVec3SelfTests(): void {
+  const ex = v3(1, 0, 0);
+  const ey = v3(0, 1, 0);
+  const ez = v3(0, 0, 1);
+
+  const c = vCross(ex, ey);
+  assert(vApproxEq(c, ez, 1e-12), "cross product should be right-handed.");
+
+  const n = vNormalizeOrThrow(v3(3, 0, 0));
+  assert(vApproxEq(n, ex, 1e-12), "normalize should produce unit axis.");
+
+  const o = vAnyOrthogonalUnit(ex);
+  assert(approxEq(vDot(o, ex), 0, 1e-12), "orthogonal unit should be perpendicular.");
+  assert(approxEq(vLen(o), 1, 1e-12), "orthogonal unit should be normalized.");
+}

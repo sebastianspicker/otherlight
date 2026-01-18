@@ -12,11 +12,12 @@
 // - Normalized stellar flux factor F in [0,1], normalized to the *same patched star without occulters*,
 //   so F = 1 out of transit for any patch map.
 
-import type { BrightnessPatch } from "../core/types";
-import { clamp01, isFinitePositive } from "../core/units";
+import type { BrightnessPatch, SpotEvolutionParams } from "../core/types";
+import { clamp, clamp01, isFinitePositive } from "../core/units";
 
 import { patchFactorAt, sanitizeBrightnessPatches, type PatchCombineMode } from "./patches";
 import { integrateDiskMidpoint } from "./diskMidpoint";
+import { orbitalPhaseFromPeriod, spotLifecycleWeight } from "./stellarVariability";
 
 import {
   anyCircleOcculterFullyCoversStar,
@@ -81,6 +82,94 @@ export function fluxUniformDiskWithPatches(params: {
 
   const flux = (totalIntensity - blockedIntensity) / totalIntensity;
   return clamp01(flux);
+}
+
+export function evolveBrightnessPatches(params: {
+  patches?: BrightnessPatch[];
+  t: number;
+  model?: SpotEvolutionParams;
+}): BrightnessPatch[] {
+  const patches = params.patches ?? [];
+  const model = params.model;
+
+  if (!model?.enabled || patches.length === 0) return patches;
+
+  const t = params.t;
+  const tRef = Number.isFinite(model.tRef) ? (model.tRef as number) : 0;
+  const period = model.rotationPeriodSec;
+  const rotPhase =
+    Number.isFinite(period) && period > 0
+      ? orbitalPhaseFromPeriod({ t, period, t0: tRef })
+      : 0;
+  const rotPhaseSafe = Number.isFinite(rotPhase) ? rotPhase : 0;
+  const driftRate = Number.isFinite(model.driftRateRadPerSec) ? (model.driftRateRadPerSec as number) : 0;
+  const rotOffset = Number.isFinite(model.rotationPhase0) ? (model.rotationPhase0 as number) : 0;
+  const rot = rotPhaseSafe + driftRate * (t - tRef) + rotOffset;
+
+  const coverage = clamp(Number.isFinite(model.coverage) ? (model.coverage as number) : 1, 0, 1);
+  const lifetime = Number.isFinite(model.lifetimeSec) ? (model.lifetimeSec as number) : 0;
+
+  const out: BrightnessPatch[] = new Array(patches.length);
+  for (let i = 0; i < patches.length; i++) {
+    const p = patches[i];
+    if (!p) {
+      out[i] = p;
+      continue;
+    }
+
+    const x0 = Number.isFinite(p.x) ? (p.x as number) : 0;
+    const y0 = Number.isFinite(p.y) ? (p.y as number) : 0;
+    const r = Math.hypot(x0, y0);
+    const baseAngle = r > 0 ? Math.atan2(y0, x0) : 0;
+    const ang = baseAngle + rot;
+
+    let factor = Number.isFinite(p.factor) ? (p.factor as number) : 1;
+    factor = 1 + coverage * (factor - 1);
+
+    if (lifetime > 0) {
+      const w = spotLifecycleWeight({ t, lifetimeSec: lifetime, t0: tRef, phaseOffset: baseAngle });
+      factor = 1 + (factor - 1) * w;
+    }
+    factor = Math.max(0, factor);
+
+    if (p.shape === "ellipse") {
+      const baseShapeAngle = Number.isFinite(p.angle) ? (p.angle as number) : 0;
+      out[i] = { ...p, x: r * Math.cos(ang), y: r * Math.sin(ang), factor, angle: baseShapeAngle + rot };
+      continue;
+    }
+
+    out[i] = { ...p, x: r * Math.cos(ang), y: r * Math.sin(ang), factor };
+  }
+
+  return out;
+}
+
+export function spotFluxFactorFromPatches(params: {
+  rStar: number;
+  patches?: BrightnessPatch[];
+  gridRes?: number;
+}): number {
+  const rStar = params.rStar;
+  if (!isFinitePositive(rStar)) return 1;
+
+  const patches = sanitizeBrightnessPatches(params.patches);
+  if (patches.length === 0) return 1;
+
+  const gridRes = clampGridRes(params.gridRes, 220);
+  const { total } = integrateDiskMidpoint({
+    rStar,
+    occulters: [],
+    gridRes,
+    intensityAt: ({ x, y }) => {
+      const I = patchFactorAt(x, y, patches, "multiply");
+      return Number.isFinite(I) ? Math.max(0, I) : 1;
+    },
+    earlyExitFluxEps: 0,
+  });
+
+  const area = Math.PI * rStar * rStar;
+  if (!(Number.isFinite(total) && total > 0 && Number.isFinite(area) && area > 0)) return 1;
+  return clamp01(total / area);
 }
 
 // Backwards-compat: keep the old exported name if other modules import it as Occulter.

@@ -195,6 +195,18 @@ export function projectToSky(
 }
 
 /**
+ * Project using a precomputed sky basis.
+ * Useful when projecting many points against the same observer direction.
+ */
+export function projectToSkyWithBasis(r: Vec3, basis: SkyBasis): SkyPoint {
+  return {
+    x: vDot(r, basis.ex),
+    y: vDot(r, basis.ey),
+    z: vDot(r, basis.ez),
+  };
+}
+
+/**
  * Optional debug/self-test helper (does not run automatically).
  * Useful for unit tests without a test framework.
  */

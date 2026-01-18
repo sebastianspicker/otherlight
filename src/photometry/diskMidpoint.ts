@@ -34,7 +34,13 @@
 // - Keep dependency-light to avoid circular imports.
 
 import { clamp, isFiniteNonNegative, isFinitePositive } from "../core/units";
-import type { CircleOcculter } from "./occulterCircle";
+import { clampGridRes, type CircleOcculter } from "./occulterCircle";
+import {
+  type OcculterShape,
+  isPointOcculted,
+  precomputeOcculterShapes,
+  sanitizeOcculterShapes,
+} from "./occulterEllipse";
 
 export type IntensityAtFn = (args: { x: number; y: number; mu: number }) => number;
 
@@ -74,6 +80,26 @@ export type IntegrateDiskMidpointParams = {
   earlyExitFluxEps?: number;
 };
 
+export type IntegrateDiskMidpointShapesParams = {
+  /** Stellar radius (must be > 0). */
+  rStar: number;
+
+  /** Mixed-shape occulters (may be empty). */
+  occulters: OcculterShape[];
+
+  /**
+   * Resolution parameter ~ number of samples across diameter in y.
+   * The implementation uses nx = ny, but x spacing varies by chord length.
+   */
+  gridRes: number;
+
+  /** Local projected intensity I(x,y) up to an arbitrary scale. */
+  intensityAt: IntensityAtFn;
+
+  /** Optional early-exit tolerance for deep eclipses. */
+  earlyExitFluxEps?: number;
+};
+
 export type IntegrateDiskMidpointResult = {
   /** ∫_disk I(x,y) dA */
   total: number;
@@ -94,12 +120,6 @@ type OcculterRowGate = {
   dy: number;
   r2: number;
 };
-
-function sanitizeGridRes(gridRes: number): number {
-  // Keep a minimum to reduce aliasing artifacts; ensure finite and integer-ish.
-  const g = Number.isFinite(gridRes) ? gridRes : 0;
-  return Math.max(60, Math.floor(g));
-}
 
 function safeIntensity(v: unknown): number {
   // Defensive: treat NaN, infinities, and negative values as 0 contribution.
@@ -138,8 +158,8 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
     throw new Error("integrateDiskMidpoint: intensityAt must be a function.");
   }
 
-  // Unified minimum-grid policy: sanitizeGridRes already enforces a minimum.
-  const ny = sanitizeGridRes(params.gridRes);
+  // Unified minimum-grid policy: clampGridRes already enforces a minimum.
+  const ny = clampGridRes(params.gridRes, 60);
   const nx = ny;
 
   const rStar2 = rStar * rStar;
@@ -226,6 +246,82 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
   } // end for iy
 
   // Numerical hygiene.
+  if (!Number.isFinite(total) || total < 0) total = 0;
+  if (!Number.isFinite(blocked) || blocked < 0) blocked = 0;
+  blocked = clamp(blocked, 0, total);
+
+  return earlyExit ? { total, blocked, earlyExit } : { total, blocked };
+}
+
+/**
+ * Midpoint integration over a stellar disk with mixed-shape occulters.
+ * This is a generic fallback for ellipses/rings and other non-circular silhouettes.
+ */
+export function integrateDiskMidpointShapes(
+  params: IntegrateDiskMidpointShapesParams
+): IntegrateDiskMidpointResult {
+  const { intensityAt } = params;
+  const rStar = params.rStar;
+
+  if (!isFinitePositive(rStar)) {
+    throw new Error("integrateDiskMidpointShapes: rStar must be a positive finite number.");
+  }
+
+  if (typeof intensityAt !== "function") {
+    throw new Error("integrateDiskMidpointShapes: intensityAt must be a function.");
+  }
+
+  const ny = clampGridRes(params.gridRes, 60);
+  const nx = ny;
+
+  const rStar2 = rStar * rStar;
+  const dy = (2 * rStar) / ny;
+
+  const occ = precomputeOcculterShapes(sanitizeOcculterShapes(rStar, params.occulters));
+  const hasOcculters = occ.length > 0;
+  const earlyExitFluxEps = isFiniteNonNegative(params.earlyExitFluxEps) ? params.earlyExitFluxEps : 0;
+
+  let total = 0;
+  let blocked = 0;
+  let earlyExit = false;
+
+  for (let iy = 0; iy < ny; iy++) {
+    const y = -rStar + (iy + 0.5) * dy;
+    const y2 = y * y;
+
+    const xMaxStar = Math.sqrt(Math.max(0, rStar2 - y2));
+    if (!(xMaxStar > 0)) continue;
+
+    const dxCell = (2 * xMaxStar) / nx;
+    const cellArea = dxCell * dy;
+
+    for (let ix = 0; ix < nx; ix++) {
+      const x = -xMaxStar + (ix + 0.5) * dxCell;
+      const rho2 = x * x + y2;
+      const mu = Math.sqrt(Math.max(0, 1 - rho2 / rStar2));
+
+      const I = safeIntensity(intensityAt({ x, y, mu }));
+      if (I === 0) continue;
+
+      const dI = I * cellArea;
+      total += dI;
+
+      if (hasOcculters && isPointOcculted(x, y, occ)) {
+        blocked += dI;
+      }
+
+      if (earlyExitFluxEps > 0 && total > 0) {
+        const remainingFrac = (total - blocked) / total;
+        if (remainingFrac <= earlyExitFluxEps) {
+          earlyExit = true;
+          break;
+        }
+      }
+    }
+
+    if (earlyExit) break;
+  }
+
   if (!Number.isFinite(total) || total < 0) total = 0;
   if (!Number.isFinite(blocked) || blocked < 0) blocked = 0;
   blocked = clamp(blocked, 0, total);

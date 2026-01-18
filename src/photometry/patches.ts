@@ -11,6 +11,7 @@
 // - The returned factor multiplies the local specific intensity.
 
 import type { BrightnessPatch } from "../core/types";
+import { isFinitePositive } from "../core/units";
 
 export type PatchCombineMode = "multiply" | "max" | "overrideLast";
 
@@ -34,10 +35,6 @@ type PatchPreEllipse = {
 };
 
 export type PatchPre = PatchPreCircle | PatchPreEllipse;
-
-function isFinitePositive(x: number): boolean {
-  return Number.isFinite(x) && x > 0;
-}
 
 /**
  * Sanitize patches into a precomputed representation.

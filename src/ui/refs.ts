@@ -43,9 +43,16 @@ export type UiRefs = {
   ldEnabled: HTMLInputElement;
   ldU1: HTMLInputElement;
   ldU2: HTMLInputElement;
+  ldBandpass: HTMLInputElement;
+  ldBands: HTMLInputElement;
 
   // Brightness patches
   patchesEnabled: HTMLInputElement;
+  spotEvolutionEnabled: HTMLInputElement;
+  spotRotationPeriod: HTMLInputElement;
+  spotCoverage: HTMLInputElement;
+  spotLifetime: HTMLInputElement;
+  spotDriftRate: HTMLInputElement;
 
   // Patch 1 circle
   p1x: HTMLInputElement;
@@ -77,6 +84,20 @@ export type UiRefs = {
   planetThermOffset: HTMLInputElement;
   planetLambertian: HTMLInputElement;
   planetConstant: HTMLInputElement;
+  planetThermalInertiaEnabled: HTMLInputElement;
+  planetAlbedo: HTMLInputElement;
+  planetEmissivity: HTMLInputElement;
+  planetThermalTimescale: HTMLInputElement;
+  planetRedistribution: HTMLInputElement;
+
+  // Planet shape / rings
+  planetOblateEnabled: HTMLInputElement;
+  planetOblateness: HTMLInputElement;
+  planetRingsEnabled: HTMLInputElement;
+  planetRingInner: HTMLInputElement;
+  planetRingOuter: HTMLInputElement;
+  planetRingInc: HTMLInputElement;
+  planetRingAngle: HTMLInputElement;
 
   // Forward scattering
   fsEnabled: HTMLInputElement;
@@ -92,6 +113,8 @@ export type UiRefs = {
   atmR0: HTMLInputElement;
   atmH: HTMLInputElement;
   atmTau0: HTMLInputElement;
+  atmLambdaNm: HTMLInputElement;
+  atmTauScale: HTMLInputElement;
 
   // MOON core + mass
   moonEnabled: HTMLInputElement;
@@ -107,6 +130,20 @@ export type UiRefs = {
   moonReflAmp: HTMLInputElement;
   moonThermAmp: HTMLInputElement;
   moonLambertian: HTMLInputElement;
+  moonThermalInertiaEnabled: HTMLInputElement;
+  moonAlbedo: HTMLInputElement;
+  moonEmissivity: HTMLInputElement;
+  moonThermalTimescale: HTMLInputElement;
+  moonRedistribution: HTMLInputElement;
+
+  // Moon shape / rings
+  moonOblateEnabled: HTMLInputElement;
+  moonOblateness: HTMLInputElement;
+  moonRingsEnabled: HTMLInputElement;
+  moonRingInner: HTMLInputElement;
+  moonRingOuter: HTMLInputElement;
+  moonRingInc: HTMLInputElement;
+  moonRingAngle: HTMLInputElement;
 
   // Observation measurement / smearing
   smearEnabled: HTMLInputElement;
@@ -135,6 +172,35 @@ export type UiRefs = {
   exoMoonIncDot: HTMLInputElement;
   exoMoonOmegaSmallDot: HTMLInputElement;
   exoImpactYDot: HTMLInputElement;
+
+  // N-body dynamics
+  nbodyEnabled: HTMLInputElement;
+  nbodyMuStar: HTMLInputElement;
+  nbodyMuPlanet: HTMLInputElement;
+  nbodyMuMoon: HTMLInputElement;
+  nbodyDtMax: HTMLInputElement;
+  nbodySoftening: HTMLInputElement;
+  pert1Enabled: HTMLInputElement;
+  pert1Mu: HTMLInputElement;
+  pert1A: HTMLInputElement;
+  pert1E: HTMLInputElement;
+  pert1Inc: HTMLInputElement;
+  pert1Period: HTMLInputElement;
+  pert2Enabled: HTMLInputElement;
+  pert2Mu: HTMLInputElement;
+  pert2A: HTMLInputElement;
+  pert2E: HTMLInputElement;
+  pert2Inc: HTMLInputElement;
+  pert2Period: HTMLInputElement;
+
+  // Relativity (LTTE/GR)
+  relEnabled: HTMLInputElement;
+  relLTTE: HTMLInputElement;
+  relShapiro: HTMLInputElement;
+  relGR: HTMLInputElement;
+  relC: HTMLInputElement;
+  relPlanetPrec: HTMLInputElement;
+  relMoonPrec: HTMLInputElement;
 };
 
 export const uiRefs: UiRefs = {
@@ -176,9 +242,16 @@ export const uiRefs: UiRefs = {
   ldEnabled: mustGetAs("ldEnabled", HTMLInputElement),
   ldU1: mustGetAs("ldU1", HTMLInputElement),
   ldU2: mustGetAs("ldU2", HTMLInputElement),
+  ldBandpass: mustGetAs("ldBandpass", HTMLInputElement),
+  ldBands: mustGetAs("ldBands", HTMLInputElement),
 
   // Brightness patches
   patchesEnabled: mustGetAs("patchesEnabled", HTMLInputElement),
+  spotEvolutionEnabled: mustGetAs("spotEvolutionEnabled", HTMLInputElement),
+  spotRotationPeriod: mustGetAs("spotRotationPeriod", HTMLInputElement),
+  spotCoverage: mustGetAs("spotCoverage", HTMLInputElement),
+  spotLifetime: mustGetAs("spotLifetime", HTMLInputElement),
+  spotDriftRate: mustGetAs("spotDriftRate", HTMLInputElement),
 
   // Patch 1 circle
   p1x: mustGetAs("p1x", HTMLInputElement),
@@ -210,6 +283,20 @@ export const uiRefs: UiRefs = {
   planetThermOffset: mustGetAs("planetThermOffset", HTMLInputElement),
   planetLambertian: mustGetAs("planetLambertian", HTMLInputElement),
   planetConstant: mustGetAs("planetConstant", HTMLInputElement),
+  planetThermalInertiaEnabled: mustGetAs("planetThermalInertiaEnabled", HTMLInputElement),
+  planetAlbedo: mustGetAs("planetAlbedo", HTMLInputElement),
+  planetEmissivity: mustGetAs("planetEmissivity", HTMLInputElement),
+  planetThermalTimescale: mustGetAs("planetThermalTimescale", HTMLInputElement),
+  planetRedistribution: mustGetAs("planetRedistribution", HTMLInputElement),
+
+  // Planet shape / rings
+  planetOblateEnabled: mustGetAs("planetOblateEnabled", HTMLInputElement),
+  planetOblateness: mustGetAs("planetOblateness", HTMLInputElement),
+  planetRingsEnabled: mustGetAs("planetRingsEnabled", HTMLInputElement),
+  planetRingInner: mustGetAs("planetRingInner", HTMLInputElement),
+  planetRingOuter: mustGetAs("planetRingOuter", HTMLInputElement),
+  planetRingInc: mustGetAs("planetRingInc", HTMLInputElement),
+  planetRingAngle: mustGetAs("planetRingAngle", HTMLInputElement),
 
   // Forward scattering
   fsEnabled: mustGetAs("fsEnabled", HTMLInputElement),
@@ -225,6 +312,8 @@ export const uiRefs: UiRefs = {
   atmR0: mustGetAs("atmR0", HTMLInputElement),
   atmH: mustGetAs("atmH", HTMLInputElement),
   atmTau0: mustGetAs("atmTau0", HTMLInputElement),
+  atmLambdaNm: mustGetAs("atmLambdaNm", HTMLInputElement),
+  atmTauScale: mustGetAs("atmTauScale", HTMLInputElement),
 
   // MOON core + mass
   moonEnabled: mustGetAs("moonEnabled", HTMLInputElement),
@@ -240,6 +329,20 @@ export const uiRefs: UiRefs = {
   moonReflAmp: mustGetAs("moonReflAmp", HTMLInputElement),
   moonThermAmp: mustGetAs("moonThermAmp", HTMLInputElement),
   moonLambertian: mustGetAs("moonLambertian", HTMLInputElement),
+  moonThermalInertiaEnabled: mustGetAs("moonThermalInertiaEnabled", HTMLInputElement),
+  moonAlbedo: mustGetAs("moonAlbedo", HTMLInputElement),
+  moonEmissivity: mustGetAs("moonEmissivity", HTMLInputElement),
+  moonThermalTimescale: mustGetAs("moonThermalTimescale", HTMLInputElement),
+  moonRedistribution: mustGetAs("moonRedistribution", HTMLInputElement),
+
+  // Moon shape / rings
+  moonOblateEnabled: mustGetAs("moonOblateEnabled", HTMLInputElement),
+  moonOblateness: mustGetAs("moonOblateness", HTMLInputElement),
+  moonRingsEnabled: mustGetAs("moonRingsEnabled", HTMLInputElement),
+  moonRingInner: mustGetAs("moonRingInner", HTMLInputElement),
+  moonRingOuter: mustGetAs("moonRingOuter", HTMLInputElement),
+  moonRingInc: mustGetAs("moonRingInc", HTMLInputElement),
+  moonRingAngle: mustGetAs("moonRingAngle", HTMLInputElement),
 
   // Observation measurement / smearing
   smearEnabled: mustGetAs("smearEnabled", HTMLInputElement),
@@ -268,4 +371,33 @@ export const uiRefs: UiRefs = {
   exoMoonIncDot: mustGetAs("exoMoonIncDot", HTMLInputElement),
   exoMoonOmegaSmallDot: mustGetAs("exoMoonOmegaSmallDot", HTMLInputElement),
   exoImpactYDot: mustGetAs("exoImpactYDot", HTMLInputElement),
+
+  // N-body dynamics
+  nbodyEnabled: mustGetAs("nbodyEnabled", HTMLInputElement),
+  nbodyMuStar: mustGetAs("nbodyMuStar", HTMLInputElement),
+  nbodyMuPlanet: mustGetAs("nbodyMuPlanet", HTMLInputElement),
+  nbodyMuMoon: mustGetAs("nbodyMuMoon", HTMLInputElement),
+  nbodyDtMax: mustGetAs("nbodyDtMax", HTMLInputElement),
+  nbodySoftening: mustGetAs("nbodySoftening", HTMLInputElement),
+  pert1Enabled: mustGetAs("pert1Enabled", HTMLInputElement),
+  pert1Mu: mustGetAs("pert1Mu", HTMLInputElement),
+  pert1A: mustGetAs("pert1A", HTMLInputElement),
+  pert1E: mustGetAs("pert1E", HTMLInputElement),
+  pert1Inc: mustGetAs("pert1Inc", HTMLInputElement),
+  pert1Period: mustGetAs("pert1Period", HTMLInputElement),
+  pert2Enabled: mustGetAs("pert2Enabled", HTMLInputElement),
+  pert2Mu: mustGetAs("pert2Mu", HTMLInputElement),
+  pert2A: mustGetAs("pert2A", HTMLInputElement),
+  pert2E: mustGetAs("pert2E", HTMLInputElement),
+  pert2Inc: mustGetAs("pert2Inc", HTMLInputElement),
+  pert2Period: mustGetAs("pert2Period", HTMLInputElement),
+
+  // Relativity (LTTE/GR)
+  relEnabled: mustGetAs("relEnabled", HTMLInputElement),
+  relLTTE: mustGetAs("relLTTE", HTMLInputElement),
+  relShapiro: mustGetAs("relShapiro", HTMLInputElement),
+  relGR: mustGetAs("relGR", HTMLInputElement),
+  relC: mustGetAs("relC", HTMLInputElement),
+  relPlanetPrec: mustGetAs("relPlanetPrec", HTMLInputElement),
+  relMoonPrec: mustGetAs("relMoonPrec", HTMLInputElement),
 };

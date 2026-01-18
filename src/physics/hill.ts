@@ -157,7 +157,6 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
 
   const mStar = p.star?.m;
   const mPlanet = p.planet?.m;
-  const mMoon = p.moon?.m;
 
   // Basic numeric sanity (non-throwing).
   if (!Number.isFinite(aP) || aP <= 0 || !Number.isFinite(eP) || eP < 0 || eP >= 1) {
@@ -192,15 +191,6 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
       severity: "info",
       code: "HILL_NO_PLANET_MASS",
       message: "Planet mass is not set; Hill-radius stability warnings cannot be computed.",
-    });
-    return out;
-  }
-
-  if (!(typeof mMoon === "number" && Number.isFinite(mMoon) && mMoon > 0)) {
-    out.push({
-      severity: "info",
-      code: "HILL_NO_MOON_MASS",
-      message: "Moon mass is not set; Hill-radius stability warnings cannot be computed.",
     });
     return out;
   }
@@ -263,4 +253,28 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   }
 
   return out;
+}
+
+/* -----------------------------
+ * Minimal built-in tests
+ * ----------------------------- */
+
+function assert(cond: unknown, msg: string): void {
+  if (!cond) throw new Error(`hill self-test failed: ${msg}`);
+}
+
+function approxEq(a: number, b: number, eps = 1e-12): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+export function runHillSelfTests(): void {
+  const r = 10;
+  const mSecondary = 1;
+  const mPrimary = 3;
+  const expected = r * Math.cbrt(mSecondary / (3 * (mPrimary + mSecondary)));
+  const RH = hillRadiusAtDistance(r, mSecondary, mPrimary);
+  assert(approxEq(RH, expected, 1e-12), "hillRadiusAtDistance mismatch.");
+
+  const aMax = maxStableProgradeMoonAxisRuleOfThumb(2, 0.5);
+  assert(approxEq(aMax, 1, 1e-12), "rule-of-thumb prograde limit mismatch.");
 }

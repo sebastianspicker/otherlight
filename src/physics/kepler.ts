@@ -216,6 +216,24 @@ export function solveKeplerE(
   return wrapToPi(E);
 }
 
+/** Mean motion n = 2π / P [rad/s]. */
+export function meanMotionFromPeriod(period: number): number {
+  if (!Number.isFinite(period) || period <= 0) {
+    throw new Error("meanMotionFromPeriod: period must be > 0 and finite.");
+  }
+  return (2 * Math.PI) / period;
+}
+
+/** Kepler's third law: mu = n^2 * a^3 (for a two-body orbit). */
+export function muFromPeriodAndA(period: number, a: number): number {
+  if (!Number.isFinite(a) || a <= 0) {
+    throw new Error("muFromPeriodAndA: a must be > 0 and finite.");
+  }
+  const n = meanMotionFromPeriod(period);
+  const mu = n * n * a * a * a;
+  return Number.isFinite(mu) ? mu : NaN;
+}
+
 /**
  * Convert eccentric anomaly E -> true anomaly ν for elliptic orbits (quadrant safe).
  */
@@ -253,4 +271,38 @@ export function radiusFromE(a: number, e: number, E: number): number {
   }
 
   return a * (1 - e * Math.cos(E));
+}
+
+/* -----------------------------
+ * Minimal built-in tests
+ * ----------------------------- */
+
+function assert(cond: unknown, msg: string): void {
+  if (!cond) throw new Error(`kepler self-test failed: ${msg}`);
+}
+
+function approxEq(a: number, b: number, eps = 1e-10): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+export function runKeplerSelfTests(): void {
+  // e=0 => E=M wrapped.
+  const M0 = 1.234;
+  const E0 = solveKeplerE(M0, 0);
+  assert(approxEq(E0, wrapToPi(M0), 1e-12), "e=0 should give E=M.");
+
+  // Generic residual check.
+  const M1 = 2.1;
+  const e1 = 0.3;
+  const E1 = solveKeplerE(M1, e1, { maxIters: 60, tol: 1e-12, strict: true });
+  const f = E1 - e1 * Math.sin(E1) - wrapToPi(M1);
+  assert(Math.abs(f) < 1e-10, "Kepler residual should be small.");
+
+  // True anomaly for e=0 reduces to E (wrapped).
+  const nu0 = trueAnomalyFromE(E0, 0);
+  assert(approxEq(nu0, wrapToPi(E0), 1e-12), "nu should equal E for e=0.");
+
+  // Radius sanity.
+  const r = radiusFromE(2, 0.5, 0);
+  assert(approxEq(r, 1, 1e-12), "radiusFromE should match a(1-e) at E=0.");
 }

@@ -16,57 +16,15 @@
 // - Returns a small additive term, usually |f| << 1.
 // - Applies a configurable stability clamp (default ±1e3) purely as a safety guard.
 
-import type { OrbitElements } from "../core/types";
-import { clamp, wrapTo2Pi } from "../core/units";
+import type {
+  OrbitElements,
+  StellarVariabilityParams,
+  StellarVariabilityPhaseModel,
+} from "../core/types";
+import { clamp, isFiniteNumber, wrapTo2Pi } from "../core/units";
 import { solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
 
-export type StellarVariabilityPhaseModel = "linear-period" | "true-anomaly";
-
-export type StellarVariabilityParams = {
-  enabled?: boolean;
-
-  /**
-   * Doppler beaming amplitude in stellar units.
-   * Model: +beamingAmp * sin(phi + beamingOffset)
-   */
-  beamingAmp?: number;
-
-  /**
-   * Ellipsoidal variation amplitude in stellar units.
-   * Model: +ellipsoidalAmp * cos(2*(phi + ellipsoidalOffset))
-   */
-  ellipsoidalAmp?: number;
-
-  /** Optional phase offset for beaming term [rad]. */
-  beamingOffset?: number;
-
-  /** Optional phase offset for ellipsoidal term [rad]. */
-  ellipsoidalOffset?: number;
-
-  /**
-   * Optional constant additive component in stellar units.
-   * Useful as a floor term.
-   */
-  constant?: number;
-
-  /**
-   * Phase model selection.
-   * - "linear-period" (default)
-   * - "true-anomaly"
-   */
-  phaseModel?: StellarVariabilityPhaseModel;
-
-  /**
-   * Stability clamp bounds for the returned additive term (NOT physical realism).
-   * If omitted, defaults to [-1e3, +1e3].
-   */
-  clampMin?: number;
-  clampMax?: number;
-};
-
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
+export type { StellarVariabilityParams, StellarVariabilityPhaseModel } from "../core/types";
 
 function finiteOrZero(x: unknown): number {
   return isFiniteNumber(x) ? x : 0;
@@ -115,6 +73,28 @@ export function orbitalPhaseFromPeriod(params: {
 
   const phi = (2 * Math.PI * (t - t0)) / period;
   return wrapTo2Pi(phi);
+}
+
+/**
+ * Smooth periodic lifecycle weight in [0,1] for spot evolution.
+ * If lifetimeSec <= 0 or invalid, returns 1 (no fading).
+ */
+export function spotLifecycleWeight(params: {
+  t: number;
+  lifetimeSec: number;
+  t0?: number;
+  phaseOffset?: number;
+}): number {
+  const t = params.t;
+  const lifetime = params.lifetimeSec;
+  if (!Number.isFinite(t) || !Number.isFinite(lifetime) || lifetime <= 0) return 1;
+
+  const t0 = isFiniteNumber(params.t0) ? (params.t0 as number) : 0;
+  const phaseOffset = isFiniteNumber(params.phaseOffset) ? (params.phaseOffset as number) : 0;
+
+  const phi = wrapTo2Pi((2 * Math.PI * (t - t0)) / lifetime + phaseOffset);
+  const w = 0.5 - 0.5 * Math.cos(phi);
+  return Number.isFinite(w) ? clamp(w, 0, 1) : 1;
 }
 
 /**

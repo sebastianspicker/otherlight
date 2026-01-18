@@ -2,18 +2,29 @@
 
 import type {
   ExomoonTimingShapeParams,
+  OrbitElements,
   SkyPoint,
   SystemParams,
 } from "../core/types";
-import { toFiniteNumber } from "../core/units";
+import { isFinitePositive, toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
-import { vAdd, vAddScaled } from "../physics/vec3";
+import { vAdd, vAddScaled, vSub } from "../physics/vec3";
 import { buildSkyBasis, projectToSky } from "../physics/frames";
 import { trySplitBarycentricPair } from "../physics/barycenter";
 import { applyOrientationEvolution } from "../physics/exomoonTiming";
-import { posFromElements, resolveOrbitElements } from "./orbits";
+import {
+  applyApsidalPrecession,
+  normalizeRelativityParams,
+  resolveGrPrecessionPerOrbit,
+  solveLightTimeCorrectedTime,
+  type NormalizedRelativityParams,
+} from "../physics/relativity";
+import { muFromPeriodAndA } from "../physics/kepler";
+import { posFromResolvedElements, resolveOrbitElements } from "./orbits";
+import { getNBodyStateAt, isNBodyEnabled } from "./dynamics";
 
 export type BodyKinematics = {
+  planetOrbit: OrbitElements;
   rBary: Vec3;
   rPlanetAbs: Vec3;
   rMoonAbs?: Vec3;
@@ -61,7 +72,8 @@ export function getMoonStateAt(
   params: SystemParams,
   t: number,
   observerDir: Vec3,
-  rBaryOverride?: Vec3
+  rBaryOverride?: Vec3,
+  relativity?: NormalizedRelativityParams
 ): MoonStateAt | undefined {
   if (!params.moon) return undefined;
   if (!Number.isFinite(t))
@@ -79,7 +91,11 @@ export function getMoonStateAt(
   // OPTIMIZATION: Use rBaryOverride if provided to avoid re-calculating Kepler orbit.
   const rBary =
     rBaryOverride ??
-    posFromElements(params.planet.orbit, t, "planet.orbit");
+    posFromResolvedElements(
+      resolveOrbitElements(params.planet.orbit, t, "planet.orbit"),
+      t,
+      "planet.orbit"
+    );
 
   const moonOrbitBaseEl = resolveOrbitElements(
     params.moon.orbitAroundPlanet,
@@ -101,11 +117,19 @@ export function getMoonStateAt(
       })
     : moonOrbitBaseEl;
 
-  const rMoonRel = posFromElements(
-    moonOrbitEvolvedEl,
-    t,
-    "moon.orbitAroundPlanet"
-  );
+  const grOn = Boolean(relativity?.enabled && relativity?.grPrecession);
+  const moonPrec = grOn
+    ? resolveGrPrecessionPerOrbit({
+        orbit: moonOrbitEvolvedEl,
+        c: relativity!.c,
+        override: relativity!.moonPrecessionPerOrbit,
+      })
+    : 0;
+  const moonOrbitRel = grOn
+    ? applyApsidalPrecession(moonOrbitEvolvedEl, t, moonPrec)
+    : moonOrbitEvolvedEl;
+
+  const rMoonRel = posFromResolvedElements(moonOrbitRel, t, "moon.orbitAroundPlanet");
 
   const split = trySplitBarycentricPair({
     rBary,
@@ -138,23 +162,159 @@ export function computeBodyKinematics(
   if (!Number.isFinite(t))
     throw new Error("computeBodyKinematics: t must be finite.");
 
+  const nbodyActive = isNBodyEnabled(params);
+  const rel = normalizeRelativityParams(params.dynamics?.relativity);
+
   // Base: planet orbit (or barycenter orbit if masses exist and splitting is possible).
-  const rBary = posFromElements(params.planet.orbit, t, "planet.orbit");
+  let planetOrbit = resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
+  const rBary = posFromResolvedElements(planetOrbit, t, "planet.orbit");
+
+  const muStarRel =
+    nbodyActive && isFinitePositive(params.dynamics?.nbodyPlanetMoon?.muStar)
+      ? (params.dynamics!.nbodyPlanetMoon!.muStar as number)
+      : (() => {
+          try {
+            const mu = muFromPeriodAndA(planetOrbit.period, planetOrbit.a);
+            return Number.isFinite(mu) && mu > 0 ? mu : undefined;
+          } catch {
+            return undefined;
+          }
+        })();
+
+  const shapiroParams =
+    rel.enabled && rel.shapiro && isFinitePositive(muStarRel)
+      ? { enabled: true, mu: muStarRel as number, minImpact: rel.shapiroMinImpact }
+      : undefined;
 
   let rPlanetAbs: Vec3 = rBary;
   let rMoonAbs: Vec3 | undefined;
   let moonSky: SkyPoint | undefined;
 
-  // Pass rBary to avoid re-calculation inside getMoonStateAt
-  const moonState = getMoonStateAt(params, t, observerDir, rBary);
+  let rBaryOut = rBary;
 
-  if (moonState) {
-    rPlanetAbs = moonState.rPlanetAbs;
-    rMoonAbs = moonState.rMoonAbs;
-    moonSky = moonState.moonSky;
+  if (nbodyActive) {
+    const ltteOn = rel.enabled && rel.ltte;
+    const tPlanet = ltteOn
+      ? solveLightTimeCorrectedTime({
+          tObs: t,
+          rAtTime: (ti) => {
+            const nb = getNBodyStateAt(params, ti);
+            return nb ? vSub(nb.state.rP, nb.state.rS) : rBary;
+          },
+          observerDir,
+          c: rel.c,
+          shapiro: shapiroParams,
+          maxIters: rel.ltteIters,
+          tolSec: rel.ltteTolSec,
+        })
+      : t;
+    const tMoon = ltteOn && params.moon
+      ? solveLightTimeCorrectedTime({
+          tObs: t,
+          rAtTime: (ti) => {
+            const nb = getNBodyStateAt(params, ti);
+            return nb ? vSub(nb.state.rM, nb.state.rS) : rBary;
+          },
+          observerDir,
+          c: rel.c,
+          shapiro: shapiroParams,
+          maxIters: rel.ltteIters,
+          tolSec: rel.ltteTolSec,
+        })
+      : t;
+
+    planetOrbit = resolveOrbitElements(params.planet.orbit, tPlanet, "planet.orbit");
+
+    const nbodyPlanet = getNBodyStateAt(params, tPlanet);
+    if (nbodyPlanet) {
+      rBaryOut = nbodyPlanet.rBary;
+      rPlanetAbs = vSub(nbodyPlanet.state.rP, nbodyPlanet.state.rS);
+    }
+
+    if (params.moon) {
+      const nbodyMoon = ltteOn && tMoon !== tPlanet ? getNBodyStateAt(params, tMoon) : nbodyPlanet;
+      if (nbodyMoon) {
+        rMoonAbs = vSub(nbodyMoon.state.rM, nbodyMoon.state.rS);
+        moonSky = rMoonAbs ? projectToSky(rMoonAbs, observerDir) : undefined;
+      }
+    }
+  } else {
+    const grOn = rel.enabled && rel.grPrecession;
+    const ltteOn = rel.enabled && rel.ltte;
+
+    const planetOrbitAt = (ti: number): OrbitElements => {
+      const base = resolveOrbitElements(params.planet.orbit, ti, "planet.orbit");
+      if (!grOn) return base;
+      const prec = resolveGrPrecessionPerOrbit({
+        orbit: base,
+        c: rel.c,
+        override: rel.planetPrecessionPerOrbit,
+      });
+      return applyApsidalPrecession(base, ti, prec);
+    };
+
+    const rBaryAt = (ti: number): Vec3 => {
+      const el = planetOrbitAt(ti);
+      return posFromResolvedElements(el, ti, "planet.orbit");
+    };
+
+    const planetAbsAt = (ti: number): Vec3 => {
+      const rB = rBaryAt(ti);
+      const moonState = getMoonStateAt(params, ti, observerDir, rB, rel);
+      return moonState ? moonState.rPlanetAbs : rB;
+    };
+
+    const moonAbsAt = (ti: number): Vec3 => {
+      const rB = rBaryAt(ti);
+      const moonState = getMoonStateAt(params, ti, observerDir, rB, rel);
+      return moonState?.rMoonAbs ?? rB;
+    };
+
+    const tPlanet = ltteOn
+      ? solveLightTimeCorrectedTime({
+          tObs: t,
+          rAtTime: planetAbsAt,
+          observerDir,
+          c: rel.c,
+          shapiro: shapiroParams,
+          maxIters: rel.ltteIters,
+          tolSec: rel.ltteTolSec,
+        })
+      : t;
+    const tMoon = ltteOn && params.moon
+      ? solveLightTimeCorrectedTime({
+          tObs: t,
+          rAtTime: moonAbsAt,
+          observerDir,
+          c: rel.c,
+          shapiro: shapiroParams,
+          maxIters: rel.ltteIters,
+          tolSec: rel.ltteTolSec,
+        })
+      : t;
+
+    planetOrbit = planetOrbitAt(tPlanet);
+    const rBaryPlanet = rBaryAt(tPlanet);
+    rBaryOut = rBaryPlanet;
+
+    const moonStatePlanet = getMoonStateAt(params, tPlanet, observerDir, rBaryPlanet, rel);
+    if (moonStatePlanet) {
+      rPlanetAbs = moonStatePlanet.rPlanetAbs;
+    } else {
+      rPlanetAbs = rBaryPlanet;
+    }
+
+    if (params.moon) {
+      const rBaryMoon = rBaryAt(tMoon);
+      const moonState = getMoonStateAt(params, tMoon, observerDir, rBaryMoon, rel);
+      if (moonState) {
+        rMoonAbs = moonState.rMoonAbs;
+        moonSky = moonState.moonSky;
+      }
+    }
   }
 
   const planetSky = projectToSky(rPlanetAbs, observerDir);
 
-  return { rBary, rPlanetAbs, rMoonAbs, planetSky, moonSky };
+  return { planetOrbit, rBary: rBaryOut, rPlanetAbs, rMoonAbs, planetSky, moonSky };
 }

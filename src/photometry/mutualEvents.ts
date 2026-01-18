@@ -26,14 +26,9 @@
 // Compatibility:
 // - Existing exports keep names and behavior; helper aliases are provided.
 
-import { clamp, clamp01 } from "../core/units";
+import { clamp, clamp01, isFinitePositive } from "../core/units";
 
 export type SkyPoint3 = { x: number; y: number; z: number };
-
-/** Local finite-positive check (avoid pulling other modules). */
-function isFinitePositive(x: number): boolean {
-  return Number.isFinite(x) && x > 0;
-}
 
 /** Safe acos with clamped argument for numeric stability near tangency. */
 function safeAcos(x: number): number {
