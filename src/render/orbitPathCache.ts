@@ -15,6 +15,7 @@
 //   purpose so no simulation/test code accidentally depends on "closed sampling".
 
 import type { OrbitElements, OrbitElementsProvider, SystemParams } from "../core/types";
+import { toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { sampleMoonOrbitSkyAbsolute, sampleOrbitSky } from "../sim/sim";
 
@@ -67,12 +68,6 @@ type CachedPath = {
   pts: OrbitPathPoint2D[];
 };
 
-function finitePositive(n: unknown, fallback: number): number {
-  const x = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(x) || x <= 0) return fallback;
-  return x;
-}
-
 function clampInt(n: number, lo: number, hi: number): number {
   const nn = Math.floor(n);
   return Math.max(lo, Math.min(hi, nn));
@@ -80,7 +75,7 @@ function clampInt(n: number, lo: number, hi: number): number {
 
 function normalizePhase01(t: number, t0: number, period: number): number {
   // Robust periodic mapping into [0,1).
-  const P = finitePositive(period, 1);
+  const P = toFinitePositiveOr(period, 1);
   const x = (t - t0) / P;
 
   // JS modulo for negatives is negative -> fix into [0,1)
@@ -149,7 +144,7 @@ export class OrbitPathCache {
 
   constructor(opts: OrbitPathCacheOptions = {}) {
     this.opts = {
-      phaseBinsPerOrbit: finitePositive(opts.phaseBinsPerOrbit, 180),
+      phaseBinsPerOrbit: toFinitePositiveOr(opts.phaseBinsPerOrbit, 180),
       observerDirDecimals: clampInt(opts.observerDirDecimals ?? 6, 0, 12),
       defaultPlanetSamples: clampInt(opts.defaultPlanetSamples ?? 360, 32, 4096),
       defaultMoonSamples: clampInt(opts.defaultMoonSamples ?? 240, 32, 4096),
@@ -182,7 +177,7 @@ export class OrbitPathCache {
 
     // Determine quantized phase bin for caching.
     const elNow = orbitElementsAt(params.planet.orbit, t);
-    const period = finitePositive(elNow.period, 1);
+    const period = toFinitePositiveOr(elNow.period, 1);
     const bins = clampInt(this.opts.phaseBinsPerOrbit, 8, 2000);
 
     const phase01 = normalizePhase01(t, Number.isFinite(elNow.t0) ? elNow.t0 : 0, period);
@@ -236,7 +231,7 @@ export class OrbitPathCache {
     const pEl = orbitElementsAt(params.planet.orbit, t);
     const mEl = orbitElementsAt(params.moon.orbitAroundPlanet, t);
 
-    const moonPeriod = finitePositive(mEl.period, finitePositive(pEl.period, 1));
+    const moonPeriod = toFinitePositiveOr(mEl.period, toFinitePositiveOr(pEl.period, 1));
     const bins = clampInt(this.opts.phaseBinsPerOrbit, 8, 2000);
 
     const phase01 = normalizePhase01(t, Number.isFinite(mEl.t0) ? mEl.t0 : 0, moonPeriod);

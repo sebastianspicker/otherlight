@@ -17,6 +17,7 @@
 // - photometry/limbDarkening.ts implements the intensity laws and optional plausibility validation. [project-local]
 
 import type { BrightnessPatch, LimbDarkeningLaw, SystemParams } from "../core/types";
+import { clamp, toFinitePositiveOr } from "../core/units";
 import { intensityNonNegative, resolveAndValidateLimbDarkening } from "../photometry/limbDarkening";
 
 export type StarDiskRenderOptions = {
@@ -110,16 +111,6 @@ export class StarDiskCache {
   }
 }
 
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function finitePositive(n: unknown, fallback: number): number {
-  const x = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(x) || x <= 0) return fallback;
-  return x;
-}
-
 function parseHexColor(hex: string, fallback: [number, number, number]): [number, number, number] {
   if (typeof hex !== "string") return fallback;
   const s = hex.trim();
@@ -200,9 +191,9 @@ function buildLimbDarkeningStops(params: {
   const Icenter = Math.max(1e-12, intensityNonNegative(1, law as any));
   const invIcenter = 1 / Icenter;
 
-  const gamma = finitePositive(params.gamma, 2.2);
+  const gamma = toFinitePositiveOr(params.gamma, 2.2);
   const invGamma = 1 / gamma;
-  const Imax = Math.max(0.05, finitePositive(params.maxDisplayIntensity, 1.4));
+  const Imax = Math.max(0.05, toFinitePositiveOr(params.maxDisplayIntensity, 1.4));
 
   const stops: Array<{ pos: number; color: string }> = [];
 
@@ -333,16 +324,16 @@ function drawBrightnessPatches(params: {
  */
 export function drawStarDisk(ctx: CanvasRenderingContext2D, params: SystemParams, opts: StarDiskRenderOptions): void {
   const centerPx = opts.centerPx;
-  const pixelsPerUnit = finitePositive(opts.pixelsPerUnit, 1);
+  const pixelsPerUnit = toFinitePositiveOr(opts.pixelsPerUnit, 1);
 
-  const rStar = finitePositive(params.star?.r, 1);
+  const rStar = toFinitePositiveOr(params.star?.r, 1);
   const Rpx = rStar * pixelsPerUnit;
 
   const baseRGB = parseHexColor(opts.baseColor ?? "#f2a33a", [242, 163, 58]);
   const highlightRGB = parseHexColor(opts.highlightColor ?? "#ffe1a6", [255, 225, 166]);
 
-  const gamma = finitePositive(opts.gamma, 2.2);
-  const maxDisplayIntensity = finitePositive(opts.maxDisplayIntensity, 1.4);
+  const gamma = toFinitePositiveOr(opts.gamma, 2.2);
+  const maxDisplayIntensity = toFinitePositiveOr(opts.maxDisplayIntensity, 1.4);
 
   const useLD = opts.useLimbDarkening ?? true;
   const law = useLD ? resolveLawFromParams(params) : undefined;
@@ -399,7 +390,7 @@ export function drawStarDisk(ctx: CanvasRenderingContext2D, params: SystemParams
   // Outline
   if (opts.drawOutline ?? true) {
     ctx.strokeStyle = opts.outlineStyle?.strokeStyle ?? "rgba(0,0,0,0.25)";
-    ctx.lineWidth = finitePositive(opts.outlineStyle?.lineWidth, 1);
+    ctx.lineWidth = toFinitePositiveOr(opts.outlineStyle?.lineWidth, 1);
     ctx.stroke();
   }
 
@@ -410,7 +401,7 @@ export function drawStarDisk(ctx: CanvasRenderingContext2D, params: SystemParams
  * Convenience helper: compute star radius in CSS pixels.
  */
 export function starRadiusPx(params: SystemParams, pixelsPerUnit: number): number {
-  const ppu = finitePositive(pixelsPerUnit, 1);
-  const rStar = finitePositive(params.star?.r, 1);
+  const ppu = toFinitePositiveOr(pixelsPerUnit, 1);
+  const rStar = toFinitePositiveOr(params.star?.r, 1);
   return rStar * ppu;
 }

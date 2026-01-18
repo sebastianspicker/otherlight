@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Transit-Exomoon-Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./style.css" />
   </head>
 
@@ -114,6 +120,30 @@
                         <label>u2 <input id="ldU2" type="number" step="0.01" value="0.25" /></label>
                       </div>
 
+                      <details>
+                        <summary>Bandpass / Multi-band LD</summary>
+                        <div class="grid">
+                          <label>
+                            bandpass
+                            <input id="ldBandpass" type="text" list="ldBandpassList" placeholder="e.g. V, g, 550" />
+                          </label>
+                          <label title="Format: band:u1,u2; band2:u1,u2">
+                            bands (u1,u2)
+                            <input id="ldBands" type="text" placeholder="g:0.45,0.25; r:0.33,0.24" />
+                          </label>
+                        </div>
+                        <datalist id="ldBandpassList">
+                          <option value="u"></option>
+                          <option value="b"></option>
+                          <option value="v"></option>
+                          <option value="r"></option>
+                          <option value="i"></option>
+                          <option value="g"></option>
+                          <option value="z"></option>
+                          <option value="y"></option>
+                        </datalist>
+                      </details>
+
                       <label class="inline">Brightness patches <input id="patchesEnabled" type="checkbox" checked /></label>
 
                       <details>
@@ -135,6 +165,17 @@
                           <label>ry <input id="p2ry" type="number" min="0" step="0.1" value="4" /></label>
                           <label>angle <input id="p2angle" type="number" step="0.01" value="0.6" /></label>
                           <label>factor <input id="p2f" type="number" min="0" step="0.01" value="1.12" /></label>
+                        </div>
+                      </details>
+
+                      <details>
+                        <summary>Spot evolution (rotation)</summary>
+                        <label class="inline">Enabled <input id="spotEvolutionEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>rotationPeriod (s) <input id="spotRotationPeriod" type="number" min="1" step="1" value="20000" /></label>
+                          <label>coverage (0..1) <input id="spotCoverage" type="number" min="0" max="1" step="0.05" value="1" /></label>
+                          <label>lifetime (s) <input id="spotLifetime" type="number" min="0" step="10" value="0" /></label>
+                          <label>driftRate (rad/s) <input id="spotDriftRate" type="number" step="0.000001" value="0" /></label>
                         </div>
                       </details>
                     </fieldset>
@@ -166,12 +207,12 @@
                     <fieldset>
                       <legend>Planet</legend>
                       <div class="grid">
-                        <label>Rp <input id="planetR" type="number" min="0.001" step="0.1" value="12" /></label>
-                        <label>a <input id="planetA" type="number" min="0.001" step="0.1" value="230" /></label>
-                        <label>e <input id="planetE" type="number" min="0" max="0.95" step="0.001" value="0.08" /></label>
+                        <label>Rp (sim units) <input id="planetR" type="number" min="0.001" step="0.1" value="12" /></label>
+                        <label>a (sim units) <input id="planetA" type="number" min="0.001" step="0.1" value="230" /></label>
+                        <label>e <input id="planetE" type="number" min="0" max="0.999" step="0.001" value="0.08" /></label>
                         <label>inc (deg) <input id="planetInc" type="number" min="0" max="180" step="0.01" value="89.2" /></label>
                         <label>period (s) <input id="planetPeriod" type="number" min="0.001" step="1" value="18000" /></label>
-                        <label>mass (optional) <input id="planetMass" type="number" min="0" step="0.01" value="0" /></label>
+                        <label>mass (arb. units) <input id="planetMass" type="number" min="0" step="0.01" value="0" /></label>
                       </div>
 
                       <label class="inline">Phase curve <input id="planetPhaseEnabled" type="checkbox" checked /></label>
@@ -184,6 +225,36 @@
 
                       <label class="inline">Lambertian <input id="planetLambertian" type="checkbox" checked /></label>
                       <label>constant <input id="planetConstant" type="number" min="0" step="0.0001" value="0" /></label>
+
+                      <details>
+                        <summary>Thermal inertia</summary>
+                        <label class="inline">Enabled <input id="planetThermalInertiaEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>albedo (0..1) <input id="planetAlbedo" type="number" min="0" max="1" step="0.01" value="0" /></label>
+                          <label>emissivity (0..1) <input id="planetEmissivity" type="number" min="0" max="1" step="0.01" value="1" /></label>
+                          <label>thermal tau (s) <input id="planetThermalTimescale" type="number" min="0" step="10" value="0" /></label>
+                          <label>redistribution (0..1) <input id="planetRedistribution" type="number" min="0" max="1" step="0.05" value="0" /></label>
+                        </div>
+                      </details>
+
+                      <details>
+                        <summary>Shape / Rings</summary>
+                        <label class="inline">Oblate <input id="planetOblateEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>
+                            oblateness f
+                            <input id="planetOblateness" type="number" min="0" max="0.95" step="0.01" value="0" />
+                          </label>
+                        </div>
+
+                        <label class="inline">Rings <input id="planetRingsEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>ring inner (sim units) <input id="planetRingInner" type="number" min="0" step="0.1" value="18" /></label>
+                          <label>ring outer (sim units) <input id="planetRingOuter" type="number" min="0" step="0.1" value="26" /></label>
+                          <label>ring inc (deg) <input id="planetRingInc" type="number" min="0" max="90" step="0.5" value="15" /></label>
+                          <label>ring angle (deg) <input id="planetRingAngle" type="number" step="1" value="0" /></label>
+                        </div>
+                      </details>
 
                       <details>
                         <summary>Forward scattering</summary>
@@ -205,12 +276,18 @@
                             kind
                             <select id="atmKind">
                               <option value="hard" selected>hard</option>
-                              <option value="exp">exp</option>
+                              <option value="exponential-halo">exp</option>
                             </select>
                           </label>
-                          <label>r0 <input id="atmR0" type="number" min="0" step="0.01" value="0" /></label>
-                          <label>H <input id="atmH" type="number" min="0" step="0.01" value="0" /></label>
-                          <label>tau0 <input id="atmTau0" type="number" min="0" step="0.01" value="0" /></label>
+                          <label>r0 (sim units) <input id="atmR0" type="number" min="0" step="0.01" value="0" /></label>
+                          <label>H (sim units) <input id="atmH" type="number" min="0" step="0.01" value="0" /></label>
+                          <label>tau0 (optical depth) <input id="atmTau0" type="number" min="0" step="0.01" value="0" /></label>
+                          <label title="Comma-separated wavelengths in nm">
+                            lambdaNm <input id="atmLambdaNm" type="text" placeholder="450, 550, 650" />
+                          </label>
+                          <label title="Optional per-lambda tau scale factors">
+                            tauScale <input id="atmTauScale" type="text" placeholder="1, 0.8, 0.6" />
+                          </label>
                         </div>
                       </details>
                     </fieldset>
@@ -219,12 +296,12 @@
                       <legend>Mond</legend>
                       <label class="inline">Enabled <input id="moonEnabled" type="checkbox" checked /></label>
                       <div class="grid">
-                        <label>Rm <input id="moonR" type="number" min="0.001" step="0.1" value="4" /></label>
-                        <label>a <input id="moonA" type="number" min="0.001" step="0.1" value="32" /></label>
-                        <label>e <input id="moonE" type="number" min="0" max="0.95" step="0.001" value="0.02" /></label>
+                        <label>Rm (sim units) <input id="moonR" type="number" min="0.001" step="0.1" value="4" /></label>
+                        <label>a (sim units) <input id="moonA" type="number" min="0.001" step="0.1" value="32" /></label>
+                        <label>e <input id="moonE" type="number" min="0" max="0.999" step="0.001" value="0.02" /></label>
                         <label>inc (deg) <input id="moonInc" type="number" min="0" max="180" step="0.01" value="10" /></label>
                         <label>period (s) <input id="moonPeriod" type="number" min="0.001" step="1" value="2200" /></label>
-                        <label>mass (optional) <input id="moonMass" type="number" min="0" step="0.01" value="0" /></label>
+                        <label>mass (arb. units) <input id="moonMass" type="number" min="0" step="0.01" value="0" /></label>
                       </div>
 
                       <label class="inline">Moon phase curve <input id="moonPhaseEnabled" type="checkbox" /></label>
@@ -233,6 +310,36 @@
                         <label>thermAmp <input id="moonThermAmp" type="number" min="0" step="0.0001" value="0" /></label>
                       </div>
                       <label class="inline">Lambertian <input id="moonLambertian" type="checkbox" checked /></label>
+
+                      <details>
+                        <summary>Thermal inertia</summary>
+                        <label class="inline">Enabled <input id="moonThermalInertiaEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>albedo (0..1) <input id="moonAlbedo" type="number" min="0" max="1" step="0.01" value="0" /></label>
+                          <label>emissivity (0..1) <input id="moonEmissivity" type="number" min="0" max="1" step="0.01" value="1" /></label>
+                          <label>thermal tau (s) <input id="moonThermalTimescale" type="number" min="0" step="10" value="0" /></label>
+                          <label>redistribution (0..1) <input id="moonRedistribution" type="number" min="0" max="1" step="0.05" value="0" /></label>
+                        </div>
+                      </details>
+
+                      <details>
+                        <summary>Shape / Rings</summary>
+                        <label class="inline">Oblate <input id="moonOblateEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>
+                            oblateness f
+                            <input id="moonOblateness" type="number" min="0" max="0.95" step="0.01" value="0" />
+                          </label>
+                        </div>
+
+                        <label class="inline">Rings <input id="moonRingsEnabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>ring inner (sim units) <input id="moonRingInner" type="number" min="0" step="0.1" value="6" /></label>
+                          <label>ring outer (sim units) <input id="moonRingOuter" type="number" min="0" step="0.1" value="10" /></label>
+                          <label>ring inc (deg) <input id="moonRingInc" type="number" min="0" max="90" step="0.5" value="10" /></label>
+                          <label>ring angle (deg) <input id="moonRingAngle" type="number" step="1" value="0" /></label>
+                        </div>
+                      </details>
                     </fieldset>
 
                     <fieldset>
@@ -263,10 +370,59 @@
                       <div class="grid">
                         <label>tRef (s) <input id="exoTRef" type="number" step="0.1" value="0" /></label>
                         <label>velDt (s) <input id="exoVelDt" type="number" min="0.000001" step="0.1" value="2" /></label>
-                        <label>moonOmegaDot <input id="exoMoonOmegaDot" type="number" step="0.000001" value="0" /></label>
-                        <label>moonIncDot <input id="exoMoonIncDot" type="number" step="0.000001" value="0" /></label>
-                        <label>moonOmegaSmallDot <input id="exoMoonOmegaSmallDot" type="number" step="0.000001" value="0" /></label>
-                        <label>moonImpactYDot <input id="exoImpactYDot" type="number" step="0.000001" value="0" /></label>
+                        <label>moonOmegaDot (rad/s) <input id="exoMoonOmegaDot" type="number" step="0.000001" value="0" /></label>
+                        <label>moonIncDot (rad/s) <input id="exoMoonIncDot" type="number" step="0.000001" value="0" /></label>
+                        <label>moonOmegaSmallDot (rad/s) <input id="exoMoonOmegaSmallDot" type="number" step="0.000001" value="0" /></label>
+                        <label>moonImpactYDot (sim units/s) <input id="exoImpactYDot" type="number" step="0.000001" value="0" /></label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset>
+                      <legend>N-body dynamics</legend>
+                      <label class="inline">Enabled <input id="nbodyEnabled" type="checkbox" /></label>
+                      <div class="grid">
+                        <label>muStar <input id="nbodyMuStar" type="number" min="0" step="0.0001" value="1" /></label>
+                        <label>muPlanet <input id="nbodyMuPlanet" type="number" min="0" step="0.0001" value="0.1" /></label>
+                        <label>muMoon <input id="nbodyMuMoon" type="number" min="0" step="0.0001" value="0.01" /></label>
+                        <label>dtMax (s) <input id="nbodyDtMax" type="number" min="0.000001" step="0.1" value="10" /></label>
+                        <label>softening <input id="nbodySoftening" type="number" min="0" step="0.0001" value="0" /></label>
+                      </div>
+
+                      <details>
+                        <summary>Perturbers</summary>
+
+                        <label class="inline">Perturber 1 <input id="pert1Enabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>mu1 <input id="pert1Mu" type="number" min="0" step="0.0001" value="0" /></label>
+                          <label>a1 (sim units) <input id="pert1A" type="number" min="0.001" step="0.1" value="400" /></label>
+                          <label>e1 <input id="pert1E" type="number" min="0" max="0.999" step="0.001" value="0" /></label>
+                          <label>inc1 (deg) <input id="pert1Inc" type="number" min="0" max="180" step="0.01" value="0" /></label>
+                          <label>period1 (s) <input id="pert1Period" type="number" min="0.001" step="1" value="40000" /></label>
+                        </div>
+
+                        <label class="inline">Perturber 2 <input id="pert2Enabled" type="checkbox" /></label>
+                        <div class="grid">
+                          <label>mu2 <input id="pert2Mu" type="number" min="0" step="0.0001" value="0" /></label>
+                          <label>a2 (sim units) <input id="pert2A" type="number" min="0.001" step="0.1" value="600" /></label>
+                          <label>e2 <input id="pert2E" type="number" min="0" max="0.999" step="0.001" value="0" /></label>
+                          <label>inc2 (deg) <input id="pert2Inc" type="number" min="0" max="180" step="0.01" value="0" /></label>
+                          <label>period2 (s) <input id="pert2Period" type="number" min="0.001" step="1" value="70000" /></label>
+                        </div>
+                      </details>
+                    </fieldset>
+
+                    <fieldset>
+                      <legend>Relativity (LTTE/GR)</legend>
+                      <label class="inline">Enabled <input id="relEnabled" type="checkbox" /></label>
+                      <div class="grid">
+                        <label class="inline">LTTE <input id="relLTTE" type="checkbox" checked /></label>
+                        <label class="inline">Shapiro <input id="relShapiro" type="checkbox" checked /></label>
+                        <label class="inline">GR precession <input id="relGR" type="checkbox" checked /></label>
+                        <label>c (sim units/s) <input id="relC" type="number" min="0" step="1" value="299792.458" /></label>
+                      </div>
+                      <div class="grid">
+                        <label>planet Δω/orbit (deg) <input id="relPlanetPrec" type="number" step="0.001" value="0" /></label>
+                        <label>moon Δω/orbit (deg) <input id="relMoonPrec" type="number" step="0.001" value="0" /></label>
                       </div>
                     </fieldset>
                   </div>

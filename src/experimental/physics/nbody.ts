@@ -2,12 +2,12 @@
 
 //
 // Minimal, scientifically correct Newtonian N-body utilities for the specific
-// star–planet–moon problem in this codebase.
+// star–planet–moon system in this codebase, including star reflex motion and
+// optional perturbers. Legacy star-fixed helpers remain for diagnostics.
 //
 // Scope and conventions
-// - Star is treated as a fixed point mass at the origin (0,0,0).
-// - Planet and Moon are integrated dynamically with stellar gravity + mutual gravity.
-// - This is a restricted “3-body” setup (star fixed), not a full N-body solver.
+// - Star, planet, moon, and optional perturbers are integrated dynamically.
+// - Positions/velocities are inertial (barycentric) unless noted otherwise.
 //
 // Units
 // - Project uses arbitrary but self-consistent simulation units.
@@ -32,15 +32,25 @@ import {
   vSub,
 } from "../../physics/vec3";
 
+export type NBodyPerturberState = {
+  r: Vec3;
+  v: Vec3;
+};
+
 export type NBodyState = {
   /** State time in seconds. */
   t: number;
-  /** Planet inertial position and velocity relative to the star (origin). */
+  /** Star inertial position and velocity. */
+  rS: Vec3;
+  vS: Vec3;
+  /** Planet inertial position and velocity. */
   rP: Vec3;
   vP: Vec3;
-  /** Moon inertial position and velocity relative to the star (origin). */
+  /** Moon inertial position and velocity. */
   rM: Vec3;
   vM: Vec3;
+  /** Optional perturbers in inertial coordinates. */
+  perturbers: NBodyPerturberState[];
 };
 
 export type NBodyStepParams = {
@@ -57,6 +67,9 @@ export type NBodyStepParams = {
 
   /** Gravitational parameter of the moon: muMoon = G*Mmoon. Must be > 0. */
   muMoon: number;
+
+  /** Optional perturber gravitational parameters mu = G*M. */
+  muPerturbers?: number[];
 
   /** Optional Plummer-style softening length eps [L]. Default: 0. */
   softening?: number;
@@ -140,9 +153,8 @@ function accelFromPointMass(params: {
 }
 
 /**
- * Compute accelerations for planet and moon under:
- * - Stellar gravity (star at origin)
- * - Mutual planet–moon gravity
+ * Legacy helper: accelerations for planet and moon with star fixed at the origin.
+ * (Use integrateNBodyStep for full star-reflex dynamics.)
  */
 export function accelerationsStarPlanetMoon(params: {
   rP: Vec3;
@@ -200,14 +212,122 @@ export function accelerationsStarPlanetMoon(params: {
   return { aP, aM };
 }
 
-/** Advance the star–planet–moon system by one Velocity-Verlet step. */
-export function integratePlanetMoon3BodyStep(
-  params: NBodyStepParams
-): NBodyState {
+type NBodyBody = { r: Vec3; v: Vec3; mu: number };
+
+function buildBodiesFromState(params: {
+  state: NBodyState;
+  muStar: number;
+  muPlanet: number;
+  muMoon: number;
+  muPerturbers: number[];
+}): NBodyBody[] {
+  const { state, muStar, muPlanet, muMoon, muPerturbers } = params;
+
+  const pert = state.perturbers ?? [];
+  if (pert.length !== muPerturbers.length) {
+    throw new Error(
+      `perturber count mismatch: state has ${pert.length}, muPerturbers has ${muPerturbers.length}.`
+    );
+  }
+
+  const bodies: NBodyBody[] = [
+    { r: state.rS, v: state.vS, mu: muStar },
+    { r: state.rP, v: state.vP, mu: muPlanet },
+    { r: state.rM, v: state.vM, mu: muMoon },
+  ];
+
+  for (let i = 0; i < pert.length; i++) {
+    bodies.push({ r: pert[i].r, v: pert[i].v, mu: muPerturbers[i] });
+  }
+
+  return bodies;
+}
+
+function unpackBodiesToState(params: {
+  t: number;
+  bodies: NBodyBody[];
+  perturberCount: number;
+}): NBodyState {
+  const { t, bodies, perturberCount } = params;
+  if (bodies.length < 3) throw new Error("N-body requires star, planet, moon bodies.");
+
+  const pertStart = 3;
+  const pertEnd = pertStart + perturberCount;
+  if (bodies.length !== pertEnd) {
+    throw new Error("N-body body count mismatch when unpacking.");
+  }
+
+  const pert: NBodyPerturberState[] = [];
+  for (let i = pertStart; i < pertEnd; i++) {
+    pert.push({ r: bodies[i].r, v: bodies[i].v });
+  }
+
+  return {
+    t,
+    rS: bodies[0].r,
+    vS: bodies[0].v,
+    rP: bodies[1].r,
+    vP: bodies[1].v,
+    rM: bodies[2].r,
+    vM: bodies[2].v,
+    perturbers: pert,
+  };
+}
+
+function computeAccelerations(params: {
+  bodies: NBodyBody[];
+  eps2: number;
+  throwOnOverlap?: boolean;
+}): Vec3[] {
+  const { bodies, eps2, throwOnOverlap } = params;
+  const acc: Vec3[] = bodies.map(() => ({ x: 0, y: 0, z: 0 }));
+
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const ri = bodies[i].r;
+      const rj = bodies[j].r;
+      const dr = vSub(rj, ri);
+      const r2 = vLenSq(dr);
+
+      if (!(r2 > 0) || !Number.isFinite(r2)) {
+        if ((throwOnOverlap ?? false) && eps2 === 0) {
+          throw new Error(
+            "nbody accel: overlap detected with zero softening (check dt, initial conditions, or add softening)."
+          );
+        }
+        continue;
+      }
+
+      const d2 = r2 + eps2;
+      if (!(d2 > 0) || !Number.isFinite(d2)) {
+        if (throwOnOverlap ?? false) {
+          throw new Error("nbody accel: invalid squared distance (non-finite).");
+        }
+        continue;
+      }
+
+      const invR = 1 / Math.sqrt(d2);
+      const invR3 = invR * invR * invR;
+
+      const muI = bodies[i].mu;
+      const muJ = bodies[j].mu;
+
+      acc[i] = vAdd(acc[i], vScale(dr, muJ * invR3));
+      acc[j] = vAdd(acc[j], vScale(dr, -muI * invR3));
+    }
+  }
+
+  return acc;
+}
+
+/** Advance the full N-body system by one Velocity-Verlet step. */
+export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
   const { state, dt, muStar, muPlanet, muMoon } = params;
 
   if (!state) throw new Error("state must be provided.");
   assertFiniteNumber(state.t, "state.t");
+  assertFiniteVec3(state.rS, "state.rS");
+  assertFiniteVec3(state.vS, "state.vS");
   assertFiniteVec3(state.rP, "state.rP");
   assertFiniteVec3(state.vP, "state.vP");
   assertFiniteVec3(state.rM, "state.rM");
@@ -220,65 +340,109 @@ export function integratePlanetMoon3BodyStep(
   assertMu(muPlanet, "muPlanet");
   assertMu(muMoon, "muMoon");
 
-  const { eps: softening } = normalizeSoftening(params.softening);
+  const muPerturbers = Array.isArray(params.muPerturbers)
+    ? params.muPerturbers
+    : [];
+  for (let i = 0; i < muPerturbers.length; i++) {
+    assertMu(muPerturbers[i], `muPerturbers[${i}]`);
+  }
+  if (Array.isArray(state.perturbers)) {
+    for (let i = 0; i < state.perturbers.length; i++) {
+      assertFiniteVec3(state.perturbers[i].r, `state.perturbers[${i}].r`);
+      assertFiniteVec3(state.perturbers[i].v, `state.perturbers[${i}].v`);
+    }
+  }
 
-  // a(t)
-  const { aP: aP0, aM: aM0 } = accelerationsStarPlanetMoon({
-    rP: state.rP,
-    rM: state.rM,
+  const { eps2 } = normalizeSoftening(params.softening);
+  const bodies0 = buildBodiesFromState({
+    state,
     muStar,
     muPlanet,
     muMoon,
-    softening,
+    muPerturbers,
+  });
+
+  const a0 = computeAccelerations({
+    bodies: bodies0,
+    eps2,
     throwOnOverlap: params.throwOnOverlap,
   });
 
-  // Drift: r1 = r0 + v0*dt + 0.5*a0*dt^2
   const dt2 = dt * dt;
-  const rP1 = vAdd(vAddScaled(state.rP, state.vP, dt), vScale(aP0, 0.5 * dt2));
-  const rM1 = vAdd(vAddScaled(state.rM, state.vM, dt), vScale(aM0, 0.5 * dt2));
+  const bodies1: NBodyBody[] = bodies0.map((b, i) => ({
+    r: vAdd(vAddScaled(b.r, b.v, dt), vScale(a0[i], 0.5 * dt2)),
+    v: b.v,
+    mu: b.mu,
+  }));
 
-  // a(t+dt)
-  const { aP: aP1, aM: aM1 } = accelerationsStarPlanetMoon({
-    rP: rP1,
-    rM: rM1,
-    muStar,
-    muPlanet,
-    muMoon,
-    softening,
+  const a1 = computeAccelerations({
+    bodies: bodies1,
+    eps2,
     throwOnOverlap: params.throwOnOverlap,
   });
 
-  // Kick: v1 = v0 + 0.5*(a0 + a1)*dt
-  const vP1 = vAdd(state.vP, vScale(vAdd(aP0, aP1), 0.5 * dt));
-  const vM1 = vAdd(state.vM, vScale(vAdd(aM0, aM1), 0.5 * dt));
+  const bodiesOut: NBodyBody[] = bodies0.map((b, i) => ({
+    r: bodies1[i].r,
+    v: vAdd(b.v, vScale(vAdd(a0[i], a1[i]), 0.5 * dt)),
+    mu: b.mu,
+  }));
 
-  const out: NBodyState = {
+  const out = unpackBodiesToState({
     t: state.t + dt,
-    rP: rP1,
-    vP: vP1,
-    rM: rM1,
-    vM: vM1,
-  };
+    bodies: bodiesOut,
+    perturberCount: muPerturbers.length,
+  });
 
   if (
     !Number.isFinite(out.t) ||
+    !vIsFinite(out.rS) ||
+    !vIsFinite(out.vS) ||
     !vIsFinite(out.rP) ||
     !vIsFinite(out.vP) ||
     !vIsFinite(out.rM) ||
     !vIsFinite(out.vM)
   ) {
     throw new Error(
-      "integratePlanetMoon3BodyStep produced non-finite state (dt too large or parameters pathological)."
+      "integrateNBodyStep produced non-finite state (dt too large or parameters pathological)."
     );
+  }
+
+  if (out.perturbers.length !== muPerturbers.length) {
+    throw new Error("integrateNBodyStep: perturber count mismatch.");
+  }
+
+  for (let i = 0; i < out.perturbers.length; i++) {
+    if (!vIsFinite(out.perturbers[i].r) || !vIsFinite(out.perturbers[i].v)) {
+      throw new Error(
+        "integrateNBodyStep produced non-finite perturber state."
+      );
+    }
   }
 
   return out;
 }
 
+/** Advance the star–planet–moon system by one Velocity-Verlet step. */
+export function integratePlanetMoon3BodyStep(
+  params: NBodyStepParams
+): NBodyState {
+  if (Array.isArray(params.muPerturbers) && params.muPerturbers.length > 0) {
+    throw new Error(
+      "integratePlanetMoon3BodyStep does not accept perturbers; use integrateNBodyStep."
+    );
+  }
+  if (params.state.perturbers.length > 0) {
+    throw new Error(
+      "integratePlanetMoon3BodyStep does not accept perturber states; use integrateNBodyStep."
+    );
+  }
+
+  return integrateNBodyStep({ ...params, muPerturbers: [] });
+}
+
 /**
  * Deterministic multi-step integration from state.t toward target time tTarget,
- * using substeps with |dt| <= dtMaxAbs.
+ * using substeps with |dt| <= dtMaxAbs (full N-body).
  */
 export function integrateToTime(params: {
   state: NBodyState;
@@ -287,6 +451,7 @@ export function integrateToTime(params: {
   muStar: number;
   muPlanet: number;
   muMoon: number;
+  muPerturbers?: number[];
   softening?: number;
   /** If true, land exactly on tTarget. Default: true. */
   exactFinalStep?: boolean;
@@ -303,6 +468,11 @@ export function integrateToTime(params: {
   assertMu(muStar, "muStar");
   assertMu(muPlanet, "muPlanet");
   assertMu(muMoon, "muMoon");
+  if (Array.isArray(params.muPerturbers)) {
+    for (let i = 0; i < params.muPerturbers.length; i++) {
+      assertMu(params.muPerturbers[i], `muPerturbers[${i}]`);
+    }
+  }
 
   const dtMaxAbs = Math.max(0, params.dtMaxAbs);
   if (dtMaxAbs === 0) throw new Error("dtMaxAbs must be > 0.");
@@ -323,12 +493,13 @@ export function integrateToTime(params: {
     const dtStepMag = Math.min(dtMaxAbs, Math.abs(remaining));
     const dt = dir * dtStepMag;
 
-    s = integratePlanetMoon3BodyStep({
+    s = integrateNBodyStep({
       state: s,
       dt,
       muStar,
       muPlanet,
       muMoon,
+      muPerturbers: params.muPerturbers,
       softening: params.softening,
       throwOnOverlap: params.throwOnOverlap,
     });

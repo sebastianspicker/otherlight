@@ -27,6 +27,7 @@ import { setText } from "./core/dom";
 import { validateSystemParamsPhysics } from "./physics/hill";
 
 import { prepareSimulation, stepSystem } from "./sim/sim";
+import { collectParamWarnings } from "./sim/validation";
 
 import { Canvas2DRenderer, LightCurvePlot } from "./render/canvas2d";
 
@@ -81,8 +82,8 @@ let noise: NoiseState = initNoiseState(params);
  * Simple physical warnings
  * ----------------------------- */
 
-function physicsValidationWarningText(p: SystemParams): string | undefined {
-  const msgs = validateSystemParamsPhysics(p);
+function uiWarningText(p: SystemParams): string | undefined {
+  const msgs = [...validateSystemParamsPhysics(p), ...collectParamWarnings(p)];
   if (!msgs.length) return undefined;
 
   // Prefer "warn" messages for the UI; otherwise show the first info.
@@ -105,6 +106,9 @@ let running = false;
 
 let t = 0; // [s]
 let last = performance.now();
+let lastPlottedT = Number.NaN;
+let lastPlotMode: string | null = null;
+let lastFluxForPlot = 1;
 
 function setRunning(next: boolean): void {
   running = next;
@@ -120,6 +124,8 @@ function resetNoiseState(): void {
 function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
   setRunning(false);
   t = 0;
+  lastPlottedT = Number.NaN;
+  lastPlotMode = null;
 
   plot.clear();
   last = performance.now();
@@ -137,6 +143,7 @@ function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
   const step0 = stepSystem(params, 0);
   setText(tVal, "0.0");
   setText(fluxVal, step0.fluxTotal.toFixed(6));
+  lastFluxForPlot = step0.fluxTotal;
 
   if (warnVal) warnVal.textContent = "";
 }
@@ -163,7 +170,11 @@ btnStart.addEventListener("click", () => setRunning(!running));
 
 btnReset.addEventListener("click", () => resetSimTimeAndLC({ resetNoise: true }));
 
-btnClearLC.addEventListener("click", () => plot.clear());
+btnClearLC.addEventListener("click", () => {
+  plot.clear();
+  lastPlottedT = Number.NaN;
+  lastPlotMode = null;
+});
 
 btnApplyParams.addEventListener("click", async () => {
   params = readUIIntoParams(params, uiRefs, SCENARIO_DEFAULTS);
@@ -208,39 +219,48 @@ function frame(now: number): void {
 
   const plotMode = readPlotModeFromDOM();
 
+  const shouldSample = !Number.isFinite(lastPlottedT) || t !== lastPlottedT || plotMode !== lastPlotMode;
+
   // "measured": smear then instrument noise (persistent state)
-  let fluxForPlot = fluxPhysical;
+  let fluxForPlot = lastFluxForPlot;
 
-  if (plotMode === "measured") {
-    const ph = params.star.photometry as any;
+  if (shouldSample) {
+    if (plotMode === "measured") {
+      const ph = params.star.photometry as any;
 
-    const smearOn = (ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1;
+      const smearOn = (ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1;
 
-    const fluxSmeared = smearOn
-      ? smearedFluxAt(
-          (ti) => stepSystem(params, ti).fluxTotal,
-          t,
-          {
-            cadenceSec: ph?.cadenceSec,
-            nSubsamples: ph?.nSubsamples,
-            clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
-            maxSubsamples: 512,
-          }
-        )
-      : fluxPhysical;
+      const fluxSmeared = smearOn
+        ? smearedFluxAt(
+            (ti) => stepSystem(params, ti).fluxTotal,
+            t,
+            {
+              cadenceSec: ph?.cadenceSec,
+              nSubsamples: ph?.nSubsamples,
+              clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
+              maxSubsamples: 512,
+            }
+          )
+        : fluxPhysical;
 
-    const noiseCfg = getInstrumentCfgFromPhotometry(ph);
+      const noiseCfg = getInstrumentCfgFromPhotometry(ph);
 
-    fluxForPlot = applyInstrumentNoiseAndSystematics({
-      flux: fluxSmeared,
-      tSec: t,
-      dtSec: dtSim,
-      cfg: noiseCfg,
-      state: noise.noiseState,
-    });
+      fluxForPlot = applyInstrumentNoiseAndSystematics({
+        flux: fluxSmeared,
+        tSec: t,
+        dtSec: dtSim,
+        cfg: noiseCfg,
+        state: noise.noiseState,
+      });
+    } else {
+      fluxForPlot = fluxPhysical;
+    }
+
+    plot.push(fluxForPlot);
+    lastPlottedT = t;
+    lastPlotMode = plotMode;
+    lastFluxForPlot = fluxForPlot;
   }
-
-  plot.push(fluxForPlot);
 
   // Renderer should be read-only; pass the simulation step result.
   // (If your renderer still expects legacy 'step.flux', you can add an alias here.)
@@ -265,7 +285,7 @@ function frame(now: number): void {
     vMoonVal.textContent = typeof vm === "number" && Number.isFinite(vm) ? vm.toFixed(3) : "";
   }
 
-  const warnMsg = physicsValidationWarningText(params);
+  const warnMsg = uiWarningText(params);
   if (warnVal) warnVal.textContent = warnMsg ?? "";
 
   requestAnimationFrame(frame);

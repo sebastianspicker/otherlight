@@ -18,8 +18,8 @@ import type { OrbitElements } from "../core/types";
 import type { Vec3 } from "./vec3";
 
 import { clamp, isFiniteNumber, normalizeFiniteDiffDtSec, toFinitePos, wrapTo2Pi } from "../core/units";
-import { projectToSky } from "./frames";
-import { vIsFinite, vLen, vScale, vSub } from "./vec3";
+import { buildSkyBasis, projectToSkyWithBasis } from "./frames";
+import { vIsFinite, vNearlyZero, vNormalizeOrZero, vSub } from "./vec3";
 
 export type AngleWrapMode = "none" | "2pi";
 
@@ -105,9 +105,8 @@ function wrapAngle(a: number, mode: AngleWrapMode): number {
 
 function normalizeObserverDirOrNaN(observerDir: Vec3): Vec3 | null {
   if (!vIsFinite(observerDir)) return null;
-  const L = vLen(observerDir);
-  if (!(L > 0) || !Number.isFinite(L)) return null;
-  return vScale(observerDir, 1 / L);
+  const dir = vNormalizeOrZero(observerDir, 1e-15);
+  return vNearlyZero(dir, 1e-15) ? null : dir;
 }
 
 /**
@@ -201,8 +200,9 @@ export function estimateSkyPlaneSpeed(
   const r1 = rAt(t1);
   if (!vIsFinite(r0) || !vIsFinite(r1)) return NaN;
 
-  const p0 = projectToSky(r0, dir);
-  const p1 = projectToSky(r1, dir);
+  const basis = buildSkyBasis(dir);
+  const p0 = projectToSkyWithBasis(r0, basis);
+  const p1 = projectToSkyWithBasis(r1, basis);
 
   return estimateSkyPlaneSpeedFromSkyPoints(p0, p1, t1 - t0);
 }
@@ -283,4 +283,54 @@ export function applySkyPlaneImpactYDrift(
 
   const y = sky.y + yDot * dt;
   return { x: sky.x, y, z: sky.z };
+}
+
+/* -----------------------------
+ * Minimal built-in tests
+ * ----------------------------- */
+
+function assert(cond: unknown, msg: string): void {
+  if (!cond) throw new Error(`exomoonTiming self-test failed: ${msg}`);
+}
+
+function approxEq(a: number, b: number, eps = 1e-10): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+export function runExomoonTimingSelfTests(): void {
+  const base: OrbitElements = {
+    a: 1,
+    e: 0.1,
+    inc: 0.3,
+    Omega: 1,
+    omega: 2,
+    period: 10,
+    t0: 0,
+  };
+
+  const evo = {
+    enabled: true,
+    tRef: 0,
+    OmegaDot: 0.1,
+    omegaDot: -0.2,
+    incDot: 0.05,
+    wrapAngles: "2pi" as AngleWrapMode,
+    clampInc01Pi: true,
+  };
+
+  const evolved = applyOrientationEvolution(base, 10, evo);
+  assert(approxEq(evolved.Omega, wrapTo2Pi(1 + 1), 1e-12), "Omega evolution mismatch.");
+  assert(approxEq(evolved.omega, wrapTo2Pi(2 - 2), 1e-12), "omega evolution mismatch.");
+  assert(approxEq(evolved.inc, 0.3 + 0.5, 1e-12), "inc evolution mismatch.");
+
+  const v = estimateSkyPlaneSpeed(
+    (t) => ({ x: t, y: 0, z: 0 }),
+    0,
+    { x: 0, y: 0, z: 1 },
+    { dtSec: 1, central: true },
+  );
+  assert(approxEq(v, 1, 1e-12), "sky-plane speed should be 1 for unit motion.");
+
+  const b = impactParameterFromSkyY(2, 4);
+  assert(approxEq(b, 0.5, 1e-12), "impact parameter should be |y|/R.");
 }

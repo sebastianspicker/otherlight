@@ -5,7 +5,7 @@
 //
 // Scientific model (summary):
 // - Star is a projected disk of radius R=rStar in the sky plane.
-// - Local specific intensity is I(mu) (optional quadratic limb darkening) multiplied by an
+// - Local specific intensity is I(mu) (optional limb darkening) multiplied by an
 //   optional brightness map P(x,y) (spots/faculae).
 // - Each occulter applies a multiplicative transmission T_i(rho_i) with rho_i the sky-plane
 //   distance to occulter center.
@@ -24,9 +24,10 @@
 // Notes:
 // - The constant cell area cancels in the ratio, so we can omit multiplying by it for numerical stability.
 
-import type { BrightnessPatch, LimbDarkeningLawQuadratic } from "../../core/types";
+import type { BrightnessPatch, LimbDarkeningLaw } from "../../core/types";
 import { clamp01, isFiniteNonNegative, isFinitePositive } from "../../core/units";
 import { clampGridRes } from "../../photometry/occulterCircle";
+import { intensityNonNegative } from "../../photometry/limbDarkening";
 import {
   patchFactorAt,
   sanitizeBrightnessPatches,
@@ -58,8 +59,8 @@ export type TransmissionOcculter = {
 export type FluxStarWithTransmissionParams = {
   rStar: number;
   occulters: TransmissionOcculter[];
-  /** Optional quadratic limb darkening. If omitted, intensity is uniform across the disk. */
-  limbDarkening?: LimbDarkeningLawQuadratic;
+  /** Optional limb-darkening law. If omitted, intensity is uniform across the disk. */
+  limbDarkening?: LimbDarkeningLaw;
   /** Optional projected brightness patches (spots/faculae), multiplicative in intensity. */
   brightnessPatches?: BrightnessPatch[];
   /** Patch combination policy. Default: "multiply" (backwards compatible). */
@@ -90,26 +91,9 @@ function safeTransmissionValue(x: number, doClamp: boolean): number {
   return doClamp ? clamp01(x) : x;
 }
 
-/**
- * Quadratic limb-darkening law (relative intensity normalized to disk center, I(1)=1).
- *
- * Note:
- * - For physically invalid coefficients, the expression can go negative; caller clamps to >=0.
- */
-function intensityAtMu(
-  mu: number,
-  ld: LimbDarkeningLawQuadratic | undefined
-): number {
+function intensityAtMu(mu: number, ld: LimbDarkeningLaw | undefined): number {
   if (!ld) return 1;
-  const u1 = ld.u1;
-  const u2 = ld.u2;
-
-  if (!Number.isFinite(u1) || !Number.isFinite(u2)) return 1;
-
-  const oneMinusMu = 1 - mu;
-  const I = 1 - u1 * oneMinusMu - u2 * oneMinusMu * oneMinusMu;
-
-  return Number.isFinite(I) ? I : 1;
+  return intensityNonNegative(mu, ld);
 }
 
 function hardDiskTransmission(

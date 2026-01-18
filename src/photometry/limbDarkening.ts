@@ -27,6 +27,7 @@
 // - Validation is designed to be called rarely (e.g. at config/preset updates), not per pixel.
 // - Transit integrators clamp intensity to >=0 for robustness; validation is optional.
 
+import { clamp01, toFiniteNumber } from "../core/units";
 import type {
   LimbDarkeningConstraints,
   LimbDarkeningLaw,
@@ -37,15 +38,6 @@ export type { LimbDarkeningConstraints, LimbDarkeningLaw } from "../core/types";
 
 /** Validation behavior for limb-darkening plausibility checks. */
 export type LimbDarkeningValidationMode = "none" | "warn" | "throw";
-
-function clamp01(x: number): number {
-  return Math.max(0, Math.min(1, x));
-}
-
-function toFiniteNumber(x: unknown, fallback: number): number {
-  const n = typeof x === "number" ? x : Number(x);
-  return Number.isFinite(n) ? n : fallback;
-}
 
 function emitValidation(mode: LimbDarkeningValidationMode, msg: string): void {
   if (mode === "none") return;
@@ -77,6 +69,47 @@ function isFiniteLaw(law: LimbDarkeningLaw): boolean {
       return _never;
     }
   }
+}
+
+function normalizeBandpassId(id: unknown): PassbandId | undefined {
+  if (id === undefined || id === null) return undefined;
+  const s = String(id).trim();
+  if (!s) return undefined;
+  return s.toLowerCase();
+}
+
+function isLawObject(candidate: unknown): candidate is LimbDarkeningLaw {
+  return Boolean(candidate && typeof (candidate as any).kind === "string");
+}
+
+function findBandLaw(
+  bands: Record<PassbandId, LimbDarkeningLaw> | undefined,
+  bandpass: unknown
+): LimbDarkeningLaw | undefined {
+  if (!bands) return undefined;
+
+  const raw = bandpass === undefined || bandpass === null ? "" : String(bandpass);
+  if (raw && Object.prototype.hasOwnProperty.call(bands, raw)) {
+    const candidate = bands[raw as PassbandId];
+    if (isLawObject(candidate)) return candidate;
+  }
+
+  const norm = normalizeBandpassId(raw);
+  if (!norm) return undefined;
+
+  if (Object.prototype.hasOwnProperty.call(bands, norm)) {
+    const candidate = bands[norm as PassbandId];
+    if (isLawObject(candidate)) return candidate;
+  }
+
+  for (const key of Object.keys(bands)) {
+    if (normalizeBandpassId(key) === norm) {
+      const candidate = bands[key as PassbandId];
+      if (isLawObject(candidate)) return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -230,9 +263,10 @@ export function validateLimbDarkeningLaw(
  * Select a limb-darkening law for a given passband, with deterministic fallback.
  *
  * Fallback order:
- * 1) If bandpass is provided (or model.bandpass exists), and model.bands[bandpass] exists, use it.
- * 2) Otherwise, use model.default if present.
- * 3) Otherwise, return undefined.
+ * 1) If bandpass is provided and model.bands[bandpass] exists, use it (case-insensitive).
+ * 2) Else if model.bandpass exists and model.bands[model.bandpass] exists, use it.
+ * 3) Otherwise, use model.default if present.
+ * 4) Otherwise, return undefined.
  *
  * Edge-case behavior:
  * - If a band entry exists but is not a valid law object, it is ignored and fallback continues.
@@ -244,21 +278,18 @@ export function resolveLimbDarkeningForBand(
 ): LimbDarkeningLaw | undefined {
   if (!model) return undefined;
 
-  // Prefer explicit argument; else allow model to carry its own preferred bandpass.
-  const b = (bandpass ?? model.bandpass) as PassbandId | undefined;
-
   const bands = model.bands as unknown as
     | Record<PassbandId, LimbDarkeningLaw>
     | undefined;
 
-  if (b && bands && Object.prototype.hasOwnProperty.call(bands, b)) {
-    const candidate = bands[b];
-    if (candidate && typeof (candidate as any).kind === "string")
-      return candidate;
-  }
+  const byExplicit = findBandLaw(bands, bandpass);
+  if (byExplicit) return byExplicit;
+
+  const byModel = findBandLaw(bands, model.bandpass);
+  if (byModel) return byModel;
 
   const def = model.default as unknown as LimbDarkeningLaw | undefined;
-  if (def && typeof (def as any).kind === "string") return def;
+  if (isLawObject(def)) return def;
 
   return undefined;
 }

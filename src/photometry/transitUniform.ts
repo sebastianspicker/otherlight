@@ -29,6 +29,7 @@
 // Canonical definitions live in occulterCircle.ts; this module is the reference integrator behavior.
 
 
+import { clamp01, isFiniteNonNegative, isFinitePositive } from "../core/units";
 import { circleIntersectionArea } from "./mutualEvents";
 import {
   anyCircleOcculterFullyCoversStar,
@@ -37,22 +38,6 @@ import {
   type CircleOcculter,
 } from "./occulterCircle";
 import { integrateDiskMidpoint } from "./diskMidpoint";
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function clamp01(x: number): number {
-  return clamp(x, 0, 1);
-}
-
-function isFinitePositive(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x) && x > 0;
-}
-
-function isFiniteNonNegative(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x) && x >= 0;
-}
 
 
 /**
@@ -109,6 +94,28 @@ export function fluxUniformDisk(params: {
     earlyExitFluxEps: 0,
   }).blocked;
   return clamp01(1.0 - blockedArea / starArea);
+}
+
+function blockedAreaByMidpointDiskIntegral(
+  rStar: number,
+  rOcculters: CircleOcculter[],
+  gridRes: number
+): number {
+  const occulters = sanitizeCircleOcculters(rStar, rOcculters);
+  if (occulters.length === 0) return 0;
+  if (anyCircleOcculterFullyCoversStar(rStar, occulters)) {
+    return Math.PI * rStar * rStar;
+  }
+
+  const { blocked } = integrateDiskMidpoint({
+    rStar,
+    occulters,
+    gridRes,
+    intensityAt: () => 1,
+    earlyExitFluxEps: 0,
+  });
+
+  return Number.isFinite(blocked) ? blocked : 0;
 }
 
 /**

@@ -5,15 +5,20 @@ UI styling for the simulation.
 */
 
 :root {
-  --bg: #0b0f14;
-  --panel: #111826;
-  --panel2: #0f1520;
-  --text: #e6edf3;
-  --muted: #a5b4c3;
-  --stroke: rgba(255, 255, 255, 0.18);
+  --bg-1: #0a1116;
+  --bg-2: #0e1b24;
+  --bg-3: #101622;
+  --panel: rgba(12, 20, 28, 0.82);
+  --panel-strong: rgba(16, 27, 38, 0.92);
+  --panel2: #14212e;
+  --text: #eef4f8;
+  --muted: #a9b8c6;
+  --stroke: rgba(255, 255, 255, 0.2);
   --stroke2: rgba(255, 255, 255, 0.12);
-  --focus: rgba(76, 201, 240, 0.55);
-  --accent: #4cc9f0;
+  --focus: rgba(46, 195, 177, 0.45);
+  --accent: #2ec3b1;
+  --accent-2: #f5c26b;
+  --shadow: 0 22px 60px rgba(3, 8, 12, 0.55);
 
   accent-color: var(--accent);
   color-scheme: dark light;
@@ -32,15 +37,36 @@ body {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+  font-family: "Space Grotesk", "Helvetica Neue", "Segoe UI", "Noto Sans",
     sans-serif;
-  background: var(--bg);
+  background: radial-gradient(1200px 800px at 15% 10%, rgba(46, 195, 177, 0.2), transparent 55%),
+    radial-gradient(900px 600px at 80% 0%, rgba(245, 194, 107, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-2) 50%, var(--bg-3));
   color: var(--text);
   line-height: 1.35;
 }
 
 a {
   color: var(--accent);
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 120px 120px;
+  opacity: 0.25;
+}
+
+body::after {
+  background: radial-gradient(900px 600px at 70% 80%, rgba(14, 27, 36, 0.85), transparent 60%);
 }
 
 button:focus-visible,
@@ -74,36 +100,50 @@ summary:focus-visible {
 
 /* App container */
 #app {
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 22px;
+}
+
+.app-header {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(20, 33, 46, 0.9), rgba(10, 17, 22, 0.92));
+  border: 1px solid var(--stroke2);
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
 }
 
 .app-header h1 {
-  margin: 0 0 6px 0;
-  font-size: 18px;
+  margin: 0 0 8px 0;
+  font-family: "Fraunces", "Times New Roman", serif;
+  font-size: clamp(22px, 2.2vw, 34px);
   font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .app-header .help {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* Panels */
 .panel {
   background: var(--panel);
   border: 1px solid var(--stroke2);
-  border-radius: 12px;
-  padding: 12px;
-  margin: 12px 0;
+  border-radius: 16px;
+  padding: 14px;
+  margin: 14px 0;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
 }
 
 .panel h2 {
   margin: 0 0 10px 0;
-  font-size: 14px;
-  color: var(--muted);
+  font-family: "Fraunces", "Times New Roman", serif;
+  font-size: 15px;
+  color: #c8d5e1;
   font-weight: 600;
 }
 
@@ -113,7 +153,7 @@ summary:focus-visible {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin: 7px 0;
+  margin: 9px 0;
 }
 
 /* Readouts row can get dense */
@@ -136,7 +176,7 @@ summary:focus-visible {
 
 .mono {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+  font-family: "Space Mono", "SFMono-Regular", Menlo, Monaco, Consolas,
     "Liberation Mono", monospace;
 }
 
@@ -146,7 +186,7 @@ summary:focus-visible {
 .mainGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 18px;
 }
 
 @media (min-width: 1100px) {
@@ -180,13 +220,14 @@ summary:focus-visible {
 .vizStack {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .col h2 {
   margin: 0 0 10px 0;
-  font-size: 14px;
-  color: var(--muted);
+  font-family: "Fraunces", "Times New Roman", serif;
+  font-size: 15px;
+  color: #c8d5e1;
   font-weight: 600;
 }
 
@@ -194,8 +235,12 @@ summary:focus-visible {
 canvas {
   width: 100%;
   display: block;
-  border-radius: 10px;
+  border-radius: 14px;
   image-rendering: auto;
+  background: radial-gradient(circle at 30% 20%, rgba(46, 195, 177, 0.06), transparent 50%),
+    rgba(8, 14, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 /* Give canvases real CSS height so HiDPI sizing has more area */
@@ -215,7 +260,7 @@ fieldset {
   border-radius: 10px;
   padding: 10px;
   margin: 10px 0 0 0;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(12, 20, 30, 0.55);
 }
 
 legend {
@@ -261,11 +306,12 @@ legend {
 input[type="number"],
 select {
   width: 100%;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--stroke);
-  background: var(--panel2);
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(11, 17, 25, 0.7);
   color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 select {
@@ -278,16 +324,19 @@ input[type="checkbox"] {
 }
 
 button {
-  background: #1f2a3a;
+  background: linear-gradient(120deg, rgba(46, 195, 177, 0.25), rgba(10, 17, 22, 0.2));
   color: var(--text);
   border: 1px solid var(--stroke);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 9px 14px;
   cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 button:hover {
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.45);
+  background: linear-gradient(120deg, rgba(46, 195, 177, 0.35), rgba(245, 194, 107, 0.16));
 }
 
 button:active {
@@ -302,8 +351,18 @@ button:disabled {
 .help {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.35;
+}
+
+details > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  color: #c3d2df;
+}
+
+details[open] > summary {
+  color: var(--accent-2);
 }
 
 /* -----------------------------
@@ -354,6 +413,10 @@ button:disabled {
   gap: 12px;
   align-items: center;
   margin: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(8, 14, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 #sliderRoot .name {
@@ -379,11 +442,7 @@ button:disabled {
 #sliderRoot input[type="range"]::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(76, 201, 240, 0.65),
-    rgba(76, 201, 240, 0.2)
-  );
+  background: linear-gradient(90deg, rgba(46, 195, 177, 0.8), rgba(245, 194, 107, 0.25));
   border: 1px solid var(--stroke2);
 }
 
@@ -408,12 +467,65 @@ button:disabled {
 #sliderRoot input[type="range"]::-moz-range-track {
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(76, 201, 240, 0.65),
-    rgba(76, 201, 240, 0.2)
-  );
+  background: linear-gradient(90deg, rgba(46, 195, 177, 0.8), rgba(245, 194, 107, 0.25));
   border: 1px solid var(--stroke2);
+}
+
+.row.readouts .mono {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 20, 28, 0.6);
+}
+
+.row.readouts .warn {
+  background: rgba(245, 194, 107, 0.14);
+  border-color: rgba(245, 194, 107, 0.4);
+  color: #f5c26b;
+}
+
+.panel.sidebar {
+  background: var(--panel-strong);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.vizStack .col {
+  animation: float-in 520ms ease both;
+}
+
+.app-header,
+.panel {
+  animation: rise-in 520ms ease both;
+}
+
+.panel:nth-of-type(2) {
+  animation-delay: 60ms;
+}
+
+.panel:nth-of-type(3) {
+  animation-delay: 120ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 #sliderRoot input[type="range"]::-moz-range-thumb {

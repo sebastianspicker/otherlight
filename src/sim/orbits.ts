@@ -13,17 +13,8 @@ import type { OrbitElements, OrbitElementsProvider } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
 import { radiusFromE, solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
 import { perifocalToInertial } from "../physics/frames";
-
-function assertOrbit(el: OrbitElements, name: string): void {
-  if (!el || typeof el !== "object") throw new Error(`${name} must be an object.`);
-  if (!Number.isFinite(el.a) || el.a <= 0) throw new Error(`${name}.a must be > 0 and finite.`);
-  if (!Number.isFinite(el.e) || el.e < 0 || el.e >= 1) throw new Error(`${name}.e must be in [0, 1).`);
-  if (!Number.isFinite(el.period) || el.period <= 0) throw new Error(`${name}.period must be > 0 and finite.`);
-  if (!Number.isFinite(el.t0)) throw new Error(`${name}.t0 must be finite.`);
-  if (!Number.isFinite(el.inc)) throw new Error(`${name}.inc must be finite.`);
-  if (!Number.isFinite(el.Omega)) throw new Error(`${name}.Omega must be finite.`);
-  if (!Number.isFinite(el.omega)) throw new Error(`${name}.omega must be finite.`);
-}
+import { assertOrbit } from "./validation";
+import { applyApsidalPrecession } from "../physics/relativity";
 
 export function resolveOrbitElements(
   elOrProvider: OrbitElements | OrbitElementsProvider,
@@ -36,12 +27,13 @@ export function resolveOrbitElements(
   return el;
 }
 
-export function posFromElements(
-  elOrProvider: OrbitElements | OrbitElementsProvider,
+export function posFromResolvedElements(
+  el: OrbitElements,
   t: number,
-  nameForErrors: string
+  nameForErrors = "orbit"
 ): Vec3 {
-  const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
+  if (!Number.isFinite(t)) throw new Error(`${nameForErrors}: t must be finite.`);
+  assertOrbit(el, nameForErrors);
 
   // Mean motion n = 2π / P [rad/s]
   const n = (2 * Math.PI) / el.period;
@@ -62,4 +54,33 @@ export function posFromElements(
 
   // Rotate into inertial frame.
   return perifocalToInertial(rPQW, el.Omega, el.inc, el.omega);
+}
+
+export function posFromElements(
+  elOrProvider: OrbitElements | OrbitElementsProvider,
+  t: number,
+  nameForErrors: string
+): Vec3 {
+  const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
+  return posFromResolvedElements(el, t, nameForErrors);
+}
+
+export function resolveOrbitElementsWithPrecession(
+  elOrProvider: OrbitElements | OrbitElementsProvider,
+  t: number,
+  nameForErrors: string,
+  precessionPerOrbitRad?: number
+): OrbitElements {
+  const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
+  return applyApsidalPrecession(el, t, precessionPerOrbitRad ?? 0);
+}
+
+export function posFromElementsWithPrecession(
+  elOrProvider: OrbitElements | OrbitElementsProvider,
+  t: number,
+  nameForErrors: string,
+  precessionPerOrbitRad?: number
+): Vec3 {
+  const el = resolveOrbitElementsWithPrecession(elOrProvider, t, nameForErrors, precessionPerOrbitRad);
+  return posFromResolvedElements(el, t, nameForErrors);
 }

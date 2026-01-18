@@ -27,7 +27,7 @@
 
 import type { Vec3 } from "../physics/vec3";
 import { vDot, vNormalizeOrThrow, vIsFinite } from "../physics/vec3";
-import { clamp } from "../core/units";
+import { clamp, isFiniteNumber } from "../core/units";
 
 export type ForwardScatteringModel = {
   enabled?: boolean;
@@ -116,10 +116,6 @@ export type ForwardScatteringFluxParams = {
    */
   phase?: number;
 };
-
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
 
 /**
  * Numerically stable "wrap to [-π, π]" for phase differences.

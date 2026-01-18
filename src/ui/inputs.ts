@@ -2,7 +2,7 @@
 //
 // UI input helpers + sanitizers.
 
-import { clamp, toFiniteNumber } from "../core/units";
+import { clamp, toFiniteNumber, ECC_MAX } from "../core/units";
 
 type PlotMode = "physical" | "measured";
 
@@ -45,14 +45,10 @@ export function sanitizeIncDeg(vDeg: number): number {
 
 // Numerical stability policy (elliptic only)
 export function sanitizeEcc(v: number): number {
-  return clamp(v, 0, 0.95);
+  return clamp(v, 0, ECC_MAX);
 }
 
 export function sanitizePositive(v: number, lo: number, hi: number): number {
-  return clamp(v, lo, hi);
-}
-
-export function sanitizeClamped(v: number, lo: number, hi: number): number {
   return clamp(v, lo, hi);
 }
 

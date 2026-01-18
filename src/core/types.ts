@@ -42,6 +42,8 @@
 export type { OrbitElements, OrbitElementsProvider } from "./typesOrbit";
 export type {
   NBodyPlanetMoonParams,
+  NBodyPerturberParams,
+  RelativityParams,
   ExomoonTimingShapeParams,
   SystemDynamicsParams,
 } from "./typesDynamics";
@@ -69,11 +71,14 @@ export type {
   AtmosphereTransmissionParams,
   ForwardScatteringParams,
   StellarVariabilityParams,
+  StellarVariabilityPhaseModel,
+  SpotEvolutionParams,
+  ThermalInertiaParams,
   PhotometryParams,
 } from "./typesPhotometry";
 
 // System
-export type { Body, SystemParams } from "./typesSystem";
+export type { Body, BodyShapeParams, RingSystemParams, SystemParams } from "./typesSystem";
 
 // Results
 export type { StepMeta, StepResult } from "./typesResults";

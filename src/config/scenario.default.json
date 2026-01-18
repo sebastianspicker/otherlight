@@ -127,6 +127,23 @@
         "moonIncDot": 0,
         "moonOmegaSmallDot": 0,
         "moonImpactYDot": 0
+      },
+      "nbodyPlanetMoon": {
+        "enabled": false,
+        "muStar": 1.5,
+        "muPlanet": 0.27,
+        "muMoon": 0.01,
+        "dtMax": 10,
+        "softening": 0,
+        "perturbers": []
+      },
+      "relativity": {
+        "enabled": false,
+        "ltte": true,
+        "grPrecession": true,
+        "c": 299792.458,
+        "planetPrecessionPerOrbit": 0,
+        "moonPrecessionPerOrbit": 0
       }
     }
   },

@@ -24,10 +24,10 @@
 // - planetPhaseFlux(...) is a backwards-compatible wrapper.
 // - This file does NOT re-implement phase angle or phase functions; it delegates to dayNightVisibility.ts.
 
-import type { DayNightVisibilityParams } from "../core/types";
+import type { DayNightVisibilityParams, PhaseCurveParams } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vLen } from "../physics/vec3";
-import { clamp01 } from "../core/units";
+import { clamp01, isFiniteNumber } from "../core/units";
 
 import type { ReflectedPhaseModel, ThermalPhaseModel } from "./dayNightVisibility";
 import {
@@ -36,10 +36,6 @@ import {
   reflectedLightGeometricWeight,
   thermalLightGeometricWeight,
 } from "./dayNightVisibility";
-
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
 
 /**
  * Phase-curve configuration (phenomenological).
@@ -52,38 +48,7 @@ function isFiniteNumber(x: unknown): x is number {
  * Backwards-compatibility:
  * - Fields mirror coretypes.PhaseCurveParams to keep JSON presets stable.
  */
-export type PhaseCurveModel = {
-  enabled?: boolean;
-
-  reflAmp?: number;
-  thermAmp?: number;
-
-  reflOffset?: number; // radians (phenomenological)
-  thermOffset?: number; // radians (phenomenological)
-
-  // Legacy toggle preserved:
-  lambertian?: boolean;
-
-  // Optional constant nightside / floor term (stellar units).
-  constant?: number;
-
-  // Explicit model selections (override legacy lambertian when present).
-  reflModel?: ReflectedPhaseModel;
-  thermalModel?: ThermalPhaseModel;
-
-  /**
-   * If true, clamp derived geometric weights into [0,1] (recommended default for robustness).
-   * Note: amplitudes are still applied multiplicatively afterwards.
-   */
-  clamp?: boolean;
-
-  /**
-   * If true (default), apply physical scaling:
-   * - Reflected: (R_body / r_star-body)^2
-   * - Thermal/constant: (R_body / R_star)^2
-   */
-  physicalScaling?: boolean;
-};
+export type PhaseCurveModel = PhaseCurveParams;
 
 /**
  * Normalized/sanitized PhaseCurveModel used internally.
@@ -101,6 +66,13 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   thermalModel?: ThermalPhaseModel;
   clamp: boolean;
   physicalScaling: boolean;
+  thermalInertia: {
+    enabled: boolean;
+    albedo: number;
+    emissivity: number;
+    tauSec: number;
+    redistribution: number;
+  };
 } {
   const enabled = Boolean(model?.enabled);
 
@@ -120,6 +92,17 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   const clamp = model?.clamp !== false;
   const physicalScaling = model?.physicalScaling !== false;
 
+  const inertia = model?.thermalInertia;
+  const thermalInertia = {
+    enabled: Boolean(inertia?.enabled),
+    albedo: clamp01(isFiniteNumber(inertia?.albedo) ? (inertia!.albedo as number) : 0),
+    emissivity: clamp01(isFiniteNumber(inertia?.emissivity) ? (inertia!.emissivity as number) : 1),
+    tauSec: isFiniteNumber(inertia?.thermalTimescaleSec)
+      ? Math.max(0, inertia!.thermalTimescaleSec as number)
+      : 0,
+    redistribution: clamp01(isFiniteNumber(inertia?.redistribution) ? (inertia!.redistribution as number) : 0),
+  };
+
   return {
     enabled,
     reflAmp,
@@ -132,6 +115,7 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
     thermalModel,
     clamp,
     physicalScaling,
+    thermalInertia,
   };
 }
 
@@ -175,6 +159,14 @@ export function thermalFluxTerm(params: {
   model: ThermalPhaseModel;
   thermOffset?: number;
   clamp?: boolean;
+  thermalInertia?: {
+    enabled: boolean;
+    albedo: number;
+    emissivity: number;
+    tauSec: number;
+    redistribution: number;
+  };
+  orbitPeriodSec?: number;
 }): number {
   const { alpha, thermAmp, model } = params;
 
@@ -182,12 +174,41 @@ export function thermalFluxTerm(params: {
   if (!Number.isFinite(thermAmp) || thermAmp <= 0) return 0;
 
   const off = isFiniteNumber(params.thermOffset) ? params.thermOffset : 0;
+  const inertia = params.thermalInertia;
+  const albedo = inertia ? inertia.albedo : 0;
+  const emissivity = inertia ? inertia.emissivity : 1;
+  const thermScale = emissivity * (1 - albedo);
+
+  const amp = thermAmp * thermScale;
+  if (!(Number.isFinite(amp) && amp > 0)) return 0;
+
+  if (inertia?.enabled && model !== "constant") {
+    const period = params.orbitPeriodSec;
+    if (Number.isFinite(period) && period > 0) {
+      const omega = (2 * Math.PI) / period;
+      const x = omega * inertia.tauSec;
+      const lag = Math.atan(x);
+      const gain = 1 / Math.sqrt(1 + x * x);
+
+      const aEff = applyPhaseOffset(alpha, -(off + lag));
+      const wRaw = thermalLightGeometricWeight(aEff, model);
+      const w = params.clamp === false ? wRaw : clamp01(wRaw);
+
+      const wVar = Number.isFinite(w) ? w * gain : 0;
+      const r = inertia.redistribution;
+      const wEff = r + (1 - r) * wVar;
+      const ww = params.clamp === false ? wEff : clamp01(wEff);
+
+      return Number.isFinite(ww) ? amp * ww : 0;
+    }
+  }
+
   const aEff = applyPhaseOffset(alpha, -off);
 
   const w = thermalLightGeometricWeight(aEff, model);
   const ww = params.clamp === false ? w : clamp01(w);
 
-  return Number.isFinite(ww) ? thermAmp * ww : 0;
+  return Number.isFinite(ww) ? amp * ww : 0;
 }
 
 /**
@@ -201,6 +222,7 @@ export function bodyPhaseFlux(params: {
   rBodyRadius?: number;
   rStarRadius?: number;
   observerDir: Vec3;
+  orbitPeriodSec?: number;
   model?: PhaseCurveModel;
   dayNightVisibility?: DayNightVisibilityParams;
 }): number {
@@ -270,6 +292,8 @@ export function bodyPhaseFlux(params: {
     model: thermalModel,
     thermOffset: norm.thermOffset,
     clamp: clampWeights,
+    thermalInertia: norm.thermalInertia,
+    orbitPeriodSec: params.orbitPeriodSec,
   });
 
   const constant = norm.physicalScaling ? norm.constant * thermScale : norm.constant;

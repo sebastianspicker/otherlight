@@ -27,6 +27,9 @@ export const HALF_PI = 0.5 * Math.PI;
 export const TWOPI = TWO_PI;
 export const HALFPI = HALF_PI;
 
+// Practical upper bound used for UI sanitization (strictly < 1 for elliptic orbits).
+export const ECC_MAX = 0.999;
+
 /**
  * Clamp value into [min,max]. Robust even if min/max are swapped.
  * If x is NaN, returns NaN (propagates via Math.min/Math.max).
@@ -148,6 +151,18 @@ export function toFiniteNonNeg(v: unknown, fallback: number): number {
   const x = toFiniteNumber(v, fallback);
   const fb = Number.isFinite(fallback) ? fallback : 0;
   return Number.isFinite(x) ? Math.max(0, x) : Math.max(0, fb);
+}
+
+/**
+ * Convert unknown input to a finite number; if not strictly > 0, return fallback.
+ * Useful for positive-only values where a sensible default is preferred over eps.
+ */
+export function toFinitePositiveOr(v: unknown, fallback: number): number {
+  const fb = toFiniteNumber(fallback, 1e-12);
+  const n = toFiniteNumber(v, fb);
+
+  if (Number.isFinite(n) && n > 0) return n;
+  return Number.isFinite(fb) && fb > 0 ? fb : 1e-12;
 }
 
 /**

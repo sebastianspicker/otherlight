@@ -3,6 +3,7 @@
 import type { SystemParams } from "../core/types";
 import { normalizeFiniteDiffDtSec, toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
+import { vSub } from "../physics/vec3";
 import { trySplitBarycentricPair } from "../physics/barycenter";
 import {
   applyOrientationEvolution,
@@ -13,6 +14,7 @@ import {
 import type { BodyKinematics } from "./kinematics";
 import { getExomoonConfig } from "./kinematics";
 import { posFromElements, resolveOrbitElements } from "./orbits";
+import { getNBodyStateAt, isNBodyEnabled } from "./dynamics";
 
 export type ExoDiagnostics = {
   vPlanetSky?: number;
@@ -34,6 +36,7 @@ export function computeExoDiagnostics(
   }
 
   const exo = getExomoonConfig(params);
+  const nbodyActive = isNBodyEnabled(params);
   const exoEnabled = Boolean(exo?.enabled);
 
   // Impact parameters are geometry diagnostics: always provide them.
@@ -45,6 +48,11 @@ export function computeExoDiagnostics(
   const velDt = normalizeFiniteDiffDtSec(exo?.velDt, 2.0);
 
   const planetAbsAt = (ti: number): Vec3 => {
+    if (nbodyActive) {
+      const nbody = getNBodyStateAt(params, ti);
+      if (nbody) return vSub(nbody.state.rP, nbody.state.rS);
+    }
+
     const rB = posFromElements(params.planet.orbit, ti, "planet.orbit");
 
     // If there is no moon, "planet orbit" is the planet orbit directly.

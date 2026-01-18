@@ -23,8 +23,13 @@
 // - Helpers are deterministic, allocation-light, and side-effect free.
 // - Prefer conservative "fail open" behavior for invalid inputs (e.g. return empty list / false).
 
+import { isFiniteNumber, isFinitePositive } from "../core/units";
+
 /** A circular opaque occulter in the sky plane (legacy planet/moon disk). */
 export type CircleOcculter = {
+  /** Optional discriminant for mixed-shape occulter lists. */
+  kind?: "circle";
+
   /** Sky-plane x offset of occulter center relative to star center. */
   dx: number;
 
@@ -35,12 +40,14 @@ export type CircleOcculter = {
   r: number;
 };
 
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
-
-function isFinitePositive(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x) && x > 0;
+/**
+ * Point-in-circle test for occulter geometry (strict: tangency is NOT blocked).
+ */
+export function pointInCircleOcculter(x: number, y: number, o: CircleOcculter): boolean {
+  const dx = x - o.dx;
+  const dy = y - o.dy;
+  const r2 = o.r * o.r;
+  return dx * dx + dy * dy < r2;
 }
 
 /**

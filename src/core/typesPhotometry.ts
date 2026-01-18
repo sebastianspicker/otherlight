@@ -71,11 +71,43 @@ export type PhaseCurveParams = {
   lambertian?: boolean;
 
   /**
+   * If true (default), clamp geometric weights into [0,1] for robustness.
+   * Note: amplitudes are still applied multiplicatively afterwards.
+   */
+  clamp?: boolean;
+
+  /**
    * If true (default), apply physical scaling:
    * - Reflected: scales by (R_body / r_star-body)^2.
    * - Thermal/constant: scales by (R_body / R_star)^2.
    */
   physicalScaling?: boolean;
+
+  /** Optional thermal inertia model (toy 1-pole response). */
+  thermalInertia?: ThermalInertiaParams;
+};
+
+/**
+ * Simple thermal inertia model for phase curves.
+ * The response is modeled as a 1-pole low-pass filter with a phase lag.
+ */
+export type ThermalInertiaParams = {
+  enabled?: boolean;
+
+  /** Bond albedo in [0,1]. */
+  albedo?: number;
+
+  /** Emissivity in [0,1]. */
+  emissivity?: number;
+
+  /** Thermal response timescale in seconds (tau). */
+  thermalTimescaleSec?: number;
+
+  /**
+   * Redistribution efficiency in [0,1].
+   * 0 => no redistribution (max day/night contrast), 1 => full redistribution (constant).
+   */
+  redistribution?: number;
 };
 
 /**
@@ -150,11 +182,70 @@ export type ForwardScatteringParams = {
  */
 export type StellarVariabilityParams = {
   enabled?: boolean;
+
+  /** Doppler beaming amplitude in stellar flux units (dimensionless). */
   beamingAmp?: number;
+
+  /** Ellipsoidal variation amplitude in stellar flux units (dimensionless). */
   ellipsoidalAmp?: number;
+
+  /** Phase offset for beaming term [rad]. */
   beamingOffset?: number;
+
+  /** Phase offset for ellipsoidal term [rad]. */
   ellipsoidalOffset?: number;
+
+  /** Constant additive term in stellar flux units (dimensionless). */
   constant?: number;
+
+  /**
+   * Phase model selection.
+   * - "linear-period" (default)
+   * - "true-anomaly"
+   */
+  phaseModel?: StellarVariabilityPhaseModel;
+
+  /**
+   * Optional safety clamp bounds for the returned additive term.
+   * If omitted, the implementation may use conservative defaults.
+   */
+  clampMin?: number;
+  clampMax?: number;
+};
+
+export type StellarVariabilityPhaseModel = "linear-period" | "true-anomaly";
+
+/**
+ * Time-evolving star-spot configuration (rotation + lifecycle).
+ *
+ * This model uses the existing brightnessPatches as the spot map and
+ * applies rotation/drift + optional fade-in/out to each patch.
+ */
+export type SpotEvolutionParams = {
+  enabled?: boolean;
+
+  /** Stellar rotation period in seconds (required when enabled). */
+  rotationPeriodSec?: number;
+
+  /** Phase offset of the rotation [rad], applied at tRef. */
+  rotationPhase0?: number;
+
+  /** Optional additional longitudinal drift rate [rad/s]. */
+  driftRateRadPerSec?: number;
+
+  /**
+   * Spot lifecycle timescale in seconds (0 => no fade; >0 => periodic fade in/out).
+   */
+  lifetimeSec?: number;
+
+  /**
+   * Spot coverage scaling in [0,1].
+   * 0 => suppress spots (factor -> 1), 1 => full patch factors.
+   */
+  coverage?: number;
+
+  /** Optional reference time for phase/lifecycle [s]. Default 0. */
+  tRef?: number;
 };
 
 /**
@@ -227,6 +318,9 @@ export type PhotometryParams = {
 
   /** Numerical resolution knob for photometry integrators (spatial integration). */
   gridRes?: number;
+
+  /** Optional time-evolving spot model (uses brightnessPatches). */
+  spotEvolution?: SpotEvolutionParams;
 
   /**
    * Instrument noise + systematics measurement-layer configuration.

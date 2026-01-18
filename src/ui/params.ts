@@ -2,7 +2,13 @@
 //
 // UI <-> SystemParams mapping.
 
-import type { BrightnessPatch, LimbDarkeningModel, PhotometryParams, SystemParams } from "../core/types";
+import type {
+  BrightnessPatch,
+  LimbDarkeningLawQuadratic,
+  LimbDarkeningModel,
+  PhotometryParams,
+  SystemParams,
+} from "../core/types";
 import { DEG2RAD, RAD2DEG, clamp } from "../core/units";
 import { vIsFinite, vNormalizeOrZero } from "../physics/vec3";
 
@@ -38,6 +44,217 @@ function getQuadraticLDFromModel(
 function ensurePhotometry(p: SystemParams): PhotometryParams {
   p.star.photometry = (p.star.photometry ?? ({} as any)) as any;
   return p.star.photometry as PhotometryParams;
+}
+
+function parseNumberList(text: string): number[] {
+  if (typeof text !== "string" || text.trim().length === 0) return [];
+  return text
+    .split(/[,;\s]+/)
+    .map((v) => Number(v))
+    .filter((v) => Number.isFinite(v));
+}
+
+function formatNumberList(values: number[] | undefined): string {
+  if (!Array.isArray(values) || values.length === 0) return "";
+  return values.map((v) => (Number.isFinite(v) ? String(v) : "")).filter(Boolean).join(", ");
+}
+
+function parseQuadraticBands(text: string): Record<string, LimbDarkeningLawQuadratic> | undefined {
+  const entries = typeof text === "string" ? text.split(/[;\n]+/) : [];
+  const bands: Record<string, LimbDarkeningLawQuadratic> = {};
+
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const parts = trimmed.split(/[:=]/);
+    if (parts.length < 2) continue;
+
+    const band = parts[0].trim();
+    if (!band) continue;
+
+    const coeffs = parts[1]
+      .trim()
+      .split(/[,\\s]+/)
+      .map((v) => Number(v))
+      .filter((v) => Number.isFinite(v));
+
+    if (coeffs.length < 2) continue;
+
+    bands[band] = { kind: "quadratic", u1: coeffs[0], u2: coeffs[1] };
+  }
+
+  return Object.keys(bands).length > 0 ? bands : undefined;
+}
+
+function formatQuadraticBands(bands: Record<string, any> | undefined): string {
+  if (!bands) return "";
+  const parts: string[] = [];
+
+  for (const [band, law] of Object.entries(bands)) {
+    if (!law || law.kind !== "quadratic") continue;
+    const u1 = (law as any).u1;
+    const u2 = (law as any).u2;
+    if (!Number.isFinite(u1) || !Number.isFinite(u2)) continue;
+    parts.push(`${band}:${u1},${u2}`);
+  }
+
+  return parts.join("; ");
+}
+
+type OrbitInputRefs = {
+  a: HTMLInputElement;
+  e: HTMLInputElement;
+  inc: HTMLInputElement;
+  period: HTMLInputElement;
+};
+
+const ORBIT_A_MIN = 0.001;
+const ORBIT_A_MAX = 1e12;
+const ORBIT_PERIOD_MIN = 0.001;
+const ORBIT_PERIOD_MAX = 1e18;
+const OBLA_MAX = 0.95;
+const RING_INC_MAX_DEG = 90;
+
+function writeOrbitInputs(r: OrbitInputRefs, orbit: { a: number; e: number; inc: number; period: number }): void {
+  writeNumberInput(r.a, orbit.a);
+  writeNumberInput(r.e, orbit.e);
+  writeNumberInput(r.inc, orbit.inc * RAD2DEG);
+  writeNumberInput(r.period, orbit.period);
+}
+
+function readOrbitInputs(r: OrbitInputRefs, orbit: any): void {
+  const aFallback = Number.isFinite(orbit.a) ? orbit.a : ORBIT_A_MIN;
+  const eFallback = Number.isFinite(orbit.e) ? orbit.e : 0;
+  const incFallbackDeg = Number.isFinite(orbit.inc) ? orbit.inc * RAD2DEG : 0;
+  const periodFallback = Number.isFinite(orbit.period) ? orbit.period : ORBIT_PERIOD_MIN;
+
+  orbit.a = sanitizePositive(readNumberInput(r.a, aFallback), ORBIT_A_MIN, ORBIT_A_MAX);
+  orbit.e = sanitizeEcc(readNumberInput(r.e, eFallback));
+
+  const incDeg = sanitizeIncDeg(readNumberInput(r.inc, incFallbackDeg));
+  orbit.inc = incDeg * DEG2RAD;
+
+  orbit.period = sanitizePositive(readNumberInput(r.period, periodFallback), ORBIT_PERIOD_MIN, ORBIT_PERIOD_MAX);
+
+  // Ensure required angles exist (schema stability)
+  orbit.Omega = Number.isFinite(orbit.Omega) ? orbit.Omega : 0;
+  orbit.omega = Number.isFinite(orbit.omega) ? orbit.omega : 0;
+  orbit.t0 = Number.isFinite(orbit.t0) ? orbit.t0 : 0;
+}
+
+type OblateInputRefs = {
+  enabled: HTMLInputElement;
+  oblateness: HTMLInputElement;
+};
+
+type RingInputRefs = {
+  enabled: HTMLInputElement;
+  inner: HTMLInputElement;
+  outer: HTMLInputElement;
+  incDeg: HTMLInputElement;
+  angleDeg: HTMLInputElement;
+};
+
+function readOblatenessInput(refs: OblateInputRefs, fallback = 0): number | undefined {
+  if (!readCheckbox(refs.enabled)) return undefined;
+  const raw = sanitizeFinite(readNumberInput(refs.oblateness, fallback), fallback);
+  const f = clamp(raw, 0, OBLA_MAX);
+  return Number.isFinite(f) ? f : fallback;
+}
+
+function readRingInputs(
+  refs: RingInputRefs,
+  defaults: { inner: number; outer: number; incDeg?: number; angleDeg?: number }
+): {
+  innerRadius: number;
+  outerRadius: number;
+  inclination: number;
+  positionAngle: number;
+} | undefined {
+  if (!readCheckbox(refs.enabled)) return undefined;
+
+  const inner = sanitizePositive(readNumberInput(refs.inner, defaults.inner), 0, 1e12);
+  const outerRaw = sanitizePositive(readNumberInput(refs.outer, defaults.outer), 0, 1e12);
+  const outer = Math.max(inner + 1e-6, outerRaw);
+
+  const incDeg = clamp(
+    sanitizeFinite(readNumberInput(refs.incDeg, defaults.incDeg ?? 0), defaults.incDeg ?? 0),
+    0,
+    RING_INC_MAX_DEG
+  );
+  const angleDeg = sanitizeFinite(readNumberInput(refs.angleDeg, defaults.angleDeg ?? 0), defaults.angleDeg ?? 0);
+
+  return {
+    innerRadius: inner,
+    outerRadius: outer,
+    inclination: incDeg * DEG2RAD,
+    positionAngle: angleDeg * DEG2RAD,
+  };
+}
+
+type PerturberInputRefs = {
+  enabled: HTMLInputElement;
+  mu: HTMLInputElement;
+  a: HTMLInputElement;
+  e: HTMLInputElement;
+  incDeg: HTMLInputElement;
+  period: HTMLInputElement;
+};
+
+function estimateMuFromOrbit(orbit: { a: number; period: number } | undefined): number | undefined {
+  if (!orbit) return undefined;
+  const a = orbit.a;
+  const p = orbit.period;
+  if (!(Number.isFinite(a) && a > 0 && Number.isFinite(p) && p > 0)) return undefined;
+  const n = (2 * Math.PI) / p;
+  const mu = n * n * a * a * a;
+  return Number.isFinite(mu) ? mu : undefined;
+}
+
+function writePerturberInputs(refs: PerturberInputRefs, p: any, defaults: {
+  mu: number;
+  a: number;
+  e: number;
+  incDeg: number;
+  period: number;
+}): void {
+  refs.enabled.checked = Boolean(p && p.enabled !== false);
+  writeNumberInput(refs.mu, p?.mu ?? defaults.mu);
+  writeNumberInput(refs.a, p?.orbit?.a ?? defaults.a);
+  writeNumberInput(refs.e, p?.orbit?.e ?? defaults.e);
+  writeNumberInput(refs.incDeg, Number.isFinite(p?.orbit?.inc) ? (p.orbit.inc as number) * RAD2DEG : defaults.incDeg);
+  writeNumberInput(refs.period, p?.orbit?.period ?? defaults.period);
+}
+
+function readPerturberInputs(refs: PerturberInputRefs, defaults: {
+  mu: number;
+  a: number;
+  e: number;
+  incDeg: number;
+  period: number;
+}): { enabled: true; mu: number; orbit: { a: number; e: number; inc: number; Omega: number; omega: number; period: number; t0: number } } | undefined {
+  if (!readCheckbox(refs.enabled)) return undefined;
+
+  const mu = sanitizePositive(readNumberInput(refs.mu, defaults.mu), 0, 1e30);
+  const a = sanitizePositive(readNumberInput(refs.a, defaults.a), ORBIT_A_MIN, ORBIT_A_MAX);
+  const e = sanitizeEcc(readNumberInput(refs.e, defaults.e));
+  const incDeg = sanitizeIncDeg(readNumberInput(refs.incDeg, defaults.incDeg));
+  const period = sanitizePositive(readNumberInput(refs.period, defaults.period), ORBIT_PERIOD_MIN, ORBIT_PERIOD_MAX);
+
+  return {
+    enabled: true,
+    mu,
+    orbit: {
+      a,
+      e,
+      inc: incDeg * DEG2RAD,
+      Omega: 0,
+      omega: 0,
+      period,
+      t0: 0,
+    },
+  };
 }
 
 export function setObserverDirFromUI(p: SystemParams, r: UiRefs): void {
@@ -99,6 +316,8 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   const qld = getQuadraticLDFromModel(ph?.limbDarkeningModel);
   writeNumberInput(r.ldU1, qld?.u1 ?? 0.35);
   writeNumberInput(r.ldU2, qld?.u2 ?? 0.25);
+  r.ldBandpass.value = String((ph?.limbDarkeningModel as any)?.bandpass ?? "");
+  r.ldBands.value = formatQuadraticBands((ph?.limbDarkeningModel as any)?.bands);
 
   const hasPatches = Boolean(ph?.brightnessPatches && ph.brightnessPatches.length > 0);
   r.patchesEnabled.checked = hasPatches;
@@ -118,6 +337,14 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.p2angle, (pa2 as any)?.angle ?? 0.6);
   writeNumberInput(r.p2f, (pa2 as any)?.factor ?? 1.12);
 
+  // Spot evolution (rotation/lifecycle)
+  const spot = ph?.spotEvolution;
+  r.spotEvolutionEnabled.checked = Boolean(spot?.enabled);
+  writeNumberInput(r.spotRotationPeriod, spot?.rotationPeriodSec ?? 20000);
+  writeNumberInput(r.spotCoverage, spot?.coverage ?? 1);
+  writeNumberInput(r.spotLifetime, spot?.lifetimeSec ?? 0);
+  writeNumberInput(r.spotDriftRate, spot?.driftRateRadPerSec ?? 0);
+
   // --- Planet ---
   writeNumberInput(r.planetR, p.planet.r);
 
@@ -126,10 +353,10 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
     throw new Error("UI does not support a function-valued planet.orbit (OrbitElementsProvider).");
   }
 
-  writeNumberInput(r.planetA, (p.planet.orbit as any).a);
-  writeNumberInput(r.planetE, (p.planet.orbit as any).e);
-  writeNumberInput(r.planetInc, (p.planet.orbit as any).inc * RAD2DEG);
-  writeNumberInput(r.planetPeriod, (p.planet.orbit as any).period);
+  writeOrbitInputs(
+    { a: r.planetA, e: r.planetE, inc: r.planetInc, period: r.planetPeriod },
+    p.planet.orbit as any
+  );
   writeNumberInput(r.planetMass, (p.planet.m ?? 0) as number);
 
   r.planetPhaseEnabled.checked = Boolean(ph?.phaseCurve?.enabled);
@@ -139,6 +366,33 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.planetThermOffset, ph?.phaseCurve?.thermOffset ?? 0);
   r.planetLambertian.checked = Boolean(ph?.phaseCurve?.lambertian ?? true);
   writeNumberInput(r.planetConstant, ph?.phaseCurve?.constant ?? 0);
+
+  const pThermal = ph?.phaseCurve?.thermalInertia;
+  r.planetThermalInertiaEnabled.checked = Boolean(pThermal?.enabled);
+  writeNumberInput(r.planetAlbedo, pThermal?.albedo ?? 0);
+  writeNumberInput(r.planetEmissivity, pThermal?.emissivity ?? 1);
+  writeNumberInput(r.planetThermalTimescale, pThermal?.thermalTimescaleSec ?? 0);
+  writeNumberInput(r.planetRedistribution, pThermal?.redistribution ?? 0);
+
+  // Planet shape / rings
+  const pShape = p.planet.shape;
+  r.planetOblateEnabled.checked = Boolean(pShape && Number.isFinite(pShape.oblateness) && pShape.oblateness > 0);
+  writeNumberInput(r.planetOblateness, pShape?.oblateness ?? 0);
+
+  const pRings = p.planet.rings;
+  r.planetRingsEnabled.checked = Boolean(pRings);
+  const pRingInnerDefault = p.planet.r * 1.4;
+  const pRingOuterDefault = p.planet.r * 2.2;
+  writeNumberInput(r.planetRingInner, pRings?.innerRadius ?? pRingInnerDefault);
+  writeNumberInput(r.planetRingOuter, pRings?.outerRadius ?? pRingOuterDefault);
+  writeNumberInput(
+    r.planetRingInc,
+    Number.isFinite(pRings?.inclination) ? (pRings!.inclination as number) * RAD2DEG : 0
+  );
+  writeNumberInput(
+    r.planetRingAngle,
+    Number.isFinite(pRings?.positionAngle) ? (pRings!.positionAngle as number) * RAD2DEG : 0
+  );
 
   // --- Forward scattering ---
   r.fsEnabled.checked = Boolean(ph?.forwardScattering?.enabled);
@@ -154,6 +408,8 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.atmR0, ph?.atmosphereTransmission?.r0 ?? 0);
   writeNumberInput(r.atmH, ph?.atmosphereTransmission?.H ?? 0);
   writeNumberInput(r.atmTau0, ph?.atmosphereTransmission?.tau0 ?? 0);
+  r.atmLambdaNm.value = formatNumberList(ph?.atmosphereTransmission?.lambdaNm);
+  r.atmTauScale.value = formatNumberList(ph?.atmosphereTransmission?.tauScale);
 
   // --- Moon ---
   r.moonEnabled.checked = Boolean(p.moon);
@@ -164,18 +420,18 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
     }
 
     writeNumberInput(r.moonR, p.moon.r);
-    writeNumberInput(r.moonA, (p.moon.orbitAroundPlanet as any).a);
-    writeNumberInput(r.moonE, (p.moon.orbitAroundPlanet as any).e);
-    writeNumberInput(r.moonInc, (p.moon.orbitAroundPlanet as any).inc * RAD2DEG);
-    writeNumberInput(r.moonPeriod, (p.moon.orbitAroundPlanet as any).period);
+    writeOrbitInputs(
+      { a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod },
+      p.moon.orbitAroundPlanet as any
+    );
     writeNumberInput(r.moonMass, (p.moon.m ?? 0) as number);
   } else {
     // Provide stable defaults so controls don't show NaN when disabled.
     writeNumberInput(r.moonR, 1);
-    writeNumberInput(r.moonA, 10);
-    writeNumberInput(r.moonE, 0);
-    writeNumberInput(r.moonInc, 0);
-    writeNumberInput(r.moonPeriod, 1000);
+    writeOrbitInputs(
+      { a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod },
+      { a: 10, e: 0, inc: 0, period: 1000 }
+    );
     writeNumberInput(r.moonMass, 0);
   }
 
@@ -183,6 +439,33 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.moonReflAmp, ph?.moonPhaseCurve?.reflAmp ?? 0);
   writeNumberInput(r.moonThermAmp, ph?.moonPhaseCurve?.thermAmp ?? 0);
   r.moonLambertian.checked = Boolean(ph?.moonPhaseCurve?.lambertian ?? true);
+
+  const mThermal = ph?.moonPhaseCurve?.thermalInertia;
+  r.moonThermalInertiaEnabled.checked = Boolean(mThermal?.enabled);
+  writeNumberInput(r.moonAlbedo, mThermal?.albedo ?? 0);
+  writeNumberInput(r.moonEmissivity, mThermal?.emissivity ?? 1);
+  writeNumberInput(r.moonThermalTimescale, mThermal?.thermalTimescaleSec ?? 0);
+  writeNumberInput(r.moonRedistribution, mThermal?.redistribution ?? 0);
+
+  // Moon shape / rings
+  const mShape = p.moon?.shape;
+  r.moonOblateEnabled.checked = Boolean(mShape && Number.isFinite(mShape.oblateness) && mShape.oblateness > 0);
+  writeNumberInput(r.moonOblateness, mShape?.oblateness ?? 0);
+
+  const mRings = p.moon?.rings;
+  r.moonRingsEnabled.checked = Boolean(mRings);
+  const mRingInnerDefault = (p.moon?.r ?? 1) * 1.4;
+  const mRingOuterDefault = (p.moon?.r ?? 1) * 2.0;
+  writeNumberInput(r.moonRingInner, mRings?.innerRadius ?? mRingInnerDefault);
+  writeNumberInput(r.moonRingOuter, mRings?.outerRadius ?? mRingOuterDefault);
+  writeNumberInput(
+    r.moonRingInc,
+    Number.isFinite(mRings?.inclination) ? (mRings!.inclination as number) * RAD2DEG : 0
+  );
+  writeNumberInput(
+    r.moonRingAngle,
+    Number.isFinite(mRings?.positionAngle) ? (mRings!.positionAngle as number) * RAD2DEG : 0
+  );
 
   // --- Smearing ---
   r.smearEnabled.checked = Boolean((ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1);
@@ -214,6 +497,54 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.exoMoonIncDot, exo?.moonIncDot ?? 0);
   writeNumberInput(r.exoMoonOmegaSmallDot, exo?.moonOmegaSmallDot ?? 0);
   writeNumberInput(r.exoImpactYDot, exo?.moonImpactYDot ?? 0);
+
+  // --- N-body dynamics ---
+  const nbody = (p as any).dynamics?.nbodyPlanetMoon;
+  r.nbodyEnabled.checked = Boolean(nbody?.enabled);
+
+  const muStarDefault =
+    nbody?.muStar ??
+    (Number.isFinite(p.star?.m) && (p.star!.m as number) > 0 ? (p.star!.m as number) : estimateMuFromOrbit(p.planet.orbit));
+  const muPlanetDefault =
+    nbody?.muPlanet ??
+    (Number.isFinite(p.planet?.m) && (p.planet!.m as number) > 0 ? (p.planet!.m as number) : estimateMuFromOrbit(p.moon?.orbitAroundPlanet));
+  const muMoonDefault =
+    nbody?.muMoon ??
+    (Number.isFinite(p.moon?.m) && (p.moon!.m as number) > 0 ? (p.moon!.m as number) : 0);
+
+  writeNumberInput(r.nbodyMuStar, muStarDefault ?? 1);
+  writeNumberInput(r.nbodyMuPlanet, muPlanetDefault ?? 0.1);
+  writeNumberInput(r.nbodyMuMoon, muMoonDefault ?? 0.01);
+  writeNumberInput(r.nbodyDtMax, nbody?.dtMax ?? 10);
+  writeNumberInput(r.nbodySoftening, nbody?.softening ?? 0);
+
+  const pert = Array.isArray(nbody?.perturbers) ? nbody!.perturbers! : [];
+  writePerturberInputs(
+    { enabled: r.pert1Enabled, mu: r.pert1Mu, a: r.pert1A, e: r.pert1E, incDeg: r.pert1Inc, period: r.pert1Period },
+    pert[0],
+    { mu: 0, a: 400, e: 0, incDeg: 0, period: 40000 }
+  );
+  writePerturberInputs(
+    { enabled: r.pert2Enabled, mu: r.pert2Mu, a: r.pert2A, e: r.pert2E, incDeg: r.pert2Inc, period: r.pert2Period },
+    pert[1],
+    { mu: 0, a: 600, e: 0, incDeg: 0, period: 70000 }
+  );
+
+  // --- Relativity (LTTE/GR) ---
+  const rel = (p as any).dynamics?.relativity;
+  r.relEnabled.checked = Boolean(rel?.enabled);
+  r.relLTTE.checked = Boolean(rel?.ltte ?? true);
+  r.relShapiro.checked = Boolean(rel?.shapiro ?? true);
+  r.relGR.checked = Boolean(rel?.grPrecession ?? true);
+  writeNumberInput(r.relC, rel?.c ?? 299792.458);
+  writeNumberInput(
+    r.relPlanetPrec,
+    Number.isFinite(rel?.planetPrecessionPerOrbit) ? (rel!.planetPrecessionPerOrbit as number) * RAD2DEG : 0
+  );
+  writeNumberInput(
+    r.relMoonPrec,
+    Number.isFinite(rel?.moonPrecessionPerOrbit) ? (rel!.moonPrecessionPerOrbit as number) * RAD2DEG : 0
+  );
 }
 
 export function readUIIntoParams(
@@ -240,10 +571,15 @@ export function readUIIntoParams(
 
     const u1 = sanitizeFinite(readNumberInput(r.ldU1, prevQ?.u1 ?? 0.35), 0.35);
     const u2 = sanitizeFinite(readNumberInput(r.ldU2, prevQ?.u2 ?? 0.25), 0.25);
+    const bandpassRaw = r.ldBandpass.value.trim();
+    const bandsText = r.ldBands.value ?? "";
+    const bands = bandsText.trim().length > 0 ? parseQuadraticBands(bandsText) : undefined;
 
     ph.limbDarkeningModel = {
       ...(prevModel as any),
+      bandpass: bandpassRaw.length > 0 ? bandpassRaw : undefined,
       default: { kind: "quadratic", u1, u2 },
+      bands,
     } as any;
   } else {
     delete ph.limbDarkeningModel;
@@ -256,6 +592,21 @@ export function readUIIntoParams(
     delete ph.brightnessPatches;
   }
 
+  // Spot evolution (uses brightnessPatches)
+  if (readCheckbox(r.spotEvolutionEnabled)) {
+    ph.spotEvolution = {
+      enabled: true,
+      rotationPeriodSec: sanitizePositive(readNumberInput(r.spotRotationPeriod, ph.spotEvolution?.rotationPeriodSec ?? 20000), 1, 1e12),
+      coverage: clamp(sanitizeFinite(readNumberInput(r.spotCoverage, ph.spotEvolution?.coverage ?? 1), 1), 0, 1),
+      lifetimeSec: sanitizePositive(readNumberInput(r.spotLifetime, ph.spotEvolution?.lifetimeSec ?? 0), 0, 1e12),
+      driftRateRadPerSec: sanitizeFinite(readNumberInput(r.spotDriftRate, ph.spotEvolution?.driftRateRadPerSec ?? 0), 0),
+      tRef: ph.spotEvolution?.tRef ?? 0,
+      rotationPhase0: ph.spotEvolution?.rotationPhase0 ?? 0,
+    } as any;
+  } else {
+    delete ph.spotEvolution;
+  }
+
   // PLANET
   next.planet.r = sanitizePositive(readNumberInput(r.planetR, next.planet.r), 0.001, 1e6);
 
@@ -264,21 +615,50 @@ export function readUIIntoParams(
   }
 
   const pOrbit = next.planet.orbit as any;
-
-  pOrbit.a = sanitizePositive(readNumberInput(r.planetA, pOrbit.a), 0.001, 1e12);
-  pOrbit.e = sanitizeEcc(readNumberInput(r.planetE, pOrbit.e));
-
-  const incDeg = sanitizeIncDeg(readNumberInput(r.planetInc, pOrbit.inc * RAD2DEG));
-  pOrbit.inc = incDeg * DEG2RAD;
-
-  pOrbit.period = sanitizePositive(readNumberInput(r.planetPeriod, pOrbit.period), 0.001, 1e18);
-
-  // Ensure required angles exist (schema stability)
-  pOrbit.Omega = Number.isFinite(pOrbit.Omega) ? pOrbit.Omega : 0;
-  pOrbit.omega = Number.isFinite(pOrbit.omega) ? pOrbit.omega : 0;
-  pOrbit.t0 = Number.isFinite(pOrbit.t0) ? pOrbit.t0 : 0;
+  readOrbitInputs({ a: r.planetA, e: r.planetE, inc: r.planetInc, period: r.planetPeriod }, pOrbit);
 
   next.planet.m = sanitizePositive(readNumberInput(r.planetMass, (next.planet.m ?? 0) as number), 0, 1e30);
+
+  // Planet shape / rings
+  const pObl = readOblatenessInput(
+    { enabled: r.planetOblateEnabled, oblateness: r.planetOblateness },
+    next.planet.shape?.oblateness ?? 0
+  );
+  if (pObl !== undefined) {
+    next.planet.shape = {
+      ...(next.planet.shape ?? ({} as any)),
+      oblateness: pObl,
+      angle: Number.isFinite(next.planet.shape?.angle) ? next.planet.shape?.angle : 0,
+    };
+  } else if (next.planet.shape) {
+    delete next.planet.shape;
+  }
+
+  const pRingDefaults = {
+    inner: next.planet.r * 1.4,
+    outer: next.planet.r * 2.2,
+    incDeg: Number.isFinite(next.planet.rings?.inclination)
+      ? (next.planet.rings!.inclination as number) * RAD2DEG
+      : 0,
+    angleDeg: Number.isFinite(next.planet.rings?.positionAngle)
+      ? (next.planet.rings!.positionAngle as number) * RAD2DEG
+      : 0,
+  };
+  const pRings = readRingInputs(
+    {
+      enabled: r.planetRingsEnabled,
+      inner: r.planetRingInner,
+      outer: r.planetRingOuter,
+      incDeg: r.planetRingInc,
+      angleDeg: r.planetRingAngle,
+    },
+    pRingDefaults
+  );
+  if (pRings) {
+    next.planet.rings = pRings as any;
+  } else if (next.planet.rings) {
+    delete next.planet.rings;
+  }
 
   // Planet phase curve
   if (readCheckbox(r.planetPhaseEnabled)) {
@@ -291,6 +671,27 @@ export function readUIIntoParams(
       lambertian: readCheckbox(r.planetLambertian),
       constant: sanitizePositive(readNumberInput(r.planetConstant, ph.phaseCurve?.constant ?? 0), 0, 10),
       physicalScaling: ph.phaseCurve?.physicalScaling,
+      thermalInertia: readCheckbox(r.planetThermalInertiaEnabled)
+        ? {
+            enabled: true,
+            albedo: clamp(sanitizeFinite(readNumberInput(r.planetAlbedo, ph.phaseCurve?.thermalInertia?.albedo ?? 0), 0), 0, 1),
+            emissivity: clamp(
+              sanitizeFinite(readNumberInput(r.planetEmissivity, ph.phaseCurve?.thermalInertia?.emissivity ?? 1), 1),
+              0,
+              1
+            ),
+            thermalTimescaleSec: sanitizePositive(
+              readNumberInput(r.planetThermalTimescale, ph.phaseCurve?.thermalInertia?.thermalTimescaleSec ?? 0),
+              0,
+              1e12
+            ),
+            redistribution: clamp(
+              sanitizeFinite(readNumberInput(r.planetRedistribution, ph.phaseCurve?.thermalInertia?.redistribution ?? 0), 0),
+              0,
+              1
+            ),
+          }
+        : undefined,
     } as any;
   } else {
     delete ph.phaseCurve;
@@ -313,6 +714,8 @@ export function readUIIntoParams(
 
   // Atmosphere transmission
   if (readCheckbox(r.atmEnabled)) {
+    const lambdaNm = parseNumberList(r.atmLambdaNm.value).filter((v) => v > 0);
+    const tauScale = parseNumberList(r.atmTauScale.value).map((v) => Math.max(0, v));
     ph.atmosphereTransmission = {
       enabled: true,
       target: "planet",
@@ -320,6 +723,8 @@ export function readUIIntoParams(
       r0: sanitizePositive(readNumberInput(r.atmR0, ph.atmosphereTransmission?.r0 ?? 0), 0, 1e9),
       H: sanitizePositive(readNumberInput(r.atmH, ph.atmosphereTransmission?.H ?? 0), 0, 1e9),
       tau0: sanitizePositive(readNumberInput(r.atmTau0, ph.atmosphereTransmission?.tau0 ?? 0), 0, 1e12),
+      lambdaNm: lambdaNm.length > 0 ? lambdaNm : undefined,
+      tauScale: tauScale.length > 0 ? tauScale : undefined,
     } as any;
   } else {
     delete ph.atmosphereTransmission;
@@ -349,20 +754,50 @@ export function readUIIntoParams(
     next.moon!.r = sanitizePositive(readNumberInput(r.moonR, next.moon!.r), 0.001, 1e6);
 
     const mOrbit = next.moon!.orbitAroundPlanet as any;
-
-    mOrbit.a = sanitizePositive(readNumberInput(r.moonA, mOrbit.a), 0.001, 1e12);
-    mOrbit.e = sanitizeEcc(readNumberInput(r.moonE, mOrbit.e));
-
-    const mIncDeg = sanitizeIncDeg(readNumberInput(r.moonInc, mOrbit.inc * RAD2DEG));
-    mOrbit.inc = mIncDeg * DEG2RAD;
-
-    mOrbit.period = sanitizePositive(readNumberInput(r.moonPeriod, mOrbit.period), 0.001, 1e18);
-
-    mOrbit.Omega = Number.isFinite(mOrbit.Omega) ? mOrbit.Omega : 0;
-    mOrbit.omega = Number.isFinite(mOrbit.omega) ? mOrbit.omega : 0;
-    mOrbit.t0 = Number.isFinite(mOrbit.t0) ? mOrbit.t0 : 0;
+    readOrbitInputs({ a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod }, mOrbit);
 
     next.moon!.m = sanitizePositive(readNumberInput(r.moonMass, (next.moon!.m ?? 0) as number), 0, 1e30);
+
+    // Moon shape / rings
+    const mObl = readOblatenessInput(
+      { enabled: r.moonOblateEnabled, oblateness: r.moonOblateness },
+      next.moon!.shape?.oblateness ?? 0
+    );
+    if (mObl !== undefined) {
+      next.moon!.shape = {
+        ...(next.moon!.shape ?? ({} as any)),
+        oblateness: mObl,
+        angle: Number.isFinite(next.moon!.shape?.angle) ? next.moon!.shape?.angle : 0,
+      };
+    } else if (next.moon!.shape) {
+      delete next.moon!.shape;
+    }
+
+    const mRingDefaults = {
+      inner: next.moon!.r * 1.4,
+      outer: next.moon!.r * 2.0,
+      incDeg: Number.isFinite(next.moon!.rings?.inclination)
+        ? (next.moon!.rings!.inclination as number) * RAD2DEG
+        : 0,
+      angleDeg: Number.isFinite(next.moon!.rings?.positionAngle)
+        ? (next.moon!.rings!.positionAngle as number) * RAD2DEG
+        : 0,
+    };
+    const mRings = readRingInputs(
+      {
+        enabled: r.moonRingsEnabled,
+        inner: r.moonRingInner,
+        outer: r.moonRingOuter,
+        incDeg: r.moonRingInc,
+        angleDeg: r.moonRingAngle,
+      },
+      mRingDefaults
+    );
+    if (mRings) {
+      next.moon!.rings = mRings as any;
+    } else if (next.moon!.rings) {
+      delete next.moon!.rings;
+    }
   } else {
     delete next.moon;
   }
@@ -375,6 +810,27 @@ export function readUIIntoParams(
       thermAmp: sanitizePositive(readNumberInput(r.moonThermAmp, ph.moonPhaseCurve?.thermAmp ?? 0), 0, 10),
       lambertian: readCheckbox(r.moonLambertian),
       physicalScaling: ph.moonPhaseCurve?.physicalScaling,
+      thermalInertia: readCheckbox(r.moonThermalInertiaEnabled)
+        ? {
+            enabled: true,
+            albedo: clamp(sanitizeFinite(readNumberInput(r.moonAlbedo, ph.moonPhaseCurve?.thermalInertia?.albedo ?? 0), 0), 0, 1),
+            emissivity: clamp(
+              sanitizeFinite(readNumberInput(r.moonEmissivity, ph.moonPhaseCurve?.thermalInertia?.emissivity ?? 1), 1),
+              0,
+              1
+            ),
+            thermalTimescaleSec: sanitizePositive(
+              readNumberInput(r.moonThermalTimescale, ph.moonPhaseCurve?.thermalInertia?.thermalTimescaleSec ?? 0),
+              0,
+              1e12
+            ),
+            redistribution: clamp(
+              sanitizeFinite(readNumberInput(r.moonRedistribution, ph.moonPhaseCurve?.thermalInertia?.redistribution ?? 0), 0),
+              0,
+              1
+            ),
+          }
+        : undefined,
     } as any;
   } else {
     delete ph.moonPhaseCurve;
@@ -413,6 +869,56 @@ export function readUIIntoParams(
     } as any;
   } else {
     delete ph.dayNightVisibility;
+  }
+
+  // N-body dynamics
+  if (readCheckbox(r.nbodyEnabled) && readCheckbox(r.moonEnabled)) {
+    next.dynamics = next.dynamics ?? ({} as any);
+    const pert1 = readPerturberInputs(
+      { enabled: r.pert1Enabled, mu: r.pert1Mu, a: r.pert1A, e: r.pert1E, incDeg: r.pert1Inc, period: r.pert1Period },
+      { mu: 0, a: 400, e: 0, incDeg: 0, period: 40000 }
+    );
+    const pert2 = readPerturberInputs(
+      { enabled: r.pert2Enabled, mu: r.pert2Mu, a: r.pert2A, e: r.pert2E, incDeg: r.pert2Inc, period: r.pert2Period },
+      { mu: 0, a: 600, e: 0, incDeg: 0, period: 70000 }
+    );
+
+    (next.dynamics as any).nbodyPlanetMoon = {
+      enabled: true,
+      muStar: sanitizePositive(readNumberInput(r.nbodyMuStar, (next.dynamics as any).nbodyPlanetMoon?.muStar ?? 1), 1e-12, 1e30),
+      muPlanet: sanitizePositive(readNumberInput(r.nbodyMuPlanet, (next.dynamics as any).nbodyPlanetMoon?.muPlanet ?? 0.1), 1e-12, 1e30),
+      muMoon: sanitizePositive(readNumberInput(r.nbodyMuMoon, (next.dynamics as any).nbodyPlanetMoon?.muMoon ?? 0.01), 1e-12, 1e30),
+      dtMax: sanitizePositive(readNumberInput(r.nbodyDtMax, (next.dynamics as any).nbodyPlanetMoon?.dtMax ?? 10), 1e-6, 1e12),
+      softening: sanitizePositive(
+        readNumberInput(r.nbodySoftening, (next.dynamics as any).nbodyPlanetMoon?.softening ?? 0),
+        0,
+        1e12
+      ),
+      perturbers: [pert1, pert2].filter(Boolean),
+    } as any;
+  } else if (next.dynamics && (next.dynamics as any).nbodyPlanetMoon) {
+    delete (next.dynamics as any).nbodyPlanetMoon;
+  }
+
+  // Relativity (LTTE/GR)
+  if (readCheckbox(r.relEnabled)) {
+    next.dynamics = next.dynamics ?? ({} as any);
+
+    (next.dynamics as any).relativity = {
+      enabled: true,
+      ltte: readCheckbox(r.relLTTE),
+      shapiro: readCheckbox(r.relShapiro),
+      grPrecession: readCheckbox(r.relGR),
+      c: sanitizePositive(readNumberInput(r.relC, (next.dynamics as any).relativity?.c ?? 299792.458), 1e-9, 1e30),
+      planetPrecessionPerOrbit:
+        sanitizeFinite(readNumberInput(r.relPlanetPrec, (next.dynamics as any).relativity?.planetPrecessionPerOrbit ?? 0), 0) *
+        DEG2RAD,
+      moonPrecessionPerOrbit:
+        sanitizeFinite(readNumberInput(r.relMoonPrec, (next.dynamics as any).relativity?.moonPrecessionPerOrbit ?? 0), 0) *
+        DEG2RAD,
+    } as any;
+  } else if (next.dynamics && (next.dynamics as any).relativity) {
+    delete (next.dynamics as any).relativity;
   }
 
   // Exomoon timing/shape (dynamics hook)

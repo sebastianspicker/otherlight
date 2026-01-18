@@ -20,7 +20,7 @@
 
 import type { BrightnessPatch } from "../core/types";
 // Prefer the canonical single source of numeric helpers.
-import { isFinitePositive } from "../core/units";
+import { clamp01, isFinitePositive } from "../core/units";
 import type {
   LimbDarkeningConstraints,
   LimbDarkeningLaw,
@@ -121,5 +121,5 @@ export function fluxLimbDarkenedDiskDetailed(params: {
   const flux =
     totalIntensity > 1e-12 ? 1 - blockedIntensity / totalIntensity : 1.0;
 
-  return { flux: Math.max(0, flux), meta: { earlyExit } };
+  return { flux: clamp01(flux), meta: { earlyExit } };
 }

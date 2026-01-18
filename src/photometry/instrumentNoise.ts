@@ -27,7 +27,7 @@
 //     - Deterministic additive systematics/correlated terms may drive fluxPreNoise negative.
 // - Must never throw for normal invalid UI inputs; treat as safe no-op and return input flux.
 
-import { clamp } from "../core/units";
+import { clamp, toFiniteNonNeg, toFiniteNumber } from "../core/units";
 import {
   createMulberry32,
   normal as normalSample,
@@ -60,16 +60,6 @@ export type InstrumentNoiseState = {
   _wasCorrelatedEnabled?: boolean;
   _wasTempEnabled?: boolean;
 };
-
-function toFinite(v: unknown, fallback: number): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function toFiniteNonNeg(v: unknown, fallback: number): number {
-  const n = toFinite(v, fallback);
-  return Number.isFinite(n) ? Math.max(0, n) : Math.max(0, fallback);
-}
 
 export function createInstrumentNoiseState(seed = 1): InstrumentNoiseState {
   const rng = createMulberry32(seed);
@@ -118,10 +108,10 @@ type OneOverFCfg = NonNullable<
 >;
 
 function makeOneOverFSignature(cfg: OneOverFCfg): string {
-  const n = Math.max(1, Math.floor(toFinite(cfg.nComponents, 6)));
-  const tauMin = toFinite(cfg.tauMinSec, 10);
-  const tauMax = toFinite(cfg.tauMaxSec, 10_000);
-  const sigma = toFinite(cfg.sigmaFlux, 0);
+  const n = Math.max(1, Math.floor(toFiniteNumber(cfg.nComponents, 6)));
+  const tauMin = toFiniteNumber(cfg.tauMinSec, 10);
+  const tauMax = toFiniteNumber(cfg.tauMaxSec, 10_000);
+  const sigma = toFiniteNumber(cfg.sigmaFlux, 0);
   return `${n}|${tauMin}|${tauMax}|${sigma}`;
 }
 
@@ -132,10 +122,10 @@ function ensureOneOverFBank(
   const sig = makeOneOverFSignature(oneF);
   if (state.ar1Bank && state.oneOverFSignature === sig) return;
 
-  const n = Math.max(1, Math.floor(toFinite(oneF.nComponents, 6)));
-  const tauMin = Math.max(1e-6, toFinite(oneF.tauMinSec, 10));
-  const tauMax = Math.max(tauMin, toFinite(oneF.tauMaxSec, 10_000));
-  const sigmaTotal = Math.max(0, toFinite(oneF.sigmaFlux, 0));
+  const n = Math.max(1, Math.floor(toFiniteNumber(oneF.nComponents, 6)));
+  const tauMin = Math.max(1e-6, toFiniteNumber(oneF.tauMinSec, 10));
+  const tauMax = Math.max(tauMin, toFiniteNumber(oneF.tauMaxSec, 10_000));
+  const sigmaTotal = Math.max(0, toFiniteNumber(oneF.sigmaFlux, 0));
 
   // Choose weights so that total RMS ≈ sigmaTotal for independent unit-RMS components.
   const w = sigmaTotal / Math.sqrt(n);
@@ -238,39 +228,26 @@ export function applyInstrumentNoiseAndSystematics(args: {
   let sysFluxAdd = 0;
   const trends = cfg.trends;
   if (trends?.enabled) {
-    // 1. Linear Drift (e.g. baseline slope)
-    const drift = trends.linearDrift;
-    if (drift?.enabled) {
-      const slope = toFinite(drift.slopePerHour, 0);
-      if (slope !== 0) {
-        const tHours = t / 3600;
-        sysFluxAdd += slope * tHours;
-      }
-    }
-
-    // 2. Roll / Periodic Systematics (e.g. HST breathe)
+    // 1. Roll / Periodic Systematics (e.g. HST breathe)
     const roll = trends.roll;
     if (roll?.enabled) {
-      const amp = toFinite(roll.ampFlux, 0);
-      const P = toFinite(roll.periodSec, NaN);
-      const phi0 = toFinite(roll.phase0, 0);
+      const amp = toFiniteNumber(roll.ampFlux, 0);
+      const P = toFiniteNumber(roll.periodSec, NaN);
+      const phi0 = toFiniteNumber(roll.phase0, 0);
       if (Number.isFinite(P) && P > 0 && Number.isFinite(amp) && amp !== 0) {
         const phi = (2 * Math.PI * t) / P + phi0;
         sysFluxAdd += amp * Math.sin(phi);
       }
     }
 
-    // 3. Temperature Effects (Drift + Random Walk)
+    // 2. Temperature Effects (Drift + Random Walk)
     const temp = trends.temperature;
     if (temp?.enabled) {
-      const sensitivity = toFinite(temp.sensitivity, 0);
-      
-      // Simple linear drift part of temp (if modeled simply)
-      const slope = toFinite(temp.linearSlopeFluxPerSec, 0);
+      const slope = toFiniteNumber(temp.linearSlopeFluxPerSec, 0);
       if (Number.isFinite(slope) && slope !== 0) sysFluxAdd += slope * t;
 
-      // Random Walk part of temp
-      const rwSigma = Math.max(0, toFinite(temp.randomWalkSigmaFluxPerSqrtSec, 0));
+      // Random Walk part of temp (flux-domain OU random walk)
+      const rwSigma = Math.max(0, toFiniteNumber(temp.randomWalkSigmaFluxPerSqrtSec, 0));
       // Re-use core randomWalkStep if available, or manual:
       // We stored randomWalkStep in imports.
       if (rwSigma > 0 && dt > 0) {
@@ -280,25 +257,18 @@ export function applyInstrumentNoiseAndSystematics(args: {
       } else if (rwSigma > 0 && dt === 0 && state.tempRW === undefined) {
          state.tempRW = 0;
       }
-      
-      // Apply temperature state to flux (via sensitivity)
-      // Note: In the provided snippet, tempRW was added directly. 
-      // Often physics is: Flux_obs = Flux_star * (1 + coeff * dT).
-      // Here we treat it as additive flux directly or scaling?
-      // The snippet used: sysFluxAdd += state.tempRW ?? 0;
-      // We will follow the snippet's logic.
       sysFluxAdd += (state.tempRW ?? 0);
     }
 
-    // 4. Intra-Pixel Sensitivity (Toy Model)
+    // 3. Intra-Pixel Sensitivity (Toy Model)
     const ip = trends.intraPixel;
     if (ip?.enabled) {
-      const amp = toFinite(ip.ampFlux, 0);
-      const ax = toFinite(ip.ax, 0);
-      const ay = toFinite(ip.ay, 0);
-      const Px = toFinite(ip.periodXSec, NaN);
-      const Py = toFinite(ip.periodYSec, NaN);
-      const phaseY = toFinite(ip.phaseY, 0);
+      const amp = toFiniteNumber(ip.ampFlux, 0);
+      const ax = toFiniteNumber(ip.ax, 0);
+      const ay = toFiniteNumber(ip.ay, 0);
+      const Px = toFiniteNumber(ip.periodXSec, NaN);
+      const Py = toFiniteNumber(ip.periodYSec, NaN);
+      const phaseY = toFiniteNumber(ip.phaseY, 0);
 
       if (
         Number.isFinite(amp) &&
@@ -323,22 +293,20 @@ export function applyInstrumentNoiseAndSystematics(args: {
   let corrFluxAdd = 0;
   if (correlatedEnabled) {
     // AR1 / OU Process
-    const ar1Cfg = cfg.correlatedNoise?.ar1;
-    if (ar1Cfg?.enabled) {
-      const sigma = Math.max(0, toFinite(ar1Cfg.sigmaFlux, 0));
-      const tau = Math.max(1e-6, toFinite(ar1Cfg.timescaleSec, 100));
+    const corrCfg = cfg.correlatedNoise;
+    const sigma = Math.max(0, toFiniteNumber(corrCfg?.sigmaFlux, 0));
+    const tau = Math.max(1e-6, toFiniteNumber(corrCfg?.tauSec, 100));
 
-      state.ar1 = state.ar1 ?? { x: 0 };
-      if (sigma > 0 && dt > 0) {
-         // ouStep(rng, current, dt, tau, sigma)
-        const xNew = ouStep(state.rng, state.ar1.x, dt, tau, sigma);
-        state.ar1.x = Number.isFinite(xNew) ? xNew : state.ar1.x;
-      }
-      corrFluxAdd += state.ar1.x;
+    state.ar1 = state.ar1 ?? { x: 0 };
+    if (sigma > 0 && dt > 0) {
+      // ouStep(rng, current, dt, tau, sigma)
+      const xNew = ouStep(state.rng, state.ar1.x, dt, tau, sigma);
+      state.ar1.x = Number.isFinite(xNew) ? xNew : state.ar1.x;
     }
+    if (sigma > 0) corrFluxAdd += state.ar1.x;
 
     // 1/f Noise Bank
-    const oneF = cfg.correlatedNoise?.oneOverF;
+    const oneF = corrCfg?.oneOverF;
     if (oneF?.enabled) {
       ensureOneOverFBank(state, oneF);
       if (state.ar1Bank && dt > 0) {
@@ -374,7 +342,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
 
   // ---------- Photon + read noise in electrons ----------
   const throughput = toFiniteNonNeg(cfg.throughput, 1);
-  const ePerFluxPerSec = Math.max(0, toFinite(cfg.electronsPerUnitFlux, 1e6));
+  const ePerFluxPerSec = Math.max(0, toFiniteNumber(cfg.electronsPerUnitFlux, 1e6));
   const exposureSec = toFiniteNonNeg(cfg.exposureSec, 0);
 
   // If exposureSec <= 0, we cannot define an electron-count measurement for this sample.
@@ -395,7 +363,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
     if (cfg.photonNoise?.enabled) {
       const gaussThresh = Math.max(
         0,
-        toFinite(cfg.photonNoise.gaussianApproxMinElectrons, 50)
+        toFiniteNumber(cfg.photonNoise.gaussianApproxMinElectrons, 50)
       );
 
       // PERFORMANCE OPTIMIZATION:
@@ -425,8 +393,8 @@ export function applyInstrumentNoiseAndSystematics(args: {
   // Optional clamp for numerical safety / UI preferences.
   const clampCfg = cfg.clampFlux;
   if (clampCfg?.enabled) {
-    const lo = toFinite(clampCfg.min, -1e9);
-    const hi = toFinite(clampCfg.max, 1e9);
+    const lo = toFiniteNumber(clampCfg.min, -1e9);
+    const hi = toFiniteNumber(clampCfg.max, 1e9);
     fluxOut = clamp(fluxOut, lo, hi);
   }
 

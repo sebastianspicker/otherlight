@@ -14,6 +14,7 @@
 // - Autoscaling uses robust quantiles by default (display choice, not a data change).
 // - Optional time axis is supported for correct temporal interpretation if caller provides t.
 
+import { clamp, isFiniteNumber } from "../core/units";
 import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
 
 export type LightCurvePlotOptions = {
@@ -66,14 +67,6 @@ export type LightCurveSample = {
   /** Flux value (normalized or in stellar units; caller decides). */
   flux: number;
 };
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function isFiniteNumber(x: unknown): x is number {
-  return typeof x === "number" && Number.isFinite(x);
-}
 
 function safeQuantile(sorted: number[], q: number): number {
   // sorted must be non-empty.

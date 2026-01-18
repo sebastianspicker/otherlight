@@ -31,7 +31,7 @@
 //   (planet/moon phase light, stellar variability, etc.), because those can legitimately
 //   produce flux > 1; clamping would bias the measurement downward.
 
-import { clamp, clamp01 } from "../core/units";
+import { clamp, clamp01, toFiniteNumber } from "../core/units";
 
 export type FluxAtTime = (tSec: number) => number;
 
@@ -71,11 +71,6 @@ export type SmearingConfig = {
    */
   nonFinitePolicy?: "ignore" | "zero";
 };
-
-function toFiniteNumber(v: unknown, fallback: number): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
 
 export function normalizeSmearingConfig(cfg: SmearingConfig | undefined): {
   cadenceSec: number;
