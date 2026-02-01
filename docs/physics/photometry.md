@@ -14,7 +14,7 @@ Additive flux terms:
 
 Composition:
 
-- F_total = (F_star + F_stellarVar) \* F_transit + F_planet + F_moon + F_scatter
+- $F_{\mathrm{total}} = (F_{\star} + F_{\mathrm{stellarVar}})\,F_{\mathrm{transit}} + F_{\mathrm{planet}} + F_{\mathrm{moon}} + F_{\mathrm{scatter}}$
 
 Multi-band support:
 

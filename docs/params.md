@@ -5,7 +5,7 @@ Core units:
 - Length: simulation units (consistent across star/planet/moon radii and orbits).
 - Time: seconds.
 - Angle: radians in model (UI uses degrees for selected fields and converts).
-- Gravitational parameter: mu = G\*M in (L^3 / T^2).
+- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
 
 Key parameter groups:
 
@@ -211,9 +211,9 @@ Instrument noise:
 | UI-ID            | SystemParams-Pfad                  | Einheit | Bedeutung                |
 | ---------------- | ---------------------------------- | ------- | ------------------------ |
 | `nbodyEnabled`   | `dynamics.nbodyPlanetMoon.enabled` | —       | Toggle                   |
-| `nbodyMuStar`    | `...muStar`                        | L^3/T^2 | mu = G\*M                |
-| `nbodyMuPlanet`  | `...muPlanet`                      | L^3/T^2 | mu = G\*M                |
-| `nbodyMuMoon`    | `...muMoon`                        | L^3/T^2 | mu = G\*M                |
+| `nbodyMuStar`    | `...muStar`                        | $L^3/T^2$ | $\mu = GM$             |
+| `nbodyMuPlanet`  | `...muPlanet`                      | $L^3/T^2$ | $\mu = GM$             |
+| `nbodyMuMoon`    | `...muMoon`                        | $L^3/T^2$ | $\mu = GM$             |
 | `nbodyDtMax`     | `...dtMax`                         | s       | Max. Integrationsschritt |
 | `nbodySoftening` | `...softening`                     | sim     | Plummer softening eps    |
 
