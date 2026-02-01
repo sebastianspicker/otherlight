@@ -4,10 +4,7 @@ import type { SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { bodyPhaseFlux } from "../photometry/phaseCurve";
-import {
-  orbitalPhaseFromPeriod,
-  stellarVariabilityFlux,
-} from "../photometry/stellarVariability";
+import { orbitalPhaseFromPeriod, stellarVariabilityFlux } from "../photometry/stellarVariability";
 import { computeForwardScatteringFlux } from "../photometry/forwardScattering";
 import { visibleFractionWhenOcculted } from "../photometry/mutualEvents";
 import { fluxUniformDisk } from "../photometry/transitUniform";
@@ -21,7 +18,7 @@ function addOcculterIfFront(
   occulters: CircleOcculter[],
   targetSky: { x: number; y: number; z: number },
   occulterSky: { x: number; y: number; z: number },
-  rOcculter: number
+  rOcculter: number,
 ): void {
   if (!Number.isFinite(rOcculter) || rOcculter <= 0) return;
   if (
@@ -72,13 +69,12 @@ export function computeAdditiveFluxComponents(
   params: SystemParams,
   t: number,
   observerDir: Vec3,
-  kin: BodyKinematics
+  kin: BodyKinematics,
 ): AdditiveFluxComponents {
   const phot = params.star.photometry;
   const starRadius = params.star.r;
 
-  const orbit =
-    kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
+  const orbit = kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
 
   // Phase / self-reflected light terms (additive).
   // Planet phase is always computed.

@@ -60,7 +60,8 @@ export function skyAngleOfVector(v: Vec3, basis: SkyBasis): number {
  * Angle is wrapped to (-π, π] for stability in UI/plotting.
  */
 export function normalizeEllipse(rx: number, ry: number, angle: number): ProjectedEllipse {
-  if (!Number.isFinite(rx) || !Number.isFinite(ry) || rx < 0 || ry < 0) return { rx: NaN, ry: NaN, angle: NaN };
+  if (!Number.isFinite(rx) || !Number.isFinite(ry) || rx < 0 || ry < 0)
+    return { rx: NaN, ry: NaN, angle: NaN };
 
   const a = Number.isFinite(angle) ? angle : 0;
 
@@ -154,7 +155,11 @@ export function projectCircularRingToSkyEllipse(params: {
 
   let nHat: Vec3;
   try {
-    nHat = vNormalizeOrThrow(ringNormal, EPS, "projectCircularRingToSkyEllipse: ringNormal must be non-zero.");
+    nHat = vNormalizeOrThrow(
+      ringNormal,
+      EPS,
+      "projectCircularRingToSkyEllipse: ringNormal must be non-zero.",
+    );
   } catch {
     // Degenerate normal: render as circle.
     return { rx: r, ry: r, angle: 0 };

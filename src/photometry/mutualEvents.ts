@@ -261,17 +261,26 @@ export function runMutualEventsSelfTests(): void {
   const rOcc = 1;
 
   assert(
-    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterSameDepth, rTarget, rOcculter: rOcc }), 1),
-    "Same depth should not occult (returns 1)."
+    approxEq(
+      visibleFractionWhenOcculted({ targetSky, occulterSky: occulterSameDepth, rTarget, rOcculter: rOcc }),
+      1,
+    ),
+    "Same depth should not occult (returns 1).",
   );
 
   assert(
-    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterBehind, rTarget, rOcculter: rOcc }), 1),
-    "Occulter behind should not occult (returns 1)."
+    approxEq(
+      visibleFractionWhenOcculted({ targetSky, occulterSky: occulterBehind, rTarget, rOcculter: rOcc }),
+      1,
+    ),
+    "Occulter behind should not occult (returns 1).",
   );
 
   assert(
-    approxEq(visibleFractionWhenOcculted({ targetSky, occulterSky: occulterInFront, rTarget, rOcculter: rOcc }), 0),
-    "Occulter in front with same center and equal radius should fully occult (returns 0)."
+    approxEq(
+      visibleFractionWhenOcculted({ targetSky, occulterSky: occulterInFront, rTarget, rOcculter: rOcc }),
+      0,
+    ),
+    "Occulter in front with same center and equal radius should fully occult (returns 0).",
   );
 }

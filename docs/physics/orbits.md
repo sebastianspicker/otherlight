@@ -12,21 +12,21 @@ The simulator uses standard Keplerian elements:
 
 Mean motion:
 
-- n = 2*pi / period
-- M(t) = n * (t - t0)
+- n = 2\*pi / period
+- M(t) = n \* (t - t0)
 
 Kepler's equation (elliptic):
 
-- M = E - e * sin(E)
+- M = E - e \* sin(E)
 
 True anomaly and radius:
 
-- nu = atan2( sqrt(1 - e^2) * sin(E), cos(E) - e )
-- r = a * (1 - e * cos(E))
+- nu = atan2( sqrt(1 - e^2) \* sin(E), cos(E) - e )
+- r = a _ (1 - e _ cos(E))
 
 Position in the orbital plane (PQW frame):
 
-- r_pqw = (r * cos(nu), r * sin(nu), 0)
+- r*pqw = (r * cos(nu), r \_ sin(nu), 0)
 
 Rotation to inertial coordinates:
 

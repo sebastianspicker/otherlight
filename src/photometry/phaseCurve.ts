@@ -100,7 +100,9 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
     tauSec: isFiniteNumber(inertia?.thermalTimescaleSec)
       ? Math.max(0, inertia!.thermalTimescaleSec as number)
       : 0,
-    redistribution: clamp01(isFiniteNumber(inertia?.redistribution) ? (inertia!.redistribution as number) : 0),
+    redistribution: clamp01(
+      isFiniteNumber(inertia?.redistribution) ? (inertia!.redistribution as number) : 0,
+    ),
   };
 
   return {
@@ -183,7 +185,7 @@ export function thermalFluxTerm(params: {
   if (!(Number.isFinite(amp) && amp > 0)) return 0;
 
   if (inertia?.enabled && model !== "constant") {
-    const period = params.orbitPeriodSec;
+    const period = params.orbitPeriodSec ?? Number.NaN;
     if (Number.isFinite(period) && period > 0) {
       const omega = (2 * Math.PI) / period;
       const x = omega * inertia.tauSec;
@@ -243,16 +245,18 @@ export function bodyPhaseFlux(params: {
   // - dayNightVisibility overrides if enabled
   // - else reflModel overrides legacy lambertian
   // - else legacy: lambertian ? "lambert" : "cosine"
-  const reflModel: ReflectedPhaseModel = (dnEnabled
-    ? dn?.reflectedModel ?? "lambert"
-    : norm.reflModel ?? (norm.lambertian ? "lambert" : "cosine")) as ReflectedPhaseModel;
+  const reflModel: ReflectedPhaseModel = (
+    dnEnabled
+      ? (dn?.reflectedModel ?? "lambert")
+      : (norm.reflModel ?? (norm.lambertian ? "lambert" : "cosine"))
+  ) as ReflectedPhaseModel;
 
   // Choose thermal model:
   // - dayNightVisibility overrides if enabled
   // - else model override or legacy default: cosine
-  const thermalModel: ThermalPhaseModel = (dnEnabled
-    ? dn?.thermalModel ?? "constant"
-    : norm.thermalModel ?? "cosine") as ThermalPhaseModel;
+  const thermalModel: ThermalPhaseModel = (
+    dnEnabled ? (dn?.thermalModel ?? "constant") : (norm.thermalModel ?? "cosine")
+  ) as ThermalPhaseModel;
 
   // Clamp policy for geometric weights.
   const clampWeights = dnEnabled ? dn?.clamp !== false : norm.clamp;
@@ -261,8 +265,8 @@ export function bodyPhaseFlux(params: {
   let reflScale = 1;
   let thermScale = 1;
   if (norm.physicalScaling) {
-    const rBodyRadius = params.rBodyRadius;
-    const rStarRadius = params.rStarRadius;
+    const rBodyRadius = params.rBodyRadius ?? Number.NaN;
+    const rStarRadius = params.rStarRadius ?? Number.NaN;
     const r = vLen(params.rBody);
 
     if (!(Number.isFinite(rBodyRadius) && rBodyRadius > 0)) {
@@ -272,8 +276,8 @@ export function bodyPhaseFlux(params: {
     } else {
       reflScale = r > 0 ? (rBodyRadius * rBodyRadius) / (r * r) : 0;
       thermScale =
-        Number.isFinite(rStarRadius) && rStarRadius! > 0
-          ? (rBodyRadius * rBodyRadius) / (rStarRadius! * rStarRadius!)
+        Number.isFinite(rStarRadius) && rStarRadius > 0
+          ? (rBodyRadius * rBodyRadius) / (rStarRadius * rStarRadius)
           : 1;
     }
   }
@@ -336,23 +340,11 @@ function approxEq(a: number, b: number, eps = 1e-12): boolean {
 export function runPhaseCurveSelfTests(): void {
   const observerDir = { x: 0, y: 0, z: 1 };
 
-  const alphaFull = phaseAngleRadFromBodyPos(
-    { x: 0, y: 0, z: -10 },
-    observerDir
-  );
-  const alphaNew = phaseAngleRadFromBodyPos(
-    { x: 0, y: 0, z: 10 },
-    observerDir
-  );
+  const alphaFull = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: -10 }, observerDir);
+  const alphaNew = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: 10 }, observerDir);
 
-  assert(
-    approxEq(alphaFull, 0, 1e-12),
-    "alpha(full) should be 0 for rBody=-z with observerDir=+z."
-  );
-  assert(
-    approxEq(alphaNew, Math.PI, 1e-12),
-    "alpha(new) should be pi for rBody=+z with observerDir=+z."
-  );
+  assert(approxEq(alphaFull, 0, 1e-12), "alpha(full) should be 0 for rBody=-z with observerDir=+z.");
+  assert(approxEq(alphaNew, Math.PI, 1e-12), "alpha(new) should be pi for rBody=+z with observerDir=+z.");
 
   const f0 = bodyPhaseFlux({
     rBody: { x: 0, y: 0, z: -10 },

@@ -58,7 +58,7 @@ export function hillRadius(
   ePlanet: number,
   mPlanet: number,
   mStar: number,
-  opts: HillRadiusOptions = {}
+  opts: HillRadiusOptions = {},
 ): number {
   assertFinitePositive(aPlanet, "aPlanet");
   assertEccentricity(ePlanet, "ePlanet");
@@ -149,6 +149,23 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
 
   if (!p?.planet?.orbit || !p?.planet) return out;
   if (!p.moon) return out; // only meaningful if there is a moon configured
+
+  if (typeof p.planet.orbit === "function") {
+    out.push({
+      severity: "info",
+      code: "HILL_ORBIT_PROVIDER_UNSUPPORTED",
+      message: "Planet orbit is a time-dependent provider; Hill-radius warnings were skipped.",
+    });
+    return out;
+  }
+  if (typeof p.moon.orbitAroundPlanet === "function") {
+    out.push({
+      severity: "info",
+      code: "HILL_MOON_ORBIT_PROVIDER_UNSUPPORTED",
+      message: "Moon orbit is a time-dependent provider; Hill-radius warnings were skipped.",
+    });
+    return out;
+  }
 
   const aP = p.planet.orbit.a;
   const eP = p.planet.orbit.e;

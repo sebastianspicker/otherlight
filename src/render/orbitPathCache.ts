@@ -170,7 +170,7 @@ export class OrbitPathCache {
     t: number,
     observerDir: Vec3,
     samples?: number,
-    closePath?: boolean
+    closePath?: boolean,
   ): OrbitPathPoint2D[] {
     const N = clampInt(samples ?? this.opts.defaultPlanetSamples, 32, 4096);
     const close = closePath ?? this.opts.closePlanetPath;
@@ -219,7 +219,7 @@ export class OrbitPathCache {
     t: number,
     observerDir: Vec3,
     samples?: number,
-    closePath?: boolean
+    closePath?: boolean,
   ): OrbitPathPoint2D[] {
     if (!params.moon) return [];
 

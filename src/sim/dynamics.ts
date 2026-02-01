@@ -6,24 +6,12 @@
 import type { OrbitElements, SystemParams } from "../core/types";
 import { isFinitePositive } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
-import {
-  VEC3ZERO,
-  vAdd,
-  vAddScaled,
-  vDot,
-  vIsFinite,
-  vLenSq,
-  vScale,
-  vSub,
-} from "../physics/vec3";
+import { VEC3ZERO, vAdd, vAddScaled, vDot, vIsFinite, vLenSq, vScale, vSub } from "../physics/vec3";
 import { perifocalToInertial } from "../physics/frames";
 import { radiusFromE, solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
 import { normalizeRelativityParams } from "../physics/relativity";
 import { resolveOrbitElements } from "./orbits";
-import {
-  resolveEnabledNBodyPlanetMoonConfig,
-  type NBodyState,
-} from "../experimental/physics/nbody";
+import { resolveEnabledNBodyPlanetMoonConfig, type NBodyState } from "../experimental/physics/nbody";
 
 type PerturberResolved = {
   mu: number;
@@ -73,15 +61,7 @@ function cloneState(s: NBodyState): NBodyState {
 }
 
 function normalizeOrbitKey(el: OrbitElements): string {
-  return [
-    el.a,
-    el.e,
-    el.inc,
-    el.Omega,
-    el.omega,
-    el.period,
-    el.t0,
-  ]
+  return [el.a, el.e, el.inc, el.Omega, el.omega, el.period, el.t0]
     .map((v) => (Number.isFinite(v) ? v.toFixed(12) : "nan"))
     .join(",");
 }
@@ -90,7 +70,7 @@ function makeCacheKey(
   cfg: ResolvedNBodyConfig,
   planetEl: OrbitElements,
   moonEl: OrbitElements,
-  perturbers: PerturberResolved[]
+  perturbers: PerturberResolved[],
 ): string {
   return JSON.stringify({
     cfg: {
@@ -126,7 +106,7 @@ function buildBodyArrays(state: NBodyState, cfg: ResolvedNBodyConfig): BodyArray
   const pert = state.perturbers ?? [];
   if (pert.length !== cfg.perturbers.length) {
     throw new Error(
-      `nbody perturber mismatch: state has ${pert.length}, config has ${cfg.perturbers.length}.`
+      `nbody perturber mismatch: state has ${pert.length}, config has ${cfg.perturbers.length}.`,
     );
   }
 
@@ -190,7 +170,7 @@ function computeAccelerations(params: {
       if (!(r2 > 0) || !Number.isFinite(r2)) {
         if (throwOnOverlap && eps2 === 0) {
           throw new Error(
-            "nbody accel: overlap detected with zero softening (check dt or initial conditions)."
+            "nbody accel: overlap detected with zero softening (check dt or initial conditions).",
           );
         }
         continue;
@@ -246,7 +226,7 @@ function grSchwarzschildAccelStarOnly(params: {
   if (!(c2 > 0) || !Number.isFinite(c2)) return VEC3ZERO;
 
   const scale = muStar / (c2 * r2 * r);
-  const termR = 4 * muStar / r - v2;
+  const termR = (4 * muStar) / r - v2;
   const termV = 4 * rv;
 
   return vAdd(vScale(rRel, scale * termR), vScale(vRel, scale * termV));
@@ -286,11 +266,7 @@ function applyGrCorrections(params: {
   }
 }
 
-function integrateStep(params: {
-  state: NBodyState;
-  dt: number;
-  cfg: ResolvedNBodyConfig;
-}): NBodyState {
+function integrateStep(params: { state: NBodyState; dt: number; cfg: ResolvedNBodyConfig }): NBodyState {
   const { state, dt, cfg } = params;
   if (dt === 0) return cloneState(state);
 
@@ -306,7 +282,7 @@ function integrateStep(params: {
   const dt2 = dt * dt;
 
   const positions1 = positions.map((r, i) =>
-    vAdd(vAddScaled(r, velocities[i], dt), vScale(a0[i], 0.5 * dt2))
+    vAdd(vAddScaled(r, velocities[i], dt), vScale(a0[i], 0.5 * dt2)),
   );
 
   const a1 = computeAccelerations({
@@ -324,9 +300,7 @@ function integrateStep(params: {
     cfg,
     eps2,
   });
-  const velocities1 = velocities.map((v, i) =>
-    vAdd(v, vScale(vAdd(a0[i], a1[i]), 0.5 * dt))
-  );
+  const velocities1 = velocities.map((v, i) => vAdd(v, vScale(vAdd(a0[i], a1[i]), 0.5 * dt)));
 
   const out = unpackBodyArrays({
     t: state.t + dt,
@@ -344,15 +318,13 @@ function integrateStep(params: {
     !vIsFinite(out.rM) ||
     !vIsFinite(out.vM)
   ) {
-    throw new Error(
-      "nbody integrator produced non-finite state (dt too large or parameters pathological)."
-    );
+    throw new Error("nbody integrator produced non-finite state (dt too large or parameters pathological).");
   }
 
   for (let i = 0; i < out.perturbers.length; i++) {
     if (!vIsFinite(out.perturbers[i].r) || !vIsFinite(out.perturbers[i].v)) {
       throw new Error(
-        "nbody integrator produced non-finite perturber state (dt too large or parameters pathological)."
+        "nbody integrator produced non-finite perturber state (dt too large or parameters pathological).",
       );
     }
   }
@@ -372,9 +344,7 @@ function integrateToTime(params: {
     throw new Error("nbody dtMax must be > 0.");
   }
 
-  const maxSteps = Number.isFinite(params.maxSteps)
-    ? Math.max(1, Math.floor(params.maxSteps!))
-    : 2_000_000;
+  const maxSteps = Number.isFinite(params.maxSteps) ? Math.max(1, Math.floor(params.maxSteps!)) : 2_000_000;
 
   let s = cloneState(state);
   for (let steps = 0; steps < maxSteps; steps++) {
@@ -442,11 +412,7 @@ function splitBarycenter(params: {
   };
 }
 
-function computeInitialState(
-  params: SystemParams,
-  cfg: ResolvedNBodyConfig,
-  t0: number
-): NBodyState {
+function computeInitialState(params: SystemParams, cfg: ResolvedNBodyConfig, t0: number): NBodyState {
   if (!params.moon) {
     throw new Error("nbody enabled requires a moon configuration.");
   }
@@ -455,7 +421,9 @@ function computeInitialState(
     throw new Error("nbody requires a static planet.orbit (initial conditions, not a function provider).");
   }
   if (typeof params.moon.orbitAroundPlanet === "function") {
-    throw new Error("nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).");
+    throw new Error(
+      "nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).",
+    );
   }
 
   const planetEl = resolveOrbitElements(params.planet.orbit, t0, "planet.orbit");
@@ -481,24 +449,9 @@ function computeInitialState(
     return pvFromResolvedElements(pert.orbit, t0, muCentral);
   });
 
-  const positions: Vec3[] = [
-    VEC3ZERO,
-    split.rP,
-    split.rM,
-    ...pertStates.map((p) => p.r),
-  ];
-  const velocities: Vec3[] = [
-    VEC3ZERO,
-    split.vP,
-    split.vM,
-    ...pertStates.map((p) => p.v),
-  ];
-  const mus: number[] = [
-    cfg.muStar,
-    cfg.muPlanet,
-    cfg.muMoon,
-    ...cfg.perturbers.map((p) => p.mu),
-  ];
+  const positions: Vec3[] = [VEC3ZERO, split.rP, split.rM, ...pertStates.map((p) => p.r)];
+  const velocities: Vec3[] = [VEC3ZERO, split.vP, split.vM, ...pertStates.map((p) => p.v)];
+  const mus: number[] = [cfg.muStar, cfg.muPlanet, cfg.muMoon, ...cfg.perturbers.map((p) => p.mu)];
 
   let muTot = 0;
   let rSum: Vec3 = VEC3ZERO;
@@ -542,11 +495,17 @@ function resolveNBodyConfig(params: SystemParams): { cfg: ResolvedNBodyConfig; k
     throw new Error("nbody requires a static planet.orbit (initial conditions, not a function provider).");
   }
   if (typeof params.moon.orbitAroundPlanet === "function") {
-    throw new Error("nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).");
+    throw new Error(
+      "nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).",
+    );
   }
 
   const planetEl = resolveOrbitElements(params.planet.orbit, ANCHOR_TIME_SEC, "planet.orbit");
-  const moonEl = resolveOrbitElements(params.moon.orbitAroundPlanet, ANCHOR_TIME_SEC, "moon.orbitAroundPlanet");
+  const moonEl = resolveOrbitElements(
+    params.moon.orbitAroundPlanet,
+    ANCHOR_TIME_SEC,
+    "moon.orbitAroundPlanet",
+  );
 
   const perturbers: PerturberResolved[] = [];
   const extra = Array.isArray(nbody?.perturbers) ? nbody!.perturbers! : [];
@@ -559,7 +518,11 @@ function resolveNBodyConfig(params: SystemParams): { cfg: ResolvedNBodyConfig; k
     if (typeof p.orbit === "function") {
       throw new Error("nbody perturbers require static orbit elements (initial conditions).");
     }
-    const el = resolveOrbitElements(p.orbit, ANCHOR_TIME_SEC, `dynamics.nbodyPlanetMoon.perturbers[${i}].orbit`);
+    const el = resolveOrbitElements(
+      p.orbit,
+      ANCHOR_TIME_SEC,
+      `dynamics.nbodyPlanetMoon.perturbers[${i}].orbit`,
+    );
     perturbers.push({ mu: p.mu, orbit: el });
   }
 
@@ -630,10 +593,7 @@ export function isNBodyEnabled(params: SystemParams): boolean {
   return Boolean(params.dynamics?.nbodyPlanetMoon?.enabled);
 }
 
-export function getNBodyStateAt(
-  params: SystemParams,
-  t: number
-): { state: NBodyState; rBary: Vec3 } | null {
+export function getNBodyStateAt(params: SystemParams, t: number): { state: NBodyState; rBary: Vec3 } | null {
   if (!Number.isFinite(t)) throw new Error("getNBodyStateAt: t must be finite.");
 
   const resolved = resolveNBodyConfig(params);
@@ -655,10 +615,7 @@ export function getNBodyStateAt(
   const muTot = cfg.muPlanet + cfg.muMoon;
   const hasMu = Number.isFinite(muTot) && muTot > 0;
   const rBaryAbs = hasMu
-    ? vScale(
-        vAdd(vScale(state.rP, cfg.muPlanet), vScale(state.rM, cfg.muMoon)),
-        1 / muTot
-      )
+    ? vScale(vAdd(vScale(state.rP, cfg.muPlanet), vScale(state.rM, cfg.muMoon)), 1 / muTot)
     : VEC3ZERO;
 
   const rBary = hasMu ? vSub(rBaryAbs, state.rS) : VEC3ZERO;

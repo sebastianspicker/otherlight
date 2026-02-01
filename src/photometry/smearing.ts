@@ -84,8 +84,7 @@ export function normalizeSmearingConfig(cfg: SmearingConfig | undefined): {
 
   const nSubsamples = clamp(Math.floor(nRaw), 1, maxN);
   const clampTo01 = Boolean(cfg?.clamp01);
-  const nonFinitePolicy: "ignore" | "zero" =
-    cfg?.nonFinitePolicy === "zero" ? "zero" : "ignore";
+  const nonFinitePolicy: "ignore" | "zero" = cfg?.nonFinitePolicy === "zero" ? "zero" : "ignore";
 
   return {
     cadenceSec: Number.isFinite(cadenceSec) ? cadenceSec : 0,
@@ -107,7 +106,7 @@ export function boxcarAverageFlux(
   tCenterSec: number,
   cadenceSec: number,
   nSubsamples: number,
-  opts?: { clampTo01?: boolean; nonFinitePolicy?: "ignore" | "zero" }
+  opts?: { clampTo01?: boolean; nonFinitePolicy?: "ignore" | "zero" },
 ): number {
   if (!Number.isFinite(tCenterSec)) {
     // Deterministic simulation requires a finite time coordinate.
@@ -115,16 +114,10 @@ export function boxcarAverageFlux(
   }
 
   const clampTo01Opt = Boolean(opts?.clampTo01);
-  const nonFinitePolicy: "ignore" | "zero" =
-    opts?.nonFinitePolicy === "zero" ? "zero" : "ignore";
+  const nonFinitePolicy: "ignore" | "zero" = opts?.nonFinitePolicy === "zero" ? "zero" : "ignore";
 
   // Disabled / trivial case:
-  if (
-    !Number.isFinite(cadenceSec) ||
-    cadenceSec <= 0 ||
-    !Number.isFinite(nSubsamples) ||
-    nSubsamples <= 1
-  ) {
+  if (!Number.isFinite(cadenceSec) || cadenceSec <= 0 || !Number.isFinite(nSubsamples) || nSubsamples <= 1) {
     const f0 = fluxAt(tCenterSec);
     const out0 = Number.isFinite(f0) ? f0 : 0;
     return clampTo01Opt ? clamp01(out0) : out0;
@@ -168,19 +161,13 @@ export function boxcarAverageFlux(
 export function smearedFluxAt(
   fluxAt: FluxAtTime,
   tCenterSec: number,
-  cfg: SmearingConfig | undefined
+  cfg: SmearingConfig | undefined,
 ): number {
   const norm = normalizeSmearingConfig(cfg);
-  return boxcarAverageFlux(
-    fluxAt,
-    tCenterSec,
-    norm.cadenceSec,
-    norm.nSubsamples,
-    {
-      clampTo01: norm.clampTo01,
-      nonFinitePolicy: norm.nonFinitePolicy,
-    }
-  );
+  return boxcarAverageFlux(fluxAt, tCenterSec, norm.cadenceSec, norm.nSubsamples, {
+    clampTo01: norm.clampTo01,
+    nonFinitePolicy: norm.nonFinitePolicy,
+  });
 }
 
 // ---------------------------
@@ -209,17 +196,11 @@ export function runSmearingSelfTests(): void {
   const fLin: FluxAtTime = (t) => 3 * t + 1;
   // Average of linear over symmetric interval equals value at center.
   const outLin = boxcarAverageFlux(fLin, 10, 4, 9);
-  assert(
-    approxEq(outLin, fLin(10), 1e-12),
-    "Linear flux boxcar average should equal center value."
-  );
+  assert(approxEq(outLin, fLin(10), 1e-12), "Linear flux boxcar average should equal center value.");
 
   const fNaN: FluxAtTime = (_t) => NaN;
   const outNaN = boxcarAverageFlux(fNaN, 10, 4, 9, {
     nonFinitePolicy: "ignore",
   });
-  assert(
-    approxEq(outNaN, 0),
-    "All-NaN flux should fall back to 0 via instantaneous fallback."
-  );
+  assert(approxEq(outNaN, 0), "All-NaN flux should fall back to 0 via instantaneous fallback.");
 }

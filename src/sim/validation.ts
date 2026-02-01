@@ -25,10 +25,7 @@ function assertOblateness(shape: { oblateness?: number } | undefined, name: stri
   }
 }
 
-function assertRings(
-  rings: { innerRadius: number; outerRadius: number } | undefined,
-  name: string
-): void {
+function assertRings(rings: { innerRadius: number; outerRadius: number } | undefined, name: string): void {
   if (!rings) return;
   const inner = rings.innerRadius;
   const outer = rings.outerRadius;
@@ -89,7 +86,8 @@ export function assertStepInputs(params: SystemParams, t: number): void {
   assertOrbitProvider(params.planet.orbit, "planet.orbit");
 
   if (params.moon) {
-    if (!params.moon.orbitAroundPlanet) throw new Error("moon.orbitAroundPlanet must be provided when moon exists.");
+    if (!params.moon.orbitAroundPlanet)
+      throw new Error("moon.orbitAroundPlanet must be provided when moon exists.");
     assertOrbitProvider(params.moon.orbitAroundPlanet, "moon.orbitAroundPlanet");
   }
 
@@ -100,7 +98,9 @@ export function assertStepInputs(params: SystemParams, t: number): void {
       throw new Error("nbody requires a static planet.orbit (initial conditions, not a function provider).");
     }
     if (typeof params.moon.orbitAroundPlanet === "function") {
-      throw new Error("nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).");
+      throw new Error(
+        "nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).",
+      );
     }
     if (!isFinitePositive(nbody.muStar)) throw new Error("nbody.muStar must be > 0 when enabled.");
     if (!isFinitePositive(nbody.muPlanet)) throw new Error("nbody.muPlanet must be > 0 when enabled.");
@@ -194,13 +194,22 @@ export function assertStepInputs(params: SystemParams, t: number): void {
     if (ti.albedo !== undefined && (!Number.isFinite(ti.albedo) || ti.albedo < 0 || ti.albedo > 1)) {
       throw new Error("phaseCurve.thermalInertia.albedo must be in [0,1] if provided.");
     }
-    if (ti.emissivity !== undefined && (!Number.isFinite(ti.emissivity) || ti.emissivity < 0 || ti.emissivity > 1)) {
+    if (
+      ti.emissivity !== undefined &&
+      (!Number.isFinite(ti.emissivity) || ti.emissivity < 0 || ti.emissivity > 1)
+    ) {
       throw new Error("phaseCurve.thermalInertia.emissivity must be in [0,1] if provided.");
     }
-    if (ti.thermalTimescaleSec !== undefined && (!Number.isFinite(ti.thermalTimescaleSec) || ti.thermalTimescaleSec < 0)) {
+    if (
+      ti.thermalTimescaleSec !== undefined &&
+      (!Number.isFinite(ti.thermalTimescaleSec) || ti.thermalTimescaleSec < 0)
+    ) {
       throw new Error("phaseCurve.thermalInertia.thermalTimescaleSec must be >= 0 if provided.");
     }
-    if (ti.redistribution !== undefined && (!Number.isFinite(ti.redistribution) || ti.redistribution < 0 || ti.redistribution > 1)) {
+    if (
+      ti.redistribution !== undefined &&
+      (!Number.isFinite(ti.redistribution) || ti.redistribution < 0 || ti.redistribution > 1)
+    ) {
       throw new Error("phaseCurve.thermalInertia.redistribution must be in [0,1] if provided.");
     }
   }
@@ -211,20 +220,29 @@ export function assertStepInputs(params: SystemParams, t: number): void {
     if (ti.albedo !== undefined && (!Number.isFinite(ti.albedo) || ti.albedo < 0 || ti.albedo > 1)) {
       throw new Error("moonPhaseCurve.thermalInertia.albedo must be in [0,1] if provided.");
     }
-    if (ti.emissivity !== undefined && (!Number.isFinite(ti.emissivity) || ti.emissivity < 0 || ti.emissivity > 1)) {
+    if (
+      ti.emissivity !== undefined &&
+      (!Number.isFinite(ti.emissivity) || ti.emissivity < 0 || ti.emissivity > 1)
+    ) {
       throw new Error("moonPhaseCurve.thermalInertia.emissivity must be in [0,1] if provided.");
     }
-    if (ti.thermalTimescaleSec !== undefined && (!Number.isFinite(ti.thermalTimescaleSec) || ti.thermalTimescaleSec < 0)) {
+    if (
+      ti.thermalTimescaleSec !== undefined &&
+      (!Number.isFinite(ti.thermalTimescaleSec) || ti.thermalTimescaleSec < 0)
+    ) {
       throw new Error("moonPhaseCurve.thermalInertia.thermalTimescaleSec must be >= 0 if provided.");
     }
-    if (ti.redistribution !== undefined && (!Number.isFinite(ti.redistribution) || ti.redistribution < 0 || ti.redistribution > 1)) {
+    if (
+      ti.redistribution !== undefined &&
+      (!Number.isFinite(ti.redistribution) || ti.redistribution < 0 || ti.redistribution > 1)
+    ) {
       throw new Error("moonPhaseCurve.thermalInertia.redistribution must be in [0,1] if provided.");
     }
   }
 
   const spot = params.star.photometry?.spotEvolution;
   if (spot?.enabled) {
-    const period = spot.rotationPeriodSec;
+    const period = spot.rotationPeriodSec ?? Number.NaN;
     if (!Number.isFinite(period) || period <= 0) {
       throw new Error("star.photometry.spotEvolution.rotationPeriodSec must be > 0 when enabled.");
     }
@@ -269,7 +287,7 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
 
   const starR = params.star?.r;
   const planet = params.planet;
-  const pOrbit = planet?.orbit as OrbitElements | undefined;
+  const pOrbit = planet && typeof planet.orbit !== "function" ? (planet.orbit as OrbitElements) : undefined;
 
   if (planet && pOrbit && Number.isFinite(pOrbit.a) && Number.isFinite(pOrbit.e)) {
     const eP = pOrbit.e;
@@ -304,7 +322,10 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
   }
 
   const moon = params.moon;
-  const mOrbit = moon?.orbitAroundPlanet as OrbitElements | undefined;
+  const mOrbit =
+    moon && typeof moon.orbitAroundPlanet !== "function"
+      ? (moon.orbitAroundPlanet as OrbitElements)
+      : undefined;
   if (moon && mOrbit && Number.isFinite(mOrbit.a) && Number.isFinite(mOrbit.e)) {
     const eM = mOrbit.e;
     const aM = mOrbit.a;
@@ -339,7 +360,7 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
 
   const phot = params.star?.photometry;
   const gridRes = phot?.gridRes;
-  if (Number.isFinite(gridRes) && gridRes > 0 && gridRes < 40) {
+  if (Number.isFinite(gridRes ?? Number.NaN) && (gridRes as number) > 0 && (gridRes as number) < 40) {
     out.push({
       severity: "info",
       code: "LOW_GRID_RES",
@@ -370,7 +391,8 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
 
   const rel = params.dynamics?.relativity;
   if (nbody?.enabled && rel?.enabled && rel.grPrecession !== false) {
-    const planetOverride = Number.isFinite(rel.planetPrecessionPerOrbit) && rel.planetPrecessionPerOrbit !== 0;
+    const planetOverride =
+      Number.isFinite(rel.planetPrecessionPerOrbit) && rel.planetPrecessionPerOrbit !== 0;
     const moonOverride = Number.isFinite(rel.moonPrecessionPerOrbit) && rel.moonPrecessionPerOrbit !== 0;
     if (planetOverride || moonOverride) {
       out.push({
@@ -397,7 +419,12 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
 
   const cadenceSec = phot?.cadenceSec;
   const nSub = phot?.nSubsamples;
-  if (Number.isFinite(cadenceSec) && cadenceSec > 0 && Number.isFinite(nSub) && nSub <= 1) {
+  if (
+    Number.isFinite(cadenceSec ?? Number.NaN) &&
+    (cadenceSec as number) > 0 &&
+    Number.isFinite(nSub ?? Number.NaN) &&
+    (nSub as number) <= 1
+  ) {
     out.push({
       severity: "info",
       code: "SMEARING_DISABLED",

@@ -258,7 +258,7 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
  * This is a generic fallback for ellipses/rings and other non-circular silhouettes.
  */
 export function integrateDiskMidpointShapes(
-  params: IntegrateDiskMidpointShapesParams
+  params: IntegrateDiskMidpointShapesParams,
 ): IntegrateDiskMidpointResult {
   const { intensityAt } = params;
   const rStar = params.rStar;

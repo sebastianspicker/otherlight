@@ -52,9 +52,7 @@ const DEFAULT_LTTE_ITERS = 2;
 const DEFAULT_LTTE_TOL_SEC = 1e-6;
 const DEFAULT_SHAPIRO_MIN_IMPACT = 0;
 
-export function normalizeRelativityParams(
-  params: RelativityParams | undefined
-): NormalizedRelativityParams {
+export function normalizeRelativityParams(params: RelativityParams | undefined): NormalizedRelativityParams {
   const enabled = Boolean(params?.enabled);
   const ltte = enabled && (params?.ltte ?? true);
   const grPrecession = enabled && (params?.grPrecession ?? true);
@@ -70,7 +68,9 @@ export function normalizeRelativityParams(
     : 0;
 
   const ltteItersRaw = params?.ltteIters;
-  const ltteIters = Number.isFinite(ltteItersRaw) ? Math.max(1, Math.floor(ltteItersRaw as number)) : DEFAULT_LTTE_ITERS;
+  const ltteIters = Number.isFinite(ltteItersRaw)
+    ? Math.max(1, Math.floor(ltteItersRaw as number))
+    : DEFAULT_LTTE_ITERS;
 
   const ltteTolRaw = params?.ltteTolSec;
   const ltteTolSec = Number.isFinite(ltteTolRaw) ? Math.max(0, ltteTolRaw as number) : DEFAULT_LTTE_TOL_SEC;
@@ -97,7 +97,7 @@ export function normalizeRelativityParams(
 export function applyApsidalPrecession(
   el: OrbitElements,
   tSec: number,
-  precessionPerOrbitRad: number
+  precessionPerOrbitRad: number,
 ): OrbitElements {
   if (!Number.isFinite(precessionPerOrbitRad) || precessionPerOrbitRad === 0) return { ...el };
   if (!Number.isFinite(tSec) || !Number.isFinite(el.period) || el.period <= 0) return { ...el };
@@ -239,12 +239,7 @@ export function resolveGrPrecessionPerOrbit(params: {
  * Apsidal precession per orbit from the GR weak-field formula:
  * Δω = 6π * mu / (a (1 - e^2) c^2)
  */
-export function grPrecessionPerOrbit(params: {
-  mu: number;
-  a: number;
-  e: number;
-  c: number;
-}): number {
+export function grPrecessionPerOrbit(params: { mu: number; a: number; e: number; c: number }): number {
   const { mu, a, e, c } = params;
   if (!(Number.isFinite(mu) && mu > 0)) return 0;
   if (!(Number.isFinite(a) && a > 0)) return 0;

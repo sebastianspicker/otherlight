@@ -155,20 +155,13 @@ function henyeyGreensteinPhase(g: number, cosTheta: number): number {
  * Scattering angle θ is the angle between incoming and outgoing directions.
  * - Forward scattering corresponds to θ ≈ 0 (cosθ ≈ 1).
  */
-function approximateCosScatteringAngle(
-  rBody: Vec3,
-  observerDirUnit: Vec3
-): number {
+function approximateCosScatteringAngle(rBody: Vec3, observerDirUnit: Vec3): number {
   if (!vIsFinite(rBody)) return 0;
 
   // Normalize rBody; if it is zero vector, return orthogonal (cos=0) to avoid blowups.
   let rHat: Vec3;
   try {
-    rHat = vNormalizeOrThrow(
-      rBody,
-      1e-15,
-      "rBody must be non-zero for scattering angle."
-    );
+    rHat = vNormalizeOrThrow(rBody, 1e-15, "rBody must be non-zero for scattering angle.");
   } catch {
     return 0;
   }
@@ -185,9 +178,7 @@ function approximateCosScatteringAngle(
  * Intended usage in sim.ts:
  * F_total = (baseline + variability) * F_transit + (phaseCurve + forwardScattering)
  */
-export function computeForwardScatteringFlux(
-  params: ForwardScatteringFluxParams
-): number {
+export function computeForwardScatteringFlux(params: ForwardScatteringFluxParams): number {
   const model = params.model;
   if (!model?.enabled) return 0;
 
@@ -200,11 +191,7 @@ export function computeForwardScatteringFlux(
   // Normalize observer dir; if invalid, no scattering contribution.
   let obsHat: Vec3;
   try {
-    obsHat = vNormalizeOrThrow(
-      params.observerDir,
-      1e-15,
-      "observerDir must be non-zero."
-    );
+    obsHat = vNormalizeOrThrow(params.observerDir, 1e-15, "observerDir must be non-zero.");
   } catch {
     return 0;
   }
@@ -251,8 +238,7 @@ export function computeForwardScatteringFlux(
     // To normalize nicely so amp has intuitive meaning "peak height":
     // Divide by the peak value (at cosTheta=1) so max shape factor is 1.0.
     const peakPhaseVal = henyeyGreensteinPhase(g, 1.0);
-    const shape =
-      peakPhaseVal > 0 ? rawPhaseVal / peakPhaseVal : rawPhaseVal > 0 ? 1 : 0;
+    const shape = peakPhaseVal > 0 ? rawPhaseVal / peakPhaseVal : rawPhaseVal > 0 ? 1 : 0;
 
     f = amp * shape;
   }

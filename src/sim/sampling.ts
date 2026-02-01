@@ -31,7 +31,7 @@ export function sampleOrbitSky(
   tStart: number,
   samples = 256,
   observerDir?: Vec3,
-  opts: OrbitSampleOptions = {}
+  opts: OrbitSampleOptions = {},
 ): Array<{ x: number; y: number; z: number }> {
   if (!Number.isFinite(tStart)) throw new Error("sampleOrbitSky: tStart must be finite.");
 
@@ -62,7 +62,7 @@ export function sampleMoonOrbitSkyAbsolute(
   params: SystemParams,
   tStart: number,
   samples = 256,
-  opts: OrbitSampleOptions = {}
+  opts: OrbitSampleOptions = {},
 ): Array<{ x: number; y: number; z: number }> {
   if (!params.moon) return [];
   if (!Number.isFinite(tStart)) throw new Error("sampleMoonOrbitSkyAbsolute: tStart must be finite.");

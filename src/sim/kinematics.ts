@@ -1,11 +1,6 @@
 // src/sim/kinematics.ts
 
-import type {
-  ExomoonTimingShapeParams,
-  OrbitElements,
-  SkyPoint,
-  SystemParams,
-} from "../core/types";
+import type { ExomoonTimingShapeParams, OrbitElements, SkyPoint, SystemParams } from "../core/types";
 import { isFinitePositive, toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vAdd, vAddScaled, vSub } from "../physics/vec3";
@@ -41,16 +36,11 @@ export type MoonStateAt = {
   driftY: number;
 };
 
-export function getExomoonConfig(
-  params: SystemParams
-): ExomoonTimingShapeParams | undefined {
+export function getExomoonConfig(params: SystemParams): ExomoonTimingShapeParams | undefined {
   return params.dynamics?.exomoonTimingShape;
 }
 
-export function computeMoonSkyDriftY(
-  exo: ExomoonTimingShapeParams | undefined,
-  t: number
-): number {
+export function computeMoonSkyDriftY(exo: ExomoonTimingShapeParams | undefined, t: number): number {
   const enabled = Boolean(exo?.enabled);
   if (!enabled) return 0;
   const tRef = toFiniteNumber(exo?.tRef, 0);
@@ -73,13 +63,11 @@ export function getMoonStateAt(
   t: number,
   observerDir: Vec3,
   rBaryOverride?: Vec3,
-  relativity?: NormalizedRelativityParams
+  relativity?: NormalizedRelativityParams,
 ): MoonStateAt | undefined {
   if (!params.moon) return undefined;
-  if (!Number.isFinite(t))
-    throw new Error("getMoonStateAt: t must be finite.");
-  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0)
-    throw new Error("moon.r must be > 0");
+  if (!Number.isFinite(t)) throw new Error("getMoonStateAt: t must be finite.");
+  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0) throw new Error("moon.r must be > 0");
 
   const exo = getExomoonConfig(params);
   const exoEnabled = Boolean(exo?.enabled);
@@ -91,17 +79,9 @@ export function getMoonStateAt(
   // OPTIMIZATION: Use rBaryOverride if provided to avoid re-calculating Kepler orbit.
   const rBary =
     rBaryOverride ??
-    posFromResolvedElements(
-      resolveOrbitElements(params.planet.orbit, t, "planet.orbit"),
-      t,
-      "planet.orbit"
-    );
+    posFromResolvedElements(resolveOrbitElements(params.planet.orbit, t, "planet.orbit"), t, "planet.orbit");
 
-  const moonOrbitBaseEl = resolveOrbitElements(
-    params.moon.orbitAroundPlanet,
-    t,
-    "moon.orbitAroundPlanet"
-  );
+  const moonOrbitBaseEl = resolveOrbitElements(params.moon.orbitAroundPlanet, t, "moon.orbitAroundPlanet");
   const moonOrbitEvolvedEl = exoEnabled
     ? applyOrientationEvolution(moonOrbitBaseEl, t, {
         enabled: true,
@@ -125,9 +105,7 @@ export function getMoonStateAt(
         override: relativity!.moonPrecessionPerOrbit,
       })
     : 0;
-  const moonOrbitRel = grOn
-    ? applyApsidalPrecession(moonOrbitEvolvedEl, t, moonPrec)
-    : moonOrbitEvolvedEl;
+  const moonOrbitRel = grOn ? applyApsidalPrecession(moonOrbitEvolvedEl, t, moonPrec) : moonOrbitEvolvedEl;
 
   const rMoonRel = posFromResolvedElements(moonOrbitRel, t, "moon.orbitAroundPlanet");
 
@@ -154,13 +132,8 @@ export function getMoonStateAt(
   return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
 }
 
-export function computeBodyKinematics(
-  params: SystemParams,
-  t: number,
-  observerDir: Vec3
-): BodyKinematics {
-  if (!Number.isFinite(t))
-    throw new Error("computeBodyKinematics: t must be finite.");
+export function computeBodyKinematics(params: SystemParams, t: number, observerDir: Vec3): BodyKinematics {
+  if (!Number.isFinite(t)) throw new Error("computeBodyKinematics: t must be finite.");
 
   const nbodyActive = isNBodyEnabled(params);
   const rel = normalizeRelativityParams(params.dynamics?.relativity);
@@ -208,20 +181,21 @@ export function computeBodyKinematics(
           tolSec: rel.ltteTolSec,
         })
       : t;
-    const tMoon = ltteOn && params.moon
-      ? solveLightTimeCorrectedTime({
-          tObs: t,
-          rAtTime: (ti) => {
-            const nb = getNBodyStateAt(params, ti);
-            return nb ? vSub(nb.state.rM, nb.state.rS) : rBary;
-          },
-          observerDir,
-          c: rel.c,
-          shapiro: shapiroParams,
-          maxIters: rel.ltteIters,
-          tolSec: rel.ltteTolSec,
-        })
-      : t;
+    const tMoon =
+      ltteOn && params.moon
+        ? solveLightTimeCorrectedTime({
+            tObs: t,
+            rAtTime: (ti) => {
+              const nb = getNBodyStateAt(params, ti);
+              return nb ? vSub(nb.state.rM, nb.state.rS) : rBary;
+            },
+            observerDir,
+            c: rel.c,
+            shapiro: shapiroParams,
+            maxIters: rel.ltteIters,
+            tolSec: rel.ltteTolSec,
+          })
+        : t;
 
     planetOrbit = resolveOrbitElements(params.planet.orbit, tPlanet, "planet.orbit");
 
@@ -281,17 +255,18 @@ export function computeBodyKinematics(
           tolSec: rel.ltteTolSec,
         })
       : t;
-    const tMoon = ltteOn && params.moon
-      ? solveLightTimeCorrectedTime({
-          tObs: t,
-          rAtTime: moonAbsAt,
-          observerDir,
-          c: rel.c,
-          shapiro: shapiroParams,
-          maxIters: rel.ltteIters,
-          tolSec: rel.ltteTolSec,
-        })
-      : t;
+    const tMoon =
+      ltteOn && params.moon
+        ? solveLightTimeCorrectedTime({
+            tObs: t,
+            rAtTime: moonAbsAt,
+            observerDir,
+            c: rel.c,
+            shapiro: shapiroParams,
+            maxIters: rel.ltteIters,
+            tolSec: rel.ltteTolSec,
+          })
+        : t;
 
     planetOrbit = planetOrbitAt(tPlanet);
     const rBaryPlanet = rBaryAt(tPlanet);

@@ -6,12 +6,7 @@ import type { CircleOcculter } from "../photometry/occulterCircle";
 import type { EllipseOcculter, OcculterShape, RingOcculter } from "../photometry/occulterEllipse";
 import type { BodyKinematics } from "./kinematics";
 
-export function couldOverlapStarOnSky(
-  dx: number,
-  dy: number,
-  rOcc: number,
-  rStar: number
-): boolean {
+export function couldOverlapStarOnSky(dx: number, dy: number, rOcc: number, rStar: number): boolean {
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
   if (!isFinitePositive(rOcc) || !isFinitePositive(rStar)) return false;
 
@@ -86,17 +81,11 @@ function buildBodyOcculters(args: {
   return out;
 }
 
-export function buildOcculters(
-  params: SystemParams,
-  kin: BodyKinematics
-): OcculterShape[] {
+export function buildOcculters(params: SystemParams, kin: BodyKinematics): OcculterShape[] {
   const occulters: OcculterShape[] = [];
 
   // stepSystem() should validate radii; keep lightweight defense anyway.
-  if (
-    !isFinitePositive(params.star?.r) ||
-    !isFinitePositive(params.planet?.r)
-  ) {
+  if (!isFinitePositive(params.star?.r) || !isFinitePositive(params.planet?.r)) {
     return occulters;
   }
 
@@ -109,7 +98,7 @@ export function buildOcculters(
       rBody: params.planet.r,
       shape: params.planet.shape,
       rings: params.planet.rings,
-    })
+    }),
   );
 
   // Optional moon occulter.
@@ -121,7 +110,7 @@ export function buildOcculters(
         rBody: params.moon.r,
         shape: params.moon.shape,
         rings: params.moon.rings,
-      })
+      }),
     );
   }
 

@@ -35,7 +35,14 @@ export function wireDebugDOM(renderer: Canvas2DRenderer): void {
     renderer.debug = next;
   }
 
-  const all = [dbgEnabled, dbgShowObserverDir, dbgShowOcculters, dbgShowImpactParams, dbgShowTDV, dbgShowFluxDecomposition];
+  const all = [
+    dbgEnabled,
+    dbgShowObserverDir,
+    dbgShowOcculters,
+    dbgShowImpactParams,
+    dbgShowTDV,
+    dbgShowFluxDecomposition,
+  ];
   for (const el of all) {
     if (!el) continue;
     el.addEventListener("change", () => syncRendererDebugFromDOM());

@@ -59,7 +59,7 @@ export function solveKeplerE(
   e: number,
   maxItersOrOpts: number | SolveKeplerEOptions = 30,
   tolArg = 1e-12,
-  diag?: KeplerSolveDiagnostics
+  diag?: KeplerSolveDiagnostics,
 ): number {
   if (!Number.isFinite(M) || !Number.isFinite(e)) {
     throw new Error("solveKeplerE: M and e must be finite numbers.");
@@ -72,19 +72,17 @@ export function solveKeplerE(
   // - legacy: solveKeplerE(M,e,maxIters,tol)
   // - new: solveKeplerE(M,e,{maxIters,tol,strict})
   const opts: SolveKeplerEOptions | undefined =
-    typeof maxItersOrOpts === "object" && maxItersOrOpts !== null
-      ? maxItersOrOpts
-      : undefined;
+    typeof maxItersOrOpts === "object" && maxItersOrOpts !== null ? maxItersOrOpts : undefined;
 
   const maxItersRaw = opts ? opts.maxIters : (maxItersOrOpts as number);
   const tolRaw = opts ? opts.tol : tolArg;
   const strict = Boolean(opts?.strict);
 
   // Sanitize numeric controls.
-  const maxIters = Number.isFinite(maxItersRaw)
-    ? Math.max(1, Math.floor(maxItersRaw))
+  const maxIters = Number.isFinite(maxItersRaw ?? Number.NaN)
+    ? Math.max(1, Math.floor(maxItersRaw as number))
     : 30;
-  const tol = Number.isFinite(tolRaw) ? Math.max(0, tolRaw) : 1e-12;
+  const tol = Number.isFinite(tolRaw ?? Number.NaN) ? Math.max(0, tolRaw as number) : 1e-12;
 
   // e = 0 -> E = M exactly
   if (e === 0) return wrapToPi(M);
@@ -112,26 +110,20 @@ export function solveKeplerE(
   // Diagnostics (opt-in)
   const diagEnabled = Boolean(diag?.enabled);
   const logger = diag?.logger ?? console.debug.bind(console);
-  const warnIterCount = Number.isFinite(diag?.warnIterCount)
-    ? Math.max(1, Math.floor(diag!.warnIterCount!))
+  const warnIterCount = Number.isFinite(diag?.warnIterCount ?? Number.NaN)
+    ? Math.max(1, Math.floor(diag!.warnIterCount as number))
     : 12;
-  const warnStepLimitedCount = Number.isFinite(diag?.warnStepLimitedCount)
-    ? Math.max(0, Math.floor(diag!.warnStepLimitedCount!))
+  const warnStepLimitedCount = Number.isFinite(diag?.warnStepLimitedCount ?? Number.NaN)
+    ? Math.max(0, Math.floor(diag!.warnStepLimitedCount as number))
     : 6;
 
   let stepLimitedCount = 0;
   let lastAbsF = Number.POSITIVE_INFINITY;
   let lastAbsDE = Number.POSITIVE_INFINITY;
 
-  const maybeLog = (
-    itersUsed: number,
-    finalE: number,
-    absF: number,
-    absDE: number
-  ) => {
+  const maybeLog = (itersUsed: number, finalE: number, absF: number, absDE: number) => {
     if (!diagEnabled) return;
-    if (itersUsed < warnIterCount && stepLimitedCount < warnStepLimitedCount)
-      return;
+    if (itersUsed < warnIterCount && stepLimitedCount < warnStepLimitedCount) return;
     logger(
       [
         "solveKeplerE diagnostics:",
@@ -143,7 +135,7 @@ export function solveKeplerE(
         `|f|=${absF.toExponential(3)}`,
         `|dE|=${absDE.toExponential(3)}`,
         `E=${wrapToPi(finalE).toFixed(6)}`,
-      ].join(" ")
+      ].join(" "),
     );
   };
 
@@ -207,8 +199,8 @@ export function solveKeplerE(
     const f = E - e * s - Mw;
     throw new Error(
       `solveKeplerE: did not converge within maxIters=${maxIters} (|f|=${Math.abs(
-        f
-      )}; tol=${tol}; e=${e}; M=${M}).`
+        f,
+      )}; tol=${tol}; e=${e}; M=${M}).`,
     );
   }
 

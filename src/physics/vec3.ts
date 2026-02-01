@@ -49,11 +49,7 @@ export function vApproxEq(a: Vec3, b: Vec3, eps = 1e-12): boolean {
   if (!Number.isFinite(eps) || eps < 0) {
     throw new Error("vApproxEq: eps must be a finite number >= 0.");
   }
-  return (
-    Math.abs(a.x - b.x) <= eps &&
-    Math.abs(a.y - b.y) <= eps &&
-    Math.abs(a.z - b.z) <= eps
-  );
+  return Math.abs(a.x - b.x) <= eps && Math.abs(a.y - b.y) <= eps && Math.abs(a.z - b.z) <= eps;
 }
 
 export function vAdd(a: Vec3, b: Vec3): Vec3 {
@@ -285,11 +281,7 @@ export function vAnyOrthogonalUnit(v: Vec3, eps = 1e-15): Vec3 {
   const az = Math.abs(u.z);
 
   const helper: Vec3 =
-    ax <= ay && ax <= az
-      ? { x: 1, y: 0, z: 0 }
-      : ay <= az
-        ? { x: 0, y: 1, z: 0 }
-        : { x: 0, y: 0, z: 1 };
+    ax <= ay && ax <= az ? { x: 1, y: 0, z: 0 } : ay <= az ? { x: 0, y: 1, z: 0 } : { x: 0, y: 0, z: 1 };
 
   return vNormalizeOrZero(vCross(u, helper), eps);
 }

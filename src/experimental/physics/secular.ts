@@ -113,7 +113,7 @@ function clampPositive(x: number, eps: number): number {
 export function applyPrecessionAtTime(
   base: OrbitElements,
   t: number,
-  model: PrecessionModel = {}
+  model: PrecessionModel = {},
 ): OrbitElements {
   const tRef = toFiniteNumber(model.tRef, 0);
   const omegaDot = toFiniteNumber(model.omegaDot, 0);
@@ -140,11 +140,7 @@ export function applyPrecessionAtTime(
  * Apply linear drifts (a,e,period,t0) at time t.
  * JSON-friendly primitive.
  */
-export function applyDriftAtTime(
-  base: OrbitElements,
-  t: number,
-  model: DriftModel = {}
-): OrbitElements {
+export function applyDriftAtTime(base: OrbitElements, t: number, model: DriftModel = {}): OrbitElements {
   const tRef = toFiniteNumber(model.tRef, 0);
   const aDot = toFiniteNumber(model.aDot, 0);
   const eDot = toFiniteNumber(model.eDot, 0);
@@ -171,7 +167,7 @@ export function applyDriftAtTime(
 /** Create a provider that applies secular precession to angular elements. */
 export function makePrecessingOrbitProvider(
   base: OrbitElements,
-  model: PrecessionModel = {}
+  model: PrecessionModel = {},
 ): OrbitElementsProvider {
   const b: OrbitElements = { ...base };
   return (t: number): OrbitElements => applyPrecessionAtTime(b, t, model);
@@ -180,23 +176,20 @@ export function makePrecessingOrbitProvider(
 /** Create a provider that applies simple linear drifts to (a, e, period, t0). */
 export function makeDriftingOrbitProvider(
   base: OrbitElements,
-  model: DriftModel = {}
+  model: DriftModel = {},
 ): OrbitElementsProvider {
   const b: OrbitElements = { ...base };
   return (t: number): OrbitElements => applyDriftAtTime(b, t, model);
 }
 
 /** Compose element transformers (JSON-friendly). */
-export type OrbitElementsTransformer = (
-  base: OrbitElements,
-  t: number
-) => OrbitElements;
+export type OrbitElementsTransformer = (base: OrbitElements, t: number) => OrbitElements;
 
 /** Apply transformers sequentially at time t: E0 -> E1 -> E2 ... */
 export function applyOrbitTransformersAtTime(
   base: OrbitElements,
   t: number,
-  transformers: OrbitElementsTransformer[]
+  transformers: OrbitElementsTransformer[],
 ): OrbitElements {
   let cur = { ...base };
   for (const tr of transformers) cur = tr(cur, t);
@@ -206,7 +199,7 @@ export function applyOrbitTransformersAtTime(
 /** Create a provider from transformers. */
 export function makeOrbitProviderFromTransformers(
   base: OrbitElements,
-  transformers: OrbitElementsTransformer[]
+  transformers: OrbitElementsTransformer[],
 ): OrbitElementsProvider {
   const b = { ...base };
   return (t: number) => applyOrbitTransformersAtTime(b, t, transformers);
@@ -223,7 +216,7 @@ export function makeOrbitProviderFromTransformers(
  */
 export function composeOrbitProviders(
   base: OrbitElements,
-  providers: Array<(base: OrbitElements) => OrbitElementsProvider>
+  providers: Array<(base: OrbitElements) => OrbitElementsProvider>,
 ): OrbitElementsProvider {
   const b = { ...base };
   const built = providers.map((make) => make(b));

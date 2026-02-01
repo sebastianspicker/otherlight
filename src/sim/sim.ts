@@ -35,10 +35,7 @@ import { getObserverDir } from "./observer";
 import { computeBodyKinematics } from "./kinematics";
 import { buildOcculters } from "./occulters";
 import { computeTransitFlux } from "./transitFlux";
-import {
-  evolveBrightnessPatches,
-  spotFluxFactorFromPatches,
-} from "../photometry/transitUniformSpots";
+import { evolveBrightnessPatches, spotFluxFactorFromPatches } from "../photometry/transitUniformSpots";
 import { computeAdditiveFluxComponents } from "./additiveFlux";
 import { computeExoDiagnostics } from "./diagnostics";
 
@@ -86,8 +83,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
   // Physically consistent composition: stellar term is attenuated, additive terms are not.
   // Assumption: Stellar variability is photospheric.
   const fluxTotal =
-    fluxStellarPreTransit * fluxTransitFactor +
-    (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering);
+    fluxStellarPreTransit * fluxTransitFactor + (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering);
 
   const exoDiag = computeExoDiagnostics(params, t, observerDir, kin);
 
@@ -130,7 +126,7 @@ export async function prepareSimulation(params: SystemParams): Promise<void> {
     } catch (e) {
       console.warn(
         "prepareSimulation: Failed to preload limb darkening module. Simulation will proceed with Uniform/Linear fallback.",
-        e
+        e,
       );
     }
   }

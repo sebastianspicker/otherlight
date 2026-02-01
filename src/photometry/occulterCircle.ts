@@ -69,7 +69,7 @@ export function pointInCircleOcculter(x: number, y: number, o: CircleOcculter): 
 export function clampGridRes(
   raw: unknown,
   fallback: number,
-  opts: { minRes?: number; maxRes?: number } = {}
+  opts: { minRes?: number; maxRes?: number } = {},
 ): number {
   const minResRaw = opts.minRes;
   const maxResRaw = opts.maxRes;
@@ -107,7 +107,7 @@ export function clampGridRes(
  */
 export function sanitizeCircleOcculters(
   rStar: number,
-  occulters?: readonly CircleOcculter[]
+  occulters?: readonly CircleOcculter[],
 ): CircleOcculter[] {
   const out: CircleOcculter[] = [];
 
@@ -145,7 +145,7 @@ export function sanitizeCircleOcculters(
  */
 export function anyCircleOcculterFullyCoversStar(
   rStar: number,
-  occulters?: readonly CircleOcculter[]
+  occulters?: readonly CircleOcculter[],
 ): boolean {
   if (!isFinitePositive(rStar)) return false;
   if (!Array.isArray(occulters) || occulters.length === 0) return false;

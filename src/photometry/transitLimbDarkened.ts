@@ -21,24 +21,14 @@
 import type { BrightnessPatch } from "../core/types";
 // Prefer the canonical single source of numeric helpers.
 import { clamp01, isFinitePositive } from "../core/units";
-import type {
-  LimbDarkeningConstraints,
-  LimbDarkeningLaw,
-} from "./limbDarkening";
-import {
-  intensityNonNegative,
-  validateLimbDarkeningLaw,
-} from "./limbDarkening";
+import type { LimbDarkeningConstraints, LimbDarkeningLaw } from "./limbDarkening";
+import { intensityNonNegative, validateLimbDarkeningLaw } from "./limbDarkening";
 // Avoid `import { type T }` mixed syntax to stay tooling-friendly.
 import type { PatchCombineMode } from "./patches";
 import { patchFactorAt, sanitizeBrightnessPatches } from "./patches";
 import { integrateDiskMidpoint } from "./diskMidpoint";
 import type { CircleOcculter } from "./occulterCircle";
-import {
-  anyCircleOcculterFullyCoversStar,
-  clampGridRes,
-  sanitizeCircleOcculters,
-} from "./occulterCircle";
+import { anyCircleOcculterFullyCoversStar, clampGridRes, sanitizeCircleOcculters } from "./occulterCircle";
 
 export type FluxLimbDarkenedDiskMeta = {
   earlyExit: boolean;
@@ -69,14 +59,10 @@ export function fluxLimbDarkenedDiskDetailed(params: {
   const rStar = params.rStar;
 
   if (!isFinitePositive(rStar)) {
-    throw new Error(
-      "fluxLimbDarkenedDisk: rStar must be a positive finite number."
-    );
+    throw new Error("fluxLimbDarkenedDisk: rStar must be a positive finite number.");
   }
   if (!params.limbDarkeningLaw) {
-    throw new Error(
-      "fluxLimbDarkenedDisk: limbDarkeningLaw must be provided."
-    );
+    throw new Error("fluxLimbDarkenedDisk: limbDarkeningLaw must be provided.");
   }
 
   // Validate once per call (NOT per pixel).
@@ -100,26 +86,29 @@ export function fluxLimbDarkenedDiskDetailed(params: {
   const patchCombineMode: PatchCombineMode = params.patchCombineMode ?? "multiply";
   const gridRes = clampGridRes(params.gridRes, 60);
 
-  const { total: totalIntensity, blocked: blockedIntensity, earlyExit } =
-    integrateDiskMidpoint({
-      rStar,
-      occulters,
-      gridRes,
-      intensityAt: ({ x, y, mu }) => {
-        const Ild = intensityNonNegative(mu, params.limbDarkeningLaw);
-        if (Ild === 0) return 0;
+  const {
+    total: totalIntensity,
+    blocked: blockedIntensity,
+    earlyExit: earlyExitRaw,
+  } = integrateDiskMidpoint({
+    rStar,
+    occulters,
+    gridRes,
+    intensityAt: ({ x, y, mu }) => {
+      const Ild = intensityNonNegative(mu, params.limbDarkeningLaw);
+      if (Ild === 0) return 0;
 
-        const Praw = patchFactorAt(x, y, patches, patchCombineMode);
-        const P = Number.isFinite(Praw) ? Math.max(0, Praw) : 1;
-        const I = Ild * P;
-        return Number.isFinite(I) ? I : 0;
-      },
-      earlyExitFluxEps: params.earlyExitFluxEps ?? 0,
-    });
+      const Praw = patchFactorAt(x, y, patches, patchCombineMode);
+      const P = Number.isFinite(Praw) ? Math.max(0, Praw) : 1;
+      const I = Ild * P;
+      return Number.isFinite(I) ? I : 0;
+    },
+    earlyExitFluxEps: params.earlyExitFluxEps ?? 0,
+  });
+  const earlyExit = Boolean(earlyExitRaw);
 
   // Safe division: if totalIntensity is effectively zero (completely dark patches?), return 1.
-  const flux =
-    totalIntensity > 1e-12 ? 1 - blockedIntensity / totalIntensity : 1.0;
+  const flux = totalIntensity > 1e-12 ? 1 - blockedIntensity / totalIntensity : 1.0;
 
   return { flux: clamp01(flux), meta: { earlyExit } };
 }

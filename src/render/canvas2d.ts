@@ -98,7 +98,10 @@ export class Canvas2DRenderer {
   private orbitCache: OrbitPathCache;
   private starDiskCache = new StarDiskCache();
 
-  constructor(private canvas: HTMLCanvasElement, opts: Canvas2DRendererOptions = {}) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    opts: Canvas2DRendererOptions = {},
+  ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas2DRenderer: 2D context unavailable.");
     this.ctx = ctx;
@@ -278,7 +281,10 @@ export class Canvas2DRenderer {
 
     // Depth-sorted draw order (Painter's algorithm):
     // smaller z first (farther), larger z last (closer).
-    const drawList: Drawable[] = [{ kind: "star", z: 0 }, { kind: "planet", z: step.planetSky.z }];
+    const drawList: Drawable[] = [
+      { kind: "star", z: 0 },
+      { kind: "planet", z: step.planetSky.z },
+    ];
     if (params.moon && step.moonSky) drawList.push({ kind: "moon", z: step.moonSky.z });
 
     drawList.sort((a, b) => (a.z === b.z ? a.kind.localeCompare(b.kind) : a.z - b.z));

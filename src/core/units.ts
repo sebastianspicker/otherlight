@@ -134,12 +134,7 @@ export function toFiniteNumber(v: unknown, fallback: number): number {
  * Convert unknown input to a finite number, then clamp into [min,max].
  * If conversion fails -> fallback, then clamp.
  */
-export function toFiniteClamped(
-  v: unknown,
-  fallback: number,
-  min: number,
-  max: number
-): number {
+export function toFiniteClamped(v: unknown, fallback: number, min: number, max: number): number {
   return clamp(toFiniteNumber(v, fallback), min, max);
 }
 
@@ -169,11 +164,7 @@ export function toFinitePositiveOr(v: unknown, fallback: number): number {
  * Convert unknown input to a finite number, clamped to > 0 by epsilon.
  * Useful for dt, tau, denominators, etc.
  */
-export function toFinitePos(
-  v: unknown,
-  fallback: number,
-  eps = 1e-12
-): number {
+export function toFinitePos(v: unknown, fallback: number, eps = 1e-12): number {
   const x = toFiniteNumber(v, fallback);
   const fb = Number.isFinite(fallback) ? fallback : eps;
   const val = Number.isFinite(x) ? x : fb;

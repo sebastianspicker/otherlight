@@ -140,10 +140,12 @@ export function pathRoundRect(
   y: number,
   w: number,
   h: number,
-  r: number
+  r: number,
 ): void {
   const rr = Math.max(0, Math.min(r, Math.min(w, h) * 0.5));
-  const anyCtx = ctx as unknown as { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void };
+  const anyCtx = ctx as unknown as {
+    roundRect?: (x: number, y: number, w: number, h: number, r: number) => void;
+  };
 
   if (typeof anyCtx.roundRect === "function") {
     ctx.beginPath();
@@ -172,7 +174,7 @@ export function drawObserverMarkerMainView(
   ctx: CanvasRenderingContext2D,
   size: SizeInfo,
   observerDirRaw: Vec3,
-  opts: ObserverMarkerOptions = {}
+  opts: ObserverMarkerOptions = {},
 ): void {
   if (!canvasSizeValid(size) || size.cssW < 40 || size.cssH < 40) return;
 
@@ -229,7 +231,7 @@ export function drawObserverGizmoInset(
   ctx: CanvasRenderingContext2D,
   size: SizeInfo,
   observerDirRaw: Vec3,
-  theme?: Partial<OverlayTheme>
+  theme?: Partial<OverlayTheme>,
 ): void {
   if (!canvasSizeValid(size) || size.cssW < 40 || size.cssH < 40) return;
 
@@ -301,7 +303,7 @@ export function drawObserverGizmoInset(
   ctx.fillText("-y", sphCx - 7, sphCy + sphR + 12);
 
   const px = sphCx + xN * sphR;
-  const py = sphCy + (-yN) * sphR; // canvas y down
+  const py = sphCy + -yN * sphR; // canvas y down
 
   if (zN >= 0) {
     ctx.beginPath();
@@ -342,7 +344,7 @@ export function drawDebugOverlay(
   step: StepResult,
   observerDirRaw: Vec3,
   toggles?: DebugOverlayToggles,
-  opts: DebugOverlayOptions = {}
+  opts: DebugOverlayOptions = {},
 ): void {
   const dbg = resolveDebugOverlayToggles(toggles);
   if (!dbg.enabled) return;
@@ -377,7 +379,9 @@ export function drawDebugOverlay(
   };
 
   if (dbg.showObserverDir) {
-    line(`Observer dir = (${observerDir.x.toFixed(2)}, ${observerDir.y.toFixed(2)}, ${observerDir.z.toFixed(2)})`);
+    line(
+      `Observer dir = (${observerDir.x.toFixed(2)}, ${observerDir.y.toFixed(2)}, ${observerDir.z.toFixed(2)})`,
+    );
   }
 
   if (dbg.showOcculters) {
@@ -405,7 +409,8 @@ export function drawDebugOverlay(
     const baseline = step.meta?.baselineFluxUsed;
     const svar = step.meta?.stellarVariabilityFlux;
 
-    if (typeof baseline === "number" && Number.isFinite(baseline)) line(`baselineFlux = ${baseline.toFixed(6)}`);
+    if (typeof baseline === "number" && Number.isFinite(baseline))
+      line(`baselineFlux = ${baseline.toFixed(6)}`);
     if (typeof svar === "number" && Number.isFinite(svar)) line(`stellarVar   = ${svar.toExponential(3)}`);
 
     const ft = step.fluxTransitFactor;

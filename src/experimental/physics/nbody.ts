@@ -21,16 +21,7 @@
 //   1/|r|^3 -> 1/(|r|^2 + eps^2)^(3/2)
 
 import type { Vec3 } from "../../physics/vec3";
-import {
-  VEC3ZERO,
-  vAdd,
-  vAddScaled,
-  vIsFinite,
-  vLen,
-  vLenSq,
-  vScale,
-  vSub,
-} from "../../physics/vec3";
+import { VEC3ZERO, vAdd, vAddScaled, vIsFinite, vLen, vLenSq, vScale, vSub } from "../../physics/vec3";
 
 export type NBodyPerturberState = {
   r: Vec3;
@@ -83,8 +74,7 @@ export type NBodyStepParams = {
 };
 
 function assertFiniteNumber(x: unknown, name: string): asserts x is number {
-  if (typeof x !== "number" || !Number.isFinite(x))
-    throw new Error(`${name} must be a finite number.`);
+  if (typeof x !== "number" || !Number.isFinite(x)) throw new Error(`${name} must be a finite number.`);
 }
 
 function assertMu(mu: unknown, name: string): asserts mu is number {
@@ -94,15 +84,11 @@ function assertMu(mu: unknown, name: string): asserts mu is number {
 
 function assertFiniteVec3(v: unknown, name: string): asserts v is Vec3 {
   if (!v || typeof v !== "object") throw new Error(`${name} must be a Vec3.`);
-  if (!vIsFinite(v as Vec3))
-    throw new Error(`${name} must be finite (no NaN/inf).`);
+  if (!vIsFinite(v as Vec3)) throw new Error(`${name} must be finite (no NaN/inf).`);
 }
 
 function normalizeSoftening(softening: unknown): { eps: number; eps2: number } {
-  const eps =
-    typeof softening === "number" && Number.isFinite(softening)
-      ? Math.max(0, softening)
-      : 0;
+  const eps = typeof softening === "number" && Number.isFinite(softening) ? Math.max(0, softening) : 0;
   return { eps, eps2: eps * eps };
 }
 
@@ -129,7 +115,7 @@ function accelFromPointMass(params: {
   if (!(r2 > 0) || !Number.isFinite(r2)) {
     if ((throwOnOverlap ?? false) && eps2 === 0) {
       throw new Error(
-        "accelFromPointMass: overlap detected with zero softening (check dt, initial conditions, or add softening)."
+        "accelFromPointMass: overlap detected with zero softening (check dt, initial conditions, or add softening).",
       );
     }
     // Deterministic fail-open behavior (legacy-friendly).
@@ -139,9 +125,7 @@ function accelFromPointMass(params: {
   const d2 = r2 + eps2;
   if (!(d2 > 0) || !Number.isFinite(d2)) {
     if (throwOnOverlap ?? false) {
-      throw new Error(
-        "accelFromPointMass: invalid squared distance (non-finite)."
-      );
+      throw new Error("accelFromPointMass: invalid squared distance (non-finite).");
     }
     return VEC3ZERO;
   }
@@ -226,7 +210,7 @@ function buildBodiesFromState(params: {
   const pert = state.perturbers ?? [];
   if (pert.length !== muPerturbers.length) {
     throw new Error(
-      `perturber count mismatch: state has ${pert.length}, muPerturbers has ${muPerturbers.length}.`
+      `perturber count mismatch: state has ${pert.length}, muPerturbers has ${muPerturbers.length}.`,
     );
   }
 
@@ -243,11 +227,7 @@ function buildBodiesFromState(params: {
   return bodies;
 }
 
-function unpackBodiesToState(params: {
-  t: number;
-  bodies: NBodyBody[];
-  perturberCount: number;
-}): NBodyState {
+function unpackBodiesToState(params: { t: number; bodies: NBodyBody[]; perturberCount: number }): NBodyState {
   const { t, bodies, perturberCount } = params;
   if (bodies.length < 3) throw new Error("N-body requires star, planet, moon bodies.");
 
@@ -292,7 +272,7 @@ function computeAccelerations(params: {
       if (!(r2 > 0) || !Number.isFinite(r2)) {
         if ((throwOnOverlap ?? false) && eps2 === 0) {
           throw new Error(
-            "nbody accel: overlap detected with zero softening (check dt, initial conditions, or add softening)."
+            "nbody accel: overlap detected with zero softening (check dt, initial conditions, or add softening).",
           );
         }
         continue;
@@ -340,9 +320,7 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
   assertMu(muPlanet, "muPlanet");
   assertMu(muMoon, "muMoon");
 
-  const muPerturbers = Array.isArray(params.muPerturbers)
-    ? params.muPerturbers
-    : [];
+  const muPerturbers = Array.isArray(params.muPerturbers) ? params.muPerturbers : [];
   for (let i = 0; i < muPerturbers.length; i++) {
     assertMu(muPerturbers[i], `muPerturbers[${i}]`);
   }
@@ -403,7 +381,7 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
     !vIsFinite(out.vM)
   ) {
     throw new Error(
-      "integrateNBodyStep produced non-finite state (dt too large or parameters pathological)."
+      "integrateNBodyStep produced non-finite state (dt too large or parameters pathological).",
     );
   }
 
@@ -413,9 +391,7 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
 
   for (let i = 0; i < out.perturbers.length; i++) {
     if (!vIsFinite(out.perturbers[i].r) || !vIsFinite(out.perturbers[i].v)) {
-      throw new Error(
-        "integrateNBodyStep produced non-finite perturber state."
-      );
+      throw new Error("integrateNBodyStep produced non-finite perturber state.");
     }
   }
 
@@ -423,18 +399,12 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
 }
 
 /** Advance the star–planet–moon system by one Velocity-Verlet step. */
-export function integratePlanetMoon3BodyStep(
-  params: NBodyStepParams
-): NBodyState {
+export function integratePlanetMoon3BodyStep(params: NBodyStepParams): NBodyState {
   if (Array.isArray(params.muPerturbers) && params.muPerturbers.length > 0) {
-    throw new Error(
-      "integratePlanetMoon3BodyStep does not accept perturbers; use integrateNBodyStep."
-    );
+    throw new Error("integratePlanetMoon3BodyStep does not accept perturbers; use integrateNBodyStep.");
   }
   if (params.state.perturbers.length > 0) {
-    throw new Error(
-      "integratePlanetMoon3BodyStep does not accept perturber states; use integrateNBodyStep."
-    );
+    throw new Error("integratePlanetMoon3BodyStep does not accept perturber states; use integrateNBodyStep.");
   }
 
   return integrateNBodyStep({ ...params, muPerturbers: [] });
@@ -478,9 +448,7 @@ export function integrateToTime(params: {
   if (dtMaxAbs === 0) throw new Error("dtMaxAbs must be > 0.");
 
   const exactFinalStep = params.exactFinalStep ?? true;
-  const maxSteps = Number.isFinite(params.maxSteps)
-    ? Math.max(1, Math.floor(params.maxSteps!))
-    : 2_000_000;
+  const maxSteps = Number.isFinite(params.maxSteps) ? Math.max(1, Math.floor(params.maxSteps!)) : 2_000_000;
 
   let s = state;
   for (let steps = 0; steps < maxSteps; steps++) {
@@ -505,9 +473,7 @@ export function integrateToTime(params: {
     });
   }
 
-  throw new Error(
-    "integrateToTime exceeded maxSteps (check dtMaxAbs or target time)."
-  );
+  throw new Error("integrateToTime exceeded maxSteps (check dtMaxAbs or target time).");
 }
 
 /**
@@ -516,12 +482,7 @@ export function integrateToTime(params: {
  *
  * Valid because mu ∝ M when mu = G*M with a shared G.
  */
-export function planetMoonBarycenter(params: {
-  rP: Vec3;
-  rM: Vec3;
-  muPlanet: number;
-  muMoon: number;
-}): Vec3 {
+export function planetMoonBarycenter(params: { rP: Vec3; rM: Vec3; muPlanet: number; muMoon: number }): Vec3 {
   const { rP, rM, muPlanet, muMoon } = params;
   assertFiniteVec3(rP, "rP");
   assertFiniteVec3(rM, "rM");
@@ -529,8 +490,7 @@ export function planetMoonBarycenter(params: {
   assertMu(muMoon, "muMoon");
 
   const muTot = muPlanet + muMoon;
-  if (!Number.isFinite(muTot) || muTot <= 0)
-    throw new Error("muPlanet + muMoon must be finite and > 0.");
+  if (!Number.isFinite(muTot) || muTot <= 0) throw new Error("muPlanet + muMoon must be finite and > 0.");
 
   const wP = muPlanet / muTot;
   const wM = muMoon / muTot;
@@ -542,11 +502,7 @@ export function planetMoonBarycenter(params: {
  * Specific two-body orbital energy (per unit mass) relative to the star:
  * eps = v^2/2 - muStar/r
  */
-export function specificEnergyTwoBody(params: {
-  r: Vec3;
-  v: Vec3;
-  muStar: number;
-}): number {
+export function specificEnergyTwoBody(params: { r: Vec3; v: Vec3; muStar: number }): number {
   const { r, v, muStar } = params;
   assertFiniteVec3(r, "r");
   assertFiniteVec3(v, "v");
@@ -589,12 +545,9 @@ export function totalEnergyStarFixedIfMassesProvided(params: {
   const mM = params.mMoon;
   const G = params.G;
 
-  if (!(typeof mP === "number" && Number.isFinite(mP) && mP > 0))
-    return Number.NaN;
-  if (!(typeof mM === "number" && Number.isFinite(mM) && mM > 0))
-    return Number.NaN;
-  if (!(typeof G === "number" && Number.isFinite(G) && G > 0))
-    return Number.NaN;
+  if (!(typeof mP === "number" && Number.isFinite(mP) && mP > 0)) return Number.NaN;
+  if (!(typeof mM === "number" && Number.isFinite(mM) && mM > 0)) return Number.NaN;
+  if (!(typeof G === "number" && Number.isFinite(G) && G > 0)) return Number.NaN;
 
   const rPmag = vLen(rP);
   const rMmag = vLen(rM);
@@ -610,8 +563,8 @@ export function totalEnergyStarFixedIfMassesProvided(params: {
   // muStar = G*Mstar => Mstar = muStar/G
   const Mstar = muStar / G;
 
-  const Ustar = -G * (mP * Mstar / rPmag + mM * Mstar / rMmag);
-  const Upm = -G * (mP * mM) / rPMmag;
+  const Ustar = -G * ((mP * Mstar) / rPmag + (mM * Mstar) / rMmag);
+  const Upm = (-G * (mP * mM)) / rPMmag;
 
   const E = T + Ustar + Upm;
   return Number.isFinite(E) ? E : Number.NaN;
@@ -642,7 +595,7 @@ function isFinitePositiveNumber(x: unknown): x is number {
  */
 export function resolveEnabledNBodyPlanetMoonConfig(
   cfg: NBodyPlanetMoonParamsLike | undefined,
-  opts?: { onInvalid?: "throw" | "disable"; defaultDtMaxAbs?: number }
+  opts?: { onInvalid?: "throw" | "disable"; defaultDtMaxAbs?: number },
 ): {
   muStar: number;
   muPlanet: number;
@@ -655,26 +608,19 @@ export function resolveEnabledNBodyPlanetMoonConfig(
 
   const onInvalid = opts?.onInvalid ?? "throw";
   const bad = (msg: string): null => {
-    if (onInvalid === "throw")
-      throw new Error(`N-body enabled but configuration invalid: ${msg}`);
+    if (onInvalid === "throw") throw new Error(`N-body enabled but configuration invalid: ${msg}`);
     return null;
   };
 
-  if (!isFinitePositiveNumber(cfg.muStar))
-    return bad("muStar must be set and > 0.");
-  if (!isFinitePositiveNumber(cfg.muPlanet))
-    return bad("muPlanet must be set and > 0.");
-  if (!isFinitePositiveNumber(cfg.muMoon))
-    return bad("muMoon must be set and > 0.");
+  if (!isFinitePositiveNumber(cfg.muStar)) return bad("muStar must be set and > 0.");
+  if (!isFinitePositiveNumber(cfg.muPlanet)) return bad("muPlanet must be set and > 0.");
+  if (!isFinitePositiveNumber(cfg.muMoon)) return bad("muMoon must be set and > 0.");
 
   const dtMaxAbsRaw = cfg.dtMax ?? opts?.defaultDtMaxAbs;
-  if (!isFinitePositiveNumber(dtMaxAbsRaw))
-    return bad("dtMax must be set and > 0.");
+  if (!isFinitePositiveNumber(dtMaxAbsRaw)) return bad("dtMax must be set and > 0.");
 
   const softening =
-    typeof cfg.softening === "number" && Number.isFinite(cfg.softening)
-      ? Math.max(0, cfg.softening)
-      : 0;
+    typeof cfg.softening === "number" && Number.isFinite(cfg.softening) ? Math.max(0, cfg.softening) : 0;
   const throwOnOverlap = Boolean(cfg.throwOnOverlap);
 
   return {

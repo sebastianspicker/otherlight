@@ -16,11 +16,7 @@
 // - Returns a small additive term, usually |f| << 1.
 // - Applies a configurable stability clamp (default ±1e3) purely as a safety guard.
 
-import type {
-  OrbitElements,
-  StellarVariabilityParams,
-  StellarVariabilityPhaseModel,
-} from "../core/types";
+import type { OrbitElements, StellarVariabilityParams, StellarVariabilityPhaseModel } from "../core/types";
 import { clamp, isFiniteNumber, wrapTo2Pi } from "../core/units";
 import { solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
 
@@ -42,15 +38,13 @@ function normalizeClampBounds(model?: StellarVariabilityParams): {
   const max0 = finiteOrDefault(model?.clampMax, 1e3);
 
   // If user swaps them or provides nonsense, fall back to defaults.
-  if (!Number.isFinite(min0) || !Number.isFinite(max0))
-    return { min: -1e3, max: 1e3 };
+  if (!Number.isFinite(min0) || !Number.isFinite(max0)) return { min: -1e3, max: 1e3 };
   if (min0 === max0) return { min: -1e3, max: 1e3 };
 
   const min = Math.min(min0, max0);
   const max = Math.max(min0, max0);
 
-  if (!Number.isFinite(min) || !Number.isFinite(max))
-    return { min: -1e3, max: 1e3 };
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: -1e3, max: 1e3 };
   return { min, max };
 }
 
@@ -60,15 +54,10 @@ function normalizeClampBounds(model?: StellarVariabilityParams): {
  * Convention:
  *   phi = wrapTo2Pi( 2π * (t - t0) / period )
  */
-export function orbitalPhaseFromPeriod(params: {
-  t: number;
-  period: number;
-  t0: number;
-}): number {
+export function orbitalPhaseFromPeriod(params: { t: number; period: number; t0: number }): number {
   const { t, period, t0 } = params;
 
-  if (!Number.isFinite(t) || !Number.isFinite(period) || !Number.isFinite(t0))
-    return NaN;
+  if (!Number.isFinite(t) || !Number.isFinite(period) || !Number.isFinite(t0)) return NaN;
   if (period <= 0) return NaN;
 
   const phi = (2 * Math.PI * (t - t0)) / period;
@@ -114,12 +103,7 @@ export function orbitalPhaseFromTrueAnomaly(params: {
 }): number {
   const { t, period, t0, e } = params;
 
-  if (
-    !Number.isFinite(t) ||
-    !Number.isFinite(period) ||
-    !Number.isFinite(t0) ||
-    !Number.isFinite(e)
-  )
+  if (!Number.isFinite(t) || !Number.isFinite(period) || !Number.isFinite(t0) || !Number.isFinite(e))
     return NaN;
   if (period <= 0) return NaN;
   if (e < 0 || e >= 1) return NaN;
@@ -156,13 +140,7 @@ export function stellarVariabilityFlux(params: {
   const P = orbit?.period;
   const t0 = orbit?.t0;
 
-  if (
-    !Number.isFinite(t) ||
-    !Number.isFinite(P) ||
-    P <= 0 ||
-    !Number.isFinite(t0)
-  )
-    return 0;
+  if (!Number.isFinite(t) || !Number.isFinite(P) || P <= 0 || !Number.isFinite(t0)) return 0;
 
   const beamingAmp = finiteOrZero(model.beamingAmp);
   const ellipAmp = finiteOrZero(model.ellipsoidalAmp);
@@ -171,8 +149,7 @@ export function stellarVariabilityFlux(params: {
   // Fast no-op.
   if (beamingAmp === 0 && ellipAmp === 0 && constant === 0) return 0;
 
-  const phaseModel: StellarVariabilityPhaseModel =
-    model.phaseModel ?? "linear-period";
+  const phaseModel: StellarVariabilityPhaseModel = model.phaseModel ?? "linear-period";
 
   const phi =
     phaseModel === "true-anomaly"
@@ -236,17 +213,11 @@ export function runStellarVariabilitySelfTests(): void {
       e: orbitCirc.e,
     });
 
-    assert(
-      Number.isFinite(phiLin) && Number.isFinite(phiTA),
-      "Phases must be finite for e=0."
-    );
+    assert(Number.isFinite(phiLin) && Number.isFinite(phiTA), "Phases must be finite for e=0.");
 
     // Compare wrapped difference.
     const d = wrapTo2Pi(phiLin - phiTA);
-    assert(
-      approxEq(d, 0, 1e-10) || approxEq(d, 2 * Math.PI, 1e-10),
-      "e=0 phases should match."
-    );
+    assert(approxEq(d, 0, 1e-10) || approxEq(d, 2 * Math.PI, 1e-10), "e=0 phases should match.");
   }
 
   const f = stellarVariabilityFlux({

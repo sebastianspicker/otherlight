@@ -115,7 +115,11 @@ function normalizeObserverDirOrNaN(observerDir: Vec3): Vec3 | null {
  *
  * Only Ω, ω, i are modified. All other fields are copied as-is.
  */
-export function applyOrientationEvolution(base: OrbitElements, tSec: number, evo: OrbitOrientationEvolution | undefined): OrbitElements {
+export function applyOrientationEvolution(
+  base: OrbitElements,
+  tSec: number,
+  evo: OrbitOrientationEvolution | undefined,
+): OrbitElements {
   const enabled = Boolean(evo?.enabled);
   if (!enabled) return { ...base };
 
@@ -159,7 +163,8 @@ export function applyOrientationEvolution(base: OrbitElements, tSec: number, evo
  */
 export function estimateSkyPlaneSpeedFromSkyPoints(p0: SkyPoint, p1: SkyPoint, dtSec: number): number {
   if (!Number.isFinite(dtSec) || dtSec <= 0) return NaN;
-  if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y) || !Number.isFinite(p1.x) || !Number.isFinite(p1.y)) return NaN;
+  if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y) || !Number.isFinite(p1.x) || !Number.isFinite(p1.y))
+    return NaN;
 
   const vx = (p1.x - p0.x) / dtSec;
   const vy = (p1.y - p0.y) / dtSec;

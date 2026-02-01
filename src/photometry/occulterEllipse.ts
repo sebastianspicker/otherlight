@@ -138,7 +138,8 @@ export function precomputeOcculterShapes(occulters: OcculterShape[]): OcculterPr
       if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
       if (!isFinitePositive(o.rx) || !isFinitePositive(o.ry)) continue;
 
-      const angle = Number.isFinite(o.angle) ? o.angle : 0;
+      const angleRaw = o.angle;
+      const angle = typeof angleRaw === "number" && Number.isFinite(angleRaw) ? angleRaw : 0;
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
       out.push({
@@ -157,16 +158,19 @@ export function precomputeOcculterShapes(occulters: OcculterShape[]): OcculterPr
       if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
       if (!isFinitePositive(o.rOuter)) continue;
 
-      const rInner = Number.isFinite(o.rInner) ? Math.max(0, o.rInner) : 0;
+      const rInnerRaw = o.rInner;
+      const rInner = typeof rInnerRaw === "number" && Number.isFinite(rInnerRaw) ? Math.max(0, rInnerRaw) : 0;
       if (!(o.rOuter > rInner)) continue;
 
-      const inc = Number.isFinite(o.inc) ? o.inc : 0;
+      const incRaw = o.inc;
+      const inc = typeof incRaw === "number" && Number.isFinite(incRaw) ? incRaw : 0;
       const cosInc = Math.abs(Math.cos(inc));
       const outerRy = o.rOuter * cosInc;
       if (!(outerRy > 0)) continue; // edge-on -> zero area, ignore
 
       const innerRy = rInner * cosInc;
-      const angle = Number.isFinite(o.angle) ? o.angle : 0;
+      const angleRaw = o.angle;
+      const angle = typeof angleRaw === "number" && Number.isFinite(angleRaw) ? angleRaw : 0;
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
 
@@ -196,7 +200,7 @@ function pointInEllipse(
   sinA: number,
   invRx2: number,
   invRy2: number,
-  inclusive = false
+  inclusive = false,
 ): boolean {
   const xp = x - dx;
   const yp = y - dy;
@@ -228,7 +232,17 @@ export function isPointOcculted(x: number, y: number, occ: OcculterPre[]): boole
     if (!insideOuter) continue;
 
     if (o.invInnerRx2 !== undefined && o.invInnerRy2 !== undefined) {
-      const insideInner = pointInEllipse(x, y, o.dx, o.dy, o.cosA, o.sinA, o.invInnerRx2, o.invInnerRy2, true);
+      const insideInner = pointInEllipse(
+        x,
+        y,
+        o.dx,
+        o.dy,
+        o.cosA,
+        o.sinA,
+        o.invInnerRx2,
+        o.invInnerRy2,
+        true,
+      );
       if (!insideInner) return true;
       continue;
     }

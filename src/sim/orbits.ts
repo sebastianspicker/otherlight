@@ -19,7 +19,7 @@ import { applyApsidalPrecession } from "../physics/relativity";
 export function resolveOrbitElements(
   elOrProvider: OrbitElements | OrbitElementsProvider,
   t: number,
-  nameForErrors: string
+  nameForErrors: string,
 ): OrbitElements {
   if (!Number.isFinite(t)) throw new Error(`${nameForErrors}: t must be finite.`);
   const el = typeof elOrProvider === "function" ? elOrProvider(t) : elOrProvider;
@@ -27,11 +27,7 @@ export function resolveOrbitElements(
   return el;
 }
 
-export function posFromResolvedElements(
-  el: OrbitElements,
-  t: number,
-  nameForErrors = "orbit"
-): Vec3 {
+export function posFromResolvedElements(el: OrbitElements, t: number, nameForErrors = "orbit"): Vec3 {
   if (!Number.isFinite(t)) throw new Error(`${nameForErrors}: t must be finite.`);
   assertOrbit(el, nameForErrors);
 
@@ -59,7 +55,7 @@ export function posFromResolvedElements(
 export function posFromElements(
   elOrProvider: OrbitElements | OrbitElementsProvider,
   t: number,
-  nameForErrors: string
+  nameForErrors: string,
 ): Vec3 {
   const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
   return posFromResolvedElements(el, t, nameForErrors);
@@ -69,7 +65,7 @@ export function resolveOrbitElementsWithPrecession(
   elOrProvider: OrbitElements | OrbitElementsProvider,
   t: number,
   nameForErrors: string,
-  precessionPerOrbitRad?: number
+  precessionPerOrbitRad?: number,
 ): OrbitElements {
   const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
   return applyApsidalPrecession(el, t, precessionPerOrbitRad ?? 0);
@@ -79,7 +75,7 @@ export function posFromElementsWithPrecession(
   elOrProvider: OrbitElements | OrbitElementsProvider,
   t: number,
   nameForErrors: string,
-  precessionPerOrbitRad?: number
+  precessionPerOrbitRad?: number,
 ): Vec3 {
   const el = resolveOrbitElementsWithPrecession(elOrProvider, t, nameForErrors, precessionPerOrbitRad);
   return posFromResolvedElements(el, t, nameForErrors);
