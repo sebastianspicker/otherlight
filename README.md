@@ -152,16 +152,16 @@ src/
 
 Contract:
 
-- `F_total = (F_star + F_stellarVar) * F_transit + F_planet + F_moon + F_scatter`
+- $F_{\mathrm{total}} = (F_{\star} + F_{\mathrm{stellarVar}})\,F_{\mathrm{transit}} + F_{\mathrm{planet}} + F_{\mathrm{moon}} + F_{\mathrm{scatter}}$
 
 ## Scientific model overview (concise)
 
 Coordinates and projection:
 
-- Orbits are defined by Kepler elements (a, e, inc, Omega, omega, period, t0).
+- Orbits are defined by Kepler elements (a, e, inc, $\Omega$, $\omega$, period, $t_0$).
 - Positions are converted from perifocal (PQW) to inertial and projected to the
   observer sky plane.
-- A body can occult the star if r · n_obs > 0.
+- A body can occult the star if $\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}} > 0$.
 
 Flux conventions:
 
@@ -170,8 +170,8 @@ Flux conventions:
 
 Kepler solver:
 
-- Mean anomaly M = n * (t - t0), n = 2*pi/period.
-- Solve M = E - e\*sin(E), then nu and r from E.
+- Mean anomaly: $M = n(t - t_0)$, with $n = 2\pi/\mathrm{period}$.
+- Solve $M = E - e\sin E$, then compute $\nu$ and $r$ from $E$.
 
 N-body:
 
@@ -180,7 +180,7 @@ N-body:
 
 Relativity:
 
-- Light-time delay (Roemer-like) uses r · n_obs / c.
+- Light-time delay (Roemer-like) uses $(\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}})/c$.
 - Shapiro delay uses a point-mass log term.
 - GR precession is derived from a, e, and mu in Kepler mode; a 1PN
   star-centric correction is applied in N-body mode.
@@ -207,7 +207,7 @@ Finite exposure smearing:
 - Length: simulation units (consistent across all bodies and orbits).
 - Time: seconds.
 - Angle: radians in the model (UI uses degrees).
-- Gravitational parameter: mu = G\*M in L^3 / T^2.
+- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
 
 Notes:
 

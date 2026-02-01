@@ -2,18 +2,18 @@
 
 Light-time (Roemer-like) delay:
 
-- delta_t_roemer = (r · n_obs) / c
+- $\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$
 - r is the body position relative to the star (sky origin)
 
 Shapiro delay (point-mass, star at origin):
 
-- delta*t_shapiro = 2 * mu / c^3 \_ ln( (r + z) / r )
-  where z = r · n_obs and r = |r|.
+- $\Delta t_{\mathrm{Shapiro}} = \frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
+  where $z = \mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}$ and $r = \lVert \mathbf{r} \rVert$.
 - A minimum impact parameter can be used to regularize the log.
 
 GR apsidal precession (weak-field, two-body):
 
-- delta*omega = 6*pi*mu / (a * (1 - e^2) \_ c^2) per orbit
+- $\Delta\omega = \frac{6\pi\mu}{a(1 - e^2)c^2}$ per orbit
 
 Behavior in this codebase:
 

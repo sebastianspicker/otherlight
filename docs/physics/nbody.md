@@ -3,17 +3,17 @@
 The N-body mode integrates star, planet, moon, and optional perturbers using
 velocity-Verlet (kick-drift-kick):
 
-- r1 = r0 + v0 _ dt + 0.5 _ a0 \* dt^2
-- v1 = v0 + 0.5 _ (a0 + a1) _ dt
+- $\mathbf{r}_1 = \mathbf{r}_0 + \mathbf{v}_0\,dt + \tfrac{1}{2}\,\mathbf{a}_0\,dt^2$
+- $\mathbf{v}_1 = \mathbf{v}_0 + \tfrac{1}{2}(\mathbf{a}_0 + \mathbf{a}_1)\,dt$
 
 Newtonian acceleration for body i due to body j:
 
-- a_i += mu_j \* (r_j - r_i) / |r_j - r_i|^3
+- $\mathbf{a}_i \mathrel{+}= \mu_j\,\frac{\mathbf{r}_j - \mathbf{r}_i}{\lVert \mathbf{r}_j - \mathbf{r}_i \rVert^3}$
 
 Softening:
 
 - Optional Plummer softening eps:
-  |r|^3 -> (|r|^2 + eps^2)^(3/2)
+  $\lVert \mathbf{r} \rVert^3 \to (\lVert \mathbf{r} \rVert^2 + \varepsilon^2)^{3/2}$
 
 Initial conditions:
 

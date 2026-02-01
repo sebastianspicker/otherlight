@@ -5,14 +5,14 @@ This simulator uses internally consistent simulation units:
 - Length: arbitrary but consistent (star/planet radii, semi-major axes, etc).
 - Time: seconds.
 - Angles: radians in the model (UI uses degrees and converts).
-- Gravitational parameter: mu = G\*M in (L^3 / T^2).
+- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
 
 ## What is simulated (short)
 
 At each time `t` the simulator computes:
 
 1. 3D inertial positions (Kepler or N-body) and a sky-plane projection.
-2. A **multiplicative** stellar transit attenuation factor `F_transit(t) ∈ [0,1]`.
+2. A **multiplicative** stellar transit attenuation factor $F_{\mathrm{transit}}(t) \in [0,1]$.
 3. Optional **additive** flux terms (phase curves, variability, forward scattering, …).
 
 The main entry point is `stepSystem(params, tSec)` in `src/sim/sim.ts`.
@@ -20,8 +20,8 @@ The main entry point is `stepSystem(params, tSec)` in `src/sim/sim.ts`.
 Coordinate system and projection:
 
 - Orbits are defined in a 3D inertial frame using Kepler elements.
-- Observer direction n_obs points from the star toward the observer.
-- A body is "in front" of the star if r · n_obs > 0.
+- Observer direction $\mathbf{n}_{\mathrm{obs}}$ points from the star toward the observer.
+- A body is "in front" of the star if $\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}} > 0$.
 - Sky-plane projection uses the basis in `src/physics/frames.ts`.
 
 ## Didactic use-cases (UI presets)
