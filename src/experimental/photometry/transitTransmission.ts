@@ -96,11 +96,7 @@ function intensityAtMu(mu: number, ld: LimbDarkeningLaw | undefined): number {
   return intensityNonNegative(mu, ld);
 }
 
-function hardDiskTransmission(
-  rho: number,
-  r0: number,
-  doClamp: boolean
-): number {
+function hardDiskTransmission(rho: number, r0: number, doClamp: boolean): number {
   if (!Number.isFinite(rho) || rho < 0) return 1;
   if (!Number.isFinite(r0) || r0 <= 0) return 1;
   const T = rho <= r0 ? 0 : 1;
@@ -161,46 +157,31 @@ function transmissionAtPoint(params: {
  * - Multiplicative attenuation factor F (typically in [0,1]) normalized to the same star
  *   with the same limb darkening and patch map but without occulters.
  */
-export function fluxStarWithTransmissiveOcculters(
-  params: FluxStarWithTransmissionParams
-): number {
+export function fluxStarWithTransmissiveOcculters(params: FluxStarWithTransmissionParams): number {
   const rStar = params.rStar;
   if (!isFinitePositive(rStar)) {
-    throw new Error(
-      "fluxStarWithTransmissiveOcculters: rStar must be > 0 and finite."
-    );
+    throw new Error("fluxStarWithTransmissiveOcculters: rStar must be > 0 and finite.");
   }
 
   const doClamp = params.clamp01 !== false;
 
   // Deterministic, bounded resolution using the canonical clampGridRes policy.
   // Keep minRes=16 here to preserve the performance envelope of this (square-grid) integrator.
-  const N = clampGridRes(
-    isFiniteNumber(params.gridRes) ? Math.floor(params.gridRes) : params.gridRes,
-    256,
-    {
-      minRes: 16,
-      maxRes: 4096,
-    }
-  );
+  const N = clampGridRes(isFiniteNumber(params.gridRes) ? Math.floor(params.gridRes) : params.gridRes, 256, {
+    minRes: 16,
+    maxRes: 4096,
+  });
 
   const occulters = params.occulters ?? [];
   const ld = params.limbDarkening;
 
   // Shared patch logic.
-  const patches: PatchPre[] = sanitizeBrightnessPatches(
-    params.brightnessPatches
-  );
-  const patchCombineMode: PatchCombineMode =
-    params.patchCombineMode ?? "multiply";
+  const patches: PatchPre[] = sanitizeBrightnessPatches(params.brightnessPatches);
+  const patchCombineMode: PatchCombineMode = params.patchCombineMode ?? "multiply";
 
   // Early-exit threshold, only meaningful in clamped/physical regime.
-  const earlyExitTMinRaw = isFiniteNonNegative(params.earlyExitTMin)
-    ? params.earlyExitTMin
-    : 0;
-  const earlyExitTMin = doClamp
-    ? clamp01(earlyExitTMinRaw)
-    : earlyExitTMinRaw;
+  const earlyExitTMinRaw = isFiniteNonNegative(params.earlyExitTMin) ? params.earlyExitTMin : 0;
+  const earlyExitTMin = doClamp ? clamp01(earlyExitTMinRaw) : earlyExitTMinRaw;
 
   const rStar2 = rStar * rStar;
 
@@ -260,11 +241,7 @@ export function fluxStarWithTransmissiveOcculters(
 }
 
 /** Helper: hard opaque disk occulter. */
-export function hardDiskOcculter(
-  dx: number,
-  dy: number,
-  r: number
-): TransmissionOcculter {
+export function hardDiskOcculter(dx: number, dy: number, r: number): TransmissionOcculter {
   return {
     dx,
     dy,
@@ -369,18 +346,9 @@ export function runTransitTransmissionSelfTests(): void {
     occulters: [exponentialHaloOcculter({ dx, dy, r0, h, tau0: 2.0 })],
   });
 
-  assert(
-    Number.isFinite(f0) && Number.isFinite(f1) && Number.isFinite(f2),
-    "Flux must be finite."
-  );
-  assert(
-    approxLe(f1, f0),
-    "Monotonicity violated: tau0=0.5 should not yield higher flux than tau0=0."
-  );
-  assert(
-    approxLe(f2, f1),
-    "Monotonicity violated: tau0=2.0 should not yield higher flux than tau0=0.5."
-  );
+  assert(Number.isFinite(f0) && Number.isFinite(f1) && Number.isFinite(f2), "Flux must be finite.");
+  assert(approxLe(f1, f0), "Monotonicity violated: tau0=0.5 should not yield higher flux than tau0=0.");
+  assert(approxLe(f2, f1), "Monotonicity violated: tau0=2.0 should not yield higher flux than tau0=0.5.");
 
   const fh = fluxStarWithTransmissiveOcculters({
     rStar,

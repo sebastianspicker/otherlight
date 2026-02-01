@@ -30,14 +30,7 @@
 // sky-basis construction in the codebase.
 
 import type { Vec3 } from "./vec3";
-import {
-  vCross,
-  vDot,
-  vIsFinite,
-  vLen,
-  vNormalizeOrThrow,
-  vNormalizeOrZero,
-} from "./vec3";
+import { vCross, vDot, vIsFinite, vLen, vNormalizeOrThrow, vNormalizeOrZero } from "./vec3";
 
 export type SkyPoint = { x: number; y: number; z: number };
 
@@ -84,12 +77,7 @@ export function rotateY(v: Vec3, a: number): Vec3 {
  * Active-rotation convention:
  * r_IJK = Rz(Omega) * Rx(inc) * Rz(omega) * r_PQW
  */
-export function perifocalToInertial(
-  rPQW: Vec3,
-  Omega: number,
-  inc: number,
-  omega: number
-): Vec3 {
+export function perifocalToInertial(rPQW: Vec3, Omega: number, inc: number, omega: number): Vec3 {
   let v = rotateZ(rPQW, omega);
   v = rotateX(v, inc);
   v = rotateZ(v, Omega);
@@ -101,12 +89,7 @@ export function perifocalToInertial(
  * For rotations: inverse = transpose => negate angles and reverse order:
  * r_PQW = Rz(-omega) * Rx(-inc) * Rz(-Omega) * r_IJK
  */
-export function inertialToPerifocal(
-  rIJK: Vec3,
-  Omega: number,
-  inc: number,
-  omega: number
-): Vec3 {
+export function inertialToPerifocal(rIJK: Vec3, Omega: number, inc: number, omega: number): Vec3 {
   let v = rotateZ(rIJK, -Omega);
   v = rotateX(v, -inc);
   v = rotateZ(v, -omega);
@@ -140,15 +123,10 @@ function pickReferenceAxisForEz(ez: Vec3): Vec3 {
  * This function is intended to be the canonical basis builder used everywhere.
  */
 export function buildSkyBasis(observerDir: Vec3): SkyBasis {
-  if (!vIsFinite(observerDir))
-    throw new Error("buildSkyBasis: observerDir must be finite.");
+  if (!vIsFinite(observerDir)) throw new Error("buildSkyBasis: observerDir must be finite.");
 
   // Require a non-zero LOS direction.
-  const ez = vNormalizeOrThrow(
-    observerDir,
-    1e-15,
-    "buildSkyBasis: observerDir must be non-zero."
-  );
+  const ez = vNormalizeOrThrow(observerDir, 1e-15, "buildSkyBasis: observerDir must be non-zero.");
 
   // Choose a robust reference axis and compute ex = normalize(ref × ez).
   const ref = pickReferenceAxisForEz(ez);
@@ -161,19 +139,11 @@ export function buildSkyBasis(observerDir: Vec3): SkyBasis {
   if (vLen(ex) === 0) {
     const ref2: Vec3 = ref.x === 1 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
     exRaw = vCross(ref2, ez);
-    ex = vNormalizeOrThrow(
-      exRaw,
-      1e-15,
-      "buildSkyBasis: failed to construct ex (degenerate observerDir)."
-    );
+    ex = vNormalizeOrThrow(exRaw, 1e-15, "buildSkyBasis: failed to construct ex (degenerate observerDir).");
   }
 
   // ey = normalize(ez × ex) ensures right-handedness and orthogonality by construction.
-  const ey = vNormalizeOrThrow(
-    vCross(ez, ex),
-    1e-15,
-    "buildSkyBasis: failed to construct ey."
-  );
+  const ey = vNormalizeOrThrow(vCross(ez, ex), 1e-15, "buildSkyBasis: failed to construct ey.");
 
   return { ex, ey, ez };
 }
@@ -186,10 +156,7 @@ export function buildSkyBasis(observerDir: Vec3): SkyBasis {
  *
  * Default convention: observer looks along +Z.
  */
-export function projectToSky(
-  r: Vec3,
-  observerDir: Vec3 = DEFAULT_OBSERVER_DIR
-): SkyPoint {
+export function projectToSky(r: Vec3, observerDir: Vec3 = DEFAULT_OBSERVER_DIR): SkyPoint {
   const { ex, ey, ez } = buildSkyBasis(observerDir);
   return { x: vDot(r, ex), y: vDot(r, ey), z: vDot(r, ez) };
 }
@@ -215,11 +182,7 @@ export function framesSelfTest(): void {
   const p: Vec3 = { x: 3.5, y: -2, z: 7 };
   const sky0 = projectToSky(p, { x: 0, y: 0, z: 1 });
 
-  if (
-    Math.abs(sky0.x - p.x) > 1e-12 ||
-    Math.abs(sky0.y - p.y) > 1e-12 ||
-    Math.abs(sky0.z - p.z) > 1e-12
-  ) {
+  if (Math.abs(sky0.x - p.x) > 1e-12 || Math.abs(sky0.y - p.y) > 1e-12 || Math.abs(sky0.z - p.z) > 1e-12) {
     throw new Error("framesSelfTest: projectToSky identity test failed.");
   }
 
@@ -232,19 +195,11 @@ export function framesSelfTest(): void {
   const ly = vLen(ey);
   const lz = vLen(ez);
 
-  if (
-    Math.abs(dotXY) > 1e-10 ||
-    Math.abs(dotXZ) > 1e-10 ||
-    Math.abs(dotYZ) > 1e-10
-  ) {
+  if (Math.abs(dotXY) > 1e-10 || Math.abs(dotXZ) > 1e-10 || Math.abs(dotYZ) > 1e-10) {
     throw new Error("framesSelfTest: basis is not orthogonal.");
   }
 
-  if (
-    Math.abs(lx - 1) > 1e-10 ||
-    Math.abs(ly - 1) > 1e-10 ||
-    Math.abs(lz - 1) > 1e-10
-  ) {
+  if (Math.abs(lx - 1) > 1e-10 || Math.abs(ly - 1) > 1e-10 || Math.abs(lz - 1) > 1e-10) {
     throw new Error("framesSelfTest: basis vectors are not unit length.");
   }
 

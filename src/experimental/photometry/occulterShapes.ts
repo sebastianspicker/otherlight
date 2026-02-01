@@ -163,7 +163,7 @@ export function isPointInCircle(x: number, y: number, occ: { dx: number; dy: num
 export function isPointInEllipse(
   x: number,
   y: number,
-  occ: { dx: number; dy: number; rx: number; ry: number; angle?: number }
+  occ: { dx: number; dy: number; rx: number; ry: number; angle?: number },
 ): boolean {
   if (!isFiniteNumber(x) || !isFiniteNumber(y)) return false;
   if (!isFiniteNumber(occ.dx) || !isFiniteNumber(occ.dy)) return false;
@@ -201,7 +201,7 @@ export function isPointInRing(
     ryInner?: number;
     angle?: number;
     holeDisabledIfDegenerate?: boolean;
-  }
+  },
 ): boolean {
   if (!isFiniteNumber(x) || !isFiniteNumber(y)) return false;
   if (!isFiniteNumber(occ.dx) || !isFiniteNumber(occ.dy)) return false;
@@ -260,7 +260,11 @@ export function isPointBlockedByOcculter(x: number, y: number, occ: OcculterShap
  * Union hit-test: returns true if (x,y) is blocked by any occulter in the list.
  * Semantics: blocked if inside ANY silhouette (union).
  */
-export function isPointBlockedByAnyOcculter(x: number, y: number, occulters: readonly OcculterShape[]): boolean {
+export function isPointBlockedByAnyOcculter(
+  x: number,
+  y: number,
+  occulters: readonly OcculterShape[],
+): boolean {
   if (!isFiniteNumber(x) || !isFiniteNumber(y)) return false;
   if (!Array.isArray(occulters) || occulters.length === 0) return false;
 
@@ -274,7 +278,7 @@ export function isPointBlockedByAnyOcculter(x: number, y: number, occulters: rea
       const dy = y - occ.dy;
       // Use bounding circle check: if point is outside bounding circle, it's outside shape.
       // Strict inequality: point outside br*br -> definitely not blocked.
-      if ((x - occ.dx) ** 2 + (y - occ.dy) ** 2 >= br * br) continue;
+      if (dx * dx + dy * dy >= br * br) continue;
     }
 
     if (isPointBlockedByOcculter(x, y, occ)) return true;
@@ -287,7 +291,10 @@ export function isPointBlockedByAnyOcculter(x: number, y: number, occulters: rea
  * Sanitize occulters for use with star-disk integrators.
  * Tangency excluded: if center distance is >= rStar + br, cannot overlap.
  */
-export function sanitizeOccultersForStarDisk(rStar: number, occulters: readonly OcculterShape[]): OcculterShape[] {
+export function sanitizeOccultersForStarDisk(
+  rStar: number,
+  occulters: readonly OcculterShape[],
+): OcculterShape[] {
   const out: OcculterShape[] = [];
   if (!isFinitePositive(rStar)) return out;
   if (!Array.isArray(occulters) || occulters.length === 0) return out;
@@ -316,7 +323,14 @@ export function circleOcculter(dx: number, dy: number, r: number, z?: number): S
   return { kind: "circle", dx, dy, r, z };
 }
 
-export function ellipseOcculter(dx: number, dy: number, rx: number, ry: number, angle = 0, z?: number): EllipseOcculter {
+export function ellipseOcculter(
+  dx: number,
+  dy: number,
+  rx: number,
+  ry: number,
+  angle = 0,
+  z?: number,
+): EllipseOcculter {
   return { kind: "ellipse", dx, dy, rx, ry, angle, z };
 }
 
@@ -328,7 +342,7 @@ export function ringOcculter(
   rxInner: number,
   ryInner: number,
   angle = 0,
-  z?: number
+  z?: number,
 ): RingOcculter {
   return { kind: "ring", dx, dy, rxOuter, ryOuter, rxInner, ryInner, angle, z };
 }
@@ -341,7 +355,7 @@ export function ringOcculter(
  * Compatibility helper: canonical circle intersection area lives in mutualEvents.ts.
  * Re-exported here to avoid a third copy elsewhere.
  */
-export { circleIntersectionArea } from "./mutualEvents";
+export { circleIntersectionArea } from "../../photometry/mutualEvents";
 
 /** Cheap overlap predicate used in several modules. */
 export function couldOverlapStarOnSky(dx: number, dy: number, br: number, rStar: number): boolean {

@@ -83,11 +83,7 @@ function safeQuantile(sorted: number[], q: number): number {
   return sorted[i0] * (1 - f) + sorted[i1] * f;
 }
 
-function computeRobustRange(
-  values: number[],
-  qLo: number,
-  qHi: number
-): { lo: number; hi: number } | null {
+function computeRobustRange(values: number[], qLo: number, qHi: number): { lo: number; hi: number } | null {
   const finite = values.filter((v) => Number.isFinite(v));
   if (finite.length < 2) return null;
 
@@ -127,7 +123,7 @@ export class LightCurvePlot {
   constructor(
     private canvas: HTMLCanvasElement,
     private capacity = 2000,
-    opts: LightCurvePlotOptions = {}
+    opts: LightCurvePlotOptions = {},
   ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("LightCurvePlot: 2D context unavailable.");
@@ -181,8 +177,6 @@ export class LightCurvePlot {
   /**
    * Explicit sample object form.
    */
-  pushSample(sample: LightCurveSample): void;
-
   push(a: number | LightCurveSample, b?: number): void {
     if (typeof a === "object") {
       this.pushSample(a);
@@ -223,8 +217,7 @@ export class LightCurvePlot {
 
     // Title / empty state
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font =
-      "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
     ctx.fillText(this.opts.title, 10, 16);
 
     const n = this.flux.length;
@@ -236,7 +229,7 @@ export class LightCurvePlot {
     const range =
       this.opts.yScaleMode === "minmax"
         ? computeMinMax(this.flux)
-        : computeRobustRange(this.flux, qLo, qHi) ?? computeMinMax(this.flux);
+        : (computeRobustRange(this.flux, qLo, qHi) ?? computeMinMax(this.flux));
 
     if (!range) return;
 
@@ -269,9 +262,7 @@ export class LightCurvePlot {
       const tSpan = Math.max(1e-12, tMax - tMin);
       xOf = (i: number) => {
         const tt = this.t[i];
-        return Number.isFinite(tt)
-          ? ((tt - tMin) / tSpan) * w
-          : (i / (n - 1)) * w; // Fallback
+        return Number.isFinite(tt) ? ((tt - tMin) / tSpan) * w : (i / (n - 1)) * w; // Fallback
       };
     }
 
@@ -330,34 +321,33 @@ export class LightCurvePlot {
     } else {
       // Downsampling
       ctx.moveTo(xOf(0), yOf(this.flux[0]));
-      
+
       // Bucket size
       const step = Math.floor(n / w);
-      
+
       for (let i = 0; i < n; i += step) {
         // Find min/max in this bucket to preserve spikes
         let chunkMin = Number.POSITIVE_INFINITY;
         let chunkMax = Number.NEGATIVE_INFINITY;
         let chunkMinIdx = -1;
-        let chunkMaxIdx = -1;
-        
+
         const limit = Math.min(n, i + step);
         for (let j = i; j < limit; j++) {
-            const v = this.flux[j];
-            if (v < chunkMin) { chunkMin = v; chunkMinIdx = j; }
-            if (v > chunkMax) { chunkMax = v; chunkMaxIdx = j; }
+          const v = this.flux[j];
+          if (v < chunkMin) {
+            chunkMin = v;
+            chunkMinIdx = j;
+          }
+          if (v > chunkMax) {
+            chunkMax = v;
+          }
         }
 
         if (chunkMinIdx !== -1) {
-            // Draw vertical line from min to max at the approximate x position
-            // (or actually connect them in order of occurrence if we want to be fancy,
-            // but just connecting min and max is usually enough for visual plots)
-            
-            // To be safe and simple: line to min, then line to max.
-            // Order doesn't matter much for dense visual noise.
-            const x = xOf(Math.floor((i + limit)/2)); 
-            ctx.lineTo(x, yOf(chunkMin));
-            ctx.lineTo(x, yOf(chunkMax));
+          // Draw vertical line from min to max at an approximate x position.
+          const x = xOf(Math.floor((i + limit) / 2));
+          ctx.lineTo(x, yOf(chunkMin));
+          ctx.lineTo(x, yOf(chunkMax));
         }
       }
     }

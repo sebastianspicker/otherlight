@@ -91,7 +91,7 @@ function fallbackSizeInfo(canvas: HTMLCanvasElement, prev?: SizeInfo): SizeInfo 
 export function ensureHiDPICanvas(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
-  prev?: SizeInfo
+  prev?: SizeInfo,
 ): SizeInfo {
   const next = getCanvasSizeInfo(canvas);
 
@@ -103,8 +103,7 @@ export function ensureHiDPICanvas(
     return fb;
   }
 
-  const needResize =
-    !prev || prev.dpr !== next.dpr || prev.pxW !== next.pxW || prev.pxH !== next.pxH;
+  const needResize = !prev || prev.dpr !== next.dpr || prev.pxW !== next.pxW || prev.pxH !== next.pxH;
 
   if (needResize) {
     canvas.width = next.pxW;
@@ -131,11 +130,7 @@ export function clearCanvasCssPixels(ctx: CanvasRenderingContext2D, size: SizeIn
  *
  * This assumes ensureHiDPICanvas() was called and the transform is set to CSS pixels.
  */
-export function fillCanvasCssPixels(
-  ctx: CanvasRenderingContext2D,
-  size: SizeInfo,
-  fillStyle: string
-): void {
+export function fillCanvasCssPixels(ctx: CanvasRenderingContext2D, size: SizeInfo, fillStyle: string): void {
   ctx.save();
   ctx.fillStyle = fillStyle;
   ctx.fillRect(0, 0, size.cssW, size.cssH);

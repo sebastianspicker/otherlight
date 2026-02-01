@@ -59,8 +59,10 @@ export function splitBarycentricPair(params: {
 
   if (!vIsFinite(rBary)) throw new Error("splitBarycentricPair: rBary must be finite.");
   if (!vIsFinite(rRel)) throw new Error("splitBarycentricPair: rRel must be finite.");
-  if (!isValidMass(mPrimary)) throw new Error("splitBarycentricPair: mPrimary must be a positive finite number.");
-  if (!isValidMass(mSecondary)) throw new Error("splitBarycentricPair: mSecondary must be a positive finite number.");
+  if (!isValidMass(mPrimary))
+    throw new Error("splitBarycentricPair: mPrimary must be a positive finite number.");
+  if (!isValidMass(mSecondary))
+    throw new Error("splitBarycentricPair: mSecondary must be a positive finite number.");
 
   const mTot = mPrimary + mSecondary;
   if (!Number.isFinite(mTot) || mTot <= 0) {
@@ -134,10 +136,12 @@ export function barycenterOfPair(params: {
   if (!vIsFinite(rPrimary)) throw new Error("barycenterOfPair: rPrimary must be finite.");
   if (!vIsFinite(rSecondary)) throw new Error("barycenterOfPair: rSecondary must be finite.");
   if (!isValidMass(mPrimary)) throw new Error("barycenterOfPair: mPrimary must be a positive finite number.");
-  if (!isValidMass(mSecondary)) throw new Error("barycenterOfPair: mSecondary must be a positive finite number.");
+  if (!isValidMass(mSecondary))
+    throw new Error("barycenterOfPair: mSecondary must be a positive finite number.");
 
   const mTot = mPrimary + mSecondary;
-  if (!Number.isFinite(mTot) || mTot <= 0) throw new Error("barycenterOfPair: mPrimary+mSecondary must be finite.");
+  if (!Number.isFinite(mTot) || mTot <= 0)
+    throw new Error("barycenterOfPair: mPrimary+mSecondary must be finite.");
 
   const wP = mPrimary / mTot;
   const wS = mSecondary / mTot;
@@ -145,7 +149,8 @@ export function barycenterOfPair(params: {
   // rBary = wP*rPrimary + wS*rSecondary
   const rBary = vAddScaled(vScale(rPrimary, wP), rSecondary, wS);
 
-  if (!vIsFinite(rBary)) throw new Error("barycenterOfPair: numerical overflow produced non-finite barycenter.");
+  if (!vIsFinite(rBary))
+    throw new Error("barycenterOfPair: numerical overflow produced non-finite barycenter.");
 
   return rBary;
 }
@@ -164,9 +169,9 @@ export function isSplitConsistentWithRel(
   const t = Number.isFinite(tol) ? Math.max(0, tol) : 0;
   const tolSq = t * t;
 
-  const dx = (split.rSecondary.x - split.rPrimary.x) - rRel.x;
-  const dy = (split.rSecondary.y - split.rPrimary.y) - rRel.y;
-  const dz = (split.rSecondary.z - split.rPrimary.z) - rRel.z;
+  const dx = split.rSecondary.x - split.rPrimary.x - rRel.x;
+  const dy = split.rSecondary.y - split.rPrimary.y - rRel.y;
+  const dz = split.rSecondary.z - split.rPrimary.z - rRel.z;
 
   const distSq = dx * dx + dy * dy + dz * dz;
   return distSq <= tolSq;
@@ -204,7 +209,10 @@ export function runBarycenterSelfTests(): void {
 
   // Barycenter must reconstruct.
   const rB = barycenterOfPair({ rPrimary: s.rPrimary, rSecondary: s.rSecondary, mPrimary, mSecondary });
-  assert(approxEq(rB.x, 0, 1e-12) && approxEq(rB.y, 0, 1e-12) && approxEq(rB.z, 0, 1e-12), "Barycenter reconstruction failed.");
+  assert(
+    approxEq(rB.x, 0, 1e-12) && approxEq(rB.y, 0, 1e-12) && approxEq(rB.z, 0, 1e-12),
+    "Barycenter reconstruction failed.",
+  );
 
   // trySplit: invalid masses should return null (no-throw path).
   const t1 = trySplitBarycentricPair({ rBary, rRel, mPrimary: -1, mSecondary: 1 });

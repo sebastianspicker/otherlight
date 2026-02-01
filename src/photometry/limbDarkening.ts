@@ -43,7 +43,6 @@ function emitValidation(mode: LimbDarkeningValidationMode, msg: string): void {
   if (mode === "none") return;
   if (mode === "throw") throw new Error(msg);
   // mode === "warn"
-  // eslint-disable-next-line no-console
   console.warn(msg);
 }
 
@@ -52,11 +51,7 @@ function isFiniteLaw(law: LimbDarkeningLaw): boolean {
     case "quadratic":
       return Number.isFinite(law.u1) && Number.isFinite(law.u2);
     case "three-parameter":
-      return (
-        Number.isFinite(law.a1) &&
-        Number.isFinite(law.a2) &&
-        Number.isFinite(law.a3)
-      );
+      return Number.isFinite(law.a1) && Number.isFinite(law.a2) && Number.isFinite(law.a3);
     case "four-parameter":
       return (
         Number.isFinite(law.a1) &&
@@ -84,7 +79,7 @@ function isLawObject(candidate: unknown): candidate is LimbDarkeningLaw {
 
 function findBandLaw(
   bands: Record<PassbandId, LimbDarkeningLaw> | undefined,
-  bandpass: unknown
+  bandpass: unknown,
 ): LimbDarkeningLaw | undefined {
   if (!bands) return undefined;
 
@@ -119,10 +114,7 @@ function findBandLaw(
  * - mu is clamped to [0,1].
  * - If coefficients are non-finite, the result may be non-finite (caller may validate/sanitize).
  */
-export function evaluateLimbDarkeningIntensity(
-  mu: number,
-  law: LimbDarkeningLaw
-): number {
+export function evaluateLimbDarkeningIntensity(mu: number, law: LimbDarkeningLaw): number {
   const m = clamp01(mu);
 
   switch (law.kind) {
@@ -139,13 +131,7 @@ export function evaluateLimbDarkeningIntensity(
       const s = Math.sqrt(m); // mu^(1/2)
       const m32 = m * s; // mu^(3/2)
       const m2 = m * m; // mu^2
-      return (
-        1 -
-        law.a1 * (1 - s) -
-        law.a2 * (1 - m) -
-        law.a3 * (1 - m32) -
-        law.a4 * (1 - m2)
-      );
+      return 1 - law.a1 * (1 - s) - law.a2 * (1 - m) - law.a3 * (1 - m32) - law.a4 * (1 - m2);
     }
     default: {
       const _never: never = law;
@@ -160,10 +146,7 @@ export function evaluateLimbDarkeningIntensity(
  * - clamps intensity to >= 0
  * - returns 0 for non-finite results
  */
-export function intensityNonNegative(
-  mu: number,
-  law: LimbDarkeningLaw
-): number {
+export function intensityNonNegative(mu: number, law: LimbDarkeningLaw): number {
   const I = evaluateLimbDarkeningIntensity(mu, law);
   if (!Number.isFinite(I)) return 0;
   return Math.max(0, I);
@@ -177,37 +160,25 @@ export function intensityNonNegative(
  */
 export function validateLimbDarkeningLaw(
   law: LimbDarkeningLaw,
-  constraints?: LimbDarkeningConstraints
+  constraints?: LimbDarkeningConstraints,
 ): void {
   const mode: LimbDarkeningValidationMode = constraints?.mode ?? "none";
   if (mode === "none") return;
 
   if (!isFiniteLaw(law)) {
-    emitValidation(
-      mode,
-      `Limb darkening coefficients must be finite (law=${law.kind}).`
-    );
+    emitValidation(mode, `Limb darkening coefficients must be finite (law=${law.kind}).`);
     return;
   }
 
-  const muSamples = Math.max(
-    8,
-    Math.floor(toFiniteNumber(constraints?.muSamples, 64))
-  );
+  const muSamples = Math.max(8, Math.floor(toFiniteNumber(constraints?.muSamples, 64)));
   const eps = Math.max(0, toFiniteNumber(constraints?.eps, 1e-12));
   const requireNonNeg = constraints?.nonNegativeIntensity ?? true;
   const requireMono = constraints?.monotoneIncreasingWithMu ?? false;
-  const maxI = toFiniteNumber(
-    constraints?.maxIntensity,
-    Number.POSITIVE_INFINITY
-  );
+  const maxI = toFiniteNumber(constraints?.maxIntensity, Number.POSITIVE_INFINITY);
 
   const I1 = evaluateLimbDarkeningIntensity(1, law);
   if (!(Number.isFinite(I1) && Math.abs(I1 - 1) <= 1e-10)) {
-    emitValidation(
-      mode,
-      `Limb darkening law ${law.kind} does not satisfy I(1)=1 (got ${I1}).`
-    );
+    emitValidation(mode, `Limb darkening law ${law.kind} does not satisfy I(1)=1 (got ${I1}).`);
   }
 
   let prevI: number | undefined;
@@ -217,10 +188,7 @@ export function validateLimbDarkeningLaw(
     const I = evaluateLimbDarkeningIntensity(mu, law);
 
     if (!Number.isFinite(I)) {
-      emitValidation(
-        mode,
-        `Limb darkening produced non-finite intensity at mu=${mu} (law=${law.kind}).`
-      );
+      emitValidation(mode, `Limb darkening produced non-finite intensity at mu=${mu} (law=${law.kind}).`);
       break;
     }
 
@@ -228,8 +196,8 @@ export function validateLimbDarkeningLaw(
       emitValidation(
         mode,
         `Limb darkening violates non-negative intensity: I(mu) < 0 at mu=${mu.toFixed(
-          6
-        )} (I=${I}) (law=${law.kind}).`
+          6,
+        )} (I=${I}) (law=${law.kind}).`,
       );
       break;
     }
@@ -237,9 +205,7 @@ export function validateLimbDarkeningLaw(
     if (I > maxI + eps) {
       emitValidation(
         mode,
-        `Limb darkening exceeds maxIntensity at mu=${mu.toFixed(
-          6
-        )} (I=${I}, max=${maxI}) (law=${law.kind}).`
+        `Limb darkening exceeds maxIntensity at mu=${mu.toFixed(6)} (I=${I}, max=${maxI}) (law=${law.kind}).`,
       );
       break;
     }
@@ -249,8 +215,8 @@ export function validateLimbDarkeningLaw(
         emitValidation(
           mode,
           `Limb darkening violates monotonicity at mu=${mu.toFixed(
-            6
-          )} (I=${I} < prev=${prevI}) (law=${law.kind}).`
+            6,
+          )} (I=${I} < prev=${prevI}) (law=${law.kind}).`,
         );
         break;
       }
@@ -274,13 +240,11 @@ export function validateLimbDarkeningLaw(
  */
 export function resolveLimbDarkeningForBand(
   model: LimbDarkeningModel,
-  bandpass?: PassbandId
+  bandpass?: PassbandId,
 ): LimbDarkeningLaw | undefined {
   if (!model) return undefined;
 
-  const bands = model.bands as unknown as
-    | Record<PassbandId, LimbDarkeningLaw>
-    | undefined;
+  const bands = model.bands as unknown as Record<PassbandId, LimbDarkeningLaw> | undefined;
 
   const byExplicit = findBandLaw(bands, bandpass);
   if (byExplicit) return byExplicit;
@@ -305,10 +269,7 @@ export function resolveAndValidateLimbDarkening(params: {
   if (!law) return undefined;
 
   // Apply configured constraints if present on the model.
-  validateLimbDarkeningLaw(
-    law,
-    params.model.constraints as unknown as LimbDarkeningConstraints | undefined
-  );
+  validateLimbDarkeningLaw(law, params.model.constraints as unknown as LimbDarkeningConstraints | undefined);
 
   return law;
 }

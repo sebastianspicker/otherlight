@@ -32,7 +32,7 @@ import { getLdIntegrators } from "./optionalLimbDarkening";
 
 function resolveLimbDarkeningLaw(
   phot: SystemParams["star"]["photometry"] | undefined,
-  bandpass?: unknown
+  bandpass?: unknown,
 ): LimbDarkeningLaw | undefined {
   const ldModel = phot?.limbDarkeningModel;
   if (!ldModel) return undefined;
@@ -48,7 +48,7 @@ function resolveLimbDarkeningLaw(
 function buildTransmissionOcculters(
   params: SystemParams,
   kin: BodyKinematics,
-  tauScale = 1
+  tauScale = 1,
 ): TransmissionOcculter[] {
   const phot = params.star.photometry;
   const atm = phot?.atmosphereTransmission;
@@ -79,7 +79,7 @@ function buildTransmissionOcculters(
   const addBody = (
     body: { r: number },
     sky: { x: number; y: number; z: number } | undefined,
-    isTarget: boolean
+    isTarget: boolean,
   ): void => {
     if (!sky) return;
     if (!(sky.z > 0)) return;
@@ -124,7 +124,7 @@ export function computeTransitFlux(
   params: SystemParams,
   occulters: OcculterShape[],
   kin: BodyKinematics,
-  opts?: { brightnessPatchesOverride?: BrightnessPatch[] }
+  opts?: { brightnessPatchesOverride?: BrightnessPatch[] },
 ): number {
   const rStar = params.star?.r;
   if (!isFinitePositive(rStar)) {

@@ -33,12 +33,10 @@ import { Canvas2DRenderer, LightCurvePlot } from "./render/canvas2d";
 
 import { smearedFluxAt } from "./photometry/smearing";
 
-import {
-  applyInstrumentNoiseAndSystematics,
-  resetInstrumentNoiseState,
-} from "./photometry/instrumentNoise";
+import { applyInstrumentNoiseAndSystematics, resetInstrumentNoiseState } from "./photometry/instrumentNoise";
 
 import { SCENARIO_DEFAULTS, cloneParams } from "./app/scenario";
+import { PRESETS, getPresetById } from "./app/presets";
 import { wireDebugDOM } from "./app/debug";
 import {
   getInstrumentCfgFromPhotometry,
@@ -64,6 +62,8 @@ const {
   timeSpeedVal,
   tVal,
   fluxVal,
+  presetSelect,
+  presetDesc,
   plotModeVal,
   warnVal,
   nOccultersVal,
@@ -74,7 +74,8 @@ const {
 } = uiRefs;
 
 // Mutable, live params (UI edits go here).
-let params: SystemParams = cloneParams(SCENARIO_DEFAULTS);
+let scenarioDefaults: SystemParams = cloneParams(SCENARIO_DEFAULTS);
+let params: SystemParams = cloneParams(scenarioDefaults);
 
 let noise: NoiseState = initNoiseState(params);
 
@@ -148,6 +149,33 @@ function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
   if (warnVal) warnVal.textContent = "";
 }
 
+function syncSliderMirrorsFromInputs(): void {
+  // loadParamsIntoUI() sets input values directly, which won't trigger the slider mirroring listeners.
+  // Dispatch `input` so range inputs stay in sync with the number inputs.
+  const nums = Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
+  for (const num of nums) {
+    num.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+}
+
+async function applyPresetById(id: string): Promise<void> {
+  const preset = getPresetById(id);
+
+  scenarioDefaults = cloneParams(preset.params);
+  params = cloneParams(scenarioDefaults);
+
+  loadParamsIntoUI(params, uiRefs);
+  syncAllEnableStates(uiRefs);
+  syncSliderMirrorsFromInputs();
+
+  presetDesc.textContent = preset.description;
+
+  noise = syncNoiseStateFromParams(noise, params);
+
+  await prepareSimulation(params);
+  resetSimTimeAndLC({ resetNoise: true });
+}
+
 /* -----------------------------
  * Time speed control
  * ----------------------------- */
@@ -177,7 +205,7 @@ btnClearLC.addEventListener("click", () => {
 });
 
 btnApplyParams.addEventListener("click", async () => {
-  params = readUIIntoParams(params, uiRefs, SCENARIO_DEFAULTS);
+  params = readUIIntoParams(params, uiRefs, scenarioDefaults);
 
   noise = syncNoiseStateFromParams(noise, params);
   syncAllEnableStates(uiRefs);
@@ -189,11 +217,12 @@ btnApplyParams.addEventListener("click", async () => {
 });
 
 btnResetParams.addEventListener("click", async () => {
-  params = cloneParams(SCENARIO_DEFAULTS);
+  params = cloneParams(scenarioDefaults);
 
   noise = syncNoiseStateFromParams(noise, params);
   loadParamsIntoUI(params, uiRefs);
   syncAllEnableStates(uiRefs);
+  syncSliderMirrorsFromInputs();
 
   await prepareSimulation(params);
 
@@ -231,16 +260,12 @@ function frame(now: number): void {
       const smearOn = (ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1;
 
       const fluxSmeared = smearOn
-        ? smearedFluxAt(
-            (ti) => stepSystem(params, ti).fluxTotal,
-            t,
-            {
-              cadenceSec: ph?.cadenceSec,
-              nSubsamples: ph?.nSubsamples,
-              clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
-              maxSubsamples: 512,
-            }
-          )
+        ? smearedFluxAt((ti) => stepSystem(params, ti).fluxTotal, t, {
+            cadenceSec: ph?.cadenceSec,
+            nSubsamples: ph?.nSubsamples,
+            clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
+            maxSubsamples: 512,
+          })
         : fluxPhysical;
 
       const noiseCfg = getInstrumentCfgFromPhotometry(ph);
@@ -296,10 +321,21 @@ function frame(now: number): void {
  * ----------------------------- */
 
 async function init(): Promise<void> {
+  presetSelect.replaceChildren();
+  for (const preset of PRESETS) {
+    const opt = document.createElement("option");
+    opt.value = preset.id;
+    opt.textContent = preset.label;
+    presetSelect.appendChild(opt);
+  }
+
+  presetSelect.value = "default";
+  presetDesc.textContent = getPresetById(presetSelect.value).description;
+  presetSelect.addEventListener("change", () => void applyPresetById(presetSelect.value));
+
   loadParamsIntoUI(params, uiRefs);
 
   noise = syncNoiseStateFromParams(noise, params);
-  syncAllEnableStates(uiRefs);
 
   wireParamSliders(uiRefs);
   wireEnableHandlers(uiRefs);

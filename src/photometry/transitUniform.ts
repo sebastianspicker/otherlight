@@ -28,7 +28,6 @@
 // - Full-cover detection may include boundary d <= rOcc - rStar (containment boundary counts).
 // Canonical definitions live in occulterCircle.ts; this module is the reference integrator behavior.
 
-
 import { clamp01, isFiniteNonNegative, isFinitePositive } from "../core/units";
 import { circleIntersectionArea } from "./mutualEvents";
 import {
@@ -38,7 +37,6 @@ import {
   type CircleOcculter,
 } from "./occulterCircle";
 import { integrateDiskMidpoint } from "./diskMidpoint";
-
 
 /**
  * Normalized flux for a uniform-brightness stellar disk.
@@ -99,7 +97,7 @@ export function fluxUniformDisk(params: {
 function blockedAreaByMidpointDiskIntegral(
   rStar: number,
   rOcculters: CircleOcculter[],
-  gridRes: number
+  gridRes: number,
 ): number {
   const occulters = sanitizeCircleOcculters(rStar, rOcculters);
   if (occulters.length === 0) return 0;
@@ -143,11 +141,11 @@ export function debugTransitUniformGrid(params?: {
 
   const rOccList = (params?.rOccList ?? [0.2, 0.5, 1.0, 1.5]).filter((x) => isFinitePositive(x));
   const dList = (params?.dList ?? [0, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0]).filter(
-    (x) => typeof x === "number" && Number.isFinite(x) && x >= 0
+    (x) => typeof x === "number" && Number.isFinite(x) && x >= 0,
   );
-  const thetaList = (params?.thetaList ?? [0, Math.PI / 6, Math.PI / 3, Math.PI / 2, (2 * Math.PI) / 3]).filter(
-    (x) => typeof x === "number" && Number.isFinite(x)
-  );
+  const thetaList = (
+    params?.thetaList ?? [0, Math.PI / 6, Math.PI / 3, Math.PI / 2, (2 * Math.PI) / 3]
+  ).filter((x) => typeof x === "number" && Number.isFinite(x));
 
   const gridResNumeric = clampGridRes(params?.gridResNumeric, 400, { minRes: 80 });
 

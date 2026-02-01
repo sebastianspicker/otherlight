@@ -26,7 +26,6 @@ import {
   type CircleOcculter,
 } from "./occulterCircle";
 
-
 /**
  * Normalized flux for a uniform-brightness stellar disk with brightness patches (spots/faculae)
  * and circular occulters.
@@ -96,11 +95,9 @@ export function evolveBrightnessPatches(params: {
 
   const t = params.t;
   const tRef = Number.isFinite(model.tRef) ? (model.tRef as number) : 0;
-  const period = model.rotationPeriodSec;
+  const period = model.rotationPeriodSec ?? Number.NaN;
   const rotPhase =
-    Number.isFinite(period) && period > 0
-      ? orbitalPhaseFromPeriod({ t, period, t0: tRef })
-      : 0;
+    Number.isFinite(period) && period > 0 ? orbitalPhaseFromPeriod({ t, period, t0: tRef }) : 0;
   const rotPhaseSafe = Number.isFinite(rotPhase) ? rotPhase : 0;
   const driftRate = Number.isFinite(model.driftRateRadPerSec) ? (model.driftRateRadPerSec as number) : 0;
   const rotOffset = Number.isFinite(model.rotationPhase0) ? (model.rotationPhase0 as number) : 0;

@@ -45,7 +45,7 @@ function toSeed32(seed: unknown, fallback = 1): number {
   const s = Number.isFinite(n) ? Math.floor(n) : fallback;
 
   // Force into uint32; avoid 0-state degeneracy by mapping 0 -> 1.
-  const u = (s >>> 0) || 1;
+  const u = s >>> 0 || 1;
   return u;
 }
 
@@ -197,7 +197,8 @@ export function ouStep(rng: PRNG, prev: number, dtSec: number, tauSec: number, s
   const dt = isFiniteNumber(dtSec) ? Math.max(0, dtSec) : NaN;
   const tau = isFiniteNumber(tauSec) ? Math.max(1e-9, tauSec) : NaN;
 
-  if (!isFiniteNumber(prev) || !isFiniteNumber(dt) || !isFiniteNumber(tau) || !isFiniteNumber(sigma)) return NaN;
+  if (!isFiniteNumber(prev) || !isFiniteNumber(dt) || !isFiniteNumber(tau) || !isFiniteNumber(sigma))
+    return NaN;
   if (sigma <= 0) return prev;
   if (dt === 0) return prev;
 

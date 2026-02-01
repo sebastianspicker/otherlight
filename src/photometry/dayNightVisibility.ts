@@ -67,14 +67,14 @@ export function phaseAngleRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number
   const sHat = vNormalizeOrThrow(
     { x: -rBody.x, y: -rBody.y, z: -rBody.z },
     1e-15,
-    "phaseAngleRadFromBodyPos: rBody must be non-zero."
+    "phaseAngleRadFromBodyPos: rBody must be non-zero.",
   );
 
   // Direction from body -> observer (observer at infinity): ~observerDir.
   const oHat = vNormalizeOrThrow(
     observerDir,
     1e-15,
-    "phaseAngleRadFromBodyPos: observerDir must be non-zero."
+    "phaseAngleRadFromBodyPos: observerDir must be non-zero.",
   );
 
   const cosAlpha = clamp11(vDot(sHat, oHat));
@@ -193,7 +193,7 @@ export function applyPhaseOffset(alphaRad: number, offsetRad: number): number {
 export function computeDayNightVisibility(
   alphaRad: number,
   reflModel: ReflectedPhaseModel = "lambert",
-  thermModel: ThermalPhaseModel = "constant"
+  thermModel: ThermalPhaseModel = "constant",
 ): { reflected: number; thermal: number } {
   const reflected = reflectedLightGeometricWeight(alphaRad, reflModel);
   const thermal = thermalLightGeometricWeight(alphaRad, thermModel);

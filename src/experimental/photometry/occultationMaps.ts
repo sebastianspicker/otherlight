@@ -96,7 +96,10 @@ export function opticalDepthToTransmissionMap(map: OpticalDepthMap2D): Transmiss
  * Combine multiple optical depth maps by summing τ.
  * Scientific meaning: independent absorbers add optical depth: τ_total = Σ τ_i.
  */
-export function sumOpticalDepthMaps(maps: OpticalDepthMap2D[], opts?: { clampNonNegative?: boolean }): OpticalDepthMap2D {
+export function sumOpticalDepthMaps(
+  maps: OpticalDepthMap2D[],
+  opts?: { clampNonNegative?: boolean },
+): OpticalDepthMap2D {
   const clampNonNeg = opts?.clampNonNegative !== false;
 
   return {
@@ -123,7 +126,10 @@ export function sumOpticalDepthMaps(maps: OpticalDepthMap2D[], opts?: { clampNon
  * Combine multiple transmission maps by multiplying T.
  * Scientific meaning: independent transmissions multiply: T_total = Π T_i.
  */
-export function multiplyTransmissionMaps(maps: TransmissionMap2D[], opts?: { clamp01?: boolean }): TransmissionMap2D {
+export function multiplyTransmissionMaps(
+  maps: TransmissionMap2D[],
+  opts?: { clamp01?: boolean },
+): TransmissionMap2D {
   const doClamp = opts?.clamp01 !== false;
 
   return {
@@ -224,9 +230,12 @@ export function exponentialHaloOpticalDepthMap(params: {
   const H = params.H;
   const tau0 = params.tau0;
 
-  if (!(isFiniteNumber(r0) && r0 > 0)) throw new Error("exponentialHaloOpticalDepthMap: r0 must be > 0 and finite.");
-  if (!(isFiniteNumber(H) && H > 0)) throw new Error("exponentialHaloOpticalDepthMap: H must be > 0 and finite.");
-  if (!(isFiniteNumber(tau0) && tau0 >= 0)) throw new Error("exponentialHaloOpticalDepthMap: tau0 must be >= 0 and finite.");
+  if (!(isFiniteNumber(r0) && r0 > 0))
+    throw new Error("exponentialHaloOpticalDepthMap: r0 must be > 0 and finite.");
+  if (!(isFiniteNumber(H) && H > 0))
+    throw new Error("exponentialHaloOpticalDepthMap: H must be > 0 and finite.");
+  if (!(isFiniteNumber(tau0) && tau0 >= 0))
+    throw new Error("exponentialHaloOpticalDepthMap: tau0 must be >= 0 and finite.");
 
   const tauCore = isFiniteNumber(params.tauCore) ? Math.max(0, params.tauCore) : 1e6;
 
@@ -265,9 +274,12 @@ export function ellipticalGaussianOpticalDepthMap(params: {
   const sy = params.sigmaY;
   const tauPeak = params.tauPeak;
 
-  if (!(isFiniteNumber(sx) && sx > 0)) throw new Error("ellipticalGaussianOpticalDepthMap: sigmaX must be > 0.");
-  if (!(isFiniteNumber(sy) && sy > 0)) throw new Error("ellipticalGaussianOpticalDepthMap: sigmaY must be > 0.");
-  if (!(isFiniteNumber(tauPeak) && tauPeak >= 0)) throw new Error("ellipticalGaussianOpticalDepthMap: tauPeak must be >= 0.");
+  if (!(isFiniteNumber(sx) && sx > 0))
+    throw new Error("ellipticalGaussianOpticalDepthMap: sigmaX must be > 0.");
+  if (!(isFiniteNumber(sy) && sy > 0))
+    throw new Error("ellipticalGaussianOpticalDepthMap: sigmaY must be > 0.");
+  if (!(isFiniteNumber(tauPeak) && tauPeak >= 0))
+    throw new Error("ellipticalGaussianOpticalDepthMap: tauPeak must be >= 0.");
 
   const invSx2 = 1 / (sx * sx);
   const invSy2 = 1 / (sy * sy);
@@ -358,7 +370,7 @@ export function transmissionFromOpticalDepthMapsAt(
   maps: OpticalDepthMap2D[],
   x: number,
   y: number,
-  opts?: { clamp01?: boolean }
+  opts?: { clamp01?: boolean },
 ): number {
   const doClamp = opts?.clamp01 !== false;
 
@@ -388,7 +400,7 @@ export function transmissionFromTransmissionMapsAt(
   maps: TransmissionMap2D[],
   x: number,
   y: number,
-  opts?: { clamp01?: boolean }
+  opts?: { clamp01?: boolean },
 ): number {
   const doClamp = opts?.clamp01 !== false;
 

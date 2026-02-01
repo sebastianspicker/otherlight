@@ -28,17 +28,12 @@ export type MustGetOptions = {
  * This function only checks that the element exists; it does not validate the element subtype.
  * If you want subtype validation, use mustGetAs().
  */
-export function mustGet<T extends Element = HTMLElement>(
-  id: string,
-  opts: MustGetOptions = {}
-): T {
+export function mustGet<T extends Element = HTMLElement>(id: string, opts: MustGetOptions = {}): T {
   const root = opts.root ?? document;
 
   // Document has getElementById; DocumentFragment/HTMLElement don't, so use querySelector there.
   const el: Element | null =
-    root instanceof Document
-      ? root.getElementById(id)
-      : root.querySelector?.(cssEscapeId(id)) ?? null;
+    root instanceof Document ? root.getElementById(id) : (root.querySelector?.(cssEscapeId(id)) ?? null);
 
   if (!el) {
     const scope = opts.scopeName ? ` in ${opts.scopeName}` : "";
@@ -58,7 +53,7 @@ export function mustGet<T extends Element = HTMLElement>(
 export function mustGetAs<T extends Element>(
   id: string,
   ctor: { new (...args: any[]): T },
-  opts: MustGetOptions = {}
+  opts: MustGetOptions = {},
 ): T {
   const el = mustGet(id, opts);
 
@@ -66,9 +61,7 @@ export function mustGetAs<T extends Element>(
     const scope = opts.scopeName ? ` in ${opts.scopeName}` : "";
     const want = ctor.name || "Element";
     const got = (el as any)?.constructor?.name || typeof el;
-    throw new Error(
-      `Element #${id}${scope} has wrong type: expected ${want}, got ${got}.`
-    );
+    throw new Error(`Element #${id}${scope} has wrong type: expected ${want}, got ${got}.`);
   }
 
   return el as T;
@@ -81,7 +74,7 @@ export function mustGetAs<T extends Element>(
  */
 export function mustQuery<T extends Element = HTMLElement>(
   selector: string,
-  root: Document | DocumentFragment | HTMLElement = document
+  root: Document | DocumentFragment | HTMLElement = document,
 ): T {
   const el = root.querySelector(selector);
   if (!el) throw new Error(`Missing element for selector: ${selector}`);
@@ -121,9 +114,7 @@ export function setDisabled(el: HTMLElement, disabled: boolean): void {
  * but it is sufficient for typical ids used in this project.
  */
 function cssEscapeId(id: string): string {
-  const esc = (globalThis as any).CSS?.escape as
-    | ((s: string) => string)
-    | undefined;
+  const esc = (globalThis as any).CSS?.escape as ((s: string) => string) | undefined;
 
   if (typeof esc === "function") return `#${esc(id)}`;
 

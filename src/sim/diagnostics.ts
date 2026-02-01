@@ -28,7 +28,7 @@ export function computeExoDiagnostics(
   params: SystemParams,
   t: number,
   observerDir: Vec3,
-  kin: BodyKinematics
+  kin: BodyKinematics,
 ): ExoDiagnostics {
   if (!Number.isFinite(t)) throw new Error("computeExoDiagnostics: t must be finite.");
   if (!params.star || !Number.isFinite(params.star.r) || params.star.r <= 0) {
@@ -85,7 +85,10 @@ export function computeExoDiagnostics(
   };
 
   const vPlanetSkyRaw = estimateSkyPlaneSpeed(planetAbsAt, t, observerDir, { dtSec: velDt, central: true });
-  const vPlanetSkyRefRaw = estimateSkyPlaneSpeed(planetAbsAt, tRef, observerDir, { dtSec: velDt, central: true });
+  const vPlanetSkyRefRaw = estimateSkyPlaneSpeed(planetAbsAt, tRef, observerDir, {
+    dtSec: velDt,
+    central: true,
+  });
 
   const vPlanetSky = Number.isFinite(vPlanetSkyRaw) ? vPlanetSkyRaw : undefined;
   const vPlanetSkyRef = Number.isFinite(vPlanetSkyRefRaw) ? vPlanetSkyRefRaw : undefined;

@@ -16,6 +16,10 @@ export type UiRefs = {
   tVal: HTMLElement;
   fluxVal: HTMLElement;
 
+  // Presets
+  presetSelect: HTMLSelectElement;
+  presetDesc: HTMLElement;
+
   // Optional readouts
   plotModeVal: HTMLSpanElement | null;
   warnVal: HTMLSpanElement | null;
@@ -214,6 +218,10 @@ export const uiRefs: UiRefs = {
   timeSpeedVal: mustGetAs("timeSpeedVal", HTMLElement),
   tVal: mustGetAs("tVal", HTMLElement),
   fluxVal: mustGetAs("fluxVal", HTMLElement),
+
+  // Presets
+  presetSelect: mustGetAs("presetSelect", HTMLSelectElement),
+  presetDesc: mustGetAs("presetDesc", HTMLElement),
 
   // Optional readouts
   plotModeVal: document.getElementById("plotModeVal") as HTMLSpanElement | null,

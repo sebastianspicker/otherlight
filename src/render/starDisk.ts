@@ -136,7 +136,11 @@ function mulRGB(rgb: [number, number, number], f: number): [number, number, numb
   return [rgb[0] * ff, rgb[1] * ff, rgb[2] * ff];
 }
 
-function lerpRGB(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
+function lerpRGB(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
   const tt = clamp(t, 0, 1);
   return [a[0] * (1 - tt) + b[0] * tt, a[1] * (1 - tt) + b[1] * tt, a[2] * (1 - tt) + b[2] * tt];
 }
@@ -207,7 +211,7 @@ function buildLimbDarkeningStops(params: {
 
     // Perceptual gamma mapping (approx sRGB).
     const bright = Math.pow(I / Imax, invGamma); // 0..1
-    const rgb = mulRGB(baseRGB, 0.25 + 0.90 * bright); // keep limb from going fully black
+    const rgb = mulRGB(baseRGB, 0.25 + 0.9 * bright); // keep limb from going fully black
     stops.push({ pos: r, color: rgbToCss(rgb) });
   }
 
@@ -239,7 +243,7 @@ function applyStopsToGradient(
   cx: number,
   cy: number,
   Rpx: number,
-  stops: Array<{ pos: number; color: string }>
+  stops: Array<{ pos: number; color: string }>,
 ): CanvasGradient {
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rpx);
   for (const s of stops) {
@@ -285,7 +289,7 @@ function drawBrightnessPatches(params: {
     // - factor > 1 => brighter (white overlay)
     const dark = factor < 1;
     const delta = Math.abs(1 - factor);
-    const alpha = clamp(delta * 0.70 * strength, 0, 0.85);
+    const alpha = clamp(delta * 0.7 * strength, 0, 0.85);
 
     ctx.save();
     ctx.fillStyle = dark ? `rgba(0,0,0,${alpha})` : `rgba(255,255,255,${alpha})`;
@@ -322,7 +326,11 @@ function drawBrightnessPatches(params: {
  *
  * The caller supplies pixelsPerUnit and centerPx so this module stays renderer-agnostic.
  */
-export function drawStarDisk(ctx: CanvasRenderingContext2D, params: SystemParams, opts: StarDiskRenderOptions): void {
+export function drawStarDisk(
+  ctx: CanvasRenderingContext2D,
+  params: SystemParams,
+  opts: StarDiskRenderOptions,
+): void {
   const centerPx = opts.centerPx;
   const pixelsPerUnit = toFinitePositiveOr(opts.pixelsPerUnit, 1);
 

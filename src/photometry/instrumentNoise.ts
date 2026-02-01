@@ -82,13 +82,10 @@ export function createInstrumentNoiseState(seed = 1): InstrumentNoiseState {
  */
 export function resetInstrumentNoiseState(
   state: InstrumentNoiseState,
-  opts?: { resetRng?: boolean; seed?: number }
+  opts?: { resetRng?: boolean; seed?: number },
 ): void {
   const nextSeedRaw = opts?.seed;
-  const nextSeed =
-    typeof nextSeedRaw === "number" && Number.isFinite(nextSeedRaw)
-      ? nextSeedRaw
-      : state.seed;
+  const nextSeed = typeof nextSeedRaw === "number" && Number.isFinite(nextSeedRaw) ? nextSeedRaw : state.seed;
   state.seed = nextSeed;
 
   if (opts?.resetRng) state.rng = createMulberry32(nextSeed);
@@ -103,9 +100,7 @@ export function resetInstrumentNoiseState(
   state._wasTempEnabled = undefined;
 }
 
-type OneOverFCfg = NonNullable<
-  NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"]
->;
+type OneOverFCfg = NonNullable<NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"]>;
 
 function makeOneOverFSignature(cfg: OneOverFCfg): string {
   const n = Math.max(1, Math.floor(toFiniteNumber(cfg.nComponents, 6)));
@@ -115,10 +110,7 @@ function makeOneOverFSignature(cfg: OneOverFCfg): string {
   return `${n}|${tauMin}|${tauMax}|${sigma}`;
 }
 
-function ensureOneOverFBank(
-  state: InstrumentNoiseState,
-  oneF: OneOverFCfg
-): void {
+function ensureOneOverFBank(state: InstrumentNoiseState, oneF: OneOverFCfg): void {
   const sig = makeOneOverFSignature(oneF);
   if (state.ar1Bank && state.oneOverFSignature === sig) return;
 
@@ -143,15 +135,9 @@ function ensureOneOverFBank(
   state.oneOverFSignature = sig;
 }
 
-function computeDt(
-  tSec: number,
-  dtSec: unknown,
-  lastT: number | undefined
-): number {
-  if (typeof dtSec === "number" && Number.isFinite(dtSec) && dtSec > 0)
-    return dtSec;
-  if (typeof lastT === "number" && Number.isFinite(lastT))
-    return Math.max(0, tSec - lastT);
+function computeDt(tSec: number, dtSec: unknown, lastT: number | undefined): number {
+  if (typeof dtSec === "number" && Number.isFinite(dtSec) && dtSec > 0) return dtSec;
+  if (typeof lastT === "number" && Number.isFinite(lastT)) return Math.max(0, tSec - lastT);
   return 0;
 }
 
@@ -186,11 +172,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
   // Optional reset on backward time jumps (reset/seek semantics).
   const r = args.resetOnTimeJump;
   const resetEnabled = typeof r === "boolean" ? r : Boolean(r?.enabled);
-  if (
-    resetEnabled &&
-    typeof state.lastT === "number" &&
-    Number.isFinite(state.lastT)
-  ) {
+  if (resetEnabled && typeof state.lastT === "number" && Number.isFinite(state.lastT)) {
     const rawDt = t - state.lastT;
     if (Number.isFinite(rawDt) && rawDt < 0) {
       resetInstrumentNoiseState(state, {
@@ -200,9 +182,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
   }
 
   const correlatedEnabled = Boolean(cfg.correlatedNoise?.enabled);
-  const tempEnabled = Boolean(
-    cfg.trends?.enabled && cfg.trends.temperature?.enabled
-  );
+  const tempEnabled = Boolean(cfg.trends?.enabled && cfg.trends.temperature?.enabled);
   const dt = computeDt(t, args.dtSec, state.lastT);
   state.lastT = t;
 
@@ -216,9 +196,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
   state._wasCorrelatedEnabled = correlatedEnabled;
 
   // Temperature random walk: optional reset-on-disable behavior.
-  const tempResetOnDisable = Boolean(
-    cfg.trends?.temperature?.resetOnDisable
-  );
+  const tempResetOnDisable = Boolean(cfg.trends?.temperature?.resetOnDisable);
   if (tempResetOnDisable && state._wasTempEnabled && !tempEnabled) {
     state.tempRW = 0;
   }
@@ -255,9 +233,9 @@ export function applyInstrumentNoiseAndSystematics(args: {
         const next = randomWalkStep(state.rng, state.tempRW ?? 0, dt, rwSigma);
         state.tempRW = Number.isFinite(next) ? next : (state.tempRW ?? 0);
       } else if (rwSigma > 0 && dt === 0 && state.tempRW === undefined) {
-         state.tempRW = 0;
+        state.tempRW = 0;
       }
-      sysFluxAdd += (state.tempRW ?? 0);
+      sysFluxAdd += state.tempRW ?? 0;
     }
 
     // 3. Intra-Pixel Sensitivity (Toy Model)
@@ -312,7 +290,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
       if (state.ar1Bank && dt > 0) {
         for (const comp of state.ar1Bank) {
           // weight is pre-calculated in bank. ouStep needs unit sigma if weight handled outside?
-          // ensureOneOverFBank puts weight in comp.weight. 
+          // ensureOneOverFBank puts weight in comp.weight.
           // We evolve process with unit variance? No, ouStep takes sigma.
           // Wait, ouStep signature: (rng, x, dt, tau, sigma).
           // If we want the component to have specific RMS, we pass that as sigma.
@@ -322,10 +300,10 @@ export function applyInstrumentNoiseAndSystematics(args: {
           corrFluxAdd += comp.x;
         }
       } else if (state.ar1Bank) {
-          // dt=0, just sum existing
-          for (const comp of state.ar1Bank) {
-             corrFluxAdd += comp.x;
-          }
+        // dt=0, just sum existing
+        for (const comp of state.ar1Bank) {
+          corrFluxAdd += comp.x;
+        }
       }
     } else {
       // Disable bank (predictable toggle).
@@ -347,34 +325,25 @@ export function applyInstrumentNoiseAndSystematics(args: {
 
   // If exposureSec <= 0, we cannot define an electron-count measurement for this sample.
   // In that case, we do not apply photon/read noise (only flux-domain terms above).
-  const electronNoiseEnabled =
-    exposureSec > 0 && ePerFluxPerSec > 0 && throughput > 0;
+  const electronNoiseEnabled = exposureSec > 0 && ePerFluxPerSec > 0 && throughput > 0;
 
   let fluxOut = fluxPreNoise;
 
   if (electronNoiseEnabled) {
     // PROTECT against negative flux: Poisson undefined for lambda < 0.
-    const meanElectronsRaw =
-      Math.max(0, fluxPreNoise) * throughput * ePerFluxPerSec * exposureSec;
+    const meanElectronsRaw = Math.max(0, fluxPreNoise) * throughput * ePerFluxPerSec * exposureSec;
     const meanElectrons = Math.max(0, meanElectronsRaw);
 
     // Photon noise
     let electrons = meanElectrons;
     if (cfg.photonNoise?.enabled) {
-      const gaussThresh = Math.max(
-        0,
-        toFiniteNumber(cfg.photonNoise.gaussianApproxMinElectrons, 50)
-      );
+      const gaussThresh = Math.max(0, toFiniteNumber(cfg.photonNoise.gaussianApproxMinElectrons, 50));
 
       // PERFORMANCE OPTIMIZATION:
       // Use Gaussian approximation for high counts to avoid O(lambda) cost of Knuth Poisson.
       if (meanElectrons >= gaussThresh) {
         // N(mean, sqrt(mean))
-        electrons = normalSample(
-          state.rng,
-          meanElectrons,
-          Math.sqrt(meanElectrons)
-        );
+        electrons = normalSample(state.rng, meanElectrons, Math.sqrt(meanElectrons));
       } else {
         electrons = poissonSample(state.rng, meanElectrons);
       }
@@ -479,8 +448,5 @@ export function runInstrumentNoiseSelfTests(): void {
     state: s3,
   });
 
-  assert(
-    Number.isFinite(out) && out === 1.234,
-    "exposureSec=0 must not inject electron noise by default."
-  );
+  assert(Number.isFinite(out) && out === 1.234, "exposureSec=0 must not inject electron noise by default.");
 }
