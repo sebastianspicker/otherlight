@@ -4,7 +4,7 @@
 // Keep these checks strict and early to preserve “fail fast” behavior.
 
 import type { OrbitElements, OrbitElementsProvider, SystemParams } from "../core/types";
-import { isFiniteNonNegative, isFinitePositive } from "../core/units";
+import { G_SI, isFiniteNonNegative, isFinitePositive } from "../core/units";
 
 function assertBodyRadius(r: unknown, name: string): void {
   if (!isFinitePositive(r)) throw new Error(`${name}.r must be > 0 and finite`);
@@ -102,9 +102,25 @@ export function assertStepInputs(params: SystemParams, t: number): void {
         "nbody requires a static moon.orbitAroundPlanet (initial conditions, not a function provider).",
       );
     }
-    if (!isFinitePositive(nbody.muStar)) throw new Error("nbody.muStar must be > 0 when enabled.");
-    if (!isFinitePositive(nbody.muPlanet)) throw new Error("nbody.muPlanet must be > 0 when enabled.");
-    if (!isFinitePositive(nbody.muMoon)) throw new Error("nbody.muMoon must be > 0 when enabled.");
+    const muStar = isFinitePositive(nbody.muStar)
+      ? nbody.muStar
+      : isFinitePositive(nbody.mStar ?? params.star?.m)
+        ? G_SI * (nbody.mStar ?? (params.star?.m as number))
+        : undefined;
+    const muPlanet = isFinitePositive(nbody.muPlanet)
+      ? nbody.muPlanet
+      : isFinitePositive(nbody.mPlanet ?? params.planet?.m)
+        ? G_SI * (nbody.mPlanet ?? (params.planet?.m as number))
+        : undefined;
+    const muMoon = isFinitePositive(nbody.muMoon)
+      ? nbody.muMoon
+      : isFinitePositive(nbody.mMoon ?? params.moon?.m)
+        ? G_SI * (nbody.mMoon ?? (params.moon?.m as number))
+        : undefined;
+
+    if (!isFinitePositive(muStar)) throw new Error("nbody.muStar or mStar must be > 0 when enabled.");
+    if (!isFinitePositive(muPlanet)) throw new Error("nbody.muPlanet or mPlanet must be > 0 when enabled.");
+    if (!isFinitePositive(muMoon)) throw new Error("nbody.muMoon or mMoon must be > 0 when enabled.");
     if (!isFinitePositive(nbody.dtMax)) throw new Error("nbody.dtMax must be > 0 when enabled.");
     if (nbody.softening !== undefined && (!Number.isFinite(nbody.softening) || nbody.softening < 0)) {
       throw new Error("nbody.softening must be finite and >= 0 if provided.");
@@ -114,8 +130,9 @@ export function assertStepInputs(params: SystemParams, t: number): void {
     for (let i = 0; i < pert.length; i++) {
       const p = pert[i] as any;
       if (!p || p.enabled === false) continue;
-      if (!isFinitePositive(p.mu)) {
-        throw new Error(`nbody.perturbers[${i}].mu must be > 0 when enabled.`);
+      const mu = isFinitePositive(p.mu) ? p.mu : isFinitePositive(p.m) ? G_SI * p.m : undefined;
+      if (!isFinitePositive(mu)) {
+        throw new Error(`nbody.perturbers[${i}].mu or m must be > 0 when enabled.`);
       }
       if (!p.orbit) {
         throw new Error(`nbody.perturbers[${i}].orbit must be provided when enabled.`);
@@ -355,6 +372,59 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
         code: "MOON_LARGER_THAN_PLANET",
         message: "Mondradius ist >= Planetenradius; typischerweise unphysikalisch.",
       });
+    }
+
+    if (planet && Number.isFinite(planet.r) && planet.r > 0 && Number.isFinite(moon.r) && moon.r > 0) {
+      const mPlanet = planet.m;
+      const mMoon = moon.m;
+      if (Number.isFinite(mPlanet ?? Number.NaN) && (mPlanet as number) > 0) {
+        if (Number.isFinite(mMoon ?? Number.NaN) && (mMoon as number) > 0) {
+          const rhoPlanet = (3 * (mPlanet as number)) / (4 * Math.PI * Math.pow(planet.r, 3));
+          const rhoMoon = (3 * (mMoon as number)) / (4 * Math.PI * Math.pow(moon.r, 3));
+          if (Number.isFinite(rhoPlanet) && rhoPlanet > 0 && Number.isFinite(rhoMoon) && rhoMoon > 0) {
+            // Fluid Roche limit (approx): 2.44 * Rp * (rho_p / rho_m)^(1/3)
+            const roche = 2.44 * planet.r * Math.cbrt(rhoPlanet / rhoMoon);
+            const qM = aM * (1 - eM);
+            if (Number.isFinite(qM) && Number.isFinite(roche) && qM < roche) {
+              out.push({
+                severity: "warn",
+                code: "MOON_ROCHE_LIMIT",
+                message: "Mond-Perizentrum liegt innerhalb der Roche-Grenze (fluider Satellit).",
+                details: { qM, roche },
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const nbodyCfg = params.dynamics?.nbodyPlanetMoon;
+  if (nbodyCfg?.enabled) {
+    const dtMaxRaw = nbodyCfg.dtMax;
+    if (typeof dtMaxRaw === "number" && Number.isFinite(dtMaxRaw) && dtMaxRaw > 0) {
+      const periods: Array<{ label: string; period: number }> = [];
+      if (pOrbit && Number.isFinite(pOrbit.period) && pOrbit.period > 0) {
+        periods.push({ label: "Planeten", period: pOrbit.period });
+      }
+      if (mOrbit && Number.isFinite(mOrbit.period) && mOrbit.period > 0) {
+        periods.push({ label: "Mond", period: mOrbit.period });
+      }
+
+      if (periods.length > 0) {
+        const shortest = periods.reduce((a, b) => (a.period <= b.period ? a : b));
+        const steps = shortest.period / dtMaxRaw;
+        if (Number.isFinite(steps) && steps < 50) {
+          out.push({
+            severity: "warn",
+            code: "NBODY_DT_COARSE",
+            message: `N-body dtMax ist groß relativ zur ${shortest.label}-Periode (~${steps.toFixed(
+              1,
+            )} Schritte/Orbit). Stabilität kann leiden.`,
+            details: { dtMax: dtMaxRaw, period: shortest.period, steps },
+          });
+        }
+      }
     }
   }
 

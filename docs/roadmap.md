@@ -180,7 +180,6 @@ Code anchors:
   - N-body energy drift
   - LTTE/Shapiro timing convergence
 
-
 ## Open Questions / Assumptions
 
 - What level of physical fidelity is required for the N-body GR terms?

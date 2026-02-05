@@ -1,11 +1,11 @@
 # Physics Overview
 
-This simulator uses internally consistent simulation units:
+This simulator uses SI units internally:
 
-- Length: arbitrary but consistent (star/planet radii, semi-major axes, etc).
-- Time: seconds.
+- Length: meters (m).
+- Time: seconds (s).
 - Angles: radians in the model (UI uses degrees and converts).
-- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
+- Gravitational parameter: $\mu = GM$ in m^3/s^2.
 
 ## What is simulated (short)
 

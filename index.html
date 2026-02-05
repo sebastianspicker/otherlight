@@ -47,7 +47,13 @@
             <section class="panel vizStack">
               <div class="col">
                 <h2>Sky-plane</h2>
-                <canvas id="skyCanvas" width="960" height="540"></canvas>
+                <canvas
+                  id="skyCanvas"
+                  width="960"
+                  height="540"
+                  role="img"
+                  aria-label="Sky-plane visualization"
+                ></canvas>
 
                 <details class="help">
                   <summary>Debug overlay</summary>
@@ -79,7 +85,13 @@
 
               <div class="col">
                 <h2>Light curve</h2>
-                <canvas id="lcCanvas" width="960" height="240"></canvas>
+                <canvas
+                  id="lcCanvas"
+                  width="960"
+                  height="240"
+                  role="img"
+                  aria-label="Light curve plot"
+                ></canvas>
               </div>
             </section>
 
@@ -128,7 +140,8 @@
                       <legend>Stern</legend>
                       <div class="grid">
                         <label
-                          >R (Längeneinheiten) <input id="starR" type="number" min="1" step="0.1" value="55"
+                          >R (m)
+                          <input id="starR" type="number" min="1e6" max="2e9" step="1e6" value="695700000"
                         /></label>
                         <label
                           >Baseline flux
@@ -281,10 +294,18 @@
                       <legend>Planet</legend>
                       <div class="grid">
                         <label
-                          >Rp (sim units) <input id="planetR" type="number" min="0.001" step="0.1" value="12"
+                          >Rp (m)
+                          <input id="planetR" type="number" min="1e6" max="2e8" step="1e6" value="69911000"
                         /></label>
                         <label
-                          >a (sim units) <input id="planetA" type="number" min="0.001" step="0.1" value="230"
+                          >a (m)
+                          <input
+                            id="planetA"
+                            type="number"
+                            min="1e8"
+                            max="1e12"
+                            step="1e7"
+                            value="7479893535"
                         /></label>
                         <label
                           >e <input id="planetE" type="number" min="0" max="0.999" step="0.001" value="0.08"
@@ -295,11 +316,23 @@
                         /></label>
                         <label
                           >period (s)
-                          <input id="planetPeriod" type="number" min="0.001" step="1" value="18000"
+                          <input
+                            id="planetPeriod"
+                            type="number"
+                            min="1000"
+                            max="1e8"
+                            step="100"
+                            value="352657.7453"
                         /></label>
                         <label
-                          >mass (arb. units)
-                          <input id="planetMass" type="number" min="0" step="0.01" value="0"
+                          >mass (kg)
+                          <input
+                            id="planetMass"
+                            type="number"
+                            min="0"
+                            max="1e30"
+                            step="1e24"
+                            value="1.89813e27"
                         /></label>
                       </div>
 
@@ -383,12 +416,24 @@
                         <label class="inline">Rings <input id="planetRingsEnabled" type="checkbox" /></label>
                         <div class="grid">
                           <label
-                            >ring inner (sim units)
-                            <input id="planetRingInner" type="number" min="0" step="0.1" value="18"
+                            >ring inner (m)
+                            <input
+                              id="planetRingInner"
+                              type="number"
+                              min="0"
+                              max="5e8"
+                              step="1e6"
+                              value="83893200"
                           /></label>
                           <label
-                            >ring outer (sim units)
-                            <input id="planetRingOuter" type="number" min="0" step="0.1" value="26"
+                            >ring outer (m)
+                            <input
+                              id="planetRingOuter"
+                              type="number"
+                              min="0"
+                              max="5e8"
+                              step="1e6"
+                              value="139822000"
                           /></label>
                           <label
                             >ring inc (deg)
@@ -434,10 +479,10 @@
                             </select>
                           </label>
                           <label
-                            >r0 (sim units) <input id="atmR0" type="number" min="0" step="0.01" value="0"
+                            >r0 (m) <input id="atmR0" type="number" min="0" max="1e9" step="1e5" value="0"
                           /></label>
                           <label
-                            >H (sim units) <input id="atmH" type="number" min="0" step="0.01" value="0"
+                            >H (m) <input id="atmH" type="number" min="0" max="1e8" step="1e4" value="0"
                           /></label>
                           <label
                             >tau0 (optical depth)
@@ -458,10 +503,12 @@
                       <label class="inline">Enabled <input id="moonEnabled" type="checkbox" checked /></label>
                       <div class="grid">
                         <label
-                          >Rm (sim units) <input id="moonR" type="number" min="0.001" step="0.1" value="4"
+                          >Rm (m)
+                          <input id="moonR" type="number" min="1e5" max="5e7" step="1e5" value="6371000"
                         /></label>
                         <label
-                          >a (sim units) <input id="moonA" type="number" min="0.001" step="0.1" value="32"
+                          >a (m)
+                          <input id="moonA" type="number" min="1e7" max="1e9" step="1e6" value="200000000"
                         /></label>
                         <label
                           >e <input id="moonE" type="number" min="0" max="0.999" step="0.001" value="0.02"
@@ -471,10 +518,18 @@
                           <input id="moonInc" type="number" min="0" max="180" step="0.01" value="10"
                         /></label>
                         <label
-                          >period (s) <input id="moonPeriod" type="number" min="0.001" step="1" value="2200"
+                          >period (s)
+                          <input
+                            id="moonPeriod"
+                            type="number"
+                            min="1000"
+                            max="1e7"
+                            step="100"
+                            value="49928.74206"
                         /></label>
                         <label
-                          >mass (arb. units) <input id="moonMass" type="number" min="0" step="0.01" value="0"
+                          >mass (kg)
+                          <input id="moonMass" type="number" min="0" max="1e27" step="1e23" value="5.9722e24"
                         /></label>
                       </div>
 
@@ -544,12 +599,24 @@
                         <label class="inline">Rings <input id="moonRingsEnabled" type="checkbox" /></label>
                         <div class="grid">
                           <label
-                            >ring inner (sim units)
-                            <input id="moonRingInner" type="number" min="0" step="0.1" value="6"
+                            >ring inner (m)
+                            <input
+                              id="moonRingInner"
+                              type="number"
+                              min="0"
+                              max="1e8"
+                              step="1e5"
+                              value="7500000"
                           /></label>
                           <label
-                            >ring outer (sim units)
-                            <input id="moonRingOuter" type="number" min="0" step="0.1" value="10"
+                            >ring outer (m)
+                            <input
+                              id="moonRingOuter"
+                              type="number"
+                              min="0"
+                              max="1e8"
+                              step="1e5"
+                              value="12000000"
                           /></label>
                           <label
                             >ring inc (deg)
@@ -605,7 +672,7 @@
                           <input id="exoMoonOmegaSmallDot" type="number" step="0.000001" value="0"
                         /></label>
                         <label
-                          >moonImpactYDot (sim units/s)
+                          >moonImpactYDot (m/s)
                           <input id="exoImpactYDot" type="number" step="0.000001" value="0"
                         /></label>
                       </div>
@@ -616,20 +683,42 @@
                       <label class="inline">Enabled <input id="nbodyEnabled" type="checkbox" /></label>
                       <div class="grid">
                         <label
-                          >muStar <input id="nbodyMuStar" type="number" min="0" step="0.0001" value="1"
+                          >muStar (m^3/s^2)
+                          <input
+                            id="nbodyMuStar"
+                            type="number"
+                            min="0"
+                            max="1e21"
+                            step="1e18"
+                            value="1.3271645321e20"
                         /></label>
                         <label
-                          >muPlanet <input id="nbodyMuPlanet" type="number" min="0" step="0.0001" value="0.1"
+                          >muPlanet (m^3/s^2)
+                          <input
+                            id="nbodyMuPlanet"
+                            type="number"
+                            min="0"
+                            max="1e19"
+                            step="1e16"
+                            value="1.2668689059e17"
                         /></label>
                         <label
-                          >muMoon <input id="nbodyMuMoon" type="number" min="0" step="0.0001" value="0.01"
+                          >muMoon (m^3/s^2)
+                          <input
+                            id="nbodyMuMoon"
+                            type="number"
+                            min="0"
+                            max="1e17"
+                            step="1e14"
+                            value="3.986025446e14"
                         /></label>
                         <label
                           >dtMax (s)
-                          <input id="nbodyDtMax" type="number" min="0.000001" step="0.1" value="10"
+                          <input id="nbodyDtMax" type="number" min="0.1" max="1e6" step="1" value="60"
                         /></label>
                         <label
-                          >softening <input id="nbodySoftening" type="number" min="0" step="0.0001" value="0"
+                          >softening (m)
+                          <input id="nbodySoftening" type="number" min="0" max="1e8" step="1e5" value="0"
                         /></label>
                       </div>
 
@@ -639,11 +728,18 @@
                         <label class="inline">Perturber 1 <input id="pert1Enabled" type="checkbox" /></label>
                         <div class="grid">
                           <label
-                            >mu1 <input id="pert1Mu" type="number" min="0" step="0.0001" value="0"
+                            >mu1 (m^3/s^2)
+                            <input id="pert1Mu" type="number" min="0" max="1e19" step="1e16" value="0"
                           /></label>
                           <label
-                            >a1 (sim units)
-                            <input id="pert1A" type="number" min="0.001" step="0.1" value="400"
+                            >a1 (m)
+                            <input
+                              id="pert1A"
+                              type="number"
+                              min="1e8"
+                              max="1e12"
+                              step="1e7"
+                              value="14959787070"
                           /></label>
                           <label
                             >e1 <input id="pert1E" type="number" min="0" max="0.999" step="0.001" value="0"
@@ -654,18 +750,25 @@
                           /></label>
                           <label
                             >period1 (s)
-                            <input id="pert1Period" type="number" min="0.001" step="1" value="40000"
+                            <input
+                              id="pert1Period"
+                              type="number"
+                              min="1000"
+                              max="1e8"
+                              step="100"
+                              value="997466.7326"
                           /></label>
                         </div>
 
                         <label class="inline">Perturber 2 <input id="pert2Enabled" type="checkbox" /></label>
                         <div class="grid">
                           <label
-                            >mu2 <input id="pert2Mu" type="number" min="0" step="0.0001" value="0"
+                            >mu2 (m^3/s^2)
+                            <input id="pert2Mu" type="number" min="0" max="1e19" step="1e16" value="0"
                           /></label>
                           <label
-                            >a2 (sim units)
-                            <input id="pert2A" type="number" min="0.001" step="0.1" value="600"
+                            >a2 (m)
+                            <input id="pert2A" type="number" min="1e8" max="1e12" step="1e7" value="2.5e10"
                           /></label>
                           <label
                             >e2 <input id="pert2E" type="number" min="0" max="0.999" step="0.001" value="0"
@@ -676,7 +779,13 @@
                           /></label>
                           <label
                             >period2 (s)
-                            <input id="pert2Period" type="number" min="0.001" step="1" value="70000"
+                            <input
+                              id="pert2Period"
+                              type="number"
+                              min="1000"
+                              max="1e8"
+                              step="100"
+                              value="1600000"
                           /></label>
                         </div>
                       </details>
@@ -694,7 +803,7 @@
                           >GR precession <input id="relGR" type="checkbox" checked
                         /></label>
                         <label
-                          >c (sim units/s) <input id="relC" type="number" min="0" step="1" value="299792.458"
+                          >c (m/s) <input id="relC" type="number" min="1e6" step="1" value="299792458"
                         /></label>
                       </div>
                       <div class="grid">
@@ -759,7 +868,7 @@
               <span class="mono">v_planet <span id="vPlanetVal"></span></span>
               <span class="mono">v_moon <span id="vMoonVal"></span></span>
               <span class="mono">mode <span id="plotModeVal"></span></span>
-              <span class="mono warn"><span id="warnVal"></span></span>
+              <span class="mono warn"><span id="warnVal" role="status" aria-live="polite"></span></span>
             </div>
 
             <div class="row">

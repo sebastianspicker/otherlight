@@ -1,11 +1,41 @@
 node_modules/
 dist/
+dist-ssr/
 coverage/
 .vite/
+.eslintcache
+.cache/
+.pnpm-store/
 
 .DS_Store
 *.log
+*.tsbuildinfo
+*.tmp
+
+# Debug logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .idea/
 .vscode/
+
+# docs (local findings/logs/decisions)
+DECISIONS.md
+FINDINGS.md
+LOG.md
+REFACTOR_PLAN.md
+PHYSICS_AUDIT.md
+validation.md
+docs/DECISIONS.md
+docs/FINDINGS.md
+docs/LOG.md
+docs/REFACTOR_PLAN.md
+docs/PHYSICS_AUDIT.md
+docs/validation.md
+
+# Env files
+.env
+.env.*

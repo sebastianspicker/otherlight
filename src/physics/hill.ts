@@ -228,6 +228,22 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   // Compare moon orbit semi-major axis against a conservative prograde limit.
   const aMaxPrograde = maxStableProgradeMoonAxisDomingos(RH, eP, eM);
   const fracOfHill = aM / RH;
+  const apoM = aM * (1 + eM);
+
+  if (Number.isFinite(apoM) && apoM > RH) {
+    out.push({
+      severity: "warn",
+      code: "MOON_APO_OUTSIDE_HILL",
+      message:
+        "Mond-Apozentrum liegt außerhalb der Hill-Sphäre (bei Planeten-Periapsis); gebundene Bahn ist unwahrscheinlich.",
+      details: {
+        aMoon: aM,
+        eMoon: eM,
+        apoMoon: apoM,
+        hillR_periapsis: RH,
+      },
+    });
+  }
 
   if (Number.isFinite(aMaxPrograde) && aM > aMaxPrograde) {
     out.push({

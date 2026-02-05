@@ -1,6 +1,6 @@
 # Exoplanet-Exomoon Transit Simulation
 
-![CI](../../actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/ci.yml/badge.svg)
 
 Interactive, time-based 2D sky-plane visualization of a star-planet-moon system
 with synthetic transit photometry, phase curves, stellar variability, and
@@ -13,13 +13,23 @@ This repo supports both:
 - Kinematic (Kepler) motion with barycentric splitting, and
 - N-body dynamics with star reflex motion and optional perturbers.
 
-## Quick start
+## What
 
-Prerequisites:
+An interactive, browser-based simulator for exoplanet–exomoon transits with a deterministic
+physics core and visualization of sky-plane geometry plus light-curve diagnostics.
+
+## Why
+
+Built for didactic exploration of transit geometry, limb darkening, and coupled dynamics
+without requiring a heavy scientific stack.
+
+## Requirements
 
 - Node.js 18+ (recommended)
 - pnpm 9 (recommended, lockfile in repo)
 - npm (supported)
+
+## Quick start
 
 Install (recommended):
 
@@ -85,6 +95,7 @@ For longer-term research items, see `docs/roadmap.md`.
 - Photometry model: `docs/physics/photometry.md`
 - Parameter units: `docs/params.md`
 - Validation and warnings: `docs/validation.md`
+- How to add a planet or moon: `docs/ADDING_BODY.md`
 
 ## Interactive presets (UI)
 
@@ -93,6 +104,9 @@ The UI includes a **Preset** dropdown (see `src/app/presets.ts`) with short, did
 - Kepler: planet-only transit (clean transit geometry)
 - Limb darkening: multi-band variation (ingress/egress curvature)
 - N-body: perturber + star reflex (dynamic timing/velocity effects)
+
+The UI also emits stability warnings (Hill/Roche/dtMax heuristics) when configurations are likely
+non-physical or numerically risky. See `docs/validation.md` for the current warning list.
 
 ## How to teach with this (didactic use-case)
 
@@ -123,6 +137,28 @@ All scripts are `pnpm`-first:
 - `pnpm lint`: ESLint + Prettier check
 - `pnpm format`: Prettier write
 - `pnpm verify-production-ready`: lint + typecheck + test + build (CI gate)
+
+## Configuration
+
+Configuration is driven by `SystemParams` and the UI fields in `index.html`.
+See `docs/params.md` for UI-to-model mapping and units.
+
+When N-body is enabled, choose `dtMax` so the shortest orbit has at least ~50 steps per period.
+The UI emits a warning when `dtMax` is coarser, but stability remains heuristic.
+
+## Development
+
+- `pnpm dev` for a local dev server.
+- `pnpm verify-production-ready` for a full local verification.
+
+## Testing
+
+- `pnpm test` for unit/smoke tests.
+- `pnpm typecheck` for TypeScript checks (includes tests).
+
+## Runbook
+
+See `docs/RUNBOOK.md` for setup, fast/full loops, security checks, and troubleshooting.
 
 ## Project structure
 
@@ -204,10 +240,12 @@ Finite exposure smearing:
 
 ## Units and normalization
 
-- Length: simulation units (consistent across all bodies and orbits).
-- Time: seconds.
+- Length: meters (SI).
+- Time: seconds (SI).
 - Angle: radians in the model (UI uses degrees).
-- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
+- Gravitational parameter: $\mu = GM$ in m^3/s^2.
+
+Note: Defaults/presets are now in SI units. If you have older configs using non‑SI “sim units,” convert them.
 
 Notes:
 
@@ -229,6 +267,14 @@ explicitly reset the noise state to avoid frozen correlations after time jumps.
 ## License
 
 MIT License. See `LICENSE`.
+
+## Security
+
+See `SECURITY.md` for vulnerability reporting.
+
+## Troubleshooting
+
+See `docs/RUNBOOK.md` for common troubleshooting steps.
 
 ## Contributing
 

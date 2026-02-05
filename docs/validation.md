@@ -13,3 +13,6 @@ Warnings (non-fatal):
 - Low grid resolution for photometry.
 - N-body enabled with exomoon timing overrides (ignored).
 - Per-orbit GR overrides ignored in N-body mode.
+- N-body dtMax too coarse relative to the shortest orbit period.
+- Moon periapsis inside the Roche limit (fluid-body heuristic).
+- Moon apoapsis outside the Hill sphere (likely unbound).

@@ -4,7 +4,7 @@
 // Uses a velocity-Verlet integrator with star reflex motion and mutually coupled perturbers.
 
 import type { OrbitElements, SystemParams } from "../core/types";
-import { isFinitePositive } from "../core/units";
+import { G_SI, isFinitePositive } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { VEC3ZERO, vAdd, vAddScaled, vDot, vIsFinite, vLenSq, vScale, vSub } from "../physics/vec3";
 import { perifocalToInertial } from "../physics/frames";
@@ -484,6 +484,11 @@ function resolveNBodyConfig(params: SystemParams): { cfg: ResolvedNBodyConfig; k
   const nbody = params.dynamics?.nbodyPlanetMoon;
   const cfg = resolveEnabledNBodyPlanetMoonConfig(nbody, {
     onInvalid: "throw",
+    masses: {
+      star: params.star?.m,
+      planet: params.planet?.m,
+      moon: params.moon?.m,
+    },
   });
   if (!cfg) return null;
 
@@ -513,7 +518,8 @@ function resolveNBodyConfig(params: SystemParams): { cfg: ResolvedNBodyConfig; k
   for (let i = 0; i < extra.length; i++) {
     const p = extra[i] as any;
     if (!p || p.enabled === false) continue;
-    if (!isFinitePositive(p.mu)) continue;
+    const mu = isFinitePositive(p.mu) ? p.mu : isFinitePositive(p.m) ? G_SI * p.m : undefined;
+    if (!isFinitePositive(mu)) continue;
     if (!p.orbit) continue;
     if (typeof p.orbit === "function") {
       throw new Error("nbody perturbers require static orbit elements (initial conditions).");
@@ -523,7 +529,7 @@ function resolveNBodyConfig(params: SystemParams): { cfg: ResolvedNBodyConfig; k
       ANCHOR_TIME_SEC,
       `dynamics.nbodyPlanetMoon.perturbers[${i}].orbit`,
     );
-    perturbers.push({ mu: p.mu, orbit: el });
+    perturbers.push({ mu, orbit: el });
   }
 
   const rel = normalizeRelativityParams(params.dynamics?.relativity);

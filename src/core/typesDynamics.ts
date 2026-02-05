@@ -17,7 +17,7 @@ export type RelativityParams = {
   moonPrecessionPerOrbit?: number;
   ltteIters?: number;
   ltteTolSec?: number;
-  /** Optional minimum impact parameter used to regularize Shapiro delay [sim units]. */
+  /** Optional minimum impact parameter used to regularize Shapiro delay [m]. */
   shapiroMinImpact?: number;
 };
 
@@ -26,6 +26,9 @@ export type NBodyPerturberParams = {
 
   /** Gravitational parameter mu = G*M for the perturber (must be > 0). */
   mu?: number;
+
+  /** Optional mass in kg. If mu is omitted, mu = G * m is used. */
+  m?: number;
 
   /** Perturber orbit elements used as initial conditions (dynamically integrated afterward). */
   orbit?: OrbitElements | OrbitElementsProvider;
@@ -42,6 +45,15 @@ export type NBodyPlanetMoonParams = {
 
   /** Gravitational parameter mu = G*M for the moon (must be > 0). */
   muMoon?: number;
+
+  /** Optional star mass in kg. If muStar is omitted, muStar = G * mStar is used. */
+  mStar?: number;
+
+  /** Optional planet mass in kg. If muPlanet is omitted, muPlanet = G * mPlanet is used. */
+  mPlanet?: number;
+
+  /** Optional moon mass in kg. If muMoon is omitted, muMoon = G * mMoon is used. */
+  mMoon?: number;
 
   /** Recommended maximum absolute substep dt in seconds. */
   dtMax?: number;
