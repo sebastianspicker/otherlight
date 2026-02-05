@@ -8,6 +8,7 @@
 
 import type { SystemParams } from "../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
+import { AU_M, EARTH_MASS_KG, G_SI, JUPITER_MASS_KG, SOLAR_MASS_KG } from "../core/units";
 
 export type ScenarioPreset = {
   id: string;
@@ -97,19 +98,30 @@ export const PRESETS: ScenarioPreset[] = [
     withoutPatches(p);
 
     const dyn = (p.dynamics ??= {} as any);
+    const muStar = G_SI * SOLAR_MASS_KG;
+    const muPlanet = G_SI * JUPITER_MASS_KG;
+    const muMoon = G_SI * EARTH_MASS_KG;
+
     dyn.nbodyPlanetMoon = {
       enabled: true,
-      // Keep mus in the same “order of magnitude” as the default scenario; stable & interactive.
-      muStar: 1.5,
-      muPlanet: 0.27,
-      muMoon: 0.01,
-      dtMax: 5,
+      muStar,
+      muPlanet,
+      muMoon,
+      dtMax: 60,
       softening: 0,
       perturbers: [
         {
           enabled: true,
-          mu: 0.05,
-          orbit: { a: 520, e: 0.12, inc: 0.1, Omega: 0, omega: 0, period: 90_000, t0: 0 },
+          mu: G_SI * (0.1 * JUPITER_MASS_KG),
+          orbit: {
+            a: 0.1 * AU_M,
+            e: 0.12,
+            inc: 0.1,
+            Omega: 0,
+            omega: 0,
+            period: 997466.7326,
+            t0: 0,
+          },
         },
       ],
     };

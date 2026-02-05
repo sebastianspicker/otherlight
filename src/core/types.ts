@@ -8,8 +8,9 @@
 // -----------------------------------------------------------------------------
 //
 // Units:
-// - Lengths are arbitrary "simulation units" (must be internally consistent).
-// - Time is seconds.
+// - Lengths are meters (SI).
+// - Time is seconds (SI).
+// - Mass is kilograms (SI) where applicable.
 // - Angles are radians.
 //
 // Coordinate / observer convention:

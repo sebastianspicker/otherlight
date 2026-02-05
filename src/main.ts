@@ -10,7 +10,7 @@
 // Important conventions:
 // - Orbits: angles in radians (UI uses degrees for inclinations and converts).
 // - Time: seconds.
-// - Length: simulation units (internally consistent).
+// - Length: meters (SI).
 //
 // Robustness policy in UI layer:
 // - Sanitize user inputs (finite, ranges) but keep non-physical configs possible via override mode.

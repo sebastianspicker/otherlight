@@ -9,6 +9,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: verify (node ${{ matrix.node }})
@@ -18,9 +21,9 @@ jobs:
       matrix:
         node: [18, 20]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
 
@@ -29,6 +32,9 @@ jobs:
 
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit (high/critical)
+        run: pnpm audit --audit-level=high
 
       - name: Verify production-ready
         run: pnpm verify-production-ready

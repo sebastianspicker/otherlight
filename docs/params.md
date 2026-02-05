@@ -1,11 +1,11 @@
 # Parameters and Units
 
-Core units:
+Core units (SI):
 
-- Length: simulation units (consistent across star/planet/moon radii and orbits).
-- Time: seconds.
+- Length: meters (m).
+- Time: seconds (s).
 - Angle: radians in model (UI uses degrees for selected fields and converts).
-- Gravitational parameter: $\mu = GM$ in $L^3/T^2$.
+- Gravitational parameter: $\mu = GM$ in m^3/s^2.
 
 Key parameter groups:
 
@@ -43,13 +43,14 @@ Konvention:
 | `observerY` | `observer.dir.y`  | arb     | Beobachterrichtung (Vektor) |
 | `observerZ` | `observer.dir.z`  | arb     | Beobachterrichtung (Vektor) |
 
-Hinweis: `observer.dir` wird intern normalisiert; ein Nullvektor wird auf `(0,0,1)` gefallbackt.
+Hinweis: In der UI wird `observer.dir` normalisiert; ein Nullvektor wird auf `(0,0,1)` gefallbackt.
+Direkte API-Nutzung (`stepSystem`) wirft bei Nullvektor einen Fehler.
 
 ### Stern (Geometrie + numerische Auflösung)
 
 | UI-ID          | SystemParams-Pfad              | Einheit | Bedeutung                                                   |
 | -------------- | ------------------------------ | ------- | ----------------------------------------------------------- |
-| `starR`        | `star.r`                       | sim     | Sternradius                                                 |
+| `starR`        | `star.r`                       | m       | Sternradius                                                 |
 | `baselineFlux` | `star.photometry.baselineFlux` | 1       | Normierungslevel (typisch 1.0)                              |
 | `gridRes`      | `star.photometry.gridRes`      | 1       | Numerische Integrationsauflösung (Genauigkeit vs. Laufzeit) |
 
@@ -68,11 +69,11 @@ Hinweis: `observer.dir` wird intern normalisiert; ein Nullvektor wird auf `(0,0,
 | UI-ID            | SystemParams-Pfad                             | Einheit | Bedeutung                          |
 | ---------------- | --------------------------------------------- | ------- | ---------------------------------- |
 | `patchesEnabled` | `star.photometry.brightnessPatches`           | —       | Toggle: Liste wird gesetzt/geleert |
-| `p1x` / `p1y`    | `star.photometry.brightnessPatches[0].x/.y`   | sim     | Patch 1 Zentrum (Sky-plane)        |
-| `p1r`            | `star.photometry.brightnessPatches[0].r`      | sim     | Patch 1 Radius                     |
+| `p1x` / `p1y`    | `star.photometry.brightnessPatches[0].x/.y`   | m       | Patch 1 Zentrum (Sky-plane)        |
+| `p1r`            | `star.photometry.brightnessPatches[0].r`      | m       | Patch 1 Radius                     |
 | `p1f`            | `star.photometry.brightnessPatches[0].factor` | 1       | Patch 1 Intensitätsfaktor          |
-| `p2x` / `p2y`    | `star.photometry.brightnessPatches[1].x/.y`   | sim     | Patch 2 Zentrum                    |
-| `p2rx` / `p2ry`  | `star.photometry.brightnessPatches[1].rx/.ry` | sim     | Patch 2 Achsen                     |
+| `p2x` / `p2y`    | `star.photometry.brightnessPatches[1].x/.y`   | m       | Patch 2 Zentrum                    |
+| `p2rx` / `p2ry`  | `star.photometry.brightnessPatches[1].rx/.ry` | m       | Patch 2 Achsen                     |
 | `p2angle`        | `star.photometry.brightnessPatches[1].angle`  | rad     | Patch 2 Orientierung               |
 | `p2f`            | `star.photometry.brightnessPatches[1].factor` | 1       | Patch 2 Intensitätsfaktor          |
 
@@ -90,12 +91,12 @@ Spot evolution (Rotation/Lifetime):
 
 | UI-ID          | SystemParams-Pfad     | Einheit   | Bedeutung                               |
 | -------------- | --------------------- | --------- | --------------------------------------- |
-| `planetR`      | `planet.r`            | sim       | Planetenradius                          |
-| `planetA`      | `planet.orbit.a`      | sim       | Semi-major axis                         |
+| `planetR`      | `planet.r`            | m         | Planetenradius                          |
+| `planetA`      | `planet.orbit.a`      | m         | Semi-major axis                         |
 | `planetE`      | `planet.orbit.e`      | 1         | Exzentrizität (0..&lt;1)                |
 | `planetInc`    | `planet.orbit.inc`    | deg → rad | Inklination (UI in Grad)                |
 | `planetPeriod` | `planet.orbit.period` | s         | Orbitalperiode                          |
-| `planetMass`   | `planet.m`            | arb       | Masse (für Hill/Barycenter-Heuristiken) |
+| `planetMass`   | `planet.m`            | kg        | Masse (für Hill/Barycenter-Heuristiken) |
 
 ### Planet: additive Phase Curve (optional)
 
@@ -128,8 +129,8 @@ Thermal inertia:
 | `planetOblateEnabled` | `planet.shape.oblateness`    | —         | Toggle                |
 | `planetOblateness`    | `planet.shape.oblateness`    | 1         | Flattening f in [0,1) |
 | `planetRingsEnabled`  | `planet.rings`               | —         | Toggle                |
-| `planetRingInner`     | `planet.rings.innerRadius`   | sim       | Ring inner radius     |
-| `planetRingOuter`     | `planet.rings.outerRadius`   | sim       | Ring outer radius     |
+| `planetRingInner`     | `planet.rings.innerRadius`   | m         | Ring inner radius     |
+| `planetRingOuter`     | `planet.rings.outerRadius`   | m         | Ring outer radius     |
 | `planetRingInc`       | `planet.rings.inclination`   | deg → rad | Ring tilt             |
 | `planetRingAngle`     | `planet.rings.positionAngle` | deg → rad | Position angle        |
 
@@ -150,8 +151,8 @@ Thermal inertia:
 | ------------- | ------------------------------------------------ | ------- | --------------------------- |
 | `atmEnabled`  | `star.photometry.atmosphereTransmission.enabled` | —       | Toggle                      |
 | `atmKind`     | `...kind`                                        | string  | `hard` / `exponential-halo` |
-| `atmR0`       | `...r0`                                          | sim     | Referenzradius              |
-| `atmH`        | `...H`                                           | sim     | Scale height                |
+| `atmR0`       | `...r0`                                          | m       | Referenzradius              |
+| `atmH`        | `...H`                                           | m       | Scale height                |
 | `atmTau0`     | `...tau0`                                        | 1       | Optical depth scale         |
 | `atmLambdaNm` | `...lambdaNm`                                    | nm      | Spektralgrid                |
 | `atmTauScale` | `...tauScale`                                    | 1       | Tau-Skalierung pro Band     |
@@ -161,12 +162,12 @@ Thermal inertia:
 | UI-ID         | SystemParams-Pfad               | Einheit   | Bedeutung                               |
 | ------------- | ------------------------------- | --------- | --------------------------------------- |
 | `moonEnabled` | `moon`                          | —         | Toggle: Block existiert / wird gelöscht |
-| `moonR`       | `moon.r`                        | sim       | Mondradius                              |
-| `moonA`       | `moon.orbitAroundPlanet.a`      | sim       | Semi-major axis                         |
+| `moonR`       | `moon.r`                        | m         | Mondradius                              |
+| `moonA`       | `moon.orbitAroundPlanet.a`      | m         | Semi-major axis                         |
 | `moonE`       | `moon.orbitAroundPlanet.e`      | 1         | Exzentrizität                           |
 | `moonInc`     | `moon.orbitAroundPlanet.inc`    | deg → rad | Inklination                             |
 | `moonPeriod`  | `moon.orbitAroundPlanet.period` | s         | Orbitalperiode                          |
-| `moonMass`    | `moon.m`                        | arb       | Masse (Barycenter/Hill-Heuristik)       |
+| `moonMass`    | `moon.m`                        | kg        | Masse (Barycenter/Hill-Heuristik)       |
 
 Mond-Phase Curve (optional):
 
@@ -204,18 +205,18 @@ Instrument noise:
 | `exoMoonOmegaDot`      | `...moonOmegaDot`                     | rad/s   | Knotenpräzession               |
 | `exoMoonIncDot`        | `...moonIncDot`                       | rad/s   | Inc-Drift                      |
 | `exoMoonOmegaSmallDot` | `...moonOmegaSmallDot`                | rad/s   | Apsis-Drift                    |
-| `exoImpactYDot`        | `...moonImpactYDot`                   | sim/s   | Sky-plane y drift              |
+| `exoImpactYDot`        | `...moonImpactYDot`                   | m/s     | Sky-plane y drift              |
 
 ### Dynamik: N-body (Velocity-Verlet)
 
-| UI-ID            | SystemParams-Pfad                  | Einheit | Bedeutung                |
-| ---------------- | ---------------------------------- | ------- | ------------------------ |
-| `nbodyEnabled`   | `dynamics.nbodyPlanetMoon.enabled` | —       | Toggle                   |
-| `nbodyMuStar`    | `...muStar`                        | $L^3/T^2$ | $\mu = GM$             |
-| `nbodyMuPlanet`  | `...muPlanet`                      | $L^3/T^2$ | $\mu = GM$             |
-| `nbodyMuMoon`    | `...muMoon`                        | $L^3/T^2$ | $\mu = GM$             |
-| `nbodyDtMax`     | `...dtMax`                         | s       | Max. Integrationsschritt |
-| `nbodySoftening` | `...softening`                     | sim     | Plummer softening eps    |
+| UI-ID            | SystemParams-Pfad                  | Einheit   | Bedeutung                |
+| ---------------- | ---------------------------------- | --------- | ------------------------ |
+| `nbodyEnabled`   | `dynamics.nbodyPlanetMoon.enabled` | —         | Toggle                   |
+| `nbodyMuStar`    | `...muStar`                        | $L^3/T^2$ | $\mu = GM$               |
+| `nbodyMuPlanet`  | `...muPlanet`                      | $L^3/T^2$ | $\mu = GM$               |
+| `nbodyMuMoon`    | `...muMoon`                        | $L^3/T^2$ | $\mu = GM$               |
+| `nbodyDtMax`     | `...dtMax`                         | s         | Max. Integrationsschritt |
+| `nbodySoftening` | `...softening`                     | m         | Plummer softening eps    |
 
 Perturbers:
 
@@ -224,12 +225,12 @@ Perturbers:
 
 ### Relativität (LTTE / Shapiro / GR precession)
 
-| UI-ID           | SystemParams-Pfad             | Einheit   | Bedeutung                         |
-| --------------- | ----------------------------- | --------- | --------------------------------- |
-| `relEnabled`    | `dynamics.relativity.enabled` | —         | Toggle                            |
-| `relLTTE`       | `...ltte`                     | —         | Light-time correction             |
-| `relShapiro`    | `...shapiro`                  | —         | Shapiro delay                     |
-| `relGR`         | `...grPrecession`             | —         | GR precession                     |
-| `relC`          | `...c`                        | sim/s     | Lichtgeschwindigkeit in sim units |
-| `relPlanetPrec` | `...planetPrecessionPerOrbit` | deg → rad | Override (Kepler-mode)            |
-| `relMoonPrec`   | `...moonPrecessionPerOrbit`   | deg → rad | Override (Kepler-mode)            |
+| UI-ID           | SystemParams-Pfad             | Einheit   | Bedeutung                  |
+| --------------- | ----------------------------- | --------- | -------------------------- |
+| `relEnabled`    | `dynamics.relativity.enabled` | —         | Toggle                     |
+| `relLTTE`       | `...ltte`                     | —         | Light-time correction      |
+| `relShapiro`    | `...shapiro`                  | —         | Shapiro delay              |
+| `relGR`         | `...grPrecession`             | —         | GR precession              |
+| `relC`          | `...c`                        | m/s       | Lichtgeschwindigkeit in SI |
+| `relPlanetPrec` | `...planetPrecessionPerOrbit` | deg → rad | Override (Kepler-mode)     |
+| `relMoonPrec`   | `...moonPrecessionPerOrbit`   | deg → rad | Override (Kepler-mode)     |

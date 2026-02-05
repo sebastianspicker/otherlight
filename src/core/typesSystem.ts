@@ -21,9 +21,9 @@ export type BodyShapeParams = {
 };
 
 export type RingSystemParams = {
-  /** Inner ring radius (simulation units). */
+  /** Inner ring radius [m]. */
   innerRadius: number;
-  /** Outer ring radius (simulation units). */
+  /** Outer ring radius [m]. */
   outerRadius: number;
   /** Ring tilt away from face-on [rad]. */
   inclination?: number;
@@ -32,7 +32,7 @@ export type RingSystemParams = {
 };
 
 export type Body = {
-  /** Radius (simulation length units). */
+  /** Radius [m]. */
   r: number;
 
   /**
@@ -44,7 +44,7 @@ export type Body = {
    * - tides / stability heuristics
    *
    * Units:
-   * - Arbitrary, but must be self-consistent across bodies (only ratios matter for barycenter).
+   * - Kilograms (SI). Ratios are used in barycenter splits, but SI is required for N-body mode.
    */
   m?: number;
 

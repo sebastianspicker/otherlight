@@ -4,7 +4,7 @@
 //
 // Notes:
 // - These are toy-model corrections intended for timing offsets and simple apsidal precession.
-// - Speed of light `c` must be provided in simulation units (length per second).
+// - Speed of light `c` must be provided in SI units (m/s).
 
 import type { OrbitElements } from "../core/types";
 import { wrapTo2Pi } from "../core/units";
@@ -20,7 +20,7 @@ export type RelativityParams = {
   grPrecession?: boolean;
   /** Apply Shapiro delay (gravitational time delay). */
   shapiro?: boolean;
-  /** Speed of light in sim units [length/sec]. */
+  /** Speed of light in SI units [m/s]. */
   c?: number;
   /** Planet apsidal precession per orbit [rad/orbit]. */
   planetPrecessionPerOrbit?: number;
@@ -30,7 +30,7 @@ export type RelativityParams = {
   ltteIters?: number;
   /** Convergence tolerance for LTTE [s]. */
   ltteTolSec?: number;
-  /** Optional minimum impact parameter used to regularize Shapiro delay [sim units]. */
+  /** Optional minimum impact parameter used to regularize Shapiro delay [m]. */
   shapiroMinImpact?: number;
 };
 
@@ -47,7 +47,7 @@ export type NormalizedRelativityParams = {
   shapiroMinImpact: number;
 };
 
-const DEFAULT_C = 299_792.458;
+const DEFAULT_C = 299_792_458;
 const DEFAULT_LTTE_ITERS = 2;
 const DEFAULT_LTTE_TOL_SEC = 1e-6;
 const DEFAULT_SHAPIRO_MIN_IMPACT = 0;

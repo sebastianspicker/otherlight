@@ -118,6 +118,8 @@ const ORBIT_PERIOD_MIN = 0.001;
 const ORBIT_PERIOD_MAX = 1e18;
 const OBLA_MAX = 0.95;
 const RING_INC_MAX_DEG = 90;
+const RADIUS_MIN = 1e3;
+const RADIUS_MAX = 1e12;
 
 function writeOrbitInputs(
   r: OrbitInputRefs,
@@ -602,7 +604,7 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
   r.relLTTE.checked = Boolean(rel?.ltte ?? true);
   r.relShapiro.checked = Boolean(rel?.shapiro ?? true);
   r.relGR.checked = Boolean(rel?.grPrecession ?? true);
-  writeNumberInput(r.relC, rel?.c ?? 299792.458);
+  writeNumberInput(r.relC, rel?.c ?? 299_792_458);
   writeNumberInput(
     r.relPlanetPrec,
     Number.isFinite(rel?.planetPrecessionPerOrbit ?? Number.NaN)
@@ -627,7 +629,7 @@ export function readUIIntoParams(
   setObserverDirFromUI(next, r);
 
   // STAR
-  next.star.r = sanitizePositive(readNumberInput(r.starR, next.star.r), 1e-6, 1e6);
+  next.star.r = sanitizePositive(readNumberInput(r.starR, next.star.r), RADIUS_MIN, RADIUS_MAX);
 
   const ph = ensurePhotometry(next) as any;
 
@@ -693,7 +695,7 @@ export function readUIIntoParams(
   }
 
   // PLANET
-  next.planet.r = sanitizePositive(readNumberInput(r.planetR, next.planet.r), 0.001, 1e6);
+  next.planet.r = sanitizePositive(readNumberInput(r.planetR, next.planet.r), RADIUS_MIN, RADIUS_MAX);
 
   if (typeof (next.planet as any).orbit === "function") {
     throw new Error("UI does not support a function-valued planet.orbit (OrbitElementsProvider).");
@@ -842,9 +844,9 @@ export function readUIIntoParams(
       } else {
         // Hard fallback if scenario has no moon block.
         next.moon = {
-          r: 1,
+          r: 1e6,
           m: 0,
-          orbitAroundPlanet: { a: 10, e: 0, inc: 0, Omega: 0, omega: 0, period: 1000, t0: 0 },
+          orbitAroundPlanet: { a: 1e8, e: 0, inc: 0, Omega: 0, omega: 0, period: 1e5, t0: 0 },
         } as any;
       }
     }
@@ -855,7 +857,7 @@ export function readUIIntoParams(
       );
     }
 
-    next.moon!.r = sanitizePositive(readNumberInput(r.moonR, next.moon!.r), 0.001, 1e6);
+    next.moon!.r = sanitizePositive(readNumberInput(r.moonR, next.moon!.r), RADIUS_MIN, RADIUS_MAX);
 
     const mOrbit = next.moon!.orbitAroundPlanet as any;
     readOrbitInputs({ a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod }, mOrbit);
@@ -1071,7 +1073,7 @@ export function readUIIntoParams(
       shapiro: readCheckbox(r.relShapiro),
       grPrecession: readCheckbox(r.relGR),
       c: sanitizePositive(
-        readNumberInput(r.relC, (next.dynamics as any).relativity?.c ?? 299792.458),
+        readNumberInput(r.relC, (next.dynamics as any).relativity?.c ?? 299_792_458),
         1e-9,
         1e30,
       ),

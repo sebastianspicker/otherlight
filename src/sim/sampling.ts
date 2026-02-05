@@ -3,7 +3,7 @@
 // Orbit sampling helpers for visualization (sky-plane paths).
 //
 // Conventions (project-wide):
-// - Time in seconds, angles in radians, lengths in simulation units.
+// - Time in seconds, angles in radians, lengths in meters (SI).
 // - `observer.dir` points from the star toward the observer.
 // - `projectToSky(r, observerDir)` projects inertial position r into sky plane coordinates.
 

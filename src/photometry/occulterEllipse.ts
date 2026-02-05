@@ -25,9 +25,9 @@ export type RingOcculter = {
   kind: "ring";
   dx: number;
   dy: number;
-  /** Inner ring radius in the body plane (simulation units). */
+  /** Inner ring radius in the body plane [m]. */
   rInner: number;
-  /** Outer ring radius in the body plane (simulation units). */
+  /** Outer ring radius in the body plane [m]. */
   rOuter: number;
   /** Ring tilt away from face-on [rad], 0 = face-on, pi/2 = edge-on. */
   inc?: number;

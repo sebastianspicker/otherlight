@@ -10,8 +10,8 @@
 // - Positions/velocities are inertial (barycentric) unless noted otherwise.
 //
 // Units
-// - Project uses arbitrary but self-consistent simulation units.
-// - Gravitational parameters must be provided as mu = G*M with units (L^3 / T^2).
+// - Project uses SI units (meters, kilograms, seconds).
+// - Gravitational parameters must be provided as mu = G*M with units (m^3 / s^2).
 //
 // Numerical method
 // - Velocity-Verlet (Kick–Drift–Kick / Leapfrog) integrator.
@@ -21,6 +21,7 @@
 //   1/|r|^3 -> 1/(|r|^2 + eps^2)^(3/2)
 
 import type { Vec3 } from "../../physics/vec3";
+import { G_SI } from "../../core/units";
 import { VEC3ZERO, vAdd, vAddScaled, vIsFinite, vLen, vLenSq, vScale, vSub } from "../../physics/vec3";
 
 export type NBodyPerturberState = {
@@ -575,6 +576,9 @@ export type NBodyPlanetMoonParamsLike = {
   muStar?: number;
   muPlanet?: number;
   muMoon?: number;
+  mStar?: number;
+  mPlanet?: number;
+  mMoon?: number;
   dtMax?: number;
   softening?: number;
   throwOnOverlap?: boolean;
@@ -593,9 +597,21 @@ function isFinitePositiveNumber(x: unknown): x is number {
  *   - onInvalid="throw": throw a clear configuration error (recommended for strict builds)
  *   - onInvalid="disable": return null (fail-open UI)
  */
+function resolveMuFromInputs(params: { mu?: unknown; m?: unknown; G: number }): number | null {
+  const { mu, m, G } = params;
+  if (isFinitePositiveNumber(mu)) return mu;
+  if (isFinitePositiveNumber(m)) return G * m;
+  return null;
+}
+
 export function resolveEnabledNBodyPlanetMoonConfig(
   cfg: NBodyPlanetMoonParamsLike | undefined,
-  opts?: { onInvalid?: "throw" | "disable"; defaultDtMaxAbs?: number },
+  opts?: {
+    onInvalid?: "throw" | "disable";
+    defaultDtMaxAbs?: number;
+    masses?: { star?: number; planet?: number; moon?: number };
+    G?: number;
+  },
 ): {
   muStar: number;
   muPlanet: number;
@@ -612,9 +628,16 @@ export function resolveEnabledNBodyPlanetMoonConfig(
     return null;
   };
 
-  if (!isFinitePositiveNumber(cfg.muStar)) return bad("muStar must be set and > 0.");
-  if (!isFinitePositiveNumber(cfg.muPlanet)) return bad("muPlanet must be set and > 0.");
-  if (!isFinitePositiveNumber(cfg.muMoon)) return bad("muMoon must be set and > 0.");
+  const G = isFinitePositiveNumber(opts?.G) ? (opts!.G as number) : G_SI;
+  if (!isFinitePositiveNumber(G)) return bad("G must be set and > 0.");
+
+  const muStar = resolveMuFromInputs({ mu: cfg.muStar, m: cfg.mStar ?? opts?.masses?.star, G });
+  const muPlanet = resolveMuFromInputs({ mu: cfg.muPlanet, m: cfg.mPlanet ?? opts?.masses?.planet, G });
+  const muMoon = resolveMuFromInputs({ mu: cfg.muMoon, m: cfg.mMoon ?? opts?.masses?.moon, G });
+
+  if (!isFinitePositiveNumber(muStar)) return bad("muStar or mStar must be set and > 0.");
+  if (!isFinitePositiveNumber(muPlanet)) return bad("muPlanet or mPlanet must be set and > 0.");
+  if (!isFinitePositiveNumber(muMoon)) return bad("muMoon or mMoon must be set and > 0.");
 
   const dtMaxAbsRaw = cfg.dtMax ?? opts?.defaultDtMaxAbs;
   if (!isFinitePositiveNumber(dtMaxAbsRaw)) return bad("dtMax must be set and > 0.");
@@ -624,9 +647,9 @@ export function resolveEnabledNBodyPlanetMoonConfig(
   const throwOnOverlap = Boolean(cfg.throwOnOverlap);
 
   return {
-    muStar: cfg.muStar,
-    muPlanet: cfg.muPlanet,
-    muMoon: cfg.muMoon,
+    muStar,
+    muPlanet,
+    muMoon,
     dtMaxAbs: dtMaxAbsRaw,
     softening,
     throwOnOverlap,

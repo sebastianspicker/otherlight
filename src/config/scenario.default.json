@@ -4,12 +4,13 @@
     "version": 1,
     "schema": "SystemParams+Controls/v1",
     "units": {
-      "length": "sim",
+      "length": "m",
       "time": "s",
-      "angles": "rad"
+      "angles": "rad",
+      "mass": "kg"
     },
     "notes": [
-      "defaults.* use internal units (angles in radians).",
+      "defaults.* use SI units (angles in radians).",
       "UI may expose degrees; use control.transform=degToRad / radToDeg accordingly.",
       "instrumentNoise is included under star.photometry because main.ts currently reads ph.instrumentNoise."
     ]
@@ -19,7 +20,8 @@
       "dir": { "x": 1, "y": 0, "z": 1 }
     },
     "star": {
-      "r": 55,
+      "r": 695700000,
+      "m": 1.98847e30,
       "photometry": {
         "cadenceSec": 60,
         "nSubsamples": 9,
@@ -93,28 +95,28 @@
       }
     },
     "planet": {
-      "r": 12,
-      "m": 0,
+      "r": 69911000,
+      "m": 1.89813e27,
       "orbit": {
-        "a": 230,
+        "a": 7479893535,
         "e": 0.08,
         "inc": 1.3962634015954636,
         "Omega": 0,
         "omega": 0,
-        "period": 18000,
+        "period": 352657.7453,
         "t0": 0
       }
     },
     "moon": {
-      "r": 4,
-      "m": 0,
+      "r": 6371000,
+      "m": 5.9722e24,
       "orbitAroundPlanet": {
-        "a": 32,
+        "a": 200000000,
         "e": 0.02,
         "inc": 0.17453292519943295,
         "Omega": 0,
         "omega": 0,
-        "period": 2200,
+        "period": 49928.74206,
         "t0": 0
       }
     },
@@ -130,10 +132,10 @@
       },
       "nbodyPlanetMoon": {
         "enabled": false,
-        "muStar": 1.5,
-        "muPlanet": 0.27,
-        "muMoon": 0.01,
-        "dtMax": 10,
+        "muStar": 1.3271645321e20,
+        "muPlanet": 1.2668689059e17,
+        "muMoon": 3.986025446e14,
+        "dtMax": 60,
         "softening": 0,
         "perturbers": []
       },
@@ -141,7 +143,7 @@
         "enabled": false,
         "ltte": true,
         "grPrecession": true,
-        "c": 299792.458,
+        "c": 299792458,
         "planetPrecessionPerOrbit": 0,
         "moonPrecessionPerOrbit": 0
       }
@@ -186,12 +188,12 @@
       {
         "id": "starR",
         "path": "star.r",
-        "ui": { "kind": "slider", "min": 10, "max": 200, "step": 1, "unit": "sim" },
+        "ui": { "kind": "slider", "min": 1e6, "max": 2e9, "step": 1e6, "unit": "m" },
         "override": {
           "enabled": true,
-          "min": 0.001,
-          "max": 1000000,
-          "step": 1
+          "min": 1e5,
+          "max": 1e12,
+          "step": 1e6
         }
       },
       {
@@ -232,23 +234,23 @@
       {
         "id": "planetR",
         "path": "planet.r",
-        "ui": { "kind": "slider", "min": 0.5, "max": 30, "step": 0.1, "unit": "sim" },
+        "ui": { "kind": "slider", "min": 1e6, "max": 2e8, "step": 1e6, "unit": "m" },
         "override": {
           "enabled": true,
-          "min": 0.001,
-          "max": 1000000,
-          "step": 0.1
+          "min": 1e5,
+          "max": 1e9,
+          "step": 1e6
         }
       },
       {
         "id": "planetA",
         "path": "planet.orbit.a",
-        "ui": { "kind": "slider", "min": 80, "max": 800, "step": 1, "unit": "sim" },
+        "ui": { "kind": "slider", "min": 1e8, "max": 1e12, "step": 1e7, "unit": "m" },
         "override": {
           "enabled": true,
-          "min": 0.001,
-          "max": 1000000000000,
-          "step": 1
+          "min": 1e7,
+          "max": 1e13,
+          "step": 1e7
         }
       },
       {
@@ -287,18 +289,18 @@
         "path": "planet.orbit.period",
         "ui": {
           "kind": "slider",
-          "min": 2000,
-          "max": 200000,
-          "step": 10,
+          "min": 10000,
+          "max": 10000000,
+          "step": 100,
           "unit": "s"
         },
-        "override": { "enabled": true, "min": 0.001, "max": 1e18, "step": 10 }
+        "override": { "enabled": true, "min": 1, "max": 1e9, "step": 100 }
       },
       {
         "id": "planetMass",
         "path": "planet.m",
-        "ui": { "kind": "slider", "min": 0, "max": 10, "step": 0.01, "unit": "arb" },
-        "override": { "enabled": true, "min": 0, "max": 1e30, "step": 0.01 }
+        "ui": { "kind": "slider", "min": 0, "max": 1e29, "step": 1e24, "unit": "kg" },
+        "override": { "enabled": true, "min": 0, "max": 1e31, "step": 1e24 }
       },
       {
         "id": "planetOmega",
@@ -349,23 +351,23 @@
       {
         "id": "moonR",
         "path": "moon.r",
-        "ui": { "kind": "slider", "min": 0.5, "max": 10, "step": 0.1, "unit": "sim" },
+        "ui": { "kind": "slider", "min": 1e5, "max": 5e7, "step": 1e5, "unit": "m" },
         "override": {
           "enabled": true,
-          "min": 0.001,
-          "max": 1000000,
-          "step": 0.1
+          "min": 1e4,
+          "max": 1e8,
+          "step": 1e5
         }
       },
       {
         "id": "moonA",
         "path": "moon.orbitAroundPlanet.a",
-        "ui": { "kind": "slider", "min": 10, "max": 100, "step": 0.5, "unit": "sim" },
+        "ui": { "kind": "slider", "min": 1e7, "max": 1e9, "step": 1e6, "unit": "m" },
         "override": {
           "enabled": true,
-          "min": 0.001,
-          "max": 1000000,
-          "step": 0.1
+          "min": 1e6,
+          "max": 1e11,
+          "step": 1e6
         }
       },
       {
@@ -408,8 +410,8 @@
       {
         "id": "moonMass",
         "path": "moon.m",
-        "ui": { "kind": "slider", "min": 0, "max": 5, "step": 0.01, "unit": "arb" },
-        "override": { "enabled": true, "min": 0, "max": 1e30, "step": 0.01 }
+        "ui": { "kind": "slider", "min": 0, "max": 1e27, "step": 1e23, "unit": "kg" },
+        "override": { "enabled": true, "min": 0, "max": 1e30, "step": 1e23 }
       },
       {
         "id": "moonOmega",
@@ -495,7 +497,7 @@
           "min": -0.1,
           "max": 0.1,
           "step": 0.001,
-          "unit": "sim/s"
+          "unit": "m/s"
         },
         "override": { "enabled": true, "min": -100, "max": 100, "step": 0.0001 }
       }

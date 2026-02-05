@@ -17,7 +17,7 @@ PART A. IMPLEMENTED MODEL (CURRENT CODE)
 
 1. Units and conventions
 
-- Length: arbitrary but internally consistent simulation units.
+- Length: meters (SI).
 - Time: seconds.
 - Angle: radians in physics; UI uses degrees then converts.
 - Flux: normalized to a baseline stellar flux near 1.0.

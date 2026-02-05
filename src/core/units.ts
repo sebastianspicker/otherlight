@@ -13,10 +13,80 @@
 // Conventions used across the simulation:
 // - Angles are radians unless explicitly stated.
 // - Time is seconds.
-// - Lengths are arbitrary "simulation units" (internally consistent).
+// - Lengths are meters (SI).
 
 export const DEG2RAD = Math.PI / 180;
 export const RAD2DEG = 180 / Math.PI;
+
+// ---------------------------------------------------------------------------
+// SI constants and conversions (centralized)
+// ---------------------------------------------------------------------------
+// References (values are standard, rounded where appropriate):
+// - G: CODATA 2018 recommended value.
+// - AU: IAU 2012 definition.
+// - Solar radius/mass: IAU 2015 nominal values (rounded).
+
+/** Gravitational constant G in m^3 kg^-1 s^-2 (CODATA 2018). */
+export const G_SI = 6.6743e-11;
+
+/** Astronomical Unit in meters (IAU 2012). */
+export const AU_M = 149_597_870_700;
+
+/** Julian day in seconds. */
+export const DAY_S = 86_400;
+
+/** Julian year in seconds (365.25 days). */
+export const JULIAN_YEAR_S = 365.25 * DAY_S;
+
+/** Nominal solar mass in kg (IAU 2015; rounded). */
+export const SOLAR_MASS_KG = 1.98847e30;
+
+/** Nominal solar radius in meters (IAU 2015; rounded). */
+export const SOLAR_RADIUS_M = 6.957e8;
+
+/** Nominal Earth mass in kg (rounded). */
+export const EARTH_MASS_KG = 5.9722e24;
+
+/** Nominal Earth radius in meters (rounded). */
+export const EARTH_RADIUS_M = 6.371e6;
+
+/** Nominal Jupiter mass in kg (rounded). */
+export const JUPITER_MASS_KG = 1.89813e27;
+
+/** Nominal Jupiter radius in meters (rounded). */
+export const JUPITER_RADIUS_M = 6.9911e7;
+
+export function auToM(au: number): number {
+  return au * AU_M;
+}
+
+export function mToAu(m: number): number {
+  return m / AU_M;
+}
+
+export function dayToSec(days: number): number {
+  return days * DAY_S;
+}
+
+export function secToDay(sec: number): number {
+  return sec / DAY_S;
+}
+
+export function yearToSec(years: number): number {
+  return years * JULIAN_YEAR_S;
+}
+
+export function secToYear(sec: number): number {
+  return sec / JULIAN_YEAR_S;
+}
+
+export function solarMassToKg(mSolar: number): number {
+  return mSolar * SOLAR_MASS_KG;
+}
+
+export function kgToSolarMass(kg: number): number {
+  return kg / SOLAR_MASS_KG;
+}
 
 // Canonical names (readable).
 export const TWO_PI = 2 * Math.PI;
