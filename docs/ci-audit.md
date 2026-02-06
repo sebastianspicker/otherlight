@@ -5,12 +5,12 @@ Scope: `.github/workflows/*.yml`
 
 ## Inventur (Trigger/Jobs/Permissions/Caches)
 
-| Workflow         | Trigger                                    | Jobs                  | Actions (pin)                      | Permissions                                                 | Cache                       |
-| ---------------- | ------------------------------------------ | --------------------- | ---------------------------------- | ----------------------------------------------------------- | --------------------------- |
-| CI               | `pull_request`, `push` on `main`           | `verify` (Node 20/22) | checkout v4.3.1, setup-node v4.4.0 | `contents: read`                                            | pnpm store via `setup-node` |
-| Security         | `pull_request`, `push` on `main`           | `gitleaks`            | checkout v4.3.1, gitleaks v2.3.9   | `contents: read`                                            | none                        |
-| CodeQL           | `pull_request`, `push` on `main`, schedule | `analyze`             | checkout v4.3.1, codeql v3.32.1    | `actions: read`, `contents: read`, `security-events: write` | none                        |
-| Dependency Audit | schedule, `workflow_dispatch`              | `audit`               | checkout v4.3.1, setup-node v4.4.0 | `contents: read`                                            | pnpm store via `setup-node` |
+| Workflow         | Trigger                                    | Jobs                  | Actions (pin)                                    | Permissions                                                 | Cache                          |
+| ---------------- | ------------------------------------------ | --------------------- | ------------------------------------------------ | ----------------------------------------------------------- | ------------------------------ |
+| CI               | `pull_request`, `push` on `main`           | `verify` (Node 20/22) | checkout v4.3.1, setup-node v4.4.0, cache v4.2.4 | `contents: read`                                            | pnpm store via `actions/cache` |
+| Security         | `pull_request`, `push` on `main`           | `gitleaks`            | checkout v4.3.1, gitleaks v2.3.9                 | `contents: read`                                            | none                           |
+| CodeQL           | `pull_request`, `push` on `main`, schedule | `analyze`             | checkout v4.3.1, codeql v3.32.1                  | `actions: read`, `contents: read`, `security-events: write` | none                           |
+| Dependency Audit | schedule, `workflow_dispatch`              | `audit`               | checkout v4.3.1, setup-node v4.4.0, cache v4.2.4 | `contents: read`                                            | pnpm store via `actions/cache` |
 
 ## Letzte fehlgeschlagene Runs
 

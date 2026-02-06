@@ -10,7 +10,7 @@
   - Trigger: `pull_request`, `push` auf `main`
   - Jobs: `verify` (Node 20/22)
   - Schritte: install (frozen lockfile) -> `pnpm verify-production-ready`
-  - Cache: pnpm store via `actions/setup-node`
+  - Cache: pnpm store via `actions/cache` (`~/.pnpm-store`)
 
 - `Security` (`.github/workflows/security.yml`)
   - Trigger: `pull_request`, `push` auf `main`
