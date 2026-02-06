@@ -6,7 +6,7 @@ on:
     branches: ["main"]
 
 concurrency:
-  group: security-${{ github.ref }}
+  group: security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -15,7 +15,8 @@ permissions:
 jobs:
   gitleaks:
     name: gitleaks (secret scan)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:

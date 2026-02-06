@@ -1,32 +1,28 @@
-name: CI
+name: Dependency Audit
 
 on:
-  pull_request:
-  push:
-    branches: ["main"]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: dependency-audit-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: verify (node ${{ matrix.node }})
+  audit:
+    name: pnpm audit (high/critical)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [20, 22]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -38,5 +34,5 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Verify production-ready
-        run: pnpm verify-production-ready
+      - name: Dependency audit (high/critical)
+        run: pnpm audit --audit-level=high
