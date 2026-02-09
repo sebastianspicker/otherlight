@@ -66,13 +66,24 @@ function normalizeOrbitKey(el: OrbitElements): string {
     .join(",");
 }
 
+/** Stringify with sorted keys so cache key is deterministic across engines and refactors. */
+function stringifyDeterministic(obj: unknown): string {
+  if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
+  if (Array.isArray(obj)) return "[" + obj.map(stringifyDeterministic).join(",") + "]";
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  const parts = keys.map(
+    (k) => JSON.stringify(k) + ":" + stringifyDeterministic((obj as Record<string, unknown>)[k]),
+  );
+  return "{" + parts.join(",") + "}";
+}
+
 function makeCacheKey(
   cfg: ResolvedNBodyConfig,
   planetEl: OrbitElements,
   moonEl: OrbitElements,
   perturbers: PerturberResolved[],
 ): string {
-  return JSON.stringify({
+  return stringifyDeterministic({
     cfg: {
       muStar: cfg.muStar,
       muPlanet: cfg.muPlanet,

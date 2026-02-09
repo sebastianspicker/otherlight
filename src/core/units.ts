@@ -102,11 +102,12 @@ export const ECC_MAX = 0.999;
 
 /**
  * Clamp value into [min,max]. Robust even if min/max are swapped.
- * If x is NaN, returns NaN (propagates via Math.min/Math.max).
+ * If x is not finite (NaN/±Inf), returns the midpoint of [min,max] to avoid propagating non-finite values.
  */
 export function clamp(x: number, a: number, b: number): number {
   const min = Math.min(a, b);
   const max = Math.max(a, b);
+  if (!Number.isFinite(x)) return (min + max) / 2;
   return Math.max(min, Math.min(max, x));
 }
 

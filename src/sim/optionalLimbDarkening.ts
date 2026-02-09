@@ -96,6 +96,8 @@ export async function preloadOptionalLimbDarkening(): Promise<void> {
 /**
  * Fire-and-forget background loading if LD is configured but prepareSimulation() wasn't awaited.
  * This is safe: it never throws and does not block stepSystem().
+ * Note: The first frame after prepareSimulation() resolves will use LD if loaded; call await prepareSimulation()
+ * before starting the animation loop to ensure the first frame has LD when configured.
  */
 export function kickoffOptionalLimbDarkeningIfRequested(params: SystemParams): void {
   const ldModel = params.star?.photometry?.limbDarkeningModel;

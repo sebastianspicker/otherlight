@@ -78,7 +78,7 @@ function parseQuadraticBands(text: string): Record<string, LimbDarkeningLawQuadr
 
     const coeffs = parts[1]
       .trim()
-      .split(/[,\\s]+/)
+      .split(/[,\s]+/)
       .map((v) => Number(v))
       .filter((v) => Number.isFinite(v));
 
@@ -1079,12 +1079,18 @@ export function readUIIntoParams(
       ),
       planetPrecessionPerOrbit:
         sanitizeFinite(
-          readNumberInput(r.relPlanetPrec, (next.dynamics as any).relativity?.planetPrecessionPerOrbit ?? 0),
+          readNumberInput(
+            r.relPlanetPrec,
+            ((next.dynamics as any).relativity?.planetPrecessionPerOrbit ?? 0) * RAD2DEG,
+          ),
           0,
         ) * DEG2RAD,
       moonPrecessionPerOrbit:
         sanitizeFinite(
-          readNumberInput(r.relMoonPrec, (next.dynamics as any).relativity?.moonPrecessionPerOrbit ?? 0),
+          readNumberInput(
+            r.relMoonPrec,
+            ((next.dynamics as any).relativity?.moonPrecessionPerOrbit ?? 0) * RAD2DEG,
+          ),
           0,
         ) * DEG2RAD,
     } as any;
@@ -1128,7 +1134,7 @@ export function readUIIntoParams(
       ),
     } as any;
   } else if (next.dynamics && (next.dynamics as any).exomoonTimingShape) {
-    (next.dynamics as any).exomoonTimingShape.enabled = false;
+    delete (next.dynamics as any).exomoonTimingShape;
   }
 
   return next;
