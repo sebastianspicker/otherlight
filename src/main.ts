@@ -152,7 +152,9 @@ function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
 function syncSliderMirrorsFromInputs(): void {
   // loadParamsIntoUI() sets input values directly, which won't trigger the slider mirroring listeners.
   // Dispatch `input` so range inputs stay in sync with the number inputs.
-  const nums = Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
+  const root = document.getElementById("paramForm") ?? document.getElementById("main");
+  if (!root) return;
+  const nums = Array.from(root.querySelectorAll("input[type='number']")) as HTMLInputElement[];
   for (const num of nums) {
     num.dispatchEvent(new Event("input", { bubbles: true }));
   }

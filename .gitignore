@@ -26,6 +26,7 @@ yarn-error.log*
 # IDE
 .idea/
 .vscode/
+.cursor/
 
 # docs (local findings/logs/decisions)
 DECISIONS.md
