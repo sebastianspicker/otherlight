@@ -108,8 +108,9 @@ export function applyApsidalPrecession(
 }
 
 /**
- * Light-time delay relative to the star for a position r.
- * Returns the signed delay [s] as dot(r, observerDir) / c.
+ * One-way light travel time from position r to the observer (at infinity in direction observerDir).
+ * Returns travel time [s] = dot(r, observerDir) / c when r is the body position (star at origin).
+ * So t_emit = t_obs - lightTimeDelaySec(...) gives the retarded/emission time.
  */
 export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number {
   if (!vIsFinite(r) || !vIsFinite(observerDir)) return 0;
@@ -160,7 +161,7 @@ export function shapiroDelaySec(params: {
 
 /**
  * Solve for retarded/emission time using a fixed-point iteration:
- * t_emit = t_obs + totalDelay(r(t_emit)).
+ * t_obs = t_emit + (light travel time from r(t_emit) to observer), so t_emit = t_obs - totalDelay(r(t_emit)).
  */
 export function solveLightTimeCorrectedTime(params: {
   tObs: number;
@@ -196,7 +197,7 @@ export function solveLightTimeCorrectedTime(params: {
     const delay = roemer + shapiro;
     if (!Number.isFinite(delay)) break;
 
-    const next = tObs + delay;
+    const next = tObs - delay;
     if (!Number.isFinite(next)) break;
     if (Math.abs(next - tEmit) <= tolSec) {
       tEmit = next;

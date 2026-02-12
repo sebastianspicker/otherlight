@@ -19,7 +19,7 @@
 
 import "./style.css";
 
-import type { SystemParams } from "./core/types";
+import type { StepResult, SystemParams } from "./core/types";
 
 import { clamp, toFiniteNumber } from "./core/units";
 import { setText } from "./core/dom";
@@ -110,6 +110,8 @@ let last = performance.now();
 let lastPlottedT = Number.NaN;
 let lastPlotMode: string | null = null;
 let lastFluxForPlot = 1;
+/** Last successful step; used as fallback when stepSystem throws (e.g. N-body maxSteps). */
+let lastStepCenter: StepResult | null = null;
 
 function setRunning(next: boolean): void {
   running = next;
@@ -244,45 +246,74 @@ function frame(now: number): void {
 
   if (running) t += dtSim;
 
-  // Geometry + "physical" flux at center time
-  const stepCenter = stepSystem(params, t);
-  const fluxPhysical = stepCenter.fluxTotal;
-
   const plotMode = readPlotModeFromDOM();
 
+  let stepCenter: StepResult;
+  try {
+    stepCenter = stepSystem(params, t);
+    lastStepCenter = stepCenter;
+    if (warnVal) warnVal.textContent = uiWarningText(params) ?? "";
+  } catch (e) {
+    if (running) t -= dtSim;
+    setRunning(false);
+    if (warnVal) warnVal.textContent = e instanceof Error ? e.message : String(e);
+    stepCenter =
+      lastStepCenter ??
+      ({
+        fluxTotal: 1,
+        planetSky: { x: 0, y: 0, z: 0 },
+        meta: { t },
+      } as StepResult);
+  }
+
+  const fluxPhysical = stepCenter.fluxTotal;
   const shouldSample = !Number.isFinite(lastPlottedT) || t !== lastPlottedT || plotMode !== lastPlotMode;
 
   // "measured": smear then instrument noise (persistent state)
   let fluxForPlot = lastFluxForPlot;
 
-  if (shouldSample) {
-    if (plotMode === "measured") {
-      const ph = params.star.photometry as any;
+  if (shouldSample && lastStepCenter !== null) {
+    try {
+      if (plotMode === "measured") {
+        const ph = params.star.photometry as any;
 
-      const smearOn = (ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1;
+        const smearOn = (ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1;
 
-      const fluxSmeared = smearOn
-        ? smearedFluxAt((ti) => stepSystem(params, ti).fluxTotal, t, {
-            cadenceSec: ph?.cadenceSec,
-            nSubsamples: ph?.nSubsamples,
-            clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
-            maxSubsamples: 512,
-          })
-        : fluxPhysical;
+        const fluxSmeared = smearOn
+          ? smearedFluxAt((ti) => stepSystem(params, ti).fluxTotal, t, {
+              cadenceSec: ph?.cadenceSec,
+              nSubsamples: ph?.nSubsamples,
+              clamp01: readClampSmearedFluxFromDOM(), // user-controlled; can distort additive phase curves if enabled
+              maxSubsamples: 512,
+            })
+          : fluxPhysical;
 
-      const noiseCfg = getInstrumentCfgFromPhotometry(ph);
+        const noiseCfg = getInstrumentCfgFromPhotometry(ph);
 
-      fluxForPlot = applyInstrumentNoiseAndSystematics({
-        flux: fluxSmeared,
-        tSec: t,
-        dtSec: dtSim,
-        cfg: noiseCfg,
-        state: noise.noiseState,
-      });
-    } else {
+        fluxForPlot = applyInstrumentNoiseAndSystematics({
+          flux: fluxSmeared,
+          tSec: t,
+          dtSec: dtSim,
+          cfg: noiseCfg,
+          state: noise.noiseState,
+        });
+      } else {
+        fluxForPlot = fluxPhysical;
+      }
+
+      plot.push(fluxForPlot);
+      lastPlottedT = t;
+      lastPlotMode = plotMode;
+      lastFluxForPlot = fluxForPlot;
+    } catch {
       fluxForPlot = fluxPhysical;
+      plot.push(fluxForPlot);
+      lastPlottedT = t;
+      lastPlotMode = plotMode;
+      lastFluxForPlot = fluxForPlot;
     }
-
+  } else if (shouldSample && lastStepCenter === null) {
+    fluxForPlot = fluxPhysical;
     plot.push(fluxForPlot);
     lastPlottedT = t;
     lastPlotMode = plotMode;
@@ -290,7 +321,6 @@ function frame(now: number): void {
   }
 
   // Renderer should be read-only; pass the simulation step result.
-  // (If your renderer still expects legacy 'step.flux', you can add an alias here.)
   renderer.drawFrame(params, stepCenter as any, t);
 
   plot.draw();
@@ -311,9 +341,6 @@ function frame(now: number): void {
     const vm = (stepCenter as any).meta?.moonVisibleFraction;
     vMoonVal.textContent = typeof vm === "number" && Number.isFinite(vm) ? vm.toFixed(3) : "";
   }
-
-  const warnMsg = uiWarningText(params);
-  if (warnVal) warnVal.textContent = warnMsg ?? "";
 
   requestAnimationFrame(frame);
 }
