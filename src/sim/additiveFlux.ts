@@ -77,7 +77,7 @@ export function computeAdditiveFluxComponents(
   const orbit = kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
 
   // Phase / self-reflected light terms (additive).
-  // Planet phase is always computed.
+  // Planet phase is always computed (uses planet orbit period for thermal inertia / phase).
   let fluxPlanetOnly = bodyPhaseFlux({
     rBody: kin.rPlanetAbs,
     rBodyRadius: params.planet.r,
@@ -88,15 +88,16 @@ export function computeAdditiveFluxComponents(
     dayNightVisibility: phot?.dayNightVisibility,
   });
 
-  // Moon phase is optional.
+  // Moon phase is optional. Use the moon's orbit period (around planet), not the planet's, for correct thermal/phase timescale.
   let fluxMoonOnly = 0;
   if (params.moon && kin.rMoonAbs) {
+    const moonOrbitEl = resolveOrbitElements(params.moon.orbitAroundPlanet, t, "moon.orbitAroundPlanet");
     fluxMoonOnly = bodyPhaseFlux({
       rBody: kin.rMoonAbs,
       rBodyRadius: params.moon.r,
       rStarRadius: starRadius,
       observerDir,
-      orbitPeriodSec: orbit.period,
+      orbitPeriodSec: moonOrbitEl.period,
       model: phot?.moonPhaseCurve,
       dayNightVisibility: phot?.dayNightVisibility,
     });
