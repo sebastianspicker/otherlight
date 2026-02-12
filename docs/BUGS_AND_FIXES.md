@@ -388,25 +388,25 @@ List derived from documentation, known limitations, operations runbook, and code
 
 ## Quick reference: common failure causes
 
-| Symptom | Typical cause | Fix / see |
-|--------|----------------|-----------|
-| CI red: “pnpm not found” / cache | pnpm not in PATH before cache step | Use Corepack + explicit store + `actions/cache` (see `ci.yml`) |
-| Dependency audit not run on PR | By design (determinism) | Scheduled / manual only; `CI_AUDIT=1 ./scripts/ci-local.sh` locally |
-| pnpm missing locally | pnpm not installed | Install pnpm 9.x; `corepack enable` if using Corepack |
-| Vite fails to start | Corrupt or inconsistent `node_modules` | `rm -rf node_modules` then `pnpm install --frozen-lockfile` |
-| N-body GR/precession “wrong” | Overrides ignored in N-body | Expected; N-body uses star-centric 1PN only (`docs/physics/relativity.md`) |
-| Shapiro/timing accuracy | Point-mass, star-at-origin only | Known limitation; see README and `docs/physics/relativity.md` |
-| Limb darkening has no effect | Loader/module export mismatch; LD path never used | Fix optional LD loader and `transitLimbDarkened` export (Critical #9) |
-| Reset/Apply/Preset crashes app | `stepSystem()` throws in `resetSimTimeAndLC()` | Add try/catch in `resetSimTimeAndLC()` (Critical #11) |
-| Oblateness “off” but value set; Apply removes shape | Checkbox reads wrong property | Fix oblateness property name in `params.ts` (Critical #10) |
-| Faculae don’t brighten star | Spot factor clamped to [0,1] | Allow factor &gt; 1 for bright patches (Critical #6) |
-| NaN/Inf become “plausible” numbers | `clamp()` midpoint for non-finite | Change clamp policy or add `clampFinite()` (Critical #7) |
-| N-body maxSteps / overlap error | Non-finite r² or near-overlap | Check initial conditions, dtMax, softening; handle non-finite r² explicitly (Critical #12) |
-| LTTE timing direction wrong | Sign vs observerDir convention | Reconcile and document in relativity docs (Critical #8) |
-| Perturber enabled but step throws | mu=0 allowed in UI | Require mu&gt;0 when enabling perturber (High #24) |
-| Override ranges not reachable | Incl/ecc always clamped | Honor override min/max in sanitizers (High #23) |
-| Empty number input → 0 | `Number("") === 0`; fallback ignored | Treat empty as “use fallback” or show validation (High: inputs) |
-| Diagnostics disagree with plot | Diagnostics omit LTTE/GR/drift | Reuse kinematics or document approximate (High #25) |
+| Symptom                                             | Typical cause                                     | Fix / see                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| CI red: “pnpm not found” / cache                    | pnpm not in PATH before cache step                | Use Corepack + explicit store + `actions/cache` (see `ci.yml`)                             |
+| Dependency audit not run on PR                      | By design (determinism)                           | Scheduled / manual only; `CI_AUDIT=1 ./scripts/ci-local.sh` locally                        |
+| pnpm missing locally                                | pnpm not installed                                | Install pnpm 9.x; `corepack enable` if using Corepack                                      |
+| Vite fails to start                                 | Corrupt or inconsistent `node_modules`            | `rm -rf node_modules` then `pnpm install --frozen-lockfile`                                |
+| N-body GR/precession “wrong”                        | Overrides ignored in N-body                       | Expected; N-body uses star-centric 1PN only (`docs/physics/relativity.md`)                 |
+| Shapiro/timing accuracy                             | Point-mass, star-at-origin only                   | Known limitation; see README and `docs/physics/relativity.md`                              |
+| Limb darkening has no effect                        | Loader/module export mismatch; LD path never used | Fix optional LD loader and `transitLimbDarkened` export (Critical #9)                      |
+| Reset/Apply/Preset crashes app                      | `stepSystem()` throws in `resetSimTimeAndLC()`    | Add try/catch in `resetSimTimeAndLC()` (Critical #11)                                      |
+| Oblateness “off” but value set; Apply removes shape | Checkbox reads wrong property                     | Fix oblateness property name in `params.ts` (Critical #10)                                 |
+| Faculae don’t brighten star                         | Spot factor clamped to [0,1]                      | Allow factor &gt; 1 for bright patches (Critical #6)                                       |
+| NaN/Inf become “plausible” numbers                  | `clamp()` midpoint for non-finite                 | Change clamp policy or add `clampFinite()` (Critical #7)                                   |
+| N-body maxSteps / overlap error                     | Non-finite r² or near-overlap                     | Check initial conditions, dtMax, softening; handle non-finite r² explicitly (Critical #12) |
+| LTTE timing direction wrong                         | Sign vs observerDir convention                    | Reconcile and document in relativity docs (Critical #8)                                    |
+| Perturber enabled but step throws                   | mu=0 allowed in UI                                | Require mu&gt;0 when enabling perturber (High #24)                                         |
+| Override ranges not reachable                       | Incl/ecc always clamped                           | Honor override min/max in sanitizers (High #23)                                            |
+| Empty number input → 0                              | `Number("") === 0`; fallback ignored              | Treat empty as “use fallback” or show validation (High: inputs)                            |
+| Diagnostics disagree with plot                      | Diagnostics omit LTTE/GR/drift                    | Reuse kinematics or document approximate (High #25)                                        |
 
 ---
 
