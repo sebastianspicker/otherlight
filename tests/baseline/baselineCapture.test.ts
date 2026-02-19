@@ -5,10 +5,10 @@ import type { SystemParams } from "../../src/core/types";
 import { PRESETS } from "../../src/app/presets";
 import { stepSystem } from "../../src/sim/sim";
 import { computeBodyKinematics } from "../../src/sim/kinematics";
-import { getObserverDir } from "../../src/sim/observer";
+import { getObserverDir } from "../../src/sim/observerContract";
 import { getNBodyStateAt } from "../../src/sim/dynamics";
 import { G_SI } from "../../src/core/units";
-import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/experimental/physics/nbody";
+import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/sim/nbody/config";
 import { vLenSq, vSub } from "../../src/physics/vec3";
 
 type BaselineSample = {

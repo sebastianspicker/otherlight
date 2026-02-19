@@ -17,18 +17,25 @@
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "install:ci": "pnpm install --frozen-lockfile",
-    "verify-production-ready": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "turbo": "pnpm verify-production-ready"
+    "ci:lint": "pnpm lint",
+    "ci:typecheck": "pnpm typecheck",
+    "ci:test": "pnpm test",
+    "ci:build": "pnpm build",
+    "ci:verify": "pnpm ci:lint && pnpm ci:typecheck && pnpm ci:test && pnpm ci:build",
+    "audit:security": "pnpm audit --audit-level=high --prod",
+    "audit:deps": "pnpm dlx depcheck",
+    "audit:deadcode": "bash ./scripts/audit-dead-code.sh",
+    "audit:full": "pnpm audit:security && pnpm audit:deps && pnpm audit:deadcode"
   },
   "devDependencies": {
-    "@eslint/js": "^9.19.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.1",
-    "eslint": "^9.19.0",
+    "eslint": "^10.0.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.4.2",
-    "typescript-eslint": "^8.22.0",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0",
-    "vitest": "^2.1.8"
+    "typescript-eslint": "^8.56.0",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   }
 }

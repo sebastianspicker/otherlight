@@ -1,6 +1,6 @@
 # Contributing
 
-## Development
+## Development setup
 
 Prerequisites:
 
@@ -13,23 +13,29 @@ Install:
 pnpm install --frozen-lockfile
 ```
 
-Run:
+Run locally:
 
 ```bash
 pnpm dev
 ```
 
-## Quality gates
+## Required quality gate
 
-Before opening a PR, run:
+Before opening a pull request, run:
 
 ```bash
-pnpm verify-production-ready
+pnpm ci:verify
 ```
 
-## Commit messages
+For dependency security validation (optional locally, mandatory in scheduled CI):
 
-Prefer Conventional Commits-style prefixes:
+```bash
+pnpm audit:security
+```
+
+## Commit message style
+
+Prefer Conventional Commits prefixes:
 
 - `feat: ...`
 - `fix: ...`
@@ -38,8 +44,8 @@ Prefer Conventional Commits-style prefixes:
 - `refactor: ...`
 - `chore: ...`
 
-For physics changes, include:
+For physics-facing changes, include in your PR description:
 
-- the model/assumption (what is being approximated),
-- the invariants/tests used to validate it,
-- any parameter/unit implications.
+- the model/assumption changed,
+- the invariants/tests used for validation,
+- parameter or unit implications.

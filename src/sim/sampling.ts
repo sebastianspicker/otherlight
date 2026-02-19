@@ -9,14 +9,12 @@
 
 import type { OrbitElements, OrbitElementsProvider, SystemParams } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
-import { vAdd, vNormalizeOrThrow } from "../physics/vec3";
+import { vNormalizeOrThrow } from "../physics/vec3";
 import { projectToSky } from "../physics/frames";
-import { trySplitBarycentricPair } from "../physics/barycenter";
-import { applyOrientationEvolution } from "../physics/exomoonTiming";
 import { toFiniteNumber } from "../core/units";
-import { getObserverDir } from "./observer";
+import { getObserverDir } from "./observerContract";
 import { posFromElements, resolveOrbitElements } from "./orbits";
-import { computeMoonSkyDriftY, getExomoonConfig } from "./kinematics";
+import { getMoonStateAt } from "./kinematics";
 
 export type OrbitSampleOptions = {
   /**
@@ -76,10 +74,6 @@ export function sampleMoonOrbitSkyAbsolute(
     throw new Error("sampleMoonOrbitSkyAbsolute: moon.orbitAroundPlanet.period must be > 0.");
   }
 
-  const exo = getExomoonConfig(params);
-  const exoEnabled = Boolean(exo?.enabled);
-  const tRef = toFiniteNumber(exo?.tRef, 0);
-
   const includeEndpoint = Boolean(opts.includeEndpoint);
   const denom = includeEndpoint ? Math.max(1, N - 1) : N;
 
@@ -90,37 +84,8 @@ export function sampleMoonOrbitSkyAbsolute(
     // rBary is interpreted consistently with the main sim: it may represent a barycenter orbit
     // if planet+moon masses are provided and the sim chooses to split around rBary.
     const rBary = posFromElements(params.planet.orbit, tt, "planet.orbit");
-
-    const moonOrbitBaseEl = resolveOrbitElements(params.moon.orbitAroundPlanet, tt, "moon.orbitAroundPlanet");
-    const moonOrbitEvolvedEl: OrbitElements = exoEnabled
-      ? applyOrientationEvolution(moonOrbitBaseEl, tt, {
-          enabled: true,
-          tRef,
-          OmegaDot: exo?.moonOmegaDot,
-          incDot: exo?.moonIncDot,
-          omegaDot: exo?.moonOmegaSmallDot,
-          Omega0: exo?.moonOmega0,
-          inc0: exo?.moonInc0,
-          omega0: exo?.moonOmegaSmall0,
-          wrapAngles: "2pi",
-          clampInc01Pi: true,
-        })
-      : moonOrbitBaseEl;
-
-    const rMoonRel = posFromElements(moonOrbitEvolvedEl, tt, "moon.orbitAroundPlanet");
-
-    const split = trySplitBarycentricPair({
-      rBary,
-      rRel: rMoonRel, // vector from planet to moon
-      mPrimary: params.planet.m,
-      mSecondary: params.moon.m,
-    });
-
-    const rMoonAbs = split ? split.rSecondary : vAdd(rBary, rMoonRel);
-    const sky = projectToSky(rMoonAbs, observerDir);
-
-    const driftY = computeMoonSkyDriftY(exo, tt);
-    pts.push(driftY !== 0 ? { x: sky.x, y: sky.y + driftY, z: sky.z } : sky);
+    const moonState = getMoonStateAt(params, tt, observerDir, rBary);
+    pts.push(moonState?.moonSky ?? projectToSky(rBary, observerDir));
   }
 
   return pts;

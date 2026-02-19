@@ -43,7 +43,7 @@ pnpm test
 ## Full Loop (CI parity)
 
 ```bash
-pnpm verify-production-ready
+pnpm ci:verify
 ```
 
 ## Lint / Format
@@ -81,7 +81,7 @@ CI runs baseline security checks (secret scan, SAST, SCA). Local equivalents are
 Dependency scan (SCA):
 
 ```bash
-pnpm audit --audit-level=high
+pnpm audit --audit-level=high --prod
 ```
 
 Notes:

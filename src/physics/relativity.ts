@@ -109,7 +109,7 @@ export function applyApsidalPrecession(
 
 /**
  * One-way light travel time from position r to the observer (at infinity in direction observerDir).
- * Returns travel time [s] = dot(r, observerDir) / c when r is the body position (star at origin).
+ * Returns travel time [s] = -dot(r, observerDir) / c when r is the body position (star at origin).
  * So t_emit = t_obs - lightTimeDelaySec(...) gives the retarded/emission time.
  */
 export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number {
@@ -120,7 +120,7 @@ export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number
   if (!vIsFinite(dir)) return 0;
 
   const z = vDot(r, dir);
-  return Number.isFinite(z) ? z / c : 0;
+  return Number.isFinite(z) ? -z / c : 0;
 }
 
 /**
@@ -160,6 +160,34 @@ export function shapiroDelaySec(params: {
 }
 
 /**
+ * Approximate multi-body Shapiro delay as a sum of point-mass terms.
+ * This is still a weak-field approximation but captures first-order contributions
+ * from multiple gravitating centers.
+ */
+export function shapiroDelayMultiBodySec(params: {
+  rBody: Vec3;
+  observerDir: Vec3;
+  masses: Array<{ mu: number; r: Vec3 }>;
+  c: number;
+  minImpact?: number;
+}): number {
+  if (!Array.isArray(params.masses) || params.masses.length === 0) return 0;
+  let sum = 0;
+  for (const m of params.masses) {
+    if (!m || !vIsFinite(m.r)) continue;
+    const d = shapiroDelaySec({
+      r: { x: params.rBody.x - m.r.x, y: params.rBody.y - m.r.y, z: params.rBody.z - m.r.z },
+      observerDir: params.observerDir,
+      mu: m.mu,
+      c: params.c,
+      minImpact: params.minImpact,
+    });
+    if (Number.isFinite(d)) sum += d;
+  }
+  return Number.isFinite(sum) ? sum : 0;
+}
+
+/**
  * Solve for retarded/emission time using a fixed-point iteration:
  * t_obs = t_emit + (light travel time from r(t_emit) to observer), so t_emit = t_obs - totalDelay(r(t_emit)).
  */
@@ -168,7 +196,12 @@ export function solveLightTimeCorrectedTime(params: {
   rAtTime: (t: number) => Vec3;
   observerDir: Vec3;
   c: number;
-  shapiro?: { enabled: boolean; mu: number; minImpact?: number };
+  shapiro?: {
+    enabled: boolean;
+    mu?: number;
+    minImpact?: number;
+    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
+  };
   maxIters?: number;
   tolSec?: number;
 }): number {
@@ -185,15 +218,27 @@ export function solveLightTimeCorrectedTime(params: {
     const r = params.rAtTime(tEmit);
     const roemer = lightTimeDelaySec(r, params.observerDir, params.c);
     const useShapiro = Boolean(params.shapiro?.enabled);
-    const shapiro = useShapiro
-      ? shapiroDelaySec({
+    let shapiro = 0;
+    if (useShapiro) {
+      const massesAtTime = params.shapiro?.massesAtTime;
+      if (typeof massesAtTime === "function") {
+        shapiro = shapiroDelayMultiBodySec({
+          rBody: r,
+          observerDir: params.observerDir,
+          masses: massesAtTime(tEmit),
+          c: params.c,
+          minImpact: params.shapiro?.minImpact,
+        });
+      } else if (Number.isFinite(params.shapiro?.mu) && (params.shapiro?.mu as number) > 0) {
+        shapiro = shapiroDelaySec({
           r,
           observerDir: params.observerDir,
-          mu: params.shapiro!.mu,
+          mu: params.shapiro!.mu as number,
           c: params.c,
-          minImpact: params.shapiro!.minImpact,
-        })
-      : 0;
+          minImpact: params.shapiro?.minImpact,
+        });
+      }
+    }
     const delay = roemer + shapiro;
     if (!Number.isFinite(delay)) break;
 

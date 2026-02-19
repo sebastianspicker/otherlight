@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { G_SI } from "../../src/core/units";
-import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/experimental/physics/nbody";
+import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/sim/nbody/config";
 
 describe("resolveEnabledNBodyPlanetMoonConfig", () => {
   it("computes mu from masses when mu is missing", () => {

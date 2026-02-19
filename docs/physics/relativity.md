@@ -21,6 +21,8 @@ Behavior in this codebase:
   per-orbit override is provided.
 - N-body mode: a star-centric 1PN correction is applied; per-orbit overrides
   are ignored.
+- Enhanced timing mode (`dynamics.relativityLevel="enhanced"`):
+  approximate multi-body Shapiro aggregation is available for observables/timing diagnostics.
 
 Related code:
 

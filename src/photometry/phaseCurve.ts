@@ -24,7 +24,7 @@
 // - planetPhaseFlux(...) is a backwards-compatible wrapper.
 // - This file does NOT re-implement phase angle or phase functions; it delegates to dayNightVisibility.ts.
 
-import type { DayNightVisibilityParams, PhaseCurveParams } from "../core/types";
+import type { DayNightVisibilityParams, PhaseCurveParams, ThermalModelAdvancedParams } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vLen } from "../physics/vec3";
 import { clamp01, isFiniteNumber } from "../core/units";
@@ -227,6 +227,7 @@ export function bodyPhaseFlux(params: {
   orbitPeriodSec?: number;
   model?: PhaseCurveModel;
   dayNightVisibility?: DayNightVisibilityParams;
+  thermalModelAdvanced?: ThermalModelAdvancedParams;
 }): number {
   const norm = normalizePhaseCurveModel(params.model);
   if (!norm.enabled) return 0;
@@ -300,8 +301,30 @@ export function bodyPhaseFlux(params: {
     orbitPeriodSec: params.orbitPeriodSec,
   });
 
+  let thermAdvancedBoost = 1;
+  if (params.thermalModelAdvanced?.enabled) {
+    const adv = params.thermalModelAdvanced;
+    const r = vLen(params.rBody);
+    const rs =
+      Number.isFinite(params.rStarRadius) && (params.rStarRadius as number) > 0
+        ? (params.rStarRadius as number)
+        : undefined;
+    const eqScale = Number.isFinite(adv.equilibriumScale) ? Math.max(0, adv.equilibriumScale as number) : 1;
+    const redistribution = clamp01(
+      Number.isFinite(adv.redistribution) ? (adv.redistribution as number) : 0.5,
+    );
+    const tau = Number.isFinite(adv.tauSec) ? Math.max(0, adv.tauSec as number) : 0;
+    const period =
+      Number.isFinite(params.orbitPeriodSec) && (params.orbitPeriodSec as number) > 0
+        ? (params.orbitPeriodSec as number)
+        : undefined;
+    const response = period && tau > 0 ? 1 / Math.sqrt(1 + Math.pow((2 * Math.PI * tau) / period, 2)) : 1;
+    const irr = rs && r > 0 ? (rs * rs) / (r * r) : 1;
+    thermAdvancedBoost = Math.max(0, redistribution + (1 - redistribution) * eqScale * irr * response);
+  }
+
   const constant = norm.physicalScaling ? norm.constant * thermScale : norm.constant;
-  const total = refl + therm + constant;
+  const total = refl + therm * thermAdvancedBoost + constant;
 
   // Enforce non-negativity (physical for these toy additive terms).
   return Number.isFinite(total) ? Math.max(0, total) : 0;

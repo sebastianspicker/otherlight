@@ -14,10 +14,13 @@
 // - Closed-curve rendering (optionally appending the first point at the end) is implemented here on
 //   purpose so no simulation/test code accidentally depends on "closed sampling".
 
-import type { OrbitElements, OrbitElementsProvider, SystemParams } from "../core/types";
+import type { NBodyPerturberParams, OrbitElements, OrbitElementsProvider, SystemParams } from "../core/types";
 import { toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
+import { vSub } from "../physics/vec3";
+import { projectToSky } from "../physics/frames";
 import { sampleMoonOrbitSkyAbsolute, sampleOrbitSky } from "../sim/sim";
+import { getNBodyStateAt, isNBodyEnabled } from "../sim/dynamics";
 
 export type OrbitPathPoint2D = { x: number; y: number };
 
@@ -135,6 +138,69 @@ function orbitProviderIdPart(orbit: OrbitElements | OrbitElementsProvider, reg: 
   return "const";
 }
 
+function finiteKey(v: unknown): string {
+  return Number.isFinite(v) ? (v as number).toFixed(12) : "NaN";
+}
+
+function nbodyOrbitKey(
+  orbit: OrbitElements | OrbitElementsProvider | undefined,
+  reg: ProviderIdRegistry,
+  t: number,
+): string {
+  if (!orbit) return "none";
+  if (typeof orbit === "function") return `fn:${reg.getId(orbit)}`;
+  return `el:${orbitElementsKey(orbitElementsAt(orbit, t))}`;
+}
+
+function nbodyMuSourceKey(args: { mu?: number; cfgMass?: number; bodyMass?: number }): string {
+  if (Number.isFinite(args.mu) && (args.mu as number) > 0) return `mu:${finiteKey(args.mu)}`;
+  if (Number.isFinite(args.cfgMass) && (args.cfgMass as number) > 0) return `mCfg:${finiteKey(args.cfgMass)}`;
+  if (Number.isFinite(args.bodyMass) && (args.bodyMass as number) > 0)
+    return `mBody:${finiteKey(args.bodyMass)}`;
+  return "none";
+}
+
+function nbodyConfigKey(params: SystemParams, reg: ProviderIdRegistry, t: number): string {
+  const nbody = params.dynamics?.nbodyPlanetMoon;
+  if (!nbody?.enabled) return "off";
+
+  const muStar = nbodyMuSourceKey({ mu: nbody.muStar, cfgMass: nbody.mStar, bodyMass: params.star?.m });
+  const muPlanet = nbodyMuSourceKey({
+    mu: nbody.muPlanet,
+    cfgMass: nbody.mPlanet,
+    bodyMass: params.planet?.m,
+  });
+  const muMoon = nbodyMuSourceKey({ mu: nbody.muMoon, cfgMass: nbody.mMoon, bodyMass: params.moon?.m });
+
+  const pert = Array.isArray(nbody.perturbers) ? (nbody.perturbers as NBodyPerturberParams[]) : [];
+  const pertKey = pert
+    .map((p, i) => {
+      if (!p || p.enabled === false) return `${i}:off`;
+      return [
+        `${i}:on`,
+        `mu:${finiteKey(p.mu)}`,
+        `m:${finiteKey(p.m)}`,
+        `orbit:${nbodyOrbitKey(p.orbit, reg, t)}`,
+      ].join(",");
+    })
+    .join(";");
+
+  const rel = params.dynamics?.relativity;
+  return [
+    "on",
+    `muS:${muStar}`,
+    `muP:${muPlanet}`,
+    `muM:${muMoon}`,
+    `dt:${finiteKey(nbody.dtMax)}`,
+    `soft:${finiteKey(nbody.softening)}`,
+    `overlap:${nbody.throwOnOverlap ? 1 : 0}`,
+    `relOn:${rel?.enabled ? 1 : 0}`,
+    `relGr:${rel?.grPrecession === false ? 0 : 1}`,
+    `relC:${finiteKey(rel?.c)}`,
+    `pert:${pertKey}`,
+  ].join("|");
+}
+
 export class OrbitPathCache {
   private opts: Required<OrbitPathCacheOptions>;
   private cachedPlanet?: CachedPath;
@@ -190,15 +256,45 @@ export class OrbitPathCache {
       `el:${orbitElementsKey(elNow)}`,
       `bin:${phaseBin}/${bins}`,
       `N:${N}`,
+      `nbody:${nbodyConfigKey(params, this.providerIds, t)}`,
       `closed:${close ? 1 : 0}`,
     ].join("|");
 
     if (this.cachedPlanet?.key === key) return this.cachedPlanet.pts;
 
-    // Use simulation helper; it may return (x,y,z). We store only (x,y).
-    const pts3 = sampleOrbitSky(params.planet.orbit, t, N, observerDir);
-    const pts2Base: OrbitPathPoint2D[] = new Array(pts3.length);
-    for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
+    const nbodyOn = isNBodyEnabled(params);
+    let pts2Base: OrbitPathPoint2D[] | null = null;
+
+    if (nbodyOn) {
+      try {
+        const includeEndpoint = false;
+        const denom = includeEndpoint ? Math.max(1, N - 1) : N;
+        const pts: OrbitPathPoint2D[] = new Array(N);
+        let success = true;
+        for (let i = 0; i < N; i++) {
+          const tt = t + (i / denom) * period;
+          const nb = getNBodyStateAt(params, tt);
+          if (!nb) {
+            success = false;
+            break;
+          }
+          const sky = projectToSky(vSub(nb.state.rP, nb.state.rS), observerDir);
+          pts[i] = { x: sky.x, y: sky.y };
+        }
+        if (success) {
+          pts2Base = pts;
+        }
+      } catch {
+        // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
+      }
+    }
+
+    if (!pts2Base) {
+      // Use simulation helper; it may return (x,y,z). We store only (x,y).
+      const pts3 = sampleOrbitSky(params.planet.orbit, t, N, observerDir);
+      pts2Base = new Array(pts3.length);
+      for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
+    }
 
     const pts2 = closePathIfRequested(pts2Base, close);
 
@@ -246,20 +342,49 @@ export class OrbitPathCache {
       `mEl:${orbitElementsKey(mEl)}`,
       `bin:${phaseBin}/${bins}`,
       `N:${N}`,
+      `nbody:${nbodyConfigKey(params, this.providerIds, t)}`,
       `closed:${close ? 1 : 0}`,
     ].join("|");
 
     if (this.cachedMoon?.key === key) return this.cachedMoon.pts;
 
-    // Ensure the moon sampling uses the same observerDir that the cache key is based on.
-    // This is render-only; it does not affect the simulation stepper.
-    const paramsForSampling: SystemParams = params.observer
-      ? { ...params, observer: { ...params.observer, dir: observerDir } }
-      : { ...params, observer: { dir: observerDir } };
+    const nbodyOn = isNBodyEnabled(params);
+    let pts2Base: OrbitPathPoint2D[] | null = null;
+    if (nbodyOn) {
+      try {
+        const includeEndpoint = false;
+        const denom = includeEndpoint ? Math.max(1, N - 1) : N;
+        const pts: OrbitPathPoint2D[] = new Array(N);
+        let success = true;
+        for (let i = 0; i < N; i++) {
+          const tt = t + (i / denom) * moonPeriod;
+          const nb = getNBodyStateAt(params, tt);
+          if (!nb) {
+            success = false;
+            break;
+          }
+          const sky = projectToSky(vSub(nb.state.rM, nb.state.rS), observerDir);
+          pts[i] = { x: sky.x, y: sky.y };
+        }
+        if (success) {
+          pts2Base = pts;
+        }
+      } catch {
+        // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
+      }
+    }
 
-    const pts3 = sampleMoonOrbitSkyAbsolute(paramsForSampling, t, N);
-    const pts2Base: OrbitPathPoint2D[] = new Array(pts3.length);
-    for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
+    if (!pts2Base) {
+      // Ensure the moon sampling uses the same observerDir that the cache key is based on.
+      // This is render-only; it does not affect the simulation stepper.
+      const paramsForSampling: SystemParams = params.observer
+        ? { ...params, observer: { ...params.observer, dir: observerDir } }
+        : { ...params, observer: { dir: observerDir } };
+
+      const pts3 = sampleMoonOrbitSkyAbsolute(paramsForSampling, t, N);
+      pts2Base = new Array(pts3.length);
+      for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
+    }
 
     const pts2 = closePathIfRequested(pts2Base, close);
 

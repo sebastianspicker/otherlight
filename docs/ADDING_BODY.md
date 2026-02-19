@@ -22,7 +22,7 @@ Files to edit:
 - `src/config/scenario.default.json` (defaults and UI ranges)
 - `src/app/presets.ts` (optional: add a didactic preset)
 
-If you adjust UI ranges, keep `src/ui/params.ts` clamps consistent with the new scale.
+If you adjust UI ranges, keep clamps in `src/ui/params/common.ts`, `src/ui/params/read.ts`, and `src/ui/params/nbody.ts` consistent with the new scale.
 
 ## Add or update a moon
 

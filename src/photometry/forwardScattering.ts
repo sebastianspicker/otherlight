@@ -209,8 +209,7 @@ export function computeForwardScatteringFlux(params: ForwardScatteringFluxParams
   const sigma = isFiniteNumber(model.sigmaPhase) ? model.sigmaPhase : 0.15; // rad, broad default
   const sigmaClamped = clamp(sigma, 1e-6, Math.PI);
 
-  let f = 0;
-
+  let f: number;
   if (kind === "gaussian-time") {
     // Purely phenomenological: two-sided brightening peak around a "transit-like" phase center.
     // Using a wrapped phase difference so it is periodic.
@@ -239,7 +238,6 @@ export function computeForwardScatteringFlux(params: ForwardScatteringFluxParams
     // Divide by the peak value (at cosTheta=1) so max shape factor is 1.0.
     const peakPhaseVal = henyeyGreensteinPhase(g, 1.0);
     const shape = peakPhaseVal > 0 ? rawPhaseVal / peakPhaseVal : rawPhaseVal > 0 ? 1 : 0;
-
     f = amp * shape;
   }
 

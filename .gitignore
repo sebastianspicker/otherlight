@@ -30,6 +30,15 @@ yarn-error.log*
 .codex/
 
 # docs (local findings/logs/decisions)
+docs/audit/
+docs/AUDIT_*.md
+docs/DEAD_CODE_POLICY.md
+docs/BASELINE.md
+docs/BUGS_AND_FIXES.md
+docs/REPO_MAP.md
+docs/ci-audit.md
+docs/ci-decision.md
+docs/roadmap.md
 DECISIONS.md
 FINDINGS.md
 LOG.md

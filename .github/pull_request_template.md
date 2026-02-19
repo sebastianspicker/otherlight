@@ -8,7 +8,8 @@
 
 ## Verification
 
-- [ ] `pnpm verify-production-ready`
+- [ ] `pnpm ci:verify`
+- [ ] `pnpm audit:security` (for dependency/security-impacting changes)
 - [ ] UI smoke: `pnpm dev` and check preset switching + light curve render
 
 ## Notes

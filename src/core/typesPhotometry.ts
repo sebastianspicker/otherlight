@@ -31,6 +31,19 @@ export type BrightnessPatch = {
 
   /** Ellipse rotation angle in radians (optional; default 0). */
   angle?: number;
+
+  /**
+   * Optional spherical patch definition on the stellar surface.
+   * When provided, runtime may project this patch into sky-plane coordinates.
+   */
+  surface?: {
+    /** Latitude [rad], -pi/2..pi/2. */
+    lat: number;
+    /** Longitude [rad]. */
+    lon: number;
+    /** Angular radius [rad] on the sphere. */
+    angularRadius: number;
+  };
 };
 
 /**
@@ -114,7 +127,7 @@ export type ThermalInertiaParams = {
  * Parameters for an atmosphere/exosphere transmission signature in transit.
  *
  * Status:
- * - Implemented: used by sim/transitFlux.ts via experimental/photometry/transitTransmission.ts.
+ * - Implemented: used by sim/transitFlux.ts via photometry/transitTransmission.ts.
  */
 export type AtmosphereTransmissionParams = {
   enabled?: boolean;
@@ -266,6 +279,83 @@ export type DayNightVisibilityParams = {
   clamp?: boolean;
 };
 
+export type SpectralBandpassParams = {
+  enabled?: boolean;
+  /** Wavelength grid [nm]. */
+  lambdaNm?: number[];
+  /** Optional normalized weights aligned with lambdaNm. */
+  weights?: number[];
+};
+
+export type AtmosphereRTLayer = {
+  /** Reference radius of the layer base [m]. */
+  r0: number;
+  /** Effective scale height [m]. */
+  H: number;
+  /** Optical depth scale at layer base (dimensionless). */
+  tau0: number;
+  /** Optional wavelength exponent: tau ~ (lambda/lambdaRef)^(-alpha). */
+  alpha?: number;
+};
+
+export type AtmosphereRTParams = {
+  enabled?: boolean;
+  target?: "planet" | "moon";
+  /** Optional wavelength reference [nm] for alpha scaling. Default: 550nm. */
+  lambdaRefNm?: number;
+  layers?: AtmosphereRTLayer[];
+  /** Approximate single-scattering channel. */
+  scattering?: {
+    enabled?: boolean;
+    /** Dimensionless scattering gain in stellar units. */
+    gain?: number;
+    /** Forwardness parameter similar to HG g. */
+    g?: number;
+  };
+  /** Optional crude thermal emission channel for the atmosphere. */
+  emission?: {
+    enabled?: boolean;
+    /** Additive amplitude in stellar units. */
+    amp?: number;
+    /** Effective phase lag [rad]. */
+    phaseLag?: number;
+  };
+};
+
+export type ThermalModelAdvancedParams = {
+  enabled?: boolean;
+  /**
+   * Characteristic radiative-equilibrium scale at unit distance (dimensionless temperature proxy).
+   * Used only by the advanced thermal model branch.
+   */
+  equilibriumScale?: number;
+  /** Day-night heat redistribution efficiency [0,1]. */
+  redistribution?: number;
+  /** Thermal response timescale [s]. */
+  tauSec?: number;
+};
+
+export type RingScatteringParams = {
+  enabled?: boolean;
+  /** Additive ring-scattering amplitude in stellar units. */
+  amp?: number;
+  /** Width in orbital phase [rad]. */
+  sigmaPhase?: number;
+};
+
+export type StellarSurfaceParams = {
+  enabled?: boolean;
+  /**
+   * If true, runtime projects `brightnessPatches[].surface` onto sky plane each step.
+   * Legacy 2D patch fields remain supported.
+   */
+  useSurfacePatches?: boolean;
+  /** Stellar equatorial rotation period [s] for surface patch advection. */
+  rotationPeriodSec?: number;
+  /** Differential rotation coefficient (toy): Omega(lat)=Omega_eq*(1-k*sin^2(lat)). */
+  differentialRotationK?: number;
+};
+
 /**
  * Photometry configuration attached to star.photometry.
  *
@@ -321,6 +411,21 @@ export type PhotometryParams = {
 
   /** Optional time-evolving spot model (uses brightnessPatches). */
   spotEvolution?: SpotEvolutionParams;
+
+  /** Optional physically-motivated stellar-surface patch projection config. */
+  stellarSurface?: StellarSurfaceParams;
+
+  /** Optional advanced atmosphere RT config (coexists with legacy atmosphereTransmission). */
+  atmosphereRT?: AtmosphereRTParams;
+
+  /** Optional spectral bandpass grid for additive and transmission channels. */
+  spectralBandpass?: SpectralBandpassParams;
+
+  /** Optional advanced thermal model parameters. */
+  thermalModelAdvanced?: ThermalModelAdvancedParams;
+
+  /** Optional ring-scattering additive model. */
+  ringScattering?: RingScatteringParams;
 
   /**
    * Instrument noise + systematics measurement-layer configuration.

@@ -8,6 +8,7 @@ import type { OrbitElements, OrbitElementsProvider } from "./typesOrbit";
 import type { Observer } from "./typesObserver";
 import type { PhotometryParams } from "./typesPhotometry";
 import type { SystemDynamicsParams } from "./typesDynamics";
+import type { DidacticsParams } from "./typesDidactics";
 
 export type BodyShapeParams = {
   /**
@@ -29,6 +30,35 @@ export type RingSystemParams = {
   inclination?: number;
   /** Ring major-axis position angle in the sky plane [rad]. */
   positionAngle?: number;
+};
+
+export type BodySpinParams = {
+  /** Rotation period [s]. */
+  rotationPeriodSec?: number;
+  /** Obliquity relative to orbital angular momentum [rad]. */
+  obliquity?: number;
+  /** Sky-plane position angle of the projected spin axis [rad]. */
+  axisPositionAngle?: number;
+};
+
+export type BodyGravityHarmonicsParams = {
+  /** Zonal quadrupole coefficient (dimensionless). */
+  J2?: number;
+};
+
+export type BodyTidesParams = {
+  enabled?: boolean;
+  /** Degree-2 Love number. */
+  k2?: number;
+  /** Tidal quality factor (dimensionless). */
+  Q?: number;
+  /**
+   * Optional explicit secular drift rates (fallback/simple mode):
+   * - da/dt [m/s]
+   * - de/dt [1/s]
+   */
+  daDt?: number;
+  deDt?: number;
 };
 
 export type Body = {
@@ -53,10 +83,19 @@ export type Body = {
 
   /** Optional ring system parameters. */
   rings?: RingSystemParams;
+
+  /** Optional spin state parameters. */
+  spin?: BodySpinParams;
+
+  /** Optional gravity harmonics for secular precession models. */
+  gravityHarmonics?: BodyGravityHarmonicsParams;
+
+  /** Optional tidal parameters for secular evolution models. */
+  tides?: BodyTidesParams;
 };
 
-/** Complete simulation parameters. */
-export type SystemParams = {
+/** Complete simulation parameters (V2 contract). */
+export type SystemParamsV2 = {
   observer?: Observer;
 
   star: Body & {
@@ -75,4 +114,12 @@ export type SystemParams = {
   };
 
   dynamics?: SystemDynamicsParams;
+  /** Optional didactic learning/lab settings (in-app only). */
+  didactics?: DidacticsParams;
 };
+
+/**
+ * Backward import name. This project now treats SystemParams as V2.
+ * Legacy fields are intentionally not reintroduced.
+ */
+export type SystemParams = SystemParamsV2;
