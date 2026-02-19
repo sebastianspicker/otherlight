@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
-import { getObserverDir } from "../../src/sim/observer";
+import { getObserverDir } from "../../src/sim/observerContract";
 
 describe("getObserverDir", () => {
   it("defaults to +z when observer.dir is missing", () => {

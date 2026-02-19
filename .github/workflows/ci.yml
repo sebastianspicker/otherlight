@@ -47,5 +47,5 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Verify production-ready
-        run: pnpm verify-production-ready
+      - name: Verify CI gate
+        run: pnpm ci:verify

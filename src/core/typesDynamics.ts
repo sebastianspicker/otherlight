@@ -6,6 +6,61 @@
 
 import type { OrbitElements, OrbitElementsProvider } from "./typesOrbit";
 
+export type FidelityProfile = "interactive" | "accurate" | "reference";
+
+export type RelativityLevel = "toy" | "enhanced";
+
+export type IntegratorMode = "fixed-verlet" | "adaptive-verlet";
+
+export type IntegratorParams = {
+  /**
+   * Integrator family.
+   * - fixed-verlet: deterministic fixed-step Velocity-Verlet (legacy behavior).
+   * - adaptive-verlet: step-size control via local two-halfstep error estimate.
+   */
+  mode?: IntegratorMode;
+  /** Absolute local position error target used by adaptive mode (simulation length units). */
+  errorTolAbs?: number;
+  /** Minimum allowed adaptive substep [s]. */
+  dtMin?: number;
+  /** Maximum substeps allowed for one integrateToTime call. */
+  maxSubsteps?: number;
+  /** Growth factor for accepted steps in adaptive mode (default ~1.5). */
+  growthFactor?: number;
+  /** Shrink factor for rejected steps in adaptive mode (default ~0.5). */
+  shrinkFactor?: number;
+};
+
+export type CollisionPolicyParams = {
+  enabled?: boolean;
+  /**
+   * Pairwise distance threshold [m] used for close-encounter detection.
+   * If <= 0 or absent, policy is effectively disabled.
+   */
+  minSeparation?: number;
+  /** Behavior when a close encounter is detected. */
+  onCloseEncounter?: "warn" | "abort";
+};
+
+export type SecularEvolutionParams = {
+  enabled?: boolean;
+  /** Apply J2-driven apsidal/nodal precession in Kepler mode. */
+  j2Precession?: boolean;
+  /** Apply a lightweight tidal secular model in Kepler mode. */
+  tides?: boolean;
+  /** Reference epoch used by secular drifts [s]. */
+  tRef?: number;
+};
+
+export type PhysicsFeatureFlags = {
+  observables?: boolean;
+  stellarSurface?: boolean;
+  atmosphereRT?: boolean;
+  nonSphericalFlux?: boolean;
+  thermalEnergyBalance?: boolean;
+  detectorRealism?: boolean;
+};
+
 export type RelativityParams = {
   enabled?: boolean;
   ltte?: boolean;
@@ -72,6 +127,9 @@ export type NBodyPlanetMoonParams = {
   /** If true, throw on overlapping bodies when softening == 0 (debug/strict). */
   throwOnOverlap?: boolean;
 
+  /** Optional per-config integrator override for N-body integration. */
+  integrator?: IntegratorParams;
+
   /** Optional external perturbers (mutually coupled, full N-body integration). */
   perturbers?: NBodyPerturberParams[];
 };
@@ -104,4 +162,16 @@ export type SystemDynamicsParams = {
   nbodyPlanetMoon?: NBodyPlanetMoonParams;
   exomoonTimingShape?: ExomoonTimingShapeParams;
   relativity?: RelativityParams;
+  /** Fidelity profile for performance/accuracy feature gates. */
+  fidelityProfile?: FidelityProfile;
+  /** Opt-in feature switches for advanced physics modules (all optional/off by default). */
+  physicsFeatures?: PhysicsFeatureFlags;
+  /** Global integrator settings (overridden by nbodyPlanetMoon.integrator where provided). */
+  integrator?: IntegratorParams;
+  /** Optional secular evolution hooks (Kepler-mode). */
+  secular?: SecularEvolutionParams;
+  /** Optional close-encounter policy for robust runs. */
+  collisionPolicy?: CollisionPolicyParams;
+  /** Relativity model level. Default: "toy" for backwards compatibility. */
+  relativityLevel?: RelativityLevel;
 };

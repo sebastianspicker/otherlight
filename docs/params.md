@@ -22,29 +22,30 @@ Notes:
 
 ---
 
-## UI ↔ Modell: Zuordnung (implementierungsgetreu)
+## UI to Model Mapping (Implementation-Accurate)
 
-Die UI ist in `index.html` definiert. Das Mapping von UI-Feldern (IDs) in das Modell passiert in:
+The UI is defined in `index.html`. Mapping from UI fields (IDs) into the model is implemented in:
 
-- `src/ui/params.ts` (lesen/schreiben von `SystemParams`)
-- `src/ui/enable.ts` (Enable/Disable-Logik, ändert nicht das Modell)
-- `src/main.ts` (Messpipeline: Smearing + Instrument noise)
+- `src/ui/params/load.ts` and `src/ui/params/read.ts` (write/read `SystemParams`)
+- `src/ui/params/common.ts` / `src/ui/params/nbody.ts` / `src/ui/params/photometry.ts` (domain helpers)
+- `src/ui/enable.ts` (enable/disable logic, does not mutate model schema)
+- `src/main.ts` (measurement pipeline: smearing + instrument noise)
 
-Konvention:
+Conventions:
 
-- UI zeigt einige Winkel in **Grad**, das Modell arbeitet in **Radiant**.
-- Viele Toggles werden als **„Feld existiert / Feld gelöscht“** modelliert (z.B. Phase Curve, Relativity).
+- The UI shows selected angles in **degrees** while the model stores **radians**.
+- Many toggles are represented as **field present / field removed** (for example phase curve, relativity).
 
-### Beobachter
+### Observer
 
 | UI-ID       | SystemParams-Pfad | Einheit | Bedeutung                   |
 | ----------- | ----------------- | ------- | --------------------------- |
-| `observerX` | `observer.dir.x`  | arb     | Beobachterrichtung (Vektor) |
-| `observerY` | `observer.dir.y`  | arb     | Beobachterrichtung (Vektor) |
-| `observerZ` | `observer.dir.z`  | arb     | Beobachterrichtung (Vektor) |
+| `observerX` | `observer.dir.x`  | arb     | Observer direction (vector) |
+| `observerY` | `observer.dir.y`  | arb     | Observer direction (vector) |
+| `observerZ` | `observer.dir.z`  | arb     | Observer direction (vector) |
 
-Hinweis: In der UI wird `observer.dir` normalisiert; ein Nullvektor wird auf `(0,0,1)` gefallbackt.
-Direkte API-Nutzung (`stepSystem`) wirft bei Nullvektor einen Fehler.
+Note: In the UI, `observer.dir` is normalized; a zero vector falls back to `(0,0,1)`.
+Direct API usage (`stepSystem`) throws for a zero vector.
 
 ### Stern (Geometrie + numerische Auflösung)
 
@@ -234,3 +235,107 @@ Perturbers:
 | `relC`          | `...c`                        | m/s       | Lichtgeschwindigkeit in SI |
 | `relPlanetPrec` | `...planetPrecessionPerOrbit` | deg → rad | Override (Kepler-mode)     |
 | `relMoonPrec`   | `...moonPrecessionPerOrbit`   | deg → rad | Override (Kepler-mode)     |
+
+---
+
+## Advanced runtime extensions (new, optional)
+
+These fields are additive and backward-compatible. Existing configs remain valid.
+
+### `dynamics`
+
+- `fidelityProfile`: `interactive | accurate | reference`
+- `physicsFeatures`:
+  - `observables`, `stellarSurface`, `atmosphereRT`, `nonSphericalFlux`, `thermalEnergyBalance`, `detectorRealism`
+- `integrator`:
+  - `mode`, `errorTolAbs`, `dtMin`, `maxSubsteps`, `growthFactor`, `shrinkFactor`
+- `collisionPolicy`:
+  - `enabled`, `minSeparation`, `onCloseEncounter`
+- `secular`:
+  - `enabled`, `j2Precession`, `tides`, `tRef`
+- `relativityLevel`: `toy | enhanced`
+
+### Body-level fields (`star`, `planet`, `moon`)
+
+- `spin`:
+  - `rotationPeriodSec`, `obliquity`, `axisPositionAngle`
+- `gravityHarmonics`:
+  - `J2`
+- `tides`:
+  - `enabled`, `k2`, `Q`, `daDt`, `deDt`
+
+### `star.photometry`
+
+- `stellarSurface`:
+  - `enabled`, `useSurfacePatches`, `rotationPeriodSec`, `differentialRotationK`
+- `atmosphereRT`:
+  - `enabled`, `target`, `lambdaRefNm`, `layers[]`, `scattering`, `emission`
+- `spectralBandpass`:
+  - `enabled`, `lambdaNm[]`, `weights[]`
+- `thermalModelAdvanced`:
+  - `enabled`, `equilibriumScale`, `redistribution`, `tauSec`
+- `ringScattering`:
+  - `enabled`, `amp`, `sigmaPhase`
+
+### Runtime V3 diagnostics fields
+
+`SimulationStepV3.observables` may include:
+
+- `rvStar`, `rvPlanet`, `rvMoon`
+- `astrometricOffsetStar.{x,y}`
+
+`SimulationStepV3.timing` may include:
+
+- `lttePlanetSec`, `ltteMoonSec`, `shapiroPlanetSec`, `shapiroMoonSec`
+
+`SimulationStepV3.conservation` may include:
+
+- `energy`, `angularMomentum`
+
+`SimulationStepV3.debug` (render/debug overlay support) may include:
+
+- `nOcculters`, `bPlanet`, `bMoon`, `tdvRatio`
+- `vPlanetSky`, `vPlanetSkyRef`
+- `baselineFluxUsed`, `stellarVariabilityFlux`
+
+### `SimulationStepV3` -> `DebugOverlayDataV3` mapping
+
+Renderer mapping is implemented in `src/render/canvas2d.ts` (`toOverlayData(...)`).
+Rendering contract details are defined in `docs/rendering/physics-visualization-contract.md`.
+
+| DebugOverlayDataV3 field | Primary source in `SimulationStepV3` | Fallback in renderer                    |
+| ------------------------ | ------------------------------------ | --------------------------------------- |
+| `nOcculters`             | `debug.nOcculters`                   | `renderSignals.occulterGeometry.length` |
+| `bPlanet`                | `debug.bPlanet`                      | none                                    |
+| `bMoon`                  | `debug.bMoon`                        | none                                    |
+| `tdvRatio`               | `debug.tdvRatio`                     | none                                    |
+| `vPlanetSky`             | `debug.vPlanetSky`                   | none                                    |
+| `vPlanetSkyRef`          | `debug.vPlanetSkyRef`                | none                                    |
+| `baselineFluxUsed`       | `debug.baselineFluxUsed`             | `flux.stellarPreTransit`                |
+| `stellarVariabilityFlux` | `debug.stellarVariabilityFlux`       | `flux.stellarVariability`               |
+| `fluxTransitFactor`      | `flux.transitFactor`                 | none                                    |
+| `fluxTotal`              | `flux.total`                         | none                                    |
+
+---
+
+## V3 namespaced parameter IDs (breaking migration path)
+
+Runtime V3 introduces namespaced UI parameter IDs. Migration helpers live in:
+
+- `src/ui/params/migration.ts`
+
+Example mappings:
+
+- `nbodyMuStar` → `dynamics.nbody.muStar`
+- `nbodyMuPlanet` → `dynamics.nbody.muPlanet`
+- `nbodyMuMoon` → `dynamics.nbody.muMoon`
+- `planetRingInc` → `bodies.planet.rings.inclinationDeg`
+- `planetRingAngle` → `bodies.planet.rings.positionAngleDeg`
+- `relGR` → `dynamics.relativity.grPrecession`
+
+Helper functions:
+
+- `toNamespacedParamId(...)`
+- `toLegacyParamId(...)`
+- `migrateParamRecordToNamespaced(...)`
+- `migrateParamRecordToLegacy(...)`

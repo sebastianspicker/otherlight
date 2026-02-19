@@ -1,21 +1,24 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-Security updates are provided for the `main` branch.
+Security fixes are provided for the current `main` branch.
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Please do not open public issues for security vulnerabilities.
+Do not open public issues for security vulnerabilities.
 
-Use GitHub Security Advisories to report privately:
+Preferred path: GitHub Security Advisories (private report)
 
-- Navigate to the repository on GitHub.
-- Click the "Security" tab.
-- Select "Report a vulnerability" and provide reproduction details.
+1. Open the repository on GitHub.
+2. Go to the **Security** tab.
+3. Click **Report a vulnerability**.
+4. Include a clear reproduction, impact description, and affected versions/commits if known.
 
-If Security Advisories are unavailable, contact the maintainer via GitHub.
+If Security Advisories are unavailable, contact the maintainer via GitHub and request a private channel.
 
-## Response Expectations
+## Response expectations
 
-Reports are triaged as soon as possible. If additional information is required, you will be contacted via the advisory thread.
+- Initial triage target: within 5 business days.
+- You may be asked for additional reproduction details or environment information.
+- Coordinated disclosure is preferred; please avoid publishing exploit details before a fix is available.

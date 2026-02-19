@@ -8,7 +8,6 @@
 // - Keep conventions consistent with core/types.ts and render/canvas2d.ts:
 //   observer.dir points from star to observer; larger sky.z means closer to observer. [file:100][file:119]
 
-import type { StepResult, SystemParams } from "../core/types";
 import { clamp, toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../physics/vec3";
@@ -76,6 +75,19 @@ export type ObserverMarkerOptions = {
 
   /** Marker outline color. Default: rgba(0,0,0,0.45). */
   markerStroke?: string;
+};
+
+export type DebugOverlayDataV3 = {
+  nOcculters?: number;
+  bPlanet?: number;
+  bMoon?: number;
+  tdvRatio?: number;
+  vPlanetSky?: number;
+  vPlanetSkyRef?: number;
+  baselineFluxUsed?: number;
+  stellarVariabilityFlux?: number;
+  fluxTransitFactor?: number;
+  fluxTotal?: number;
 };
 
 const DEFAULT_THEME: OverlayTheme = {
@@ -333,15 +345,10 @@ export function drawObserverGizmoInset(
   ctx.restore();
 }
 
-/**
- * Draw the debug text overlay in the top-left.
- * Uses StepResult.meta fields as produced by sim.ts. [file:119][file:100]
- */
-export function drawDebugOverlay(
+export function drawDebugOverlayV3(
   ctx: CanvasRenderingContext2D,
   size: SizeInfo,
-  params: SystemParams,
-  step: StepResult,
+  data: DebugOverlayDataV3,
   observerDirRaw: Vec3,
   toggles?: DebugOverlayToggles,
   opts: DebugOverlayOptions = {},
@@ -385,44 +392,40 @@ export function drawDebugOverlay(
   }
 
   if (dbg.showOcculters) {
-    const nOcc = step.meta?.nOcculters;
+    const nOcc = data.nOcculters;
     if (typeof nOcc === "number" && Number.isFinite(nOcc)) line(`Occulters = ${nOcc}`);
   }
 
   if (dbg.showImpactParams) {
-    const bP = step.meta?.bPlanet;
-    const bM = step.meta?.bMoon;
+    const bP = data.bPlanet;
+    const bM = data.bMoon;
     if (typeof bP === "number" && Number.isFinite(bP)) line(`b_planet = ${bP.toFixed(3)}`);
     if (typeof bM === "number" && Number.isFinite(bM)) line(`b_moon   = ${bM.toFixed(3)}`);
   }
 
   if (dbg.showTDV) {
-    const tdv = step.meta?.tdvRatio;
-    const vSky = step.meta?.vPlanetSky;
-    const vRef = step.meta?.vPlanetSkyRef;
+    const tdv = data.tdvRatio;
+    const vSky = data.vPlanetSky;
+    const vRef = data.vPlanetSkyRef;
     if (typeof tdv === "number" && Number.isFinite(tdv)) line(`TDV ratio = ${tdv.toFixed(4)}`);
     if (typeof vSky === "number" && Number.isFinite(vSky)) line(`v_sky(t)   = ${vSky.toFixed(6)}`);
     if (typeof vRef === "number" && Number.isFinite(vRef)) line(`v_sky(ref) = ${vRef.toFixed(6)}`);
   }
 
   if (dbg.showFluxDecomposition) {
-    const baseline = step.meta?.baselineFluxUsed;
-    const svar = step.meta?.stellarVariabilityFlux;
+    const baseline = data.baselineFluxUsed;
+    const svar = data.stellarVariabilityFlux;
 
     if (typeof baseline === "number" && Number.isFinite(baseline))
       line(`baselineFlux = ${baseline.toFixed(6)}`);
     if (typeof svar === "number" && Number.isFinite(svar)) line(`stellarVar   = ${svar.toExponential(3)}`);
 
-    const ft = step.fluxTransitFactor;
+    const ft = data.fluxTransitFactor;
     if (typeof ft === "number" && Number.isFinite(ft)) line(`F_transit    = ${ft.toFixed(6)}`);
 
-    const f = step.fluxTotal;
+    const f = data.fluxTotal;
     if (typeof f === "number" && Number.isFinite(f)) line(`F_total      = ${f.toFixed(6)}`);
   }
 
   ctx.restore();
-
-  // Keep params referenced to make it explicit this overlay is "read-only but context-aware".
-  // (Also helpful if callers want to quickly extend overlays to display config state.)
-  void params;
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
-import { integrateNBodyStep, type NBodyState } from "../../src/experimental/physics/nbody";
+import { integrateNBodyStep } from "../../src/sim/nbody/integrator";
+import type { NBodyState } from "../../src/sim/nbody/types";
 import { getNBodyStateAt } from "../../src/sim/dynamics";
 import { vLenSq, vSub } from "../../src/physics/vec3";
 

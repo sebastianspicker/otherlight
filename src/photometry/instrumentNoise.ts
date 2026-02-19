@@ -316,7 +316,25 @@ export function applyInstrumentNoiseAndSystematics(args: {
   }
 
   // Combine physical flux with additive systematics + correlated components before electron conversion.
-  const fluxPreNoise = fluxIn + sysFluxAdd + corrFluxAdd;
+  let fluxPreNoise = fluxIn + sysFluxAdd + corrFluxAdd;
+
+  // Optional detector realism hooks in flux domain.
+  const det = cfg.detector;
+  if (det?.enabled) {
+    const prnuSigma = Math.max(0, toFiniteNumber(det.prnuSigma, 0));
+    if (prnuSigma > 0) {
+      const gain = 1 + normalSample(state.rng, 0, prnuSigma);
+      fluxPreNoise *= Math.max(0, gain);
+    }
+
+    const jitterSigmaPx = Math.max(0, toFiniteNumber(det.jitterSigmaPx, 0));
+    if (jitterSigmaPx > 0) {
+      const jx = normalSample(state.rng, 0, jitterSigmaPx);
+      const jy = normalSample(state.rng, 0, jitterSigmaPx);
+      const r2 = jx * jx + jy * jy;
+      fluxPreNoise *= Math.max(0, 1 - 0.02 * r2);
+    }
+  }
 
   // ---------- Photon + read noise in electrons ----------
   const throughput = toFiniteNonNeg(cfg.throughput, 1);
@@ -353,6 +371,23 @@ export function applyInstrumentNoiseAndSystematics(args: {
     if (cfg.readNoise?.enabled) {
       const s = toFiniteNonNeg(cfg.readNoise.sigmaElectrons, 0);
       if (s > 0) electrons += normalSample(state.rng, 0, s);
+    }
+
+    if (det?.enabled) {
+      const nonlin = Math.max(0, toFiniteNumber(det.nonlinearityCoeff, 0));
+      if (nonlin > 0) {
+        electrons = Math.max(0, electrons * (1 - nonlin * Math.max(0, electrons)));
+      }
+
+      const cti = Math.max(0, toFiniteNumber(det.ctiTrailCoeff, 0));
+      if (cti > 0) {
+        electrons = Math.max(0, electrons - cti * Math.sqrt(Math.max(0, electrons)));
+      }
+
+      const sat = toFiniteNumber(det.saturationElectrons, Number.NaN);
+      if (Number.isFinite(sat) && sat > 0) {
+        electrons = Math.min(electrons, sat);
+      }
     }
 
     const denom = throughput * ePerFluxPerSec * exposureSec;

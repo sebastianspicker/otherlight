@@ -166,7 +166,7 @@ export function spotFluxFactorFromPatches(params: {
 
   const area = Math.PI * rStar * rStar;
   if (!(Number.isFinite(total) && total > 0 && Number.isFinite(area) && area > 0)) return 1;
-  return clamp01(total / area);
+  return total / area;
 }
 
 // Backwards-compat: keep the old exported name if other modules import it as Occulter.

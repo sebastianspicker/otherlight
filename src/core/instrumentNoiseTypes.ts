@@ -122,6 +122,23 @@ export type InstrumentNoiseSystematicsParams = {
     };
   };
 
+  detector?: {
+    enabled?: boolean;
+    /**
+     * Quadratic non-linearity coefficient in electron domain:
+     * e_out = e_in * (1 - coeff * e_in), clamped to >=0.
+     */
+    nonlinearityCoeff?: number;
+    /** Saturation level [e-]. Values above are clipped. */
+    saturationElectrons?: number;
+    /** Pixel-response non-uniformity sigma (dimensionless, multiplicative around 1). */
+    prnuSigma?: number;
+    /** Pointing jitter sigma in pixel units (mapped to additive flux modulation). */
+    jitterSigmaPx?: number;
+    /** CTI-like trailing coefficient (dimensionless, small positive). */
+    ctiTrailCoeff?: number;
+  };
+
   /** Optional safety clamp of the returned flux value. */
   clampFlux?: { enabled?: boolean; min?: number; max?: number };
 };

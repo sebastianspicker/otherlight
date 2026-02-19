@@ -70,20 +70,20 @@ Note: the repo pins dependencies via `pnpm-lock.yaml`, so pnpm is the reproducib
 ## Feature status (scope)
 
 This section is the **source-of-truth** for what is implemented vs. intentionally simplified.
-For longer-term research items, see `docs/roadmap.md`.
 
-| Area                                | Status                         | Notes                                                               | Code anchors                                                                    |
-| ----------------------------------- | ------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Kepler kinematics                   | Implemented                    | Elliptic solver + sky-plane projection                              | `src/physics/kepler.ts`, `src/sim/kinematics.ts`                                |
-| N-body dynamics                     | Implemented                    | Velocity-Verlet, star reflex, optional perturbers                   | `src/sim/dynamics.ts`, `src/experimental/physics/nbody.ts`                      |
-| Transit photometry (uniform)        | Implemented                    | Union masking, analytic 1-occult path                               | `src/photometry/transitUniform.ts`                                              |
-| Transit photometry (limb darkening) | Implemented                    | Quadratic + generic integrator                                      | `src/photometry/transitLimbDarkened.ts`                                         |
-| Oblateness + rings (silhouette)     | Implemented                    | Affects transit silhouette                                          | `src/sim/occulters.ts`, `src/photometry/occulterEllipse.ts`                     |
-| Atmosphere transmission             | Partial                        | Transmissive halo / tau scaling; no full scattering/emission/clouds | `src/experimental/photometry/transitTransmission.ts`, `docs/roadmap.md`         |
-| Phase curves (planet/moon)          | Implemented (phenomenological) | Optional thermal inertia filter; not an energy-balance model        | `src/photometry/phaseCurve.ts`, `docs/roadmap.md`                               |
-| Stellar variability + patches       | Implemented (toy)              | Patch evolution/variability are simplified                          | `src/photometry/transitUniformSpots.ts`, `src/photometry/stellarVariability.ts` |
-| Relativity (LTTE/Shapiro/GR)        | Implemented (approx.)          | Point-mass + star-centric 1PN-style correction                      | `src/physics/relativity.ts`, `docs/physics/relativity.md`                       |
-| Measurement layer (smearing/noise)  | Implemented (simplified)       | Deterministic OU/1f style noise + systematics hooks                 | `src/photometry/smearing.ts`, `src/photometry/instrumentNoise.ts`               |
+| Area                                | Status                       | Notes                                                                | Code anchors                                                                    |
+| ----------------------------------- | ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Kepler kinematics                   | Implemented                  | Elliptic solver + sky-plane projection                               | `src/physics/kepler.ts`, `src/sim/kinematics.ts`                                |
+| N-body dynamics                     | Implemented                  | Fixed/adaptive Verlet, star reflex, optional perturbers              | `src/sim/dynamics.ts`, `src/sim/nbody/*`                                        |
+| Transit photometry (uniform)        | Implemented                  | Union masking, analytic 1-occult path                                | `src/photometry/transitUniform.ts`                                              |
+| Transit photometry (limb darkening) | Implemented                  | Quadratic + generic integrator                                       | `src/photometry/transitLimbDarkened.ts`                                         |
+| Oblateness + rings (silhouette)     | Implemented                  | Affects transit silhouette                                           | `src/sim/occulters.ts`, `src/photometry/occulterEllipse.ts`                     |
+| Atmosphere transmission             | Implemented + advanced hooks | Legacy halo + optional layered `atmosphereRT`                        | `src/sim/transitFlux.ts`, `src/photometry/transitTransmission.ts`               |
+| Phase curves (planet/moon)          | Implemented                  | Thermal inertia + optional advanced thermal scaling                  | `src/photometry/phaseCurve.ts`, `src/sim/additiveFlux.ts`                       |
+| Stellar variability + patches       | Implemented                  | Legacy 2D patches + optional surface projection path                 | `src/photometry/transitUniformSpots.ts`, `src/photometry/stellarSurface.ts`     |
+| Relativity (LTTE/Shapiro/GR)        | Implemented (approx.)        | Point-mass + star-centric 1PN-style correction                       | `src/physics/relativity.ts`, `docs/physics/relativity.md`                       |
+| Measurement layer (smearing/noise)  | Implemented                  | OU/1f + detector realism hooks (PRNU/nonlinearity/saturation/jitter) | `src/photometry/smearing.ts`, `src/photometry/instrumentNoise.ts`               |
+| Observables (RV + astrometry)       | Implemented                  | `StepResult.meta.observables` incl. timing/conservation              | `src/sim/observables.ts`, `src/sim/stateSampler.ts`, `src/core/typesResults.ts` |
 
 ## Documentation map
 
@@ -94,7 +94,6 @@ For longer-term research items, see `docs/roadmap.md`.
 - Relativity and timing: `docs/physics/relativity.md`
 - Photometry model: `docs/physics/photometry.md`
 - Parameter units: `docs/params.md`
-- Validation and warnings: `docs/validation.md`
 - How to add a planet or moon: `docs/ADDING_BODY.md`
 
 ## Interactive presets (UI)
@@ -106,7 +105,7 @@ The UI includes a **Preset** dropdown (see `src/app/presets.ts`) with short, did
 - N-body: perturber + star reflex (dynamic timing/velocity effects)
 
 The UI also emits stability warnings (Hill/Roche/dtMax heuristics) when configurations are likely
-non-physical or numerically risky. See `docs/validation.md` for the current warning list.
+non-physical or numerically risky.
 
 ## How to teach with this (didactic use-case)
 
@@ -136,7 +135,9 @@ All scripts are `pnpm`-first:
 - `pnpm test`: Vitest (unit + smoke)
 - `pnpm lint`: ESLint + Prettier check
 - `pnpm format`: Prettier write
-- `pnpm verify-production-ready`: lint + typecheck + test + build (CI gate)
+- `pnpm ci:verify`: lint + typecheck + test + build (CI gate)
+- `pnpm audit:security`: high-severity production dependency audit
+- `pnpm audit:full`: security + depcheck + dead-code audit
 
 ## Configuration
 
@@ -149,7 +150,7 @@ The UI emits a warning when `dtMax` is coarser, but stability remains heuristic.
 ## Development
 
 - `pnpm dev` for a local dev server.
-- `pnpm verify-production-ready` for a full local verification.
+- `pnpm ci:verify` for a full local verification.
 
 ## Testing
 
@@ -167,7 +168,6 @@ src/
 ├── app/           # Scenario presets, debug, noise helpers
 ├── config/        # Default scenario config
 ├── core/          # Types, units, DOM helpers
-├── experimental/  # Optional/experimental physics and photometry
 ├── photometry/    # Transit, limb darkening, phase curves, variability
 ├── physics/       # Vectors, frames, kepler, relativity, barycenter
 ├── render/        # Canvas rendering and overlays

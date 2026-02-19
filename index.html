@@ -890,6 +890,44 @@
 
               <input id="smearQuantity" type="hidden" value="flux" />
             </div>
+
+            <section class="panel">
+              <h3>Guided Labs</h3>
+              <div class="row">
+                <label class="inline">
+                  Lesson
+                  <select id="didLessonSelect" aria-label="Didactic lesson"></select>
+                </label>
+                <label class="inline">
+                  Auto assess
+                  <input id="didAutoAssess" type="checkbox" checked />
+                </label>
+              </div>
+              <div class="row">
+                <button id="didCheckBtn" type="button">Check step</button>
+                <button id="didNextBtn" type="button">Next step</button>
+                <button id="didExportBtn" type="button">Export report</button>
+              </div>
+              <p id="didLessonStatus" class="help"></p>
+              <div id="didCheckList" class="help"></div>
+              <div id="didFormulaList" class="help mono"></div>
+
+              <details class="help">
+                <summary>A/B compare</summary>
+                <div class="row">
+                  <label class="inline">
+                    Preset B
+                    <select id="didComparePreset"></select>
+                  </label>
+                  <label class="inline">
+                    t (s)
+                    <input id="didCompareTime" type="number" step="1" value="0" />
+                  </label>
+                  <button id="didCompareBtn" type="button">Compare</button>
+                </div>
+                <pre id="didCompareOut" class="help mono"></pre>
+              </details>
+            </section>
           </aside>
         </div>
 

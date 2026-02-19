@@ -29,4 +29,4 @@ GR correction (approximate):
 Related code:
 
 - `src/sim/dynamics.ts`
-- `src/experimental/physics/nbody.ts`
+- `src/sim/nbody/*`

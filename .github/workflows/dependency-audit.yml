@@ -43,5 +43,5 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Dependency audit (high/critical)
-        run: pnpm audit --audit-level=high
+      - name: Dependency audit (high/critical, production graph)
+        run: pnpm audit --audit-level=high --prod

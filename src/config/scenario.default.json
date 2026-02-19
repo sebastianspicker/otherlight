@@ -147,6 +147,11 @@
         "planetPrecessionPerOrbit": 0,
         "moonPrecessionPerOrbit": 0
       }
+    },
+    "didactics": {
+      "enabled": true,
+      "activeLessonId": "kepler-geometry",
+      "autoAssess": true
     }
   },
   "ui": {

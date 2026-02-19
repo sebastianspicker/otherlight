@@ -225,8 +225,11 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     return out;
   }
 
-  // Compare moon orbit semi-major axis against a conservative prograde limit.
-  const aMaxPrograde = maxStableProgradeMoonAxisDomingos(RH, eP, eM);
+  // Compare moon orbit semi-major axis against a conservative sense-aware limit.
+  const retro = p.moon?.sense === "retrograde";
+  const aMaxSense = retro
+    ? maxStableRetrogradeMoonAxisRuleOfThumb(RH)
+    : maxStableProgradeMoonAxisDomingos(RH, eP, eM);
   const fracOfHill = aM / RH;
   const apoM = aM * (1 + eM);
 
@@ -235,7 +238,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
       severity: "warn",
       code: "MOON_APO_OUTSIDE_HILL",
       message:
-        "Mond-Apozentrum liegt außerhalb der Hill-Sphäre (bei Planeten-Periapsis); gebundene Bahn ist unwahrscheinlich.",
+        "Moon apoapsis lies outside the Hill sphere (at planetary periapsis); a bound orbit is unlikely.",
       details: {
         aMoon: aM,
         eMoon: eM,
@@ -245,17 +248,19 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     });
   }
 
-  if (Number.isFinite(aMaxPrograde) && aM > aMaxPrograde) {
+  if (Number.isFinite(aMaxSense) && aM > aMaxSense) {
     out.push({
       severity: "warn",
       code: "MOON_BEYOND_HILL_STABILITY",
-      message:
-        "Moon semi-major axis exceeds a conservative prograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable.",
+      message: retro
+        ? "Moon semi-major axis exceeds a conservative retrograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable."
+        : "Moon semi-major axis exceeds a conservative prograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable.",
       details: {
         aMoon: aM,
         eMoon: eM,
         hillR_periapsis: RH,
-        aCrit_prograde: aMaxPrograde,
+        aCrit_sense: aMaxSense,
+        sense: retro ? "retrograde" : "prograde",
         aMoon_over_RH: fracOfHill,
       },
     });
@@ -263,11 +268,14 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     out.push({
       severity: "info",
       code: "MOON_HILL_OK",
-      message: "Moon orbit is within a conservative Hill-sphere prograde stability heuristic.",
+      message: retro
+        ? "Moon orbit is within a conservative Hill-sphere retrograde stability heuristic."
+        : "Moon orbit is within a conservative Hill-sphere prograde stability heuristic.",
       details: {
         aMoon: aM,
         hillR_periapsis: RH,
-        aCrit_prograde: aMaxPrograde,
+        aCrit_sense: aMaxSense,
+        sense: retro ? "retrograde" : "prograde",
         aMoon_over_RH: fracOfHill,
       },
     });
