@@ -24,5 +24,3 @@ jobs:
 
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
-        with:
-          args: --redact --no-banner
