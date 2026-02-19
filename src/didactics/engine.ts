@@ -1,7 +1,9 @@
 import type {
+  AssessmentRubricV2,
   DidacticCheckResult,
   DidacticSignals,
   LearningState,
+  RubricCriterionV2,
   StepResult,
   SystemParams,
 } from "../core/types";
@@ -17,6 +19,58 @@ type NumericSignals = {
   depthApprox: number;
   depthObserved: number;
 };
+
+function buildHintLevels(params: {
+  checksFailed: boolean;
+  bPlanetFinite: boolean;
+  depthApprox: number;
+  depthObserved: number;
+}): { L1: string[]; L2: string[]; L3: string[] } {
+  const out = { L1: [] as string[], L2: [] as string[], L3: [] as string[] };
+  if (!params.bPlanetFinite) {
+    out.L1.push("Check observer direction and orbital inclination.");
+    out.L2.push("Set observer dir close to edge-on geometry before adjusting radii.");
+    out.L3.push("Invalid b indicates sky-plane projection degeneracy; re-normalize observer vector.");
+  }
+  if (params.checksFailed) {
+    out.L1.push("Change one parameter and re-check the curve.");
+    out.L2.push("Compare physical vs measured mode after each parameter change.");
+    out.L3.push("Track depth_theory=(Rp/Rs)^2 against depth_obs to isolate geometry vs noise effects.");
+  }
+  const d = Math.abs(params.depthObserved - params.depthApprox);
+  if (Number.isFinite(d) && d > 0.2) {
+    out.L2.push("Large depth mismatch suggests limb-darkening or non-central transit effects.");
+    out.L3.push("Inspect ingress/egress curvature and impact parameter before tuning planet radius.");
+  }
+  if (out.L1.length === 0) out.L1.push("All checks currently pass.");
+  if (out.L2.length === 0) out.L2.push("Use A/B compare to confirm causal signal changes.");
+  if (out.L3.length === 0) out.L3.push("Export report and validate rubric consistency across steps.");
+  return out;
+}
+
+function buildMisconceptions(params: {
+  bPlanetFinite: boolean;
+  depthApprox: number;
+  depthObserved: number;
+}): Array<{ id: string; message: string; severity: "info" | "warn" }> {
+  const out: Array<{ id: string; message: string; severity: "info" | "warn" }> = [];
+  if (!params.bPlanetFinite) {
+    out.push({
+      id: "impact-undefined",
+      message: "Assuming a valid impact parameter while observer geometry is undefined.",
+      severity: "warn",
+    });
+  }
+  const d = Math.abs(params.depthObserved - params.depthApprox);
+  if (Number.isFinite(d) && d > 0.2) {
+    out.push({
+      id: "depth-equals-ratio",
+      message: "Depth is treated as purely (Rp/Rs)^2 although limb-darkening/geometry can dominate.",
+      severity: "info",
+    });
+  }
+  return out;
+}
 
 function collectNumericSignals(system: SystemParams, step: StepResult): NumericSignals {
   const rs = toFiniteNumber(system.star.r, 1);
@@ -98,6 +152,61 @@ function evaluateChecks(
   };
 }
 
+function defaultRubricCriteria(): RubricCriterionV2[] {
+  return [
+    { id: "check-pass-rate", label: "Check pass rate", weight: 0.6, metric: "check-pass-rate" },
+    { id: "depth-consistency", label: "Depth consistency", weight: 0.25, metric: "depth-consistency" },
+    { id: "timing-signal", label: "Timing signal awareness", weight: 0.15, metric: "timing-signal" },
+  ];
+}
+
+function evaluateRubricV2(args: {
+  rubric?: AssessmentRubricV2;
+  checksScore: number;
+  depthApprox: number;
+  depthObserved: number;
+  tdvRatio: number;
+}): DidacticSignals["rubricV2"] | undefined {
+  const enabled = args.rubric?.enabled ?? true;
+  if (!enabled) return undefined;
+  const criteria =
+    Array.isArray(args.rubric?.criteria) && args.rubric!.criteria!.length > 0
+      ? args.rubric!.criteria!
+      : defaultRubricCriteria();
+  const passScore = Number.isFinite(args.rubric?.passScore)
+    ? Math.min(1, Math.max(0, args.rubric!.passScore as number))
+    : 0.7;
+
+  const scoreForMetric = (metric: RubricCriterionV2["metric"]): number => {
+    if (metric === "check-pass-rate") return Math.min(1, Math.max(0, args.checksScore));
+    if (metric === "depth-consistency") {
+      const delta = Math.abs(args.depthObserved - args.depthApprox);
+      return Math.max(0, 1 - Math.min(1, delta));
+    }
+    const tdvDelta = Number.isFinite(args.tdvRatio) ? Math.abs(args.tdvRatio - 1) : 0;
+    return Math.min(1, tdvDelta * 10);
+  };
+
+  const safe = criteria
+    .map((c) => ({
+      id: c.id,
+      label: c.label,
+      weight: Number.isFinite(c.weight) && c.weight > 0 ? (c.weight as number) : 0,
+      score: scoreForMetric(c.metric),
+    }))
+    .filter((c) => c.weight > 0);
+  if (safe.length === 0) return undefined;
+
+  const weightSum = safe.reduce((s, c) => s + c.weight, 0);
+  const score = safe.reduce((s, c) => s + c.score * c.weight, 0) / weightSum;
+  return {
+    score,
+    pass: score >= passScore,
+    passScore,
+    breakdown: safe,
+  };
+}
+
 export function resolveLearningState(system: SystemParams, tSec: number): LearningState {
   const did = system.didactics;
   const lesson = getLessonById(did?.activeLessonId ?? DEFAULT_LESSON_ID);
@@ -135,13 +244,41 @@ export function computeDidacticSignals(system: SystemParams, step: StepResult): 
     hints.push("Adjust one control at a time, then compare physical vs measured plot mode.");
   }
 
+  const hintLevels = buildHintLevels({
+    checksFailed: !evalResult.allChecksPassed,
+    bPlanetFinite: Number.isFinite(numeric.bPlanet),
+    depthApprox: numeric.depthApprox,
+    depthObserved: numeric.depthObserved,
+  });
+  const preferredLevel = system.didactics.hintLevel ?? "L2";
+  const selectedHints =
+    preferredLevel === "L1" ? hintLevels.L1 : preferredLevel === "L3" ? hintLevels.L3 : hintLevels.L2;
+  const misconceptions =
+    system.didactics.misconceptionChecks?.enabled !== false
+      ? buildMisconceptions({
+          bPlanetFinite: Number.isFinite(numeric.bPlanet),
+          depthApprox: numeric.depthApprox,
+          depthObserved: numeric.depthObserved,
+        })
+      : [];
+  const rubricV2 = evaluateRubricV2({
+    rubric: system.didactics.assessmentRubricV2,
+    checksScore: evalResult.score,
+    depthApprox: numeric.depthApprox,
+    depthObserved: numeric.depthObserved,
+    tdvRatio: numeric.tdvRatio,
+  });
+
   return {
     lessonId: lesson.id,
     lessonTitle: lesson.title,
     stepId: evalResult.stepId,
     stepTitle: evalResult.stepTitle,
     prompt: evalResult.prompt,
-    hints,
+    hints: [...hints, ...selectedHints],
+    hintLevels,
+    misconceptions,
+    rubricV2,
     score: evalResult.score,
     allChecksPassed: evalResult.allChecksPassed,
     checks: evalResult.checks,

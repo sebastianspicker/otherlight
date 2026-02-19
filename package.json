@@ -25,7 +25,14 @@
     "audit:security": "pnpm audit --audit-level=high --prod",
     "audit:deps": "pnpm dlx depcheck",
     "audit:deadcode": "bash ./scripts/audit-dead-code.sh",
-    "audit:full": "pnpm audit:security && pnpm audit:deps && pnpm audit:deadcode"
+    "audit:full": "pnpm audit:security && pnpm audit:deps && pnpm audit:deadcode",
+    "physics-regression": "vitest run tests/sim/transit-sequence-regression.test.ts tests/sim/transit-timing-tracker.test.ts tests/sim/dynamics-driven-diagnostics.test.ts",
+    "data:real-systems:refresh": "node scripts/fetch-real-systems-snapshot.mjs",
+    "migrate:v4": "node --experimental-strip-types scripts/migrate-systemparams-v4.ts",
+    "literature-benchmarks": "vitest run tests/benchmarks/literature-benchmarks.test.ts",
+    "didactics-acceptance": "vitest run tests/didactics/didactics-acceptance.test.ts tests/didactics/hint-levels.test.ts",
+    "perf-smoke": "vitest run tests/perf/perf-smoke.test.ts",
+    "migration-regression": "vitest run tests/scripts/migration-regression.test.ts tests/scripts/migrate-systemparams-v4.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

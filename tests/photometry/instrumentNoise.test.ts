@@ -103,4 +103,43 @@ describe("instrument noise determinism", () => {
     expect(out).toBe(0.75);
     expect(state.lastT).toBe(123);
   });
+
+  it("applies deterministic drift-family trends", () => {
+    const cfg: InstrumentNoiseSystematicsParams = {
+      enabled: true,
+      seed: 1,
+      trends: {
+        enabled: true,
+        driftFamilies: {
+          enabled: true,
+          amplitudesFlux: [1e-3, 5e-4],
+          periodsSec: [100, 250],
+          phasesRad: [0, Math.PI / 3],
+        },
+      },
+      photonNoise: { enabled: false },
+      readNoise: { enabled: false },
+      correlatedNoise: { enabled: false },
+    };
+
+    const state = createInstrumentNoiseState(cfg.seed);
+    const a = applyInstrumentNoiseAndSystematics({
+      flux: 1,
+      tSec: 50,
+      dtSec: 1,
+      cfg,
+      state,
+    });
+    resetInstrumentNoiseState(state, { resetRng: true, seed: cfg.seed });
+    const b = applyInstrumentNoiseAndSystematics({
+      flux: 1,
+      tSec: 50,
+      dtSec: 1,
+      cfg,
+      state,
+    });
+
+    expect(a).toBe(b);
+    expect(a).not.toBe(1);
+  });
 });

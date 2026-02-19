@@ -6,6 +6,20 @@
 - Fast feedback for pull requests.
 - Security coverage with least-privilege workflow permissions.
 
+## Pipeline at a glance
+
+```mermaid
+flowchart LR
+  PR["pull_request / push"] --> CI["CI workflow: verify"]
+  PR --> SEC["Security workflow: gitleaks"]
+  PR --> CQL["CodeQL workflow: analyze"]
+  SCH["weekly schedule"] --> DEP["Dependency audit workflow"]
+  CI --> GATE["Required quality gate"]
+  SEC --> GATE
+  CQL --> GATE
+  DEP --> REPORT["Security report and remediation backlog"]
+```
+
 ## Workflows
 
 - `CI` (`.github/workflows/ci.yml`)
@@ -55,6 +69,18 @@ pnpm audit:security
 - Node is pinned in CI (22).
 - pnpm is pinned (`pnpm@9.0.0` via Corepack).
 - Lockfile is enforced (`--frozen-lockfile`).
+
+## Required checks for merge
+
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm build`
+- Optional strict gates used in release prep:
+  - `pnpm literature-benchmarks`
+  - `pnpm didactics-acceptance`
+  - `pnpm perf-smoke`
+  - `pnpm migration-regression`
 
 ## Secrets and permissions
 

@@ -12,6 +12,16 @@ export type StepTimingDiagnostics = {
   ltteMoonSec?: number;
   shapiroPlanetSec?: number;
   shapiroMoonSec?: number;
+  planetTransitCenterSec?: number;
+  planetTransitDurationSec?: number;
+  planetIngressSec?: number;
+  planetEgressSec?: number;
+  planetTtvSec?: number;
+  moonTransitCenterSec?: number;
+  moonTransitDurationSec?: number;
+  moonIngressSec?: number;
+  moonEgressSec?: number;
+  moonTtvSec?: number;
 };
 
 export type StepConservationDiagnostics = {
@@ -20,6 +30,12 @@ export type StepConservationDiagnostics = {
 };
 
 export type StepFluxDecomposition = {
+  stellarA?: number;
+  stellarB?: number;
+  binaryEclipseTerms?: number;
+  additivePlanetary?: number;
+  additiveLunar?: number;
+  instrumental?: number;
   stellarPreTransit?: number;
   stellarVariability?: number;
   transitFactor?: number;

@@ -24,7 +24,7 @@
 // - stepSystem() is synchronous by design (simulation stepping).
 // - Optional limb darkening requires prepareSimulation() to be awaited for deterministic usage.
 
-import type { StepResult, SystemParams } from "../core/types";
+import type { StepResult, StepTimingDiagnostics, SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";
 import { assertStepInputs } from "./validation";
 import {
@@ -39,6 +39,7 @@ import { evolveBrightnessPatches, spotFluxFactorFromPatches } from "../photometr
 import { computeAdditiveFluxComponents } from "./additiveFlux";
 import { computeExoDiagnostics } from "./diagnostics";
 import { computeStepObservables } from "./observables";
+import { computeTransitTimingDiagnostics } from "./transitTiming";
 import { projectSurfacePatchesToSky } from "../photometry/stellarSurface";
 import { assertTimeObserverContract } from "./observerContract";
 import { isPhysicsFeatureEnabled } from "./fidelity";
@@ -108,7 +109,14 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
 
   const exoDiag = computeExoDiagnostics(params, t, observerDir, kin);
   const observables = computeStepObservables(params, t, observerDir, kin);
-  const timing = observables?.timing;
+  const dynamicTiming = computeTransitTimingDiagnostics(params, t, observerDir, kin);
+  const mergedTiming: StepTimingDiagnostics = {
+    ...(observables?.timing ?? {}),
+    ...dynamicTiming,
+  };
+  const timing = Object.values(mergedTiming).some((v) => typeof v === "number" && Number.isFinite(v))
+    ? mergedTiming
+    : undefined;
   const conservation = observables?.conservation;
 
   const stepBase: StepResult = {
@@ -141,6 +149,12 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
       timing,
       conservation,
       fluxDecomposition: {
+        stellarA: baselineFluxUsed * spotFluxFactor * fluxTransitFactor,
+        stellarB: fluxPlanetPhase,
+        binaryEclipseTerms: fluxTransitFactor,
+        additivePlanetary: fluxPlanetPhase + fluxForwardScattering + fluxRingScattering,
+        additiveLunar: fluxMoonPhase,
+        instrumental: 0,
         stellarPreTransit: fluxStellarPreTransit,
         stellarVariability: fluxStellarVar,
         transitFactor: fluxTransitFactor,

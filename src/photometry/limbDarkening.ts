@@ -33,8 +33,47 @@ import type {
   LimbDarkeningLaw,
   LimbDarkeningModel,
   PassbandId,
+  StellarLimbDarkeningParams,
 } from "../core/types";
 export type { LimbDarkeningConstraints, LimbDarkeningLaw } from "../core/types";
+
+export type StellarLdParams = StellarLimbDarkeningParams & { bandpass?: PassbandId };
+
+/**
+ * Deterministic, bounded quadratic-LD approximation from stellar parameters.
+ * The mapping is intentionally conservative and used as a runtime fallback when no table is configured.
+ */
+export function deriveQuadraticLimbDarkeningFromStellarParams(
+  params: StellarLdParams,
+): Extract<LimbDarkeningLaw, { kind: "quadratic" }> {
+  const teff = Number.isFinite(params.teffK) ? (params.teffK as number) : 5772;
+  const logg = Number.isFinite(params.loggCgs) ? (params.loggCgs as number) : 4.44;
+  const feh = Number.isFinite(params.metallicityDex) ? (params.metallicityDex as number) : 0;
+  const band = normalizeBandpassId(params.bandpass ?? "v") ?? "v";
+
+  // Smoothly varying toy coefficients around solar values.
+  const tNorm = Math.max(-1, Math.min(1, (teff - 5772) / 4000));
+  const gNorm = Math.max(-1, Math.min(1, (logg - 4.44) / 1.5));
+  const zNorm = Math.max(-1, Math.min(1, feh / 1.0));
+  const bandShift =
+    band === "u" || band === "b"
+      ? 0.06
+      : band === "r" || band === "i" || band === "z" || band === "y"
+        ? -0.05
+        : 0;
+
+  let u1 = 0.42 - 0.14 * tNorm + 0.05 * gNorm + 0.03 * zNorm + bandShift;
+  let u2 = 0.24 - 0.08 * tNorm + 0.03 * gNorm - 0.02 * zNorm + 0.5 * bandShift;
+  u1 = Math.max(0, Math.min(1.3, u1));
+  u2 = Math.max(0, Math.min(1.1, u2));
+  if (u1 + u2 >= 1.95) {
+    const s = 1.95 / (u1 + u2);
+    u1 *= s;
+    u2 *= s;
+  }
+
+  return { kind: "quadratic", u1, u2 };
+}
 
 /** Validation behavior for limb-darkening plausibility checks. */
 export type LimbDarkeningValidationMode = "none" | "warn" | "throw";
@@ -254,6 +293,14 @@ export function resolveLimbDarkeningForBand(
 
   const def = model.default as unknown as LimbDarkeningLaw | undefined;
   if (isLawObject(def)) return def;
+
+  const stellar = model.stellar;
+  if (stellar && typeof stellar === "object") {
+    return deriveQuadraticLimbDarkeningFromStellarParams({
+      ...stellar,
+      bandpass: bandpass ?? model.bandpass,
+    });
+  }
 
   return undefined;
 }

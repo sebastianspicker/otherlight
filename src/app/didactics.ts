@@ -85,7 +85,9 @@ export function renderDidacticSignals(refs: UiRefs, runtime: DidacticsRuntimeSta
     if (!signals) {
       refs.didLessonStatus.textContent = "Didactics disabled.";
     } else {
-      refs.didLessonStatus.textContent = `${signals.lessonTitle ?? "Lesson"} · ${signals.stepTitle ?? ""} · score ${(toFiniteNumber(signals.score, 0) * 100).toFixed(0)}%`;
+      const score = (toFiniteNumber(signals.score, 0) * 100).toFixed(0);
+      const rubric = signals.rubricV2 ? ` · rubric ${(signals.rubricV2.score * 100).toFixed(0)}%` : "";
+      refs.didLessonStatus.textContent = `${signals.lessonTitle ?? "Lesson"} · ${signals.stepTitle ?? ""} · score ${score}%${rubric}`;
     }
   }
 

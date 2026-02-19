@@ -74,15 +74,58 @@ export type DidacticSignals = {
   stepTitle?: string;
   prompt?: string;
   hints?: string[];
+  hintLevels?: {
+    L1?: string[];
+    L2?: string[];
+    L3?: string[];
+  };
+  misconceptions?: Array<{
+    id: string;
+    message: string;
+    severity: "info" | "warn";
+  }>;
   formulas?: DidacticFormulaValue[];
   checks?: DidacticCheckResult[];
+  rubricV2?: {
+    score: number;
+    pass: boolean;
+    passScore: number;
+    breakdown: Array<{
+      id: string;
+      label: string;
+      weight: number;
+      score: number;
+    }>;
+  };
   score?: number;
   allChecksPassed?: boolean;
+};
+
+export type RubricCriterionV2 = {
+  id: string;
+  label: string;
+  weight: number;
+  metric: "check-pass-rate" | "depth-consistency" | "timing-signal";
+};
+
+export type AssessmentRubricV2 = {
+  enabled?: boolean;
+  passScore?: number;
+  criteria?: RubricCriterionV2[];
 };
 
 export type DidacticsParams = {
   enabled?: boolean;
   activeLessonId?: string;
   autoAssess?: boolean;
+  hintLevel?: "L1" | "L2" | "L3";
+  misconceptionChecks?: {
+    enabled?: boolean;
+  };
+  compareLabs?: {
+    enabled?: boolean;
+    autoInterpret?: boolean;
+  };
+  assessmentRubricV2?: AssessmentRubricV2;
   learningState?: LearningState;
 };

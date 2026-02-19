@@ -265,6 +265,22 @@ export function applyInstrumentNoiseAndSystematics(args: {
         sysFluxAdd += amp * resp;
       }
     }
+
+    // 4. Drift families (deterministic correlated low-frequency components)
+    const drift = trends.driftFamilies;
+    if (drift?.enabled) {
+      const amps = Array.isArray(drift.amplitudesFlux) ? drift.amplitudesFlux : [];
+      const periods = Array.isArray(drift.periodsSec) ? drift.periodsSec : [];
+      const phases = Array.isArray(drift.phasesRad) ? drift.phasesRad : [];
+      const n = Math.min(amps.length, periods.length);
+      for (let i = 0; i < n; i++) {
+        const a = toFiniteNumber(amps[i], 0);
+        const p = toFiniteNumber(periods[i], NaN);
+        const ph = toFiniteNumber(phases[i], 0);
+        if (!(Number.isFinite(a) && a !== 0 && Number.isFinite(p) && p > 0)) continue;
+        sysFluxAdd += a * Math.sin((2 * Math.PI * t) / p + ph);
+      }
+    }
   }
 
   // ---------- Correlated noise (flux units, additive) ----------

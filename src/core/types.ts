@@ -68,6 +68,7 @@ export type {
   LimbDarkeningLawFourParameter,
   LimbDarkeningLaw,
   LimbDarkeningModel,
+  StellarLimbDarkeningParams,
 } from "./typesLimbDarkening";
 
 // Photometry config
@@ -104,7 +105,14 @@ export type {
 } from "./typesSystem";
 
 // Results
-export type { StepMeta, StepResult, StepObservables } from "./typesResults";
+export type {
+  StepMeta,
+  StepResult,
+  StepObservables,
+  StepTimingDiagnostics,
+  StepConservationDiagnostics,
+  StepFluxDecomposition,
+} from "./typesResults";
 
 // Didactics
 export type {
@@ -115,5 +123,7 @@ export type {
   LearningState,
   DidacticCheckResult,
   DidacticSignals,
+  RubricCriterionV2,
+  AssessmentRubricV2,
   DidacticsParams,
 } from "./typesDidactics";

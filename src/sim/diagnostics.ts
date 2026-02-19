@@ -29,12 +29,10 @@ export function computeExoDiagnostics(
   }
 
   const exo = getExomoonConfig(params);
-  const exoEnabled = Boolean(exo?.enabled);
 
   // Impact parameters are geometry diagnostics: always provide them.
   const bPlanet = impactParameterFromSkyY(kin.planetSky.y, params.star.r);
   const bMoon = kin.moonSky ? impactParameterFromSkyY(kin.moonSky.y, params.star.r) : undefined;
-  if (!exoEnabled) return { bPlanet, bMoon };
 
   const tRef = toFiniteNumber(exo?.tRef, 0);
   const sampledNow = sampleSystemState({

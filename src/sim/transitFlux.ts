@@ -27,6 +27,7 @@ import {
   fluxStarWithTransmissiveOcculters,
   type TransmissionOcculter,
 } from "../photometry/transitTransmission";
+import { totalAtmosphereTransmission } from "../photometry/atmosphereRT/model";
 import type { BodyKinematics } from "./kinematics";
 import { getLdIntegrators } from "./optionalLimbDarkening";
 import { isPhysicsFeatureEnabled } from "./fidelity";
@@ -80,7 +81,6 @@ function buildTransmissionOcculters(
     }
 
     if (rt?.enabled && Array.isArray(rt.layers) && rt.layers.length > 0) {
-      const lambdaRef = isFinitePositive(rt.lambdaRefNm) ? (rt.lambdaRefNm as number) : 550;
       const layers = rt.layers.filter(
         (ly) => ly && isFinitePositive(ly.r0) && isFinitePositive(ly.H) && isFiniteNonNegative(ly.tau0),
       );
@@ -95,16 +95,14 @@ function buildTransmissionOcculters(
         transmission: (rho: number): number => {
           if (!Number.isFinite(rho) || rho < 0) return 1;
           if (rho <= r0) return 0;
-          let tau = 0;
-          for (const ly of layers) {
-            const base = Math.max(r0, ly.r0);
-            if (!(rho > base)) continue;
-            const alpha = Number.isFinite(ly.alpha) ? (ly.alpha as number) : 0;
-            const wlScale =
-              Number.isFinite(lambdaNm) && lambdaNm! > 0 ? Math.pow(lambdaNm! / lambdaRef, -alpha) : 1;
-            tau += ly.tau0 * wlScale * Math.exp(-(rho - base) / ly.H);
-          }
-          return Math.exp(-Math.max(0, tau));
+          return totalAtmosphereTransmission({
+            rho,
+            config: {
+              ...rt,
+              layers,
+            },
+            lambdaNm,
+          });
         },
       });
       return;

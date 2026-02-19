@@ -251,6 +251,10 @@ canvas {
   height: clamp(200px, 24vh, 360px);
 }
 
+#ocCanvas {
+  height: clamp(140px, 20vh, 220px);
+}
+
 /* -----------------------------
    Forms / inputs
    ----------------------------- */

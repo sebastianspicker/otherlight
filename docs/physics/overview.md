@@ -47,25 +47,25 @@ flowchart LR
   Total --> Measured["Optional Measurement Layer (Smearing + Instrument Noise)"]
 ```
 
-The public runtime entry point is `createSimulation(config).step(tObsSec)` in `src/sim/v3/runtime.ts`.
-`stepSystem(params, tSec)` in `src/sim/sim.ts` remains the internal physics kernel used by the runtime.
+The default runtime entry point is `createSimulationV4(config).step(tObsSec)` in `src/sim/v4/runtime.ts`.
+`stepSystem(params, tSec)` in `src/sim/sim.ts` remains the internal physics kernel used by compatibility and focused module tests.
 
 Runtime contracts and consistency:
 
 - `src/sim/observerContract.ts` enforces strict time/observer invariants.
 - `src/sim/stateSampler.ts` is the shared sampler for diagnostics and observables.
-- `src/sim/v3/runtime.ts` maps core results to `SimulationStepV3` with:
+- `src/sim/v4/runtime.ts` maps core results to `SimulationStepV4` with:
   - `renderSignals` (canonical rendering contract)
   - `physicsDiagnostics` (timing/integrator/conservation visibility)
 
-V3 rendering/debug contract:
+Rendering/debug contract:
 
-- `src/render/scene.ts` accepts `SimulationStepV3` and dispatches to `drawFrameV3(...)`.
-- `SimulationStepV3` no longer exposes a `legacyStep` payload in the active UI path.
-- Debug overlays consume `drawDebugOverlayV3(...)` data mapped from:
-  - `SimulationStepV3.debug`
-  - `SimulationStepV3.flux`
-  - `SimulationStepV3.renderSignals`
+- `src/render/scene.ts` accepts the active simulation step payload and dispatches the canonical draw path.
+- The active UI path does not require a legacy step payload.
+- Debug overlays consume `drawDebugOverlay...` data mapped from:
+  - `simulationStep.debug`
+  - `simulationStep.flux`
+  - `simulationStep.renderSignals`
 
 Fidelity and feature gates:
 
@@ -102,7 +102,7 @@ Key files:
 - N-body dynamics: `src/sim/dynamics.ts`
 - Relativity and timing: `src/physics/relativity.ts`
 - Photometry: `src/sim/transitFlux.ts`, `src/photometry/*`
-- Runtime V3 mapping: `src/sim/v3/runtime.ts`
+- Runtime V4 mapping: `src/sim/v4/runtime.ts`
 - V3 render entry: `src/render/scene.ts`, `src/render/canvas2d.ts`
 - V3 debug overlay: `src/render/overlays.ts`
 - Rendering contract: `docs/rendering/physics-visualization-contract.md`

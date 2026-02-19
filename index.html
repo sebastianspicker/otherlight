@@ -32,10 +32,32 @@
 
         <div class="help">
           <label class="inline">
+            Simulation mode
+            <select id="simModeSelect" aria-label="Simulationsmodus auswählen">
+              <option value="binary-lab" selected>Binary lab (default)</option>
+              <option value="preset-lab">Preset / real systems</option>
+            </select>
+          </label>
+
+          <label class="inline">
+            Runtime mode
+            <select id="runtimeModeSelect" aria-label="Runtime-Modus auswählen">
+              <option value="realtime" selected>realtime</option>
+              <option value="reference">reference</option>
+            </select>
+          </label>
+
+          <label class="inline">
             Preset
             <select id="presetSelect" aria-label="Preset auswählen"></select>
           </label>
           <p id="presetDesc" class="help"></p>
+
+          <label class="inline">
+            Real systems
+            <select id="realSystemSelect" aria-label="Reales System auswählen"></select>
+          </label>
+          <p id="realSystemMeta" class="help"></p>
         </div>
       </header>
 
@@ -54,6 +76,9 @@
                   role="img"
                   aria-label="Sky-plane visualization"
                 ></canvas>
+                <p id="skyBlackboxHint" class="help" hidden>
+                  Black-box mode aktiv: nur Lichtkurve sichtbar. Wähle eine Hypothese und klicke „Reveal sky“.
+                </p>
 
                 <details class="help">
                   <summary>Debug overlay</summary>
@@ -867,6 +892,7 @@
               <span class="mono">occulters <span id="nOccultersVal"></span></span>
               <span class="mono">v_planet <span id="vPlanetVal"></span></span>
               <span class="mono">v_moon <span id="vMoonVal"></span></span>
+              <span class="mono">O-C <span id="timingHistoryVal"></span></span>
               <span class="mono">mode <span id="plotModeVal"></span></span>
               <span class="mono warn"><span id="warnVal" role="status" aria-live="polite"></span></span>
             </div>
@@ -892,7 +918,60 @@
             </div>
 
             <section class="panel">
+              <h3>O-C history</h3>
+              <div class="row">
+                <label class="inline">
+                  Body
+                  <select id="ocBodySelect" aria-label="O-C body">
+                    <option value="planet" selected>planet</option>
+                    <option value="moon">moon</option>
+                  </select>
+                </label>
+                <label class="inline">
+                  Unit
+                  <select id="ocUnitSelect" aria-label="O-C unit">
+                    <option value="s" selected>s</option>
+                    <option value="ms">ms</option>
+                  </select>
+                </label>
+                <label class="inline">
+                  Trend
+                  <select id="ocTrendModeSelect" aria-label="O-C trend mode">
+                    <option value="raw" selected>raw</option>
+                    <option value="fit">fit overlay</option>
+                    <option value="detrended">detrended</option>
+                  </select>
+                </label>
+                <button id="ocExportBtn" type="button">Export CSV</button>
+                <button id="ocClearBtn" type="button">Clear history</button>
+              </div>
+              <canvas
+                id="ocCanvas"
+                width="960"
+                height="220"
+                role="img"
+                aria-label="O-C history plot"
+              ></canvas>
+              <p id="ocStatsVal" class="help mono"></p>
+              <p id="ocFitVal" class="help mono"></p>
+            </section>
+
+            <section class="panel">
               <h3>Guided Labs</h3>
+              <div class="row">
+                <label class="inline">
+                  Hypothesis
+                  <select id="didHypothesisSelect" aria-label="Hypothese wählen">
+                    <option value="" selected>— choose hypothesis —</option>
+                    <option value="primary-eclipse-deepest">Primary eclipse is deepest</option>
+                    <option value="secondary-eclipse-dominates">Secondary eclipse dominates</option>
+                    <option value="eccentricity-shifts-eclipse-spacing">
+                      Eccentricity shifts eclipse spacing
+                    </option>
+                  </select>
+                </label>
+                <button id="didRevealSkyBtn" type="button">Reveal sky</button>
+              </div>
               <div class="row">
                 <label class="inline">
                   Lesson

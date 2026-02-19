@@ -1,6 +1,6 @@
 export { LESSONS, DEFAULT_LESSON_ID, getLessonById } from "./lessons";
 export { computeDidacticSignals, resolveLearningState, advanceLearningState } from "./engine";
-export { compareScenariosAtTime } from "./compare";
+export { compareScenariosAtTime, interpretDidacticComparison } from "./compare";
 export { buildLessonReportMarkdown } from "./report";
 export {
   applyAdaptiveHints,

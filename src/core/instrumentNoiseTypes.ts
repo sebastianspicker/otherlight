@@ -120,6 +120,16 @@ export type InstrumentNoiseSystematicsParams = {
       /** Phase offset for Y motion [rad]. */
       phaseY?: number;
     };
+
+    driftFamilies?: {
+      enabled?: boolean;
+      /** Additive amplitudes in flux units for each drift component. */
+      amplitudesFlux?: number[];
+      /** Component periods [s], aligned by index with amplitudesFlux. */
+      periodsSec?: number[];
+      /** Optional phase offsets [rad], aligned by index with amplitudesFlux. */
+      phasesRad?: number[];
+    };
   };
 
   detector?: {

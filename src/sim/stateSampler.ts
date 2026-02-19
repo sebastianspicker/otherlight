@@ -8,10 +8,11 @@ import {
   shapiroDelayMultiBodySec,
 } from "../physics/relativity";
 import type { Vec3 } from "../physics/vec3";
-import { VEC3ZERO, vAdd, vIsFinite, vScale } from "../physics/vec3";
+import { VEC3ZERO, vAdd, vIsFinite, vScale, vSub } from "../physics/vec3";
 import { projectToSky } from "../physics/frames";
 import { computeBodyKinematics, type BodyKinematics } from "./kinematics";
 import { assertTimeObserverContract } from "./observerContract";
+import { getNBodyStateAt, isNBodyEnabled } from "./dynamics";
 
 export type SampledBodyState = {
   r: Vec3;
@@ -158,6 +159,48 @@ export function sampleSystemState(params: {
   assertTimeObserverContract({ system, tObs, observerDir });
   const kinAtT = params.kinAtT ?? computeBodyKinematics(system, tObs, observerDir);
   const dt = normalizeFiniteDiffDtSec(params.velDtSec, 2);
+  const nbodySample = isNBodyEnabled(system) ? getNBodyStateAt(system, tObs) : null;
+
+  if (nbodySample) {
+    const rPlanetRel = vSub(nbodySample.state.rP, nbodySample.state.rS);
+    const vPlanetRel = vSub(nbodySample.state.vP, nbodySample.state.vS);
+    const rMoonRel = vSub(nbodySample.state.rM, nbodySample.state.rS);
+    const vMoonRel = vSub(nbodySample.state.vM, nbodySample.state.vS);
+
+    const planet: SampledBodyState = {
+      r: rPlanetRel,
+      v: vPlanetRel,
+      sky: kinAtT.planetSky,
+      ...sampleTimingTerms(system, kinAtT, observerDir, rPlanetRel),
+    };
+
+    const moon: SampledBodyState | undefined = kinAtT.rMoonAbs
+      ? {
+          r: rMoonRel,
+          v: vMoonRel,
+          sky: kinAtT.moonSky ?? projectToSky(rMoonRel, observerDir),
+          ...sampleTimingTerms(system, kinAtT, observerDir, rMoonRel),
+        }
+      : undefined;
+
+    const star: SampledBodyState = {
+      r: nbodySample.state.rS,
+      v: nbodySample.state.vS,
+      sky: projectToSky(nbodySample.state.rS, observerDir),
+    };
+
+    if (!vIsFinite(planet.v)) planet.v = VEC3ZERO;
+    if (moon && !vIsFinite(moon.v)) moon.v = VEC3ZERO;
+    if (!vIsFinite(star.v)) star.v = VEC3ZERO;
+
+    return {
+      tObs,
+      observerDir,
+      planet,
+      moon,
+      star,
+    };
+  }
 
   const kinAt = (t: number) => computeBodyKinematics(system, t, observerDir);
 

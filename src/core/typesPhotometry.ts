@@ -296,6 +296,12 @@ export type AtmosphereRTLayer = {
   tau0: number;
   /** Optional wavelength exponent: tau ~ (lambda/lambdaRef)^(-alpha). */
   alpha?: number;
+  /** Optional cloud deck contribution (dimensionless optical depth). */
+  cloudOpacity?: number;
+  /** Optional haze slope (dimensionless spectral modifier). */
+  hazeSlope?: number;
+  /** Optional local layer temperature [K]. */
+  temperatureK?: number;
 };
 
 export type AtmosphereRTParams = {
@@ -304,6 +310,8 @@ export type AtmosphereRTParams = {
   /** Optional wavelength reference [nm] for alpha scaling. Default: 550nm. */
   lambdaRefNm?: number;
   layers?: AtmosphereRTLayer[];
+  /** Optional normalized temperature profile (index aligned to layers). */
+  temperatureProfileK?: number[];
   /** Approximate single-scattering channel. */
   scattering?: {
     enabled?: boolean;
@@ -319,6 +327,12 @@ export type AtmosphereRTParams = {
     amp?: number;
     /** Effective phase lag [rad]. */
     phaseLag?: number;
+  };
+  cloudHaze?: {
+    enabled?: boolean;
+    cloudDeckTau?: number;
+    hazeTau?: number;
+    hazeSlope?: number;
   };
 };
 
@@ -354,6 +368,12 @@ export type StellarSurfaceParams = {
   rotationPeriodSec?: number;
   /** Differential rotation coefficient (toy): Omega(lat)=Omega_eq*(1-k*sin^2(lat)). */
   differentialRotationK?: number;
+  /** Granulation RMS amplitude in stellar units (toy/phenomenological). */
+  granulationSigma?: number;
+  /** Activity cycle period [s] for slow baseline modulation. */
+  activityCyclePeriodSec?: number;
+  /** Activity cycle amplitude in stellar units. */
+  activityCycleAmp?: number;
 };
 
 /**

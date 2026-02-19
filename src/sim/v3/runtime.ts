@@ -103,7 +103,11 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
       id: "timing-correction",
       kind: "timing",
       label: "Timing correction available",
-      active: Boolean(step.meta?.timing?.lttePlanetSec || step.meta?.timing?.shapiroPlanetSec),
+      active: Boolean(
+        step.meta?.timing?.lttePlanetSec ||
+        step.meta?.timing?.shapiroPlanetSec ||
+        step.meta?.timing?.planetTransitDurationSec,
+      ),
     },
   ];
 
@@ -112,6 +116,12 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
     { id: "ltteMoonSec", seconds: step.meta?.timing?.ltteMoonSec },
     { id: "shapiroPlanetSec", seconds: step.meta?.timing?.shapiroPlanetSec },
     { id: "shapiroMoonSec", seconds: step.meta?.timing?.shapiroMoonSec },
+    { id: "planetTransitCenterSec", seconds: step.meta?.timing?.planetTransitCenterSec },
+    { id: "planetTransitDurationSec", seconds: step.meta?.timing?.planetTransitDurationSec },
+    { id: "planetTtvSec", seconds: step.meta?.timing?.planetTtvSec },
+    { id: "moonTransitCenterSec", seconds: step.meta?.timing?.moonTransitCenterSec },
+    { id: "moonTransitDurationSec", seconds: step.meta?.timing?.moonTransitDurationSec },
+    { id: "moonTtvSec", seconds: step.meta?.timing?.moonTtvSec },
   ].filter((x) => Number.isFinite(x.seconds));
 
   const uncertaintyFlags: string[] = [];

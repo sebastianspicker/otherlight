@@ -25,5 +25,19 @@ describe("UI smoke", () => {
     syncAllEnableStates(uiRefs);
 
     expect(document.getElementById("app")).not.toBeNull();
+    expect(document.getElementById("realSystemSelect")).not.toBeNull();
+    expect(document.getElementById("realSystemMeta")).not.toBeNull();
+    expect(document.getElementById("simModeSelect")).not.toBeNull();
+    expect(document.getElementById("runtimeModeSelect")).not.toBeNull();
+    expect(document.getElementById("didHypothesisSelect")).not.toBeNull();
+    expect(document.getElementById("didRevealSkyBtn")).not.toBeNull();
+    expect(document.getElementById("timingHistoryVal")).not.toBeNull();
+    expect(document.getElementById("ocCanvas")).not.toBeNull();
+    expect(document.getElementById("ocBodySelect")).not.toBeNull();
+    expect(document.getElementById("ocUnitSelect")).not.toBeNull();
+    expect(document.getElementById("ocTrendModeSelect")).not.toBeNull();
+    expect(document.getElementById("ocExportBtn")).not.toBeNull();
+    expect(document.getElementById("ocClearBtn")).not.toBeNull();
+    expect(document.getElementById("ocFitVal")).not.toBeNull();
   });
 });
