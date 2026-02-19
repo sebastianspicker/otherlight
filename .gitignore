@@ -44,13 +44,12 @@ FINDINGS.md
 LOG.md
 REFACTOR_PLAN.md
 PHYSICS_AUDIT.md
-validation.md
+/validation.md
 docs/DECISIONS.md
 docs/FINDINGS.md
 docs/LOG.md
 docs/REFACTOR_PLAN.md
 docs/PHYSICS_AUDIT.md
-docs/validation.md
 
 # Env files
 .env
