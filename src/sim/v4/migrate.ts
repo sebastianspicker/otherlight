@@ -1,35 +1,10 @@
-import type { OrbitElements, SystemParams } from "../../core/types";
+import type { SystemParams } from "../../core/types";
 import type { SimulationConfigV4 } from "./types";
+import { defaultBinaryOrbit, sanitizeStaticOrbit } from "./orbitSanitizer";
 
 function isObject(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null;
 }
-
-function asStaticOrbit(orbit: unknown, fallback: OrbitElements): OrbitElements {
-  if (typeof orbit === "function" || !isObject(orbit)) return fallback;
-
-  return {
-    a: Number.isFinite((orbit as OrbitElements).a) ? (orbit as OrbitElements).a : fallback.a,
-    e: Number.isFinite((orbit as OrbitElements).e) ? (orbit as OrbitElements).e : fallback.e,
-    inc: Number.isFinite((orbit as OrbitElements).inc) ? (orbit as OrbitElements).inc : fallback.inc,
-    Omega: Number.isFinite((orbit as OrbitElements).Omega) ? (orbit as OrbitElements).Omega : fallback.Omega,
-    omega: Number.isFinite((orbit as OrbitElements).omega) ? (orbit as OrbitElements).omega : fallback.omega,
-    period: Number.isFinite((orbit as OrbitElements).period)
-      ? (orbit as OrbitElements).period
-      : fallback.period,
-    t0: Number.isFinite((orbit as OrbitElements).t0) ? (orbit as OrbitElements).t0 : fallback.t0,
-  };
-}
-
-const DEFAULT_BINARY_ORBIT: OrbitElements = {
-  a: 1,
-  e: 0,
-  inc: Math.PI / 2,
-  Omega: 0,
-  omega: 0,
-  period: 1,
-  t0: 0,
-};
 
 export function migrateSystemParamsToV4(input: SystemParams): SimulationConfigV4 {
   const primary = {
@@ -56,7 +31,7 @@ export function migrateSystemParamsToV4(input: SystemParams): SimulationConfigV4
     luminosityScale: 0,
   };
 
-  const binary = asStaticOrbit(input.planet?.orbit, DEFAULT_BINARY_ORBIT);
+  const binary = sanitizeStaticOrbit(input.planet?.orbit, defaultBinaryOrbit());
 
   const planets = [
     {
@@ -85,7 +60,7 @@ export function migrateSystemParamsToV4(input: SystemParams): SimulationConfigV4
           spin: input.moon.spin,
           gravityHarmonics: input.moon.gravityHarmonics,
           tides: input.moon.tides,
-          orbit: asStaticOrbit(input.moon.orbitAroundPlanet, DEFAULT_BINARY_ORBIT),
+          orbit: sanitizeStaticOrbit(input.moon.orbitAroundPlanet, defaultBinaryOrbit()),
           parentPlanetId: "planet-1",
         },
       ]

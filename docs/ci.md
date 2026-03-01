@@ -91,6 +91,16 @@ If deployment/secrets are added later:
 - use GitHub Environments with approval,
 - keep workflow permissions minimal.
 
+## Release checklist
+
+Before cutting a release (tag or GitHub release):
+
+1. Run full verification: `pnpm ci:verify`
+2. Optionally run strict gates: `pnpm literature-benchmarks`, `pnpm didactics-acceptance`, `pnpm perf-smoke`, `pnpm migration-regression`
+3. Ensure `CHANGELOG.md` has a versioned section for the release
+4. Tag the version (e.g. `git tag v0.1.0`) and push
+5. Optional: refresh real-systems snapshot with `pnpm data:real-systems:refresh` if you want the release to ship updated NASA data
+
 ## Extending CI safely
 
 - Keep PR checks fast (`lint`, `typecheck`, `test`, `build`).

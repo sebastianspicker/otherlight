@@ -1,10 +1,7 @@
+import { deepClone } from "../../core/clone";
 import type { PhotometryParams, SystemParams } from "../../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "../../app/scenario";
 import type { SimulationConfigV4 } from "./types";
-
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
 
 function ensurePhotometry(p: SystemParams): PhotometryParams {
   p.star.photometry = p.star.photometry ?? {};

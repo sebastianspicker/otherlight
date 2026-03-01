@@ -1,4 +1,4 @@
-import type { SystemParams } from "../../core/types";
+import type { SystemDynamicsParams, SystemParams } from "../../core/types";
 import { DEG2RAD, RAD2DEG } from "../../core/units";
 import { cloneParams } from "../../app/scenario";
 import { readCheckbox, readNumberInput, sanitizeFinite, sanitizePositive } from "../inputs";
@@ -26,10 +26,10 @@ export function readUIIntoParams(
   readPhotometryFromUI(next, r);
 
   next.planet.r = sanitizePositive(readNumberInput(r.planetR, next.planet.r), RADIUS_MIN, RADIUS_MAX);
-  if (typeof (next.planet as any).orbit === "function") {
+  const pOrbit = next.planet.orbit;
+  if (typeof pOrbit === "function") {
     throw new Error("UI does not support a function-valued planet.orbit (OrbitElementsProvider).");
   }
-  const pOrbit = next.planet.orbit as any;
   readOrbitInputs({ a: r.planetA, e: r.planetE, inc: r.planetInc, period: r.planetPeriod }, pOrbit);
   next.planet.m = sanitizePositive(readNumberInput(r.planetMass, (next.planet.m ?? 0) as number), 0, 1e30);
 
@@ -39,7 +39,7 @@ export function readUIIntoParams(
   );
   if (pObl !== undefined) {
     next.planet.shape = {
-      ...(next.planet.shape ?? ({} as any)),
+      ...(next.planet.shape ?? {}),
       oblateness: pObl,
       angle: Number.isFinite(next.planet.shape?.angle ?? Number.NaN) ? next.planet.shape?.angle : 0,
     };
@@ -68,7 +68,7 @@ export function readUIIntoParams(
     pRingDefaults,
   );
   if (pRings) {
-    next.planet.rings = pRings as any;
+    next.planet.rings = pRings;
   } else if (next.planet.rings) {
     delete next.planet.rings;
   }
@@ -77,24 +77,24 @@ export function readUIIntoParams(
     if (!next.moon) {
       const templateMoon = cloneParams(scenarioDefaults).moon;
       if (templateMoon) {
-        next.moon = templateMoon as any;
+        next.moon = templateMoon;
       } else {
         next.moon = {
           r: 1e6,
           m: 0,
           orbitAroundPlanet: { a: 1e8, e: 0, inc: 0, Omega: 0, omega: 0, period: 1e5, t0: 0 },
-        } as any;
+        };
       }
     }
 
-    if (typeof (next.moon as any).orbitAroundPlanet === "function") {
+    const mOrbit = next.moon.orbitAroundPlanet;
+    if (typeof mOrbit === "function") {
       throw new Error(
         "UI does not support a function-valued moon.orbitAroundPlanet (OrbitElementsProvider).",
       );
     }
 
     next.moon!.r = sanitizePositive(readNumberInput(r.moonR, next.moon!.r), RADIUS_MIN, RADIUS_MAX);
-    const mOrbit = next.moon!.orbitAroundPlanet as any;
     readOrbitInputs({ a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod }, mOrbit);
     next.moon!.m = sanitizePositive(readNumberInput(r.moonMass, (next.moon!.m ?? 0) as number), 0, 1e30);
 
@@ -104,7 +104,7 @@ export function readUIIntoParams(
     );
     if (mObl !== undefined) {
       next.moon!.shape = {
-        ...(next.moon!.shape ?? ({} as any)),
+        ...(next.moon!.shape ?? {}),
         oblateness: mObl,
         angle: Number.isFinite(next.moon!.shape?.angle ?? Number.NaN) ? next.moon!.shape?.angle : 0,
       };
@@ -133,7 +133,7 @@ export function readUIIntoParams(
       mRingDefaults,
     );
     if (mRings) {
-      next.moon!.rings = mRings as any;
+      next.moon!.rings = mRings;
     } else if (next.moon!.rings) {
       delete next.moon!.rings;
     }
@@ -144,73 +144,59 @@ export function readUIIntoParams(
   readNBodyFromUI(next, r);
 
   if (readCheckbox(r.relEnabled)) {
-    next.dynamics = next.dynamics ?? ({} as any);
-    (next.dynamics as any).relativity = {
+    next.dynamics = next.dynamics ?? {};
+    const dynamics = next.dynamics as SystemDynamicsParams;
+    dynamics.relativity = {
       enabled: true,
       ltte: readCheckbox(r.relLTTE),
       shapiro: readCheckbox(r.relShapiro),
       grPrecession: readCheckbox(r.relGR),
-      c: sanitizePositive(
-        readNumberInput(r.relC, (next.dynamics as any).relativity?.c ?? 299_792_458),
-        1e-9,
-        1e30,
-      ),
+      c: sanitizePositive(readNumberInput(r.relC, dynamics.relativity?.c ?? 299_792_458), 1e-9, 1e30),
       planetPrecessionPerOrbit:
         sanitizeFinite(
-          readNumberInput(
-            r.relPlanetPrec,
-            ((next.dynamics as any).relativity?.planetPrecessionPerOrbit ?? 0) * RAD2DEG,
-          ),
+          readNumberInput(r.relPlanetPrec, (dynamics.relativity?.planetPrecessionPerOrbit ?? 0) * RAD2DEG),
           0,
         ) * DEG2RAD,
       moonPrecessionPerOrbit:
         sanitizeFinite(
-          readNumberInput(
-            r.relMoonPrec,
-            ((next.dynamics as any).relativity?.moonPrecessionPerOrbit ?? 0) * RAD2DEG,
-          ),
+          readNumberInput(r.relMoonPrec, (dynamics.relativity?.moonPrecessionPerOrbit ?? 0) * RAD2DEG),
           0,
         ) * DEG2RAD,
-    } as any;
-  } else if (next.dynamics && (next.dynamics as any).relativity) {
-    delete (next.dynamics as any).relativity;
+    };
+  } else if (next.dynamics?.relativity) {
+    delete next.dynamics.relativity;
   }
 
   if (readCheckbox(r.exoEnabled)) {
-    next.dynamics = next.dynamics ?? ({} as any);
-    (next.dynamics as any).exomoonTimingShape = {
+    next.dynamics = next.dynamics ?? {};
+    const dynamics = next.dynamics as SystemDynamicsParams;
+    dynamics.exomoonTimingShape = {
       enabled: true,
-      tRef: sanitizeFinite(
-        readNumberInput(r.exoTRef, (next.dynamics as any).exomoonTimingShape?.tRef ?? 0),
-        0,
-      ),
+      tRef: sanitizeFinite(readNumberInput(r.exoTRef, dynamics.exomoonTimingShape?.tRef ?? 0), 0),
       velDt: sanitizePositive(
-        readNumberInput(r.exoVelDt, (next.dynamics as any).exomoonTimingShape?.velDt ?? 2),
+        readNumberInput(r.exoVelDt, dynamics.exomoonTimingShape?.velDt ?? 2),
         1e-6,
         1e9,
       ),
       moonOmegaDot: sanitizeFinite(
-        readNumberInput(r.exoMoonOmegaDot, (next.dynamics as any).exomoonTimingShape?.moonOmegaDot ?? 0),
+        readNumberInput(r.exoMoonOmegaDot, dynamics.exomoonTimingShape?.moonOmegaDot ?? 0),
         0,
       ),
       moonIncDot: sanitizeFinite(
-        readNumberInput(r.exoMoonIncDot, (next.dynamics as any).exomoonTimingShape?.moonIncDot ?? 0),
+        readNumberInput(r.exoMoonIncDot, dynamics.exomoonTimingShape?.moonIncDot ?? 0),
         0,
       ),
       moonOmegaSmallDot: sanitizeFinite(
-        readNumberInput(
-          r.exoMoonOmegaSmallDot,
-          (next.dynamics as any).exomoonTimingShape?.moonOmegaSmallDot ?? 0,
-        ),
+        readNumberInput(r.exoMoonOmegaSmallDot, dynamics.exomoonTimingShape?.moonOmegaSmallDot ?? 0),
         0,
       ),
       moonImpactYDot: sanitizeFinite(
-        readNumberInput(r.exoImpactYDot, (next.dynamics as any).exomoonTimingShape?.moonImpactYDot ?? 0),
+        readNumberInput(r.exoImpactYDot, dynamics.exomoonTimingShape?.moonImpactYDot ?? 0),
         0,
       ),
-    } as any;
-  } else if (next.dynamics && (next.dynamics as any).exomoonTimingShape) {
-    delete (next.dynamics as any).exomoonTimingShape;
+    };
+  } else if (next.dynamics?.exomoonTimingShape) {
+    delete next.dynamics.exomoonTimingShape;
   }
 
   return next;

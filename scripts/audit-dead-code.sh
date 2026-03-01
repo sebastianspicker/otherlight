@@ -15,16 +15,25 @@ pnpm dlx madge --extensions ts src --orphans > "$MADGE_OUT"
 ALLOWED_ORPHANS=(
   "main.ts"
   "photometry/transitQuadraticLD.ts"
+  # Dedicated worker entrypoint loaded by bundler worker pipeline (?worker import).
+  # Madge treats this as orphan although it is emitted and used at runtime.
+  "sim/v4/referenceWorker.ts"
 )
 
-actual_orphans=$(tail -n +2 "$MADGE_OUT" | sed '/^Processed /d' | sed '/^$/d' | sed 's/^\s*//')
+actual_orphans=$(
+  tail -n +2 "$MADGE_OUT" \
+    | sed '/^Processed /d' \
+    | sed '/^$/d' \
+    | sed 's/\r//g' \
+    | sed 's/^[[:space:]]*//'
+)
 
 unexpected=()
 while IFS= read -r orphan; do
   [[ -z "$orphan" ]] && continue
   allowed=false
   for item in "${ALLOWED_ORPHANS[@]}"; do
-    if [[ "$orphan" == "$item" ]]; then
+    if [[ "$orphan" == "$item" || "$orphan" == *"$item" ]]; then
       allowed=true
       break
     fi

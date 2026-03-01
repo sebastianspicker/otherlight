@@ -201,13 +201,30 @@ export function loadLearningProgressV3(params?: {
   try {
     const parsed = JSON.parse(raw) as {
       schemaVersion?: number;
-      progress?: LearningProgressV3;
+      progress?: unknown;
     };
     if (parsed.schemaVersion !== PROGRESS_SCHEMA_VERSION) return undefined;
-    return parsed.progress;
+    return sanitizeLearningProgressV3(parsed.progress);
   } catch {
     return undefined;
   }
+}
+
+function sanitizeLearningProgressV3(progress: unknown): LearningProgressV3 | undefined {
+  if (!progress || typeof progress !== "object") return undefined;
+  const p = progress as Record<string, unknown>;
+  const stepIndex = typeof p.stepIndex === "number" && Number.isFinite(p.stepIndex) ? p.stepIndex : 0;
+  const passedStepIds = Array.isArray(p.passedStepIds)
+    ? (p.passedStepIds as unknown[]).filter((id): id is string => typeof id === "string")
+    : [];
+  return {
+    lessonId: typeof p.lessonId === "string" ? p.lessonId : undefined,
+    stepIndex: Math.max(0, Math.floor(stepIndex)),
+    passedStepIds,
+    lastScore: typeof p.lastScore === "number" && Number.isFinite(p.lastScore) ? p.lastScore : undefined,
+    updatedAtSec:
+      typeof p.updatedAtSec === "number" && Number.isFinite(p.updatedAtSec) ? p.updatedAtSec : undefined,
+  };
 }
 
 export function clearLearningProgressV3(params?: { storage?: StorageLike; storageKey?: string }): void {

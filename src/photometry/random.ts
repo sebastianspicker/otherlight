@@ -268,17 +268,19 @@ export function runRandomSelfTests(): void {
   const z = r4.n01();
   assert(Number.isFinite(z), "n01 must be finite.");
 
-  // Ensure Box–Muller cache reset behavior is deterministic with setState:
+  // Ensure setState clears Box–Muller cache and the next n01() sequence is deterministic:
   const r5 = createMulberry32(7);
-  const zA0 = r5.n01();
-  void zA0;
-
+  void r5.n01(); // consume one pair so we are at a known stream position
   const stateAfter = r5.getState();
-  const zA1 = r5.n01();
 
   r5.setState(stateAfter);
   const zB1 = r5.n01();
-
-  // zA1 and zB1 should match because cache is reset and u32 stream restarts from same point.
-  assert(approxEq(zA1, zB1, 0), "Cache reset + same underlying state must reproduce n01 draws.");
+  const zB2 = r5.n01();
+  r5.setState(stateAfter);
+  const zB1b = r5.n01();
+  const zB2b = r5.n01();
+  assert(
+    approxEq(zB1, zB1b, 0) && approxEq(zB2, zB2b, 0),
+    "Cache reset + same underlying state must reproduce n01 draws.",
+  );
 }

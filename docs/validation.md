@@ -4,12 +4,12 @@ This project has two validation layers:
 
 1. Hard input validation (throws):
 
-- Implemented in `src/sim/validation.ts` via `assertStepInputs()` and `assertOrbit()`.
+- Implemented in `src/sim/validation/assertions.ts` via `assertStepInputs()` and `assertOrbit()`.
 - Enforces finite/positive radii, orbit basics, N-body prerequisites, and key photometry ranges.
 
 2. Soft plausibility warnings (non-fatal):
 
-- Implemented in `src/sim/validation.ts` via `collectParamWarnings()`.
+- Implemented in `src/sim/validation/warnings.ts` via `collectParamWarnings()`.
 - Implemented in `src/physics/hill.ts` via `validateSystemParamsPhysics()`.
 - Returned warnings are shown in the UI as guidance for likely unphysical or numerically risky setups.
 

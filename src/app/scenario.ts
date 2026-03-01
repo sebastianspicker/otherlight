@@ -2,6 +2,7 @@
 //
 // Scenario loading and defaults.
 
+import { deepClone } from "../core/clone";
 import type { SystemParams } from "../core/types";
 
 // IMPORTANT: This file must exist: src/config/scenario.default.json
@@ -46,25 +47,25 @@ function assertScenarioUnitsSI(meta: unknown): void {
 
 export function cloneParams(p: SystemParams): SystemParams {
   // Plain-data guarantee: SystemParams is expected to be JSON-serializable in this project.
-  return JSON.parse(JSON.stringify(p)) as SystemParams;
+  return deepClone(p);
 }
 
 export function loadScenario(): ScenarioFile {
-  const raw: unknown = scenarioJson as unknown;
+  const raw: unknown = scenarioJson;
 
   if (!isObject(raw)) {
     throw new Error("scenario.default.json must be a JSON object");
   }
+  const rawObj = raw as Record<string, unknown>;
 
-  const defaults = (raw as any).defaults as unknown;
+  const defaults = rawObj.defaults;
   if (!isObject(defaults)) {
     throw new Error("scenario.default.json must contain a 'defaults' object");
   }
-  assertScenarioUnitsSI((raw as any).meta);
+  assertScenarioUnitsSI(rawObj.meta);
 
   // Trust schema for size/speed, but deep-clone to prevent accidental mutation of the import object.
-  const typedDefaults = defaults as SystemParams;
-  return { ...(raw as any), defaults: cloneParams(typedDefaults) } as ScenarioFile;
+  return { ...rawObj, defaults: cloneParams(defaults as SystemParams) } as ScenarioFile;
 }
 
 export const scenario = loadScenario();

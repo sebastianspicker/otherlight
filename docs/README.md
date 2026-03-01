@@ -24,3 +24,5 @@ flowchart LR
   Physics --> Photometry["physics/photometry.md"]
   Root --> Didactics["didactics/curriculum-v3.md"]
 ```
+
+Ephemeral local inspection notes should stay outside the maintained docs set (see `.gitignore` patterns).

@@ -1,18 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function walkTsFiles(dir: string, out: string[] = []): string[] {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkTsFiles(full, out);
-      continue;
-    }
-    if (entry.isFile() && full.endsWith(".ts")) out.push(full);
-  }
-  return out;
-}
+import { walkTsFiles } from "../helpers/walkTsFiles";
 
 describe("hygiene any budget", () => {
   it("keeps explicit any usage under the current migration budget", () => {
@@ -28,7 +17,7 @@ describe("hygiene any budget", () => {
       count += matches?.length ?? 0;
     }
 
-    // Iteration-1 migration budget. Reduce in follow-up iterations.
-    expect(count).toBeLessThanOrEqual(120);
+    // Iteration-2 migration budget.
+    expect(count).toBeLessThanOrEqual(115);
   });
 });

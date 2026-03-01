@@ -54,7 +54,7 @@ Runtime contracts and consistency:
 
 - `src/sim/observerContract.ts` enforces strict time/observer invariants.
 - `src/sim/stateSampler.ts` is the shared sampler for diagnostics and observables.
-- `src/sim/v4/runtime.ts` maps core results to `SimulationStepV4` with:
+- `src/sim/v4/runtime.ts` maps core results to the V3-compatible step contract (`SimulationStepV3`) with:
   - `renderSignals` (canonical rendering contract)
   - `physicsDiagnostics` (timing/integrator/conservation visibility)
 

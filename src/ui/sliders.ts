@@ -37,6 +37,8 @@ export function wireParamSliders(r: UiRefs): void {
 
     const range = document.createElement("input");
     range.type = "range";
+    range.id = `slider-${num.id || "param"}`;
+    range.setAttribute("aria-label", num.id || "parameter slider");
     range.min = String(min);
     range.max = String(max);
     range.step = String(safeStep);

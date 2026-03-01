@@ -10,12 +10,13 @@ export function buildLessonReportMarkdown(params: {
   const formulas = latestSignals?.formulas ?? [];
 
   const lines: string[] = [];
+  const passedStepIds = Array.isArray(state.passedStepIds) ? state.passedStepIds : [];
   lines.push(`# ${courseTitle}`);
   lines.push("");
-  lines.push(`- Lesson ID: \`${state.lessonId}\``);
-  lines.push(`- Step Index: ${state.stepIndex}`);
-  lines.push(`- Passed Steps: ${state.passedStepIds.length > 0 ? state.passedStepIds.join(", ") : "none"}`);
-  lines.push(`- Last Score: ${state.lastScore ?? 0}`);
+  lines.push(`- Lesson ID: \`${state?.lessonId ?? "unknown"}\``);
+  lines.push(`- Step Index: ${Number.isFinite(state?.stepIndex) ? state.stepIndex : 0}`);
+  lines.push(`- Passed Steps: ${passedStepIds.length > 0 ? passedStepIds.join(", ") : "none"}`);
+  lines.push(`- Last Score: ${state?.lastScore ?? 0}`);
   lines.push("");
   lines.push("## Latest Check Results");
   if (checks.length === 0) {

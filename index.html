@@ -10,9 +10,24 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        z-index: 999;
+      }
+      .skip-link:focus {
+        left: 1rem;
+        top: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--bg, #fff);
+        border: 1px solid #333;
+      }
+    </style>
   </head>
 
   <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
     <div id="app" class="app">
       <header class="app-header">
         <h1>Transit-Exomoon-Lightcurve-Simulator</h1>
@@ -31,7 +46,7 @@
         </details>
 
         <div class="help">
-          <label class="inline">
+          <label class="inline" for="simModeSelect">
             Simulation mode
             <select id="simModeSelect" aria-label="Simulationsmodus auswählen">
               <option value="binary-lab" selected>Binary lab (default)</option>
@@ -39,7 +54,7 @@
             </select>
           </label>
 
-          <label class="inline">
+          <label class="inline" for="runtimeModeSelect">
             Runtime mode
             <select id="runtimeModeSelect" aria-label="Runtime-Modus auswählen">
               <option value="realtime" selected>realtime</option>
@@ -47,13 +62,13 @@
             </select>
           </label>
 
-          <label class="inline">
+          <label class="inline" for="presetSelect">
             Preset
             <select id="presetSelect" aria-label="Preset auswählen"></select>
           </label>
           <p id="presetDesc" class="help"></p>
 
-          <label class="inline">
+          <label class="inline" for="realSystemSelect">
             Real systems
             <select id="realSystemSelect" aria-label="Reales System auswählen"></select>
           </label>
@@ -83,20 +98,22 @@
                 <details class="help">
                   <summary>Debug overlay</summary>
                   <div class="grid">
-                    <label class="inline">Enabled <input id="dbgEnabled" type="checkbox" checked /></label>
-                    <label class="inline"
+                    <label class="inline" for="dbgEnabled"
+                      >Enabled <input id="dbgEnabled" type="checkbox" checked
+                    /></label>
+                    <label class="inline" for="dbgShowObserverDir"
                       >Observer dir <input id="dbgShowObserverDir" type="checkbox" checked
                     /></label>
-                    <label class="inline"
+                    <label class="inline" for="dbgShowOcculters"
                       >Occulters <input id="dbgShowOcculters" type="checkbox" checked
                     /></label>
-                    <label class="inline"
+                    <label class="inline" for="dbgShowImpactParams"
                       >Impact params <input id="dbgShowImpactParams" type="checkbox" checked
                     /></label>
-                    <label class="inline"
+                    <label class="inline" for="dbgShowTDV"
                       >TDV diagnostics <input id="dbgShowTDV" type="checkbox" checked
                     /></label>
-                    <label class="inline"
+                    <label class="inline" for="dbgShowFluxDecomposition"
                       >Flux decomposition <input id="dbgShowFluxDecomposition" type="checkbox"
                     /></label>
                   </div>
@@ -130,6 +147,7 @@
                   <legend>UI Ranges</legend>
                   <label
                     class="inline"
+                    for="overrideMode"
                     title="Erlaubt Werte außerhalb der in scenario.default.json definierten wissenschaftlichen Range."
                   >
                     Override mode <input id="overrideMode" type="checkbox" />
@@ -155,24 +173,31 @@
                         normalisiert; (0,0,1) ist der Standard-Blick entlang +z.
                       </p>
                       <div class="grid">
-                        <label>observerX <input id="observerX" type="number" step="0.1" value="0" /></label>
-                        <label>observerY <input id="observerY" type="number" step="0.1" value="0" /></label>
-                        <label>observerZ <input id="observerZ" type="number" step="0.1" value="1" /></label>
+                        <label for="observerX"
+                          >observerX <input id="observerX" type="number" step="0.1" value="0"
+                        /></label>
+                        <label for="observerY"
+                          >observerY <input id="observerY" type="number" step="0.1" value="0"
+                        /></label>
+                        <label for="observerZ"
+                          >observerZ <input id="observerZ" type="number" step="0.1" value="1"
+                        /></label>
                       </div>
                     </fieldset>
 
                     <fieldset>
                       <legend>Stern</legend>
                       <div class="grid">
-                        <label
+                        <label for="starR"
                           >R (m)
                           <input id="starR" type="number" min="1e6" max="2e9" step="1e6" value="695700000"
                         /></label>
-                        <label
+                        <label for="baselineFlux"
                           >Baseline flux
                           <input id="baselineFlux" type="number" min="0" step="0.000001" value="1"
                         /></label>
                         <label
+                          for="gridRes"
                           title="Numerische Auflösung der Sternscheiben-Integration (trade-off Genauigkeit vs. Performance)."
                         >
                           gridRes
@@ -180,18 +205,22 @@
                         </label>
                       </div>
 
-                      <label class="inline"
+                      <label class="inline" for="ldEnabled"
                         >Limb darkening (quadratic) <input id="ldEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label>u1 <input id="ldU1" type="number" step="0.01" value="0.35" /></label>
-                        <label>u2 <input id="ldU2" type="number" step="0.01" value="0.25" /></label>
+                        <label for="ldU1"
+                          >u1 <input id="ldU1" type="number" step="0.01" value="0.35"
+                        /></label>
+                        <label for="ldU2"
+                          >u2 <input id="ldU2" type="number" step="0.01" value="0.25"
+                        /></label>
                       </div>
 
                       <details>
                         <summary>Bandpass / Multi-band LD</summary>
                         <div class="grid">
-                          <label>
+                          <label for="ldBandpass">
                             bandpass
                             <input
                               id="ldBandpass"
@@ -200,7 +229,7 @@
                               placeholder="e.g. V, g, 550"
                             />
                           </label>
-                          <label title="Format: band:u1,u2; band2:u1,u2">
+                          <label for="ldBands" title="Format: band:u1,u2; band2:u1,u2">
                             bands (u1,u2)
                             <input id="ldBands" type="text" placeholder="g:0.45,0.25; r:0.33,0.24" />
                           </label>
@@ -217,17 +246,19 @@
                         </datalist>
                       </details>
 
-                      <label class="inline"
+                      <label class="inline" for="patchesEnabled"
                         >Brightness patches <input id="patchesEnabled" type="checkbox" checked
                       /></label>
 
                       <details>
                         <summary>Patch 1 (circle)</summary>
                         <div class="grid">
-                          <label>x <input id="p1x" type="number" step="0.1" value="-10" /></label>
-                          <label>y <input id="p1y" type="number" step="0.1" value="8" /></label>
-                          <label>r <input id="p1r" type="number" min="0" step="0.1" value="7" /></label>
-                          <label
+                          <label for="p1x">x <input id="p1x" type="number" step="0.1" value="-10" /></label>
+                          <label for="p1y">y <input id="p1y" type="number" step="0.1" value="8" /></label>
+                          <label for="p1r"
+                            >r <input id="p1r" type="number" min="0" step="0.1" value="7"
+                          /></label>
+                          <label for="p1f"
                             >factor <input id="p1f" type="number" min="0" step="0.01" value="0.75"
                           /></label>
                         </div>
@@ -236,12 +267,18 @@
                       <details>
                         <summary>Patch 2 (ellipse)</summary>
                         <div class="grid">
-                          <label>x <input id="p2x" type="number" step="0.1" value="12" /></label>
-                          <label>y <input id="p2y" type="number" step="0.1" value="-6" /></label>
-                          <label>rx <input id="p2rx" type="number" min="0" step="0.1" value="10" /></label>
-                          <label>ry <input id="p2ry" type="number" min="0" step="0.1" value="4" /></label>
-                          <label>angle <input id="p2angle" type="number" step="0.01" value="0.6" /></label>
-                          <label
+                          <label for="p2x">x <input id="p2x" type="number" step="0.1" value="12" /></label>
+                          <label for="p2y">y <input id="p2y" type="number" step="0.1" value="-6" /></label>
+                          <label for="p2rx"
+                            >rx <input id="p2rx" type="number" min="0" step="0.1" value="10"
+                          /></label>
+                          <label for="p2ry"
+                            >ry <input id="p2ry" type="number" min="0" step="0.1" value="4"
+                          /></label>
+                          <label for="p2angle"
+                            >angle <input id="p2angle" type="number" step="0.01" value="0.6"
+                          /></label>
+                          <label for="p2f"
                             >factor <input id="p2f" type="number" min="0" step="0.01" value="1.12"
                           /></label>
                         </div>
@@ -249,22 +286,22 @@
 
                       <details>
                         <summary>Spot evolution (rotation)</summary>
-                        <label class="inline"
+                        <label class="inline" for="spotEvolutionEnabled"
                           >Enabled <input id="spotEvolutionEnabled" type="checkbox"
                         /></label>
                         <div class="grid">
-                          <label
+                          <label for="spotRotationPeriod"
                             >rotationPeriod (s)
                             <input id="spotRotationPeriod" type="number" min="1" step="1" value="20000"
                           /></label>
-                          <label
+                          <label for="spotCoverage"
                             >coverage (0..1)
                             <input id="spotCoverage" type="number" min="0" max="1" step="0.05" value="1"
                           /></label>
-                          <label
+                          <label for="spotLifetime"
                             >lifetime (s) <input id="spotLifetime" type="number" min="0" step="10" value="0"
                           /></label>
-                          <label
+                          <label for="spotDriftRate"
                             >driftRate (rad/s)
                             <input id="spotDriftRate" type="number" step="0.000001" value="0"
                           /></label>
@@ -274,14 +311,14 @@
 
                     <fieldset>
                       <legend>Messung / Smearing</legend>
-                      <label class="inline"
+                      <label class="inline" for="smearEnabled"
                         >Enabled <input id="smearEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label
+                        <label for="cadenceSec"
                           >cadence (s) <input id="cadenceSec" type="number" min="0" step="1" value="60"
                         /></label>
-                        <label
+                        <label for="nSubsamples"
                           >subsamples
                           <input id="nSubsamples" type="number" min="1" max="4096" step="1" value="9"
                         /></label>
@@ -290,23 +327,25 @@
 
                     <fieldset>
                       <legend>Stellar variability</legend>
-                      <label class="inline">Enabled <input id="varEnabled" type="checkbox" checked /></label>
+                      <label class="inline" for="varEnabled"
+                        >Enabled <input id="varEnabled" type="checkbox" checked
+                      /></label>
                       <div class="grid">
-                        <label
+                        <label for="beamingAmp"
                           >beamingAmp <input id="beamingAmp" type="number" step="0.000001" value="0.00002"
                         /></label>
-                        <label
+                        <label for="ellipsoidalAmp"
                           >ellipsoidalAmp
                           <input id="ellipsoidalAmp" type="number" step="0.000001" value="0.00003"
                         /></label>
-                        <label
+                        <label for="beamingOffset"
                           >beamingOffset <input id="beamingOffset" type="number" step="0.001" value="0"
                         /></label>
-                        <label
+                        <label for="ellipsoidalOffset"
                           >ellipsoidalOffset
                           <input id="ellipsoidalOffset" type="number" step="0.001" value="0"
                         /></label>
-                        <label
+                        <label for="varConstant"
                           >constant <input id="varConstant" type="number" min="0" step="0.000001" value="0"
                         /></label>
                       </div>
@@ -318,11 +357,11 @@
                     <fieldset>
                       <legend>Planet</legend>
                       <div class="grid">
-                        <label
+                        <label for="planetR"
                           >Rp (m)
                           <input id="planetR" type="number" min="1e6" max="2e8" step="1e6" value="69911000"
                         /></label>
-                        <label
+                        <label for="planetA"
                           >a (m)
                           <input
                             id="planetA"
@@ -332,14 +371,14 @@
                             step="1e7"
                             value="7479893535"
                         /></label>
-                        <label
+                        <label for="planetE"
                           >e <input id="planetE" type="number" min="0" max="0.999" step="0.001" value="0.08"
                         /></label>
-                        <label
+                        <label for="planetInc"
                           >inc (deg)
                           <input id="planetInc" type="number" min="0" max="180" step="0.01" value="89.2"
                         /></label>
-                        <label
+                        <label for="planetPeriod"
                           >period (s)
                           <input
                             id="planetPeriod"
@@ -349,7 +388,7 @@
                             step="100"
                             value="352657.7453"
                         /></label>
-                        <label
+                        <label for="planetMass"
                           >mass (kg)
                           <input
                             id="planetMass"
@@ -361,52 +400,52 @@
                         /></label>
                       </div>
 
-                      <label class="inline"
+                      <label class="inline" for="planetPhaseEnabled"
                         >Phase curve <input id="planetPhaseEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label
+                        <label for="planetReflAmp"
                           >reflAmp
                           <input id="planetReflAmp" type="number" min="0" step="0.0001" value="0.001"
                         /></label>
-                        <label
+                        <label for="planetThermAmp"
                           >thermAmp
                           <input id="planetThermAmp" type="number" min="0" step="0.0001" value="0.0005"
                         /></label>
-                        <label
+                        <label for="planetReflOffset"
                           >reflOffset <input id="planetReflOffset" type="number" step="0.01" value="0"
                         /></label>
-                        <label
+                        <label for="planetThermOffset"
                           >thermOffset <input id="planetThermOffset" type="number" step="0.01" value="0"
                         /></label>
                       </div>
 
-                      <label class="inline"
+                      <label class="inline" for="planetLambertian"
                         >Lambertian <input id="planetLambertian" type="checkbox" checked
                       /></label>
-                      <label
+                      <label for="planetConstant"
                         >constant <input id="planetConstant" type="number" min="0" step="0.0001" value="0"
                       /></label>
 
                       <details>
                         <summary>Thermal inertia</summary>
-                        <label class="inline"
+                        <label class="inline" for="planetThermalInertiaEnabled"
                           >Enabled <input id="planetThermalInertiaEnabled" type="checkbox"
                         /></label>
                         <div class="grid">
-                          <label
+                          <label for="planetAlbedo"
                             >albedo (0..1)
                             <input id="planetAlbedo" type="number" min="0" max="1" step="0.01" value="0"
                           /></label>
-                          <label
+                          <label for="planetEmissivity"
                             >emissivity (0..1)
                             <input id="planetEmissivity" type="number" min="0" max="1" step="0.01" value="1"
                           /></label>
-                          <label
+                          <label for="planetThermalTimescale"
                             >thermal tau (s)
                             <input id="planetThermalTimescale" type="number" min="0" step="10" value="0"
                           /></label>
-                          <label
+                          <label for="planetRedistribution"
                             >redistribution (0..1)
                             <input
                               id="planetRedistribution"
@@ -421,11 +460,11 @@
 
                       <details>
                         <summary>Shape / Rings</summary>
-                        <label class="inline"
+                        <label class="inline" for="planetOblateEnabled"
                           >Oblate <input id="planetOblateEnabled" type="checkbox"
                         /></label>
                         <div class="grid">
-                          <label>
+                          <label for="planetOblateness">
                             oblateness f
                             <input
                               id="planetOblateness"
@@ -438,9 +477,11 @@
                           </label>
                         </div>
 
-                        <label class="inline">Rings <input id="planetRingsEnabled" type="checkbox" /></label>
+                        <label class="inline" for="planetRingsEnabled"
+                          >Rings <input id="planetRingsEnabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label
+                          <label for="planetRingInner"
                             >ring inner (m)
                             <input
                               id="planetRingInner"
@@ -450,7 +491,7 @@
                               step="1e6"
                               value="83893200"
                           /></label>
-                          <label
+                          <label for="planetRingOuter"
                             >ring outer (m)
                             <input
                               id="planetRingOuter"
@@ -460,11 +501,11 @@
                               step="1e6"
                               value="139822000"
                           /></label>
-                          <label
+                          <label for="planetRingInc"
                             >ring inc (deg)
                             <input id="planetRingInc" type="number" min="0" max="90" step="0.5" value="15"
                           /></label>
-                          <label
+                          <label for="planetRingAngle"
                             >ring angle (deg) <input id="planetRingAngle" type="number" step="1" value="0"
                           /></label>
                         </div>
@@ -472,51 +513,57 @@
 
                       <details>
                         <summary>Forward scattering</summary>
-                        <label class="inline">Enabled <input id="fsEnabled" type="checkbox" /></label>
+                        <label class="inline" for="fsEnabled"
+                          >Enabled <input id="fsEnabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label
+                          <label for="fsAmp"
                             >amp <input id="fsAmp" type="number" min="0" step="0.0001" value="0"
                           /></label>
-                          <label
+                          <label for="fsG"
                             >g
                             <input id="fsG" type="number" min="-0.999" max="0.999" step="0.001" value="0.8"
                           /></label>
-                          <label
+                          <label for="fsSigma"
                             >sigmaPhase
                             <input id="fsSigma" type="number" min="0.000001" step="0.001" value="0.12"
                           /></label>
-                          <label>offset <input id="fsOffset" type="number" step="0.001" value="0" /></label>
+                          <label for="fsOffset"
+                            >offset <input id="fsOffset" type="number" step="0.001" value="0"
+                          /></label>
                         </div>
-                        <label class="inline"
+                        <label class="inline" for="fsGateBehind"
                           >Gate behind star <input id="fsGateBehind" type="checkbox" checked
                         /></label>
                       </details>
 
                       <details>
                         <summary>Atmosphere transmission</summary>
-                        <label class="inline">Enabled <input id="atmEnabled" type="checkbox" /></label>
+                        <label class="inline" for="atmEnabled"
+                          >Enabled <input id="atmEnabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label>
+                          <label for="atmKind">
                             kind
                             <select id="atmKind">
                               <option value="hard" selected>hard</option>
                               <option value="exponential-halo">exp</option>
                             </select>
                           </label>
-                          <label
+                          <label for="atmR0"
                             >r0 (m) <input id="atmR0" type="number" min="0" max="1e9" step="1e5" value="0"
                           /></label>
-                          <label
+                          <label for="atmH"
                             >H (m) <input id="atmH" type="number" min="0" max="1e8" step="1e4" value="0"
                           /></label>
-                          <label
+                          <label for="atmTau0"
                             >tau0 (optical depth)
                             <input id="atmTau0" type="number" min="0" step="0.01" value="0"
                           /></label>
-                          <label title="Comma-separated wavelengths in nm">
+                          <label for="atmLambdaNm" title="Comma-separated wavelengths in nm">
                             lambdaNm <input id="atmLambdaNm" type="text" placeholder="450, 550, 650" />
                           </label>
-                          <label title="Optional per-lambda tau scale factors">
+                          <label for="atmTauScale" title="Optional per-lambda tau scale factors">
                             tauScale <input id="atmTauScale" type="text" placeholder="1, 0.8, 0.6" />
                           </label>
                         </div>
@@ -525,24 +572,26 @@
 
                     <fieldset>
                       <legend>Mond</legend>
-                      <label class="inline">Enabled <input id="moonEnabled" type="checkbox" checked /></label>
+                      <label class="inline" for="moonEnabled"
+                        >Enabled <input id="moonEnabled" type="checkbox" checked
+                      /></label>
                       <div class="grid">
-                        <label
+                        <label for="moonR"
                           >Rm (m)
                           <input id="moonR" type="number" min="1e5" max="5e7" step="1e5" value="6371000"
                         /></label>
-                        <label
+                        <label for="moonA"
                           >a (m)
                           <input id="moonA" type="number" min="1e7" max="1e9" step="1e6" value="200000000"
                         /></label>
-                        <label
+                        <label for="moonE"
                           >e <input id="moonE" type="number" min="0" max="0.999" step="0.001" value="0.02"
                         /></label>
-                        <label
+                        <label for="moonInc"
                           >inc (deg)
                           <input id="moonInc" type="number" min="0" max="180" step="0.01" value="10"
                         /></label>
-                        <label
+                        <label for="moonPeriod"
                           >period (s)
                           <input
                             id="moonPeriod"
@@ -552,34 +601,34 @@
                             step="100"
                             value="49928.74206"
                         /></label>
-                        <label
+                        <label for="moonMass"
                           >mass (kg)
                           <input id="moonMass" type="number" min="0" max="1e27" step="1e23" value="5.9722e24"
                         /></label>
                       </div>
 
-                      <label class="inline"
+                      <label class="inline" for="moonPhaseEnabled"
                         >Moon phase curve <input id="moonPhaseEnabled" type="checkbox"
                       /></label>
                       <div class="grid">
-                        <label
+                        <label for="moonReflAmp"
                           >reflAmp <input id="moonReflAmp" type="number" min="0" step="0.0001" value="0"
                         /></label>
-                        <label
+                        <label for="moonThermAmp"
                           >thermAmp <input id="moonThermAmp" type="number" min="0" step="0.0001" value="0"
                         /></label>
                       </div>
-                      <label class="inline"
+                      <label class="inline" for="moonLambertian"
                         >Lambertian <input id="moonLambertian" type="checkbox" checked
                       /></label>
 
                       <details>
                         <summary>Thermal inertia</summary>
-                        <label class="inline"
+                        <label class="inline" for="moonThermalInertiaEnabled"
                           >Enabled <input id="moonThermalInertiaEnabled" type="checkbox"
                         /></label>
                         <div class="grid">
-                          <label
+                          <label for="moonAlbedo"
                             >albedo (0..1)
                             <input id="moonAlbedo" type="number" min="0" max="1" step="0.01" value="0"
                           /></label>
@@ -606,9 +655,11 @@
 
                       <details>
                         <summary>Shape / Rings</summary>
-                        <label class="inline">Oblate <input id="moonOblateEnabled" type="checkbox" /></label>
+                        <label class="inline" for="moonOblateEnabled"
+                          >Oblate <input id="moonOblateEnabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label>
+                          <label for="moonOblateness">
                             oblateness f
                             <input
                               id="moonOblateness"
@@ -621,9 +672,11 @@
                           </label>
                         </div>
 
-                        <label class="inline">Rings <input id="moonRingsEnabled" type="checkbox" /></label>
+                        <label class="inline" for="moonRingsEnabled"
+                          >Rings <input id="moonRingsEnabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label
+                          <label for="moonRingInner"
                             >ring inner (m)
                             <input
                               id="moonRingInner"
@@ -633,7 +686,7 @@
                               step="1e5"
                               value="7500000"
                           /></label>
-                          <label
+                          <label for="moonRingOuter"
                             >ring outer (m)
                             <input
                               id="moonRingOuter"
@@ -643,11 +696,11 @@
                               step="1e5"
                               value="12000000"
                           /></label>
-                          <label
+                          <label for="moonRingInc"
                             >ring inc (deg)
                             <input id="moonRingInc" type="number" min="0" max="90" step="0.5" value="10"
                           /></label>
-                          <label
+                          <label for="moonRingAngle"
                             >ring angle (deg) <input id="moonRingAngle" type="number" step="1" value="0"
                           /></label>
                         </div>
@@ -656,17 +709,21 @@
 
                     <fieldset>
                       <legend>Day/Night visibility</legend>
-                      <label class="inline">Enabled <input id="dnEnabled" type="checkbox" /></label>
-                      <label class="inline">Clamp <input id="dnClamp" type="checkbox" checked /></label>
+                      <label class="inline" for="dnEnabled"
+                        >Enabled <input id="dnEnabled" type="checkbox"
+                      /></label>
+                      <label class="inline" for="dnClamp"
+                        >Clamp <input id="dnClamp" type="checkbox" checked
+                      /></label>
                       <div class="grid">
-                        <label>
+                        <label for="dnReflectedModel">
                           Reflected model
                           <select id="dnReflectedModel">
                             <option value="lambert" selected>lambert</option>
                             <option value="constant">constant</option>
                           </select>
                         </label>
-                        <label>
+                        <label for="dnThermalModel">
                           Thermal model
                           <select id="dnThermalModel">
                             <option value="constant" selected>constant</option>
@@ -678,25 +735,29 @@
 
                     <fieldset>
                       <legend>Exomoon timing/shape (Dynamics)</legend>
-                      <label class="inline">Enabled <input id="exoEnabled" type="checkbox" checked /></label>
+                      <label class="inline" for="exoEnabled"
+                        >Enabled <input id="exoEnabled" type="checkbox" checked
+                      /></label>
                       <div class="grid">
-                        <label>tRef (s) <input id="exoTRef" type="number" step="0.1" value="0" /></label>
-                        <label
+                        <label for="exoTRef"
+                          >tRef (s) <input id="exoTRef" type="number" step="0.1" value="0"
+                        /></label>
+                        <label for="exoVelDt"
                           >velDt (s) <input id="exoVelDt" type="number" min="0.000001" step="0.1" value="2"
                         /></label>
-                        <label
+                        <label for="exoMoonOmegaDot"
                           >moonOmegaDot (rad/s)
                           <input id="exoMoonOmegaDot" type="number" step="0.000001" value="0"
                         /></label>
-                        <label
+                        <label for="exoMoonIncDot"
                           >moonIncDot (rad/s)
                           <input id="exoMoonIncDot" type="number" step="0.000001" value="0"
                         /></label>
-                        <label
+                        <label for="exoMoonOmegaSmallDot"
                           >moonOmegaSmallDot (rad/s)
                           <input id="exoMoonOmegaSmallDot" type="number" step="0.000001" value="0"
                         /></label>
-                        <label
+                        <label for="exoImpactYDot"
                           >moonImpactYDot (m/s)
                           <input id="exoImpactYDot" type="number" step="0.000001" value="0"
                         /></label>
@@ -705,9 +766,11 @@
 
                     <fieldset>
                       <legend>N-body dynamics</legend>
-                      <label class="inline">Enabled <input id="nbodyEnabled" type="checkbox" /></label>
+                      <label class="inline" for="nbodyEnabled"
+                        >Enabled <input id="nbodyEnabled" type="checkbox"
+                      /></label>
                       <div class="grid">
-                        <label
+                        <label for="nbodyMuStar"
                           >muStar (m^3/s^2)
                           <input
                             id="nbodyMuStar"
@@ -717,7 +780,7 @@
                             step="1e18"
                             value="1.3271645321e20"
                         /></label>
-                        <label
+                        <label for="nbodyMuPlanet"
                           >muPlanet (m^3/s^2)
                           <input
                             id="nbodyMuPlanet"
@@ -727,7 +790,7 @@
                             step="1e16"
                             value="1.2668689059e17"
                         /></label>
-                        <label
+                        <label for="nbodyMuMoon"
                           >muMoon (m^3/s^2)
                           <input
                             id="nbodyMuMoon"
@@ -737,11 +800,11 @@
                             step="1e14"
                             value="3.986025446e14"
                         /></label>
-                        <label
+                        <label for="nbodyDtMax"
                           >dtMax (s)
                           <input id="nbodyDtMax" type="number" min="0.1" max="1e6" step="1" value="60"
                         /></label>
-                        <label
+                        <label for="nbodySoftening"
                           >softening (m)
                           <input id="nbodySoftening" type="number" min="0" max="1e8" step="1e5" value="0"
                         /></label>
@@ -750,13 +813,15 @@
                       <details>
                         <summary>Perturbers</summary>
 
-                        <label class="inline">Perturber 1 <input id="pert1Enabled" type="checkbox" /></label>
+                        <label class="inline" for="pert1Enabled"
+                          >Perturber 1 <input id="pert1Enabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label
+                          <label for="pert1Mu"
                             >mu1 (m^3/s^2)
                             <input id="pert1Mu" type="number" min="0" max="1e19" step="1e16" value="0"
                           /></label>
-                          <label
+                          <label for="pert1A"
                             >a1 (m)
                             <input
                               id="pert1A"
@@ -766,14 +831,14 @@
                               step="1e7"
                               value="14959787070"
                           /></label>
-                          <label
+                          <label for="pert1E"
                             >e1 <input id="pert1E" type="number" min="0" max="0.999" step="0.001" value="0"
                           /></label>
-                          <label
+                          <label for="pert1Inc"
                             >inc1 (deg)
                             <input id="pert1Inc" type="number" min="0" max="180" step="0.01" value="0"
                           /></label>
-                          <label
+                          <label for="pert1Period"
                             >period1 (s)
                             <input
                               id="pert1Period"
@@ -785,24 +850,26 @@
                           /></label>
                         </div>
 
-                        <label class="inline">Perturber 2 <input id="pert2Enabled" type="checkbox" /></label>
+                        <label class="inline" for="pert2Enabled"
+                          >Perturber 2 <input id="pert2Enabled" type="checkbox"
+                        /></label>
                         <div class="grid">
-                          <label
+                          <label for="pert2Mu"
                             >mu2 (m^3/s^2)
                             <input id="pert2Mu" type="number" min="0" max="1e19" step="1e16" value="0"
                           /></label>
-                          <label
+                          <label for="pert2A"
                             >a2 (m)
                             <input id="pert2A" type="number" min="1e8" max="1e12" step="1e7" value="2.5e10"
                           /></label>
-                          <label
+                          <label for="pert2E"
                             >e2 <input id="pert2E" type="number" min="0" max="0.999" step="0.001" value="0"
                           /></label>
-                          <label
+                          <label for="pert2Inc"
                             >inc2 (deg)
                             <input id="pert2Inc" type="number" min="0" max="180" step="0.01" value="0"
                           /></label>
-                          <label
+                          <label for="pert2Period"
                             >period2 (s)
                             <input
                               id="pert2Period"
@@ -818,25 +885,29 @@
 
                     <fieldset>
                       <legend>Relativity (LTTE/GR)</legend>
-                      <label class="inline">Enabled <input id="relEnabled" type="checkbox" /></label>
+                      <label class="inline" for="relEnabled"
+                        >Enabled <input id="relEnabled" type="checkbox"
+                      /></label>
                       <div class="grid">
-                        <label class="inline">LTTE <input id="relLTTE" type="checkbox" checked /></label>
-                        <label class="inline"
+                        <label class="inline" for="relLTTE"
+                          >LTTE <input id="relLTTE" type="checkbox" checked
+                        /></label>
+                        <label class="inline" for="relShapiro"
                           >Shapiro <input id="relShapiro" type="checkbox" checked
                         /></label>
-                        <label class="inline"
+                        <label class="inline" for="relGR"
                           >GR precession <input id="relGR" type="checkbox" checked
                         /></label>
-                        <label
+                        <label for="relC"
                           >c (m/s) <input id="relC" type="number" min="1e6" step="1" value="299792458"
                         /></label>
                       </div>
                       <div class="grid">
-                        <label
+                        <label for="relPlanetPrec"
                           >planet Δω/orbit (deg)
                           <input id="relPlanetPrec" type="number" step="0.001" value="0"
                         /></label>
-                        <label
+                        <label for="relMoonPrec"
                           >moon Δω/orbit (deg) <input id="relMoonPrec" type="number" step="0.001" value="0"
                         /></label>
                       </div>
@@ -871,7 +942,7 @@
             </div>
 
             <div class="row">
-              <label class="inline">
+              <label class="inline" for="timeSpeed">
                 Time speed
                 <input
                   id="timeSpeed"
@@ -898,7 +969,7 @@
             </div>
 
             <div class="row">
-              <label class="inline">
+              <label class="inline" for="plotMode">
                 Plot mode
                 <select id="plotMode">
                   <option value="physical" selected>physical</option>
@@ -908,6 +979,7 @@
 
               <label
                 class="inline"
+                for="clampSmearedFlux"
                 title="WARNUNG: Clamp auf [0,1] nur für normierte transit-artige Signale verwenden. Bei additiven Modellen (PhaseCurve/StellarVariability) kann Flux > 1 sein; Clamp würde physikalisch falsches Abschneiden verursachen."
               >
                 Clamp smeared flux
@@ -977,7 +1049,7 @@
                   Lesson
                   <select id="didLessonSelect" aria-label="Didactic lesson"></select>
                 </label>
-                <label class="inline">
+                <label class="inline" for="didAutoAssess">
                   Auto assess
                   <input id="didAutoAssess" type="checkbox" checked />
                 </label>
@@ -998,7 +1070,7 @@
                     Preset B
                     <select id="didComparePreset"></select>
                   </label>
-                  <label class="inline">
+                  <label class="inline" for="didCompareTime">
                     t (s)
                     <input id="didCompareTime" type="number" step="1" value="0" />
                   </label>

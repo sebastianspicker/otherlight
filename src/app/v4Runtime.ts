@@ -1,21 +1,15 @@
-import type { OrbitElements, SystemParams } from "../core/types";
+import type { SystemParams } from "../core/types";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";
 import type { RuntimeModeV4, SimulationConfigV4 } from "../sim/v4";
 import type { BinaryLabConfigV4 } from "../sim/v4/types";
+import { sanitizeStaticOrbit } from "../sim/v4/orbitSanitizer";
+import {
+  createReferenceSimulationV4,
+  type ReferenceClientOptions,
+  type SimulationRuntimeV4WithDispose,
+} from "../sim/v4/referenceClient";
 
-function asStaticOrbit(orbit: unknown, fallback: OrbitElements): OrbitElements {
-  if (!orbit || typeof orbit !== "object" || typeof orbit === "function") return fallback;
-  const src = orbit as OrbitElements;
-  return {
-    a: Number.isFinite(src.a) ? src.a : fallback.a,
-    e: Number.isFinite(src.e) ? src.e : fallback.e,
-    inc: Number.isFinite(src.inc) ? src.inc : fallback.inc,
-    Omega: Number.isFinite(src.Omega) ? src.Omega : fallback.Omega,
-    omega: Number.isFinite(src.omega) ? src.omega : fallback.omega,
-    period: Number.isFinite(src.period) ? src.period : fallback.period,
-    t0: Number.isFinite(src.t0) ? src.t0 : fallback.t0,
-  };
-}
+export type AppSimulationRuntime = SimulationRuntimeV4WithDispose;
 
 export function buildSimulationConfigV4FromParams(args: {
   system: SystemParams;
@@ -60,7 +54,7 @@ export function buildSimulationConfigV4FromParams(args: {
       luminosityScale: Number.isFinite(starBLum) ? Math.max(0, starBLum as number) : 0.3,
     },
   ];
-  cfg.orbits.binary = asStaticOrbit(system.planet.orbit, binaryFallback);
+  cfg.orbits.binary = sanitizeStaticOrbit(system.planet.orbit, binaryFallback);
   cfg.bodies.planets = [];
   cfg.bodies.moons = [];
   return cfg;
@@ -71,6 +65,16 @@ export function createSimulationRuntimeV4FromParams(args: {
   binaryMode: boolean;
   runtimeMode: RuntimeModeV4;
   binaryLabDefaults?: BinaryLabConfigV4;
-}): ReturnType<typeof createSimulationV4> {
-  return createSimulationV4(buildSimulationConfigV4FromParams(args));
+  referenceClient?: ReferenceClientOptions;
+}): AppSimulationRuntime {
+  const cfg = buildSimulationConfigV4FromParams(args);
+  if (args.runtimeMode === "reference") {
+    return createReferenceSimulationV4(cfg, args.referenceClient);
+  }
+  const rt = createSimulationV4(cfg);
+  return {
+    ...rt,
+    dispose: () => {},
+    takeStatusMessage: () => undefined,
+  };
 }

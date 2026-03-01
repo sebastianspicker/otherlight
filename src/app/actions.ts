@@ -3,6 +3,11 @@ import { setText } from "../core/dom";
 import type { NoiseState } from "./noise";
 import { resetNoiseStateWithSeed } from "./noise";
 
+/** Frame delta in seconds, clamped to [0, 0.1] for tab-switch / lag spikes. */
+export function computeFrameDt(now: number, last: number): number {
+  return clamp((now - last) / 1000, 0, 0.1);
+}
+
 export function setRunningState(
   next: boolean,
   btnStart: HTMLButtonElement,

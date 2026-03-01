@@ -92,7 +92,7 @@ export function renderDidacticSignals(refs: UiRefs, runtime: DidacticsRuntimeSta
   }
 
   if (refs.didCheckList) {
-    refs.didCheckList.innerHTML = "";
+    refs.didCheckList.replaceChildren();
     const checks = signals?.checks ?? [];
     for (const c of checks) {
       const row = document.createElement("div");
@@ -107,7 +107,7 @@ export function renderDidacticSignals(refs: UiRefs, runtime: DidacticsRuntimeSta
   }
 
   if (refs.didFormulaList) {
-    refs.didFormulaList.innerHTML = "";
+    refs.didFormulaList.replaceChildren();
     for (const f of signals?.formulas ?? []) {
       const row = document.createElement("div");
       row.textContent = `${f.title}: ${f.latex} = ${f.value}${f.unit ? ` ${f.unit}` : ""}`;

@@ -1,10 +1,10 @@
-import type { SystemParams } from "../core/types";
-import { projectToSky } from "../physics/frames";
-import { computeBodyKinematics } from "./kinematics";
-import { resolveOrbitElements } from "./orbits";
-import { getObserverDir } from "./observerContract";
-import { sampleSystemState } from "./stateSampler";
-import { estimateTransitEvent, type TransitEventEstimate } from "./transitTiming";
+import type { SystemParams } from "../../src/core/types";
+import { projectToSky } from "../../src/physics/frames";
+import { computeBodyKinematics } from "../../src/sim/kinematics";
+import { resolveOrbitElements } from "../../src/sim/orbits";
+import { getObserverDir } from "../../src/sim/observerContract";
+import { sampleSystemState } from "../../src/sim/stateSampler";
+import { estimateTransitEvent, type TransitEventEstimate } from "../../src/sim/transitTiming";
 
 export type TransitBodyId = "planet" | "moon";
 

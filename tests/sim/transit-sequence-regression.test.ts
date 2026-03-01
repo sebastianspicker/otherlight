@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
-import { buildTransitSequenceDiagnostics } from "../../src/sim/transitSequence";
+import { buildTransitSequenceDiagnostics } from "../helpers/transitSequence";
 
 function buildKeplerTransitParams(): SystemParams {
   return {

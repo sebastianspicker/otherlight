@@ -1,3 +1,4 @@
+import { deepClone } from "../../core/clone";
 import type { SimulationStepV3 } from "../v3";
 import { normalizeScenarioInputToV4 } from "./migrate";
 import { stepNativeSimulationV4 } from "./nativeEngine";
@@ -75,6 +76,6 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
       mode = next;
     },
     getMode: (): RuntimeModeV4 => mode,
-    getConfig: (): SimulationConfigV4 => JSON.parse(JSON.stringify(config)) as SimulationConfigV4,
+    getConfig: (): SimulationConfigV4 => deepClone(config),
   };
 }

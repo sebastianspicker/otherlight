@@ -6,10 +6,17 @@
 
 Interactive browser simulation for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. The core is deterministic and SI-based, with a didactic UI flow for black-box exploration and hypothesis-driven learning.
 
+## Screenshot
+
+![UI Screenshot](docs/media/github/hero-overview.png)
+
 ## Table of Contents
 
 - [Highlights](#highlights)
+- [Screenshot](#screenshot)
 - [Architecture](#architecture)
+- [How it works](#how-it-works)
+- [Application lifecycle](#application-lifecycle)
 - [Quick Start](#quick-start)
 - [Runtime Modes](#runtime-modes)
 - [Real Systems Snapshot](#real-systems-snapshot)
@@ -55,6 +62,59 @@ stateDiagram-v2
   RevealEnabled --> CompareLab: run A/B comparison
   CompareLab --> Rubric: rubric + hints
   Rubric --> [*]
+```
+
+## How it works
+
+End-to-end execution flow from page load to the running simulation:
+
+```mermaid
+flowchart TD
+  subgraph load [Load]
+    HTML[index.html]
+    Main[main.ts]
+    Scenario[scenario.default.json]
+    Refs[uiRefs]
+    Sim0[createRuntimeFromParams]
+  end
+  subgraph init [Init]
+    Wire[Wire presets, real systems, handlers]
+    ApplyInit[applyActiveScenarioForMode]
+    RAF[requestAnimationFrame]
+  end
+  subgraph loop [Frame loop]
+    Dt[computeFrameDt, readTimeSpeed]
+    Step[simulation.step]
+    Smear[Optional smear and noise]
+    Render[renderScene, plot.draw]
+    Readouts[Update readouts, didactics]
+  end
+  HTML --> Main
+  Main --> Scenario
+  Main --> Refs
+  Main --> Sim0
+  Main --> init
+  Wire --> ApplyInit
+  ApplyInit --> RAF
+  RAF --> loop
+  Readouts --> RAF
+```
+
+User actions (Apply, Reset, Preset, Real system, or mode change) update params and call `rebuildSimulationFromParams()` or `resetSimTimeAndLC()` as in the Architecture flow; the frame loop keeps running and reflects the new state on the next frame.
+
+## Application lifecycle
+
+Main application states and transitions:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Loaded
+  Loaded --> Initializing: init
+  Initializing --> Running: "applyActiveScenarioForMode + rAF"
+  Running --> Running: Apply params
+  Running --> Running: Reset params
+  Running --> Running: Preset or Real system
+  Running --> Running: frame
 ```
 
 ## Quick Start

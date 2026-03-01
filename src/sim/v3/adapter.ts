@@ -1,11 +1,8 @@
 import type { InstrumentNoiseSystematicsParams } from "../../core/instrumentNoiseTypes";
+import { deepClone } from "../../core/clone";
 import type { DidacticsParams, OrbitElements, PhotometryParams, SystemParams } from "../../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "../../app/scenario";
 import type { DidacticsModuleConfigV3, SimulationConfigV3 } from "./types";
-
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
 
 function toFixedOrbit(orbit: unknown, path: string): OrbitElements {
   if (typeof orbit === "function") {

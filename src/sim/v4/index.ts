@@ -16,3 +16,5 @@ export type {
 export { toSystemParamsV2FromV4 } from "./adapter";
 export { createSimulationV4 } from "./runtime";
 export { isSimulationConfigV4, migrateSystemParamsToV4, normalizeScenarioInputToV4 } from "./migrate";
+export { createReferenceSimulationV4 } from "./referenceClient";
+export { sanitizeStaticOrbit, defaultBinaryOrbit } from "./orbitSanitizer";

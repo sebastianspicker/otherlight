@@ -17,13 +17,11 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
 
   writeNumberInput(r.planetR, p.planet.r);
 
-  if (typeof (p.planet as any).orbit === "function") {
+  const pOrbit = p.planet.orbit;
+  if (typeof pOrbit === "function") {
     throw new Error("UI does not support a function-valued planet.orbit (OrbitElementsProvider).");
   }
-  writeOrbitInputs(
-    { a: r.planetA, e: r.planetE, inc: r.planetInc, period: r.planetPeriod },
-    p.planet.orbit as any,
-  );
+  writeOrbitInputs({ a: r.planetA, e: r.planetE, inc: r.planetInc, period: r.planetPeriod }, pOrbit);
   writeNumberInput(r.planetMass, (p.planet.m ?? 0) as number);
 
   const pShape = p.planet.shape;
@@ -49,16 +47,14 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
 
   r.moonEnabled.checked = Boolean(p.moon);
   if (p.moon) {
-    if (typeof (p.moon as any).orbitAroundPlanet === "function") {
+    const mOrbit = p.moon.orbitAroundPlanet;
+    if (typeof mOrbit === "function") {
       throw new Error(
         "UI does not support a function-valued moon.orbitAroundPlanet (OrbitElementsProvider).",
       );
     }
     writeNumberInput(r.moonR, p.moon.r);
-    writeOrbitInputs(
-      { a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod },
-      p.moon.orbitAroundPlanet as any,
-    );
+    writeOrbitInputs({ a: r.moonA, e: r.moonE, inc: r.moonInc, period: r.moonPeriod }, mOrbit);
     writeNumberInput(r.moonMass, (p.moon.m ?? 0) as number);
   } else {
     writeNumberInput(r.moonR, 1);
@@ -90,7 +86,7 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
     Number.isFinite(mRings?.positionAngle ?? Number.NaN) ? (mRings!.positionAngle as number) * RAD2DEG : 0,
   );
 
-  const exo = (p as any).dynamics?.exomoonTimingShape;
+  const exo = p.dynamics?.exomoonTimingShape;
   r.exoEnabled.checked = Boolean(exo?.enabled);
   writeNumberInput(r.exoTRef, exo?.tRef ?? 0);
   writeNumberInput(r.exoVelDt, exo?.velDt ?? 2);
@@ -101,7 +97,7 @@ export function loadParamsIntoUI(p: SystemParams, r: UiRefs): void {
 
   loadNBodyIntoUI(p, r);
 
-  const rel = (p as any).dynamics?.relativity;
+  const rel = p.dynamics?.relativity;
   r.relEnabled.checked = Boolean(rel?.enabled);
   r.relLTTE.checked = Boolean(rel?.ltte ?? true);
   r.relShapiro.checked = Boolean(rel?.shapiro ?? true);

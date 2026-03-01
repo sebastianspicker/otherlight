@@ -1,6 +1,7 @@
+import { deepClone } from "../../core/clone";
 import { toFiniteNumber } from "../../core/units";
-import { evaluateDidacticsV3 } from "../../didactics/v3";
 import type { SystemParams } from "../../core/types";
+import { evaluateDidacticsV3 } from "../../didactics/v3";
 import { prepareSimulation, stepSystem } from "../sim";
 import { toSystemParamsV2 } from "./adapter";
 import type {
@@ -16,10 +17,6 @@ import type {
   TimeRange,
 } from "./types";
 import { assertValidSimulationConfigV3, assertValidTimeRange } from "./validation";
-
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
 
 export function sampleRangeSeconds(startSec: number, endSec: number, stepSec: number): TimeRange {
   return { startSec, endSec, stepSec };

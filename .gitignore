@@ -50,6 +50,7 @@ docs/FINDINGS.md
 docs/LOG.md
 docs/REFACTOR_PLAN.md
 docs/PHYSICS_AUDIT.md
+docs/DEEP-INSPECTION-*.md
 
 # Env files
 .env
