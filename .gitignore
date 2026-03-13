@@ -52,6 +52,13 @@ docs/REFACTOR_PLAN.md
 docs/PHYSICS_AUDIT.md
 docs/DEEP-INSPECTION-*.md
 
-# Env files
+# Env files & secrets
 .env
 .env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.secret*
