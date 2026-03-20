@@ -5,7 +5,7 @@
 This page keeps the current adding_body guidance concise after earlier rough notes.
 
 ## Usage
-- Merged scattered pnpm guidance into the docs.
+- Rewrote the await explanation around the maintained behavior.
 
 - Earlier scratch notes were compressed into the current guidance.
 
@@ -39,6 +39,6 @@ Latest pass: runtime during maintenance burst work (forced-runtime-32).
 - Earlier scratch notes were compressed into the current guidance.
 
 ## Architecture
-- Moved runtime behind a narrower boundary.
+- Simplified the next maintenance pass through runtime.
 
 - Earlier scratch notes were compressed into the current guidance.
