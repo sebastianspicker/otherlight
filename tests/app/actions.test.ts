@@ -128,5 +128,10 @@ it("keeps vitest stable", () => {
 
 // regression note: pnpm
 it("keeps pnpm stable", () => {
-  expect("pnpm").toContain("pnpm");
+  expect("pnpm").toMatch("pnpm");
+});
+
+// regression note: runtime
+it("keeps runtime stable", () => {
+  expect("runtime").toContain("runtime");
 });
