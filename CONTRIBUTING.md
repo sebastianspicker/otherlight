@@ -24,14 +24,25 @@ pnpm dev
 Before opening a pull request, run:
 
 ```bash
-pnpm ci:verify
+pnpm ci:verify          # lint + typecheck + all tests + build
 ```
 
-For dependency security validation (optional locally, mandatory in scheduled CI):
+Additional verification gates (run before release):
 
 ```bash
-pnpm audit:security
+pnpm literature-benchmarks   # physics correctness vs. published results
+pnpm didactics-acceptance    # educational flow validation
+pnpm perf-smoke              # interactive performance budget
+pnpm migration-regression    # V3 -> V4 backwards compatibility
+pnpm audit:security          # dependency vulnerability scan
 ```
+
+## Code quality rules
+
+- **No explicit `any` in source**: `@typescript-eslint/no-explicit-any` is enforced as `error` for `src/`. Tests and scripts are exempt. Use proper types, type guards, or narrowing instead of `as any`.
+- **Module layering**: Architectural boundaries are enforced by 34 automated tests in `tests/docs/hygiene-layering.test.ts`. Layers: core -> physics -> photometry -> sim -> render/ui -> app.
+- **Property-based tests**: Numerical code (Kepler solver, vector ops, transit flux) should have property-based tests in `tests/property/`.
+- **Fail-open catch blocks**: All `catch` blocks must have a comment explaining the fallback policy.
 
 ## Commit message style
 
