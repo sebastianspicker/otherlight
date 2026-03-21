@@ -1,4 +1,5 @@
 import type {
+  LimbDarkeningLaw,
   LimbDarkeningLawQuadratic,
   LimbDarkeningModel,
   PhotometryParams,
@@ -49,9 +50,10 @@ export const RADIUS_MAX = 1e12;
 export function getQuadraticLDFromModel(
   model: LimbDarkeningModel | undefined,
 ): { u1: number; u2: number } | undefined {
-  const band = (model as any)?.bandpass as string | undefined;
-  const bands = ((model as any)?.bands ?? undefined) as Record<string, any> | undefined;
-  const law: any = band && bands && bands[band] ? bands[band] : (model as any)?.default;
+  if (!model) return undefined;
+  const band = model.bandpass;
+  const bands = model.bands;
+  const law = band && bands && bands[band] ? bands[band] : model.default;
 
   if (!law || law.kind !== "quadratic") return undefined;
 
@@ -63,8 +65,9 @@ export function getQuadraticLDFromModel(
 }
 
 export function ensurePhotometry(p: SystemParams): PhotometryParams {
-  p.star.photometry = (p.star.photometry ?? ({} as any)) as any;
-  return p.star.photometry as PhotometryParams;
+  const ph: PhotometryParams = p.star.photometry ?? {};
+  p.star.photometry = ph;
+  return ph;
 }
 
 export function parseNumberList(text: string): number[] {
@@ -111,14 +114,14 @@ export function parseQuadraticBands(text: string): Record<string, LimbDarkeningL
   return Object.keys(bands).length > 0 ? bands : undefined;
 }
 
-export function formatQuadraticBands(bands: Record<string, any> | undefined): string {
+export function formatQuadraticBands(bands: Record<string, LimbDarkeningLaw> | undefined): string {
   if (!bands) return "";
   const parts: string[] = [];
 
   for (const [band, law] of Object.entries(bands)) {
     if (!law || law.kind !== "quadratic") continue;
-    const u1 = (law as any).u1;
-    const u2 = (law as any).u2;
+    const u1 = law.u1;
+    const u2 = law.u2;
     if (!Number.isFinite(u1) || !Number.isFinite(u2)) continue;
     parts.push(`${band}:${u1},${u2}`);
   }
@@ -136,7 +139,7 @@ export function writeOrbitInputs(
   writeNumberInput(r.period, orbit.period);
 }
 
-export function readOrbitInputs(r: OrbitInputRefs, orbit: any): void {
+export function readOrbitInputs(r: OrbitInputRefs, orbit: Record<string, number>): void {
   const aFallback = Number.isFinite(orbit.a) ? orbit.a : ORBIT_A_MIN;
   const eFallback = Number.isFinite(orbit.e) ? orbit.e : 0;
   const incFallbackDeg = Number.isFinite(orbit.inc) ? orbit.inc * RAD2DEG : 0;
@@ -210,7 +213,7 @@ export function setObserverDirFromUI(p: SystemParams, r: UiRefs): void {
   const dir = vNormalizeOrZero(raw, 1e-15);
   const safeDir = vIsFinite(dir) && !(dir.x === 0 && dir.y === 0 && dir.z === 0) ? dir : { x: 0, y: 0, z: 1 };
 
-  const obs = p.observer ?? ({ dir: safeDir } as any);
+  const obs = p.observer ?? { dir: safeDir };
   p.observer = obs;
   obs.dir = safeDir;
 }

@@ -1,4 +1,4 @@
-import type { SystemParams } from "../../core/types";
+import type { NBodyPerturberParams, SystemDynamicsParams, SystemParams } from "../../core/types";
 import { DEG2RAD, G_SI, RAD2DEG } from "../../core/units";
 import {
   readCheckbox,
@@ -34,7 +34,7 @@ function estimateMuFromOrbit(orbit: { a: number; period: number } | undefined): 
 
 function writePerturberInputs(
   refs: PerturberInputRefs,
-  p: any,
+  p: NBodyPerturberParams | undefined,
   defaults: {
     mu: number;
     a: number;
@@ -45,13 +45,11 @@ function writePerturberInputs(
 ): void {
   refs.enabled.checked = Boolean(p && p.enabled !== false);
   writeNumberInput(refs.mu, p?.mu ?? defaults.mu);
-  writeNumberInput(refs.a, p?.orbit?.a ?? defaults.a);
-  writeNumberInput(refs.e, p?.orbit?.e ?? defaults.e);
-  writeNumberInput(
-    refs.incDeg,
-    Number.isFinite(p?.orbit?.inc) ? (p.orbit.inc as number) * RAD2DEG : defaults.incDeg,
-  );
-  writeNumberInput(refs.period, p?.orbit?.period ?? defaults.period);
+  const orbit = p?.orbit && typeof p.orbit !== "function" ? p.orbit : undefined;
+  writeNumberInput(refs.a, orbit?.a ?? defaults.a);
+  writeNumberInput(refs.e, orbit?.e ?? defaults.e);
+  writeNumberInput(refs.incDeg, Number.isFinite(orbit?.inc) ? orbit!.inc * RAD2DEG : defaults.incDeg);
+  writeNumberInput(refs.period, orbit?.period ?? defaults.period);
 }
 
 function readPerturberInputs(
@@ -98,15 +96,15 @@ function readPerturberInputs(
 }
 
 export function loadNBodyIntoUI(p: SystemParams, r: UiRefs): void {
-  const nbody = (p as any).dynamics?.nbodyPlanetMoon;
+  const nbody = p.dynamics?.nbodyPlanetMoon;
   r.nbodyEnabled.checked = Boolean(nbody?.enabled);
 
   const starM = p.star?.m;
   const planetM = p.planet?.m;
   const moonM = p.moon?.m;
-  const planetOrbitStatic = typeof p.planet.orbit === "function" ? undefined : (p.planet.orbit as any);
-  const moonOrbitStatic =
-    p.moon && typeof p.moon.orbitAroundPlanet === "function" ? undefined : (p.moon?.orbitAroundPlanet as any);
+  const planetOrbitStatic = typeof p.planet.orbit === "function" ? undefined : p.planet.orbit;
+  const moonOrbitRaw = p.moon?.orbitAroundPlanet;
+  const moonOrbitStatic = moonOrbitRaw && typeof moonOrbitRaw !== "function" ? moonOrbitRaw : undefined;
 
   const muStarDefault =
     nbody?.muStar ??
@@ -157,7 +155,7 @@ export function loadNBodyIntoUI(p: SystemParams, r: UiRefs): void {
 
 export function readNBodyFromUI(next: SystemParams, r: UiRefs): void {
   if (readCheckbox(r.nbodyEnabled) && readCheckbox(r.moonEnabled)) {
-    next.dynamics = next.dynamics ?? ({} as any);
+    next.dynamics = next.dynamics ?? ({} as SystemDynamicsParams);
     const pert1 = readPerturberInputs(
       {
         enabled: r.pert1Enabled,
@@ -181,36 +179,17 @@ export function readNBodyFromUI(next: SystemParams, r: UiRefs): void {
       { mu: NBODY_MU_MIN, a: 600, e: 0, incDeg: 0, period: 70000 },
     );
 
-    (next.dynamics as any).nbodyPlanetMoon = {
+    const prev = next.dynamics!.nbodyPlanetMoon;
+    next.dynamics!.nbodyPlanetMoon = {
       enabled: true,
-      muStar: sanitizePositive(
-        readNumberInput(r.nbodyMuStar, (next.dynamics as any).nbodyPlanetMoon?.muStar ?? 1),
-        NBODY_MU_MIN,
-        1e30,
-      ),
-      muPlanet: sanitizePositive(
-        readNumberInput(r.nbodyMuPlanet, (next.dynamics as any).nbodyPlanetMoon?.muPlanet ?? 0.1),
-        NBODY_MU_MIN,
-        1e30,
-      ),
-      muMoon: sanitizePositive(
-        readNumberInput(r.nbodyMuMoon, (next.dynamics as any).nbodyPlanetMoon?.muMoon ?? 0.01),
-        NBODY_MU_MIN,
-        1e30,
-      ),
-      dtMax: sanitizePositive(
-        readNumberInput(r.nbodyDtMax, (next.dynamics as any).nbodyPlanetMoon?.dtMax ?? 10),
-        1e-6,
-        1e12,
-      ),
-      softening: sanitizePositive(
-        readNumberInput(r.nbodySoftening, (next.dynamics as any).nbodyPlanetMoon?.softening ?? 0),
-        0,
-        1e12,
-      ),
-      perturbers: [pert1, pert2].filter(Boolean),
-    } as any;
-  } else if (next.dynamics && (next.dynamics as any).nbodyPlanetMoon) {
-    delete (next.dynamics as any).nbodyPlanetMoon;
+      muStar: sanitizePositive(readNumberInput(r.nbodyMuStar, prev?.muStar ?? 1), NBODY_MU_MIN, 1e30),
+      muPlanet: sanitizePositive(readNumberInput(r.nbodyMuPlanet, prev?.muPlanet ?? 0.1), NBODY_MU_MIN, 1e30),
+      muMoon: sanitizePositive(readNumberInput(r.nbodyMuMoon, prev?.muMoon ?? 0.01), NBODY_MU_MIN, 1e30),
+      dtMax: sanitizePositive(readNumberInput(r.nbodyDtMax, prev?.dtMax ?? 10), 1e-6, 1e12),
+      softening: sanitizePositive(readNumberInput(r.nbodySoftening, prev?.softening ?? 0), 0, 1e12),
+      perturbers: [pert1, pert2].filter((p): p is NonNullable<typeof p> => p != null),
+    };
+  } else if (next.dynamics?.nbodyPlanetMoon) {
+    delete next.dynamics.nbodyPlanetMoon;
   }
 }

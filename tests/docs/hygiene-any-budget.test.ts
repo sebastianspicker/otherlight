@@ -17,7 +17,7 @@ describe("hygiene any budget", () => {
       count += matches?.length ?? 0;
     }
 
-    // Iteration-3 migration budget (down from 115 after Phase 1.1 type-safety work).
-    expect(count).toBeLessThanOrEqual(50);
+    // Iteration-4 budget: only 2 false positives remain (comment word + constructor generic).
+    expect(count).toBeLessThanOrEqual(5);
   });
 });

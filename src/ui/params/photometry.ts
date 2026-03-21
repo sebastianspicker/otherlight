@@ -43,7 +43,7 @@ function buildPatchesFromUI(r: UiRefs): BrightnessPatch[] {
 }
 
 export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
-  const ph = p.star.photometry as any;
+  const ph = p.star.photometry;
 
   writeNumberInput(r.baselineFlux, ph?.baselineFlux ?? 1.0);
   writeNumberInput(r.gridRes, ph?.gridRes ?? 220);
@@ -54,8 +54,8 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
   const qld = getQuadraticLDFromModel(ph?.limbDarkeningModel);
   writeNumberInput(r.ldU1, qld?.u1 ?? 0.35);
   writeNumberInput(r.ldU2, qld?.u2 ?? 0.25);
-  r.ldBandpass.value = String((ph?.limbDarkeningModel as any)?.bandpass ?? "");
-  r.ldBands.value = formatQuadraticBands((ph?.limbDarkeningModel as any)?.bands);
+  r.ldBandpass.value = String(ph?.limbDarkeningModel?.bandpass ?? "");
+  r.ldBands.value = formatQuadraticBands(ph?.limbDarkeningModel?.bands);
 
   const hasPatches = Boolean(ph?.brightnessPatches && ph.brightnessPatches.length > 0);
   r.patchesEnabled.checked = hasPatches;
@@ -63,17 +63,17 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
   const pa1 = ph?.brightnessPatches?.[0] as BrightnessPatch | undefined;
   const pa2 = ph?.brightnessPatches?.[1] as BrightnessPatch | undefined;
 
-  writeNumberInput(r.p1x, (pa1 as any)?.x ?? -10);
-  writeNumberInput(r.p1y, (pa1 as any)?.y ?? 8);
-  writeNumberInput(r.p1r, (pa1 as any)?.r ?? 7);
-  writeNumberInput(r.p1f, (pa1 as any)?.factor ?? 0.75);
+  writeNumberInput(r.p1x, pa1?.x ?? -10);
+  writeNumberInput(r.p1y, pa1?.y ?? 8);
+  writeNumberInput(r.p1r, pa1?.r ?? 7);
+  writeNumberInput(r.p1f, pa1?.factor ?? 0.75);
 
-  writeNumberInput(r.p2x, (pa2 as any)?.x ?? 12);
-  writeNumberInput(r.p2y, (pa2 as any)?.y ?? -6);
-  writeNumberInput(r.p2rx, (pa2 as any)?.rx ?? 10);
-  writeNumberInput(r.p2ry, (pa2 as any)?.ry ?? 4);
-  writeNumberInput(r.p2angle, (pa2 as any)?.angle ?? 0.6);
-  writeNumberInput(r.p2f, (pa2 as any)?.factor ?? 1.12);
+  writeNumberInput(r.p2x, pa2?.x ?? 12);
+  writeNumberInput(r.p2y, pa2?.y ?? -6);
+  writeNumberInput(r.p2rx, pa2?.rx ?? 10);
+  writeNumberInput(r.p2ry, pa2?.ry ?? 4);
+  writeNumberInput(r.p2angle, pa2?.angle ?? 0.6);
+  writeNumberInput(r.p2f, pa2?.factor ?? 1.12);
 
   const spot = ph?.spotEvolution;
   r.spotEvolutionEnabled.checked = Boolean(spot?.enabled);
@@ -142,7 +142,7 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
 }
 
 export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
-  const ph = ensurePhotometry(next) as any;
+  const ph = ensurePhotometry(next);
 
   ph.baselineFlux = sanitizePositive(readNumberInput(r.baselineFlux, ph.baselineFlux ?? 1), 0, 1e9);
   ph.gridRes = Math.floor(sanitizePositive(readNumberInput(r.gridRes, ph.gridRes ?? 220), 10, 5000));
@@ -158,11 +158,11 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
     const bands = bandsText.trim().length > 0 ? parseQuadraticBands(bandsText) : undefined;
 
     ph.limbDarkeningModel = {
-      ...(prevModel as any),
+      ...prevModel,
       bandpass: bandpassRaw.length > 0 ? bandpassRaw : undefined,
       default: { kind: "quadratic", u1, u2 },
       bands,
-    } as any;
+    };
   } else {
     delete ph.limbDarkeningModel;
   }
@@ -197,7 +197,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
       ),
       tRef: ph.spotEvolution?.tRef ?? 0,
       rotationPhase0: ph.spotEvolution?.rotationPhase0 ?? 0,
-    } as any;
+    };
   } else {
     delete ph.spotEvolution;
   }
@@ -246,7 +246,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
             ),
           }
         : undefined,
-    } as any;
+    };
   } else {
     delete ph.phaseCurve;
   }
@@ -264,7 +264,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
       phaseOffset: sanitizeFinite(readNumberInput(r.fsOffset, ph.forwardScattering?.phaseOffset ?? 0), 0),
       gateWhenBehindStar: readCheckbox(r.fsGateBehind),
       clampNonNegative: true,
-    } as any;
+    };
   } else {
     delete ph.forwardScattering;
   }
@@ -275,13 +275,13 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
     ph.atmosphereTransmission = {
       enabled: true,
       target: "planet",
-      kind: readSelect(r.atmKind, "hard"),
+      kind: readSelect(r.atmKind, "hard") as "hard" | "exponential-halo" | "custom",
       r0: sanitizePositive(readNumberInput(r.atmR0, ph.atmosphereTransmission?.r0 ?? 0), 0, 1e9),
       H: sanitizePositive(readNumberInput(r.atmH, ph.atmosphereTransmission?.H ?? 0), 0, 1e9),
       tau0: sanitizePositive(readNumberInput(r.atmTau0, ph.atmosphereTransmission?.tau0 ?? 0), 0, 1e12),
       lambdaNm: lambdaNm.length > 0 ? lambdaNm : undefined,
       tauScale: tauScale.length > 0 ? tauScale : undefined,
-    } as any;
+    };
   } else {
     delete ph.atmosphereTransmission;
   }
@@ -330,7 +330,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
             ),
           }
         : undefined,
-    } as any;
+    };
   } else {
     delete ph.moonPhaseCurve;
   }
@@ -362,7 +362,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
         0,
       ),
       constant: sanitizePositive(readNumberInput(r.varConstant, ph.stellarVariability?.constant ?? 0), 0, 10),
-    } as any;
+    };
   } else {
     delete ph.stellarVariability;
   }
@@ -371,9 +371,9 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
     ph.dayNightVisibility = {
       enabled: true,
       clamp: readCheckbox(r.dnClamp),
-      reflectedModel: readSelect(r.dnReflectedModel, "lambert"),
-      thermalModel: readSelect(r.dnThermalModel, "constant"),
-    } as any;
+      reflectedModel: readSelect(r.dnReflectedModel, "lambert") as "lambert" | "cosine",
+      thermalModel: readSelect(r.dnThermalModel, "constant") as "constant" | "lambert" | "cosine",
+    };
   } else {
     delete ph.dayNightVisibility;
   }
