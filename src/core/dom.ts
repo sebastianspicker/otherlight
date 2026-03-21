@@ -52,6 +52,7 @@ export function mustGet<T extends Element = HTMLElement>(id: string, opts: MustG
  */
 export function mustGetAs<T extends Element>(
   id: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic constructor constraint requires any[]
   ctor: { new (...args: any[]): T },
   opts: MustGetOptions = {},
 ): T {
