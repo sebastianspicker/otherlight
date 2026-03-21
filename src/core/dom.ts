@@ -60,7 +60,7 @@ export function mustGetAs<T extends Element>(
   if (!(el instanceof ctor)) {
     const scope = opts.scopeName ? ` in ${opts.scopeName}` : "";
     const want = ctor.name || "Element";
-    const got = (el as any)?.constructor?.name || typeof el;
+    const got = (el.constructor as { name?: string })?.name || typeof el;
     throw new Error(`Element #${id}${scope} has wrong type: expected ${want}, got ${got}.`);
   }
 
@@ -97,7 +97,7 @@ export function setHidden(el: HTMLElement, hidden: boolean): void {
 export function setDisabled(el: HTMLElement, disabled: boolean): void {
   // Many elements have .disabled, but not all HTMLElements do.
   // Use a runtime guard to avoid TypeScript over-generalization.
-  if ("disabled" in (el as any)) (el as any).disabled = disabled;
+  if ("disabled" in el) (el as HTMLButtonElement).disabled = disabled;
   el.setAttribute("aria-disabled", disabled ? "true" : "false");
 }
 
@@ -114,7 +114,7 @@ export function setDisabled(el: HTMLElement, disabled: boolean): void {
  * but it is sufficient for typical ids used in this project.
  */
 function cssEscapeId(id: string): string {
-  const esc = (globalThis as any).CSS?.escape as ((s: string) => string) | undefined;
+  const esc = (globalThis as { CSS?: { escape?: (s: string) => string } }).CSS?.escape;
 
   if (typeof esc === "function") return `#${esc(id)}`;
 

@@ -99,7 +99,9 @@ export function migrateSystemParamsToV4(input: SystemParams): SimulationConfigV4
 
 export function isSimulationConfigV4(input: unknown): input is SimulationConfigV4 {
   return Boolean(
-    isObject(input) && (input as Record<string, unknown>).version === "4" && isObject((input as any).bodies),
+    isObject(input) &&
+    (input as Record<string, unknown>).version === "4" &&
+    isObject((input as Record<string, unknown>).bodies),
   );
 }
 
@@ -109,8 +111,9 @@ export function normalizeScenarioInputToV4(input: unknown): SimulationConfigV4 {
     throw new Error("normalizeScenarioInputToV4: input must be an object.");
   }
 
-  if (isObject((input as any).defaults)) {
-    return migrateSystemParamsToV4((input as any).defaults as SystemParams);
+  const rec = input as Record<string, unknown>;
+  if (isObject(rec.defaults)) {
+    return migrateSystemParamsToV4(rec.defaults as SystemParams);
   }
 
   return migrateSystemParamsToV4(input as SystemParams);

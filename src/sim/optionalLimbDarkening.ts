@@ -62,7 +62,7 @@ export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
 
   loadPromise = (async (): Promise<void> => {
     try {
-      const m1: any = await import("../photometry/transitLimbDarkened");
+      const m1 = (await import("../photometry/transitLimbDarkened")) as Record<string, unknown>;
       const fluxFnDirect = (m1?.fluxLimbDarkenedDisk ?? m1?.default ?? null) as FluxLimbDarkenedDiskFn | null;
       const fluxFnDetailed = m1?.fluxLimbDarkenedDiskDetailed as
         | ((args: unknown) => { flux?: number } | number)
@@ -78,7 +78,7 @@ export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
             }
           : null);
 
-      const m2: any = await import("../photometry/limbDarkening");
+      const m2 = (await import("../photometry/limbDarkening")) as Record<string, unknown>;
       const resolveFn = (m2?.resolveLimbDarkeningForBand ?? null) as ResolveLimbDarkeningForBandFn | null;
 
       if (fluxFn && resolveFn) {

@@ -113,7 +113,9 @@ function normalizeBandpassId(id: unknown): PassbandId | undefined {
 }
 
 function isLawObject(candidate: unknown): candidate is LimbDarkeningLaw {
-  return Boolean(candidate && typeof (candidate as any).kind === "string");
+  return Boolean(
+    candidate && typeof candidate === "object" && "kind" in candidate && typeof candidate.kind === "string",
+  );
 }
 
 function findBandLaw(
@@ -283,7 +285,7 @@ export function resolveLimbDarkeningForBand(
 ): LimbDarkeningLaw | undefined {
   if (!model) return undefined;
 
-  const bands = model.bands as unknown as Record<PassbandId, LimbDarkeningLaw> | undefined;
+  const bands = model.bands;
 
   const byExplicit = findBandLaw(bands, bandpass);
   if (byExplicit) return byExplicit;
@@ -291,7 +293,7 @@ export function resolveLimbDarkeningForBand(
   const byModel = findBandLaw(bands, model.bandpass);
   if (byModel) return byModel;
 
-  const def = model.default as unknown as LimbDarkeningLaw | undefined;
+  const def = model.default;
   if (isLawObject(def)) return def;
 
   const stellar = model.stellar;
@@ -316,7 +318,7 @@ export function resolveAndValidateLimbDarkening(params: {
   if (!law) return undefined;
 
   // Apply configured constraints if present on the model.
-  validateLimbDarkeningLaw(law, params.model.constraints as unknown as LimbDarkeningConstraints | undefined);
+  validateLimbDarkeningLaw(law, params.model.constraints);
 
   return law;
 }

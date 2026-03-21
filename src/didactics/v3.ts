@@ -215,7 +215,7 @@ function sanitizeLearningProgressV3(progress: unknown): LearningProgressV3 | und
   const p = progress as Record<string, unknown>;
   const stepIndex = typeof p.stepIndex === "number" && Number.isFinite(p.stepIndex) ? p.stepIndex : 0;
   const passedStepIds = Array.isArray(p.passedStepIds)
-    ? (p.passedStepIds as unknown[]).filter((id): id is string => typeof id === "string")
+    ? (p.passedStepIds as Array<unknown>).filter((id): id is string => typeof id === "string")
     : [];
   return {
     lessonId: typeof p.lessonId === "string" ? p.lessonId : undefined,

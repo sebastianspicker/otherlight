@@ -43,7 +43,7 @@ export function projectSurfacePatchesToSky(params: {
     const angR = p.surface.angularRadius;
     if (!Number.isFinite(lat) || !Number.isFinite(lon0) || !Number.isFinite(angR) || angR <= 0) continue;
 
-    const baseOmega = (2 * Math.PI) / Math.max(1, Number((model as any)?.rotationPeriodSec ?? 1));
+    const baseOmega = (2 * Math.PI) / Math.max(1, Number(model.rotationPeriodSec ?? 1));
     const omegaLat = baseOmega * (1 - kDiff * Math.sin(lat) * Math.sin(lat));
     const lon = lon0 + omegaLat * dt;
 

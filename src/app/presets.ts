@@ -6,7 +6,7 @@
 // - Provide reproducible starting points for exploration / teaching.
 // - Keep presets code-defined (type-safe) while still being JSON-serializable via SystemParams.
 
-import type { SystemParams } from "../core/types";
+import type { LimbDarkeningModel, SystemDynamicsParams, SystemParams } from "../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
 import { AU_M, EARTH_MASS_KG, G_SI, JUPITER_MASS_KG, SOLAR_MASS_KG } from "../core/units";
 
@@ -25,7 +25,7 @@ function withoutPatches(p: SystemParams): void {
   const ph = p.star.photometry;
   if (!ph) return;
   ph.brightnessPatches = [];
-  delete (ph as any).spotEvolution;
+  delete ph.spotEvolution;
 }
 
 export const PRESETS: ScenarioPreset[] = [
@@ -80,7 +80,7 @@ export const PRESETS: ScenarioPreset[] = [
           r: { kind: "quadratic", u1: 0.42, u2: 0.22 },
           i: { kind: "quadratic", u1: 0.35, u2: 0.25 },
         },
-      } as any;
+      } satisfies LimbDarkeningModel;
     }
 
     return {
@@ -97,7 +97,7 @@ export const PRESETS: ScenarioPreset[] = [
 
     withoutPatches(p);
 
-    const dyn = (p.dynamics ??= {} as any);
+    const dyn = (p.dynamics ??= {} as SystemDynamicsParams);
     const muStar = G_SI * SOLAR_MASS_KG;
     const muPlanet = G_SI * JUPITER_MASS_KG;
     const muMoon = G_SI * EARTH_MASS_KG;

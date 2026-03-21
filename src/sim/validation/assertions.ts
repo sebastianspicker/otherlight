@@ -197,7 +197,7 @@ export function assertStepInputs(params: SystemParams, t: number): void {
 
     const pert = Array.isArray(nbody.perturbers) ? nbody.perturbers : [];
     for (let i = 0; i < pert.length; i++) {
-      const p = pert[i] as any;
+      const p = pert[i];
       if (!p || p.enabled === false) continue;
       const mu = isFinitePositive(p.mu) ? p.mu : isFinitePositive(p.m) ? G_SI * p.m : undefined;
       if (!isFinitePositive(mu)) {

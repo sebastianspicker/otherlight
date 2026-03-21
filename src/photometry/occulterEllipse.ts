@@ -38,15 +38,15 @@ export type RingOcculter = {
 export type OcculterShape = CircleOcculter | EllipseOcculter | RingOcculter;
 
 export function isCircleOcculter(o: OcculterShape): o is CircleOcculter {
-  return typeof (o as any)?.r === "number" && (o as any).kind !== "ellipse" && (o as any).kind !== "ring";
+  return !("kind" in o) || o.kind === undefined || o.kind === "circle";
 }
 
 export function isEllipseOcculter(o: OcculterShape): o is EllipseOcculter {
-  return (o as any)?.kind === "ellipse";
+  return "kind" in o && o.kind === "ellipse";
 }
 
 export function isRingOcculter(o: OcculterShape): o is RingOcculter {
-  return (o as any)?.kind === "ring";
+  return "kind" in o && o.kind === "ring";
 }
 
 function overlapsStarByRadius(dx: number, dy: number, rOccMax: number, rStar: number): boolean {

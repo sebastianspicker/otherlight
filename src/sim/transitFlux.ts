@@ -11,7 +11,7 @@
 // - If brightness patches are configured, prefer the patched uniform-disk integrator.
 // - Always clamp output into [0,1] and fail-open to 1.0 on non-finite results.
 
-import type { BrightnessPatch, LimbDarkeningLaw, SystemParams } from "../core/types";
+import type { BrightnessPatch, LimbDarkeningLaw, PassbandId, SystemParams } from "../core/types";
 import { clamp01, isFiniteNonNegative, isFinitePositive } from "../core/units";
 import type { CircleOcculter } from "../photometry/occulterCircle";
 import { fluxUniformDisk } from "../photometry/transitUniform";
@@ -42,9 +42,9 @@ function resolveLimbDarkeningLaw(
   const ld = getLdIntegrators();
   const law = ld
     ? (ld.resolveLimbDarkeningForBand(ldModel, bandpass) as LimbDarkeningLaw | undefined)
-    : resolveLimbDarkeningForBand(ldModel, bandpass as any);
+    : resolveLimbDarkeningForBand(ldModel, bandpass as PassbandId | undefined);
 
-  return law && typeof (law as any).kind === "string" ? law : undefined;
+  return law && typeof law.kind === "string" ? law : undefined;
 }
 
 function buildTransmissionOcculters(
@@ -276,16 +276,14 @@ export function computeTransitFlux(
   if (ldModel && ld && allCircles) {
     try {
       // Keep this permissive: limb-darkening model schema is intentionally flexible.
-      const bandpass = (ldModel as any)?.bandpass;
-      const constraints = (ldModel as any)?.constraints;
-      const ldLaw = ld.resolveLimbDarkeningForBand(ldModel, bandpass);
+      const ldLaw = ld.resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
 
       if (ldLaw) {
         const f = ld.fluxLimbDarkenedDisk({
           rStar,
           rOcculters: circleOcculters,
           limbDarkeningLaw: ldLaw,
-          constraints,
+          constraints: ldModel.constraints,
           brightnessPatches: patches,
           gridRes,
         });
@@ -317,16 +315,14 @@ export function computeTransitFlux(
   // Mixed-shape occulters: fall back to generic numerical integrators.
   if (ldModel) {
     try {
-      const bandpass = (ldModel as any)?.bandpass;
-      const constraints = (ldModel as any)?.constraints;
-      const ldLaw = resolveLimbDarkeningForBand(ldModel, bandpass);
+      const ldLaw = resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
 
       if (ldLaw) {
         const f = fluxLimbDarkenedDiskShapes({
           rStar,
           occulters,
           limbDarkeningLaw: ldLaw,
-          constraints,
+          constraints: ldModel.constraints,
           brightnessPatches: patches,
           gridRes,
         });

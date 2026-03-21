@@ -142,7 +142,7 @@ export function resolveNBodyConfig(
   const extra = Array.isArray(nbody?.perturbers) ? nbody!.perturbers! : [];
 
   for (let i = 0; i < extra.length; i++) {
-    const p = extra[i] as any;
+    const p = extra[i];
     if (!p || p.enabled === false) continue;
     const mu = isFinitePositive(p.mu) ? p.mu : isFinitePositive(p.m) ? G_SI * p.m : undefined;
     if (!isFinitePositive(mu)) continue;

@@ -155,13 +155,9 @@ export function pathRoundRect(
   r: number,
 ): void {
   const rr = Math.max(0, Math.min(r, Math.min(w, h) * 0.5));
-  const anyCtx = ctx as unknown as {
-    roundRect?: (x: number, y: number, w: number, h: number, r: number) => void;
-  };
-
-  if (typeof anyCtx.roundRect === "function") {
+  if ("roundRect" in ctx && typeof ctx.roundRect === "function") {
     ctx.beginPath();
-    anyCtx.roundRect(x, y, w, h, rr);
+    ctx.roundRect(x, y, w, h, rr);
     return;
   }
 
