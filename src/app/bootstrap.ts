@@ -36,8 +36,14 @@ import {
   renderDidacticSignals,
   syncDidacticsControlsFromParams,
 } from "./didactics";
-import { compareScenariosAtTime, interpretDidacticComparison } from "../didactics";
+import {
+  compareScenariosAtTime,
+  computeDidacticSignals,
+  evaluateDidacticsV3,
+  interpretDidacticComparison,
+} from "../didactics";
 import { createBinaryLabState, revealSky, setHypothesis } from "../didactics/binaryLab";
+import { setDidacticsHook, setDidacticsV3Hook } from "../sim/didacticsHook";
 import { uiRefs } from "../ui/refs";
 import { readUIIntoParams } from "../ui/params";
 import { syncAllEnableStates, wireEnableHandlers } from "../ui/enable";
@@ -60,6 +66,10 @@ import { replaceRuntime, takeRuntimeStatus } from "./runtimeLifecycle";
 type AppState = ScenarioFlowState & FrameLoopState;
 
 export async function initApp(): Promise<void> {
+  // Wire didactics hooks so sim/ can call them without importing didactics/ directly.
+  setDidacticsHook(computeDidacticSignals);
+  setDidacticsV3Hook(evaluateDidacticsV3);
+
   const {
     skyCanvas,
     lcCanvas,

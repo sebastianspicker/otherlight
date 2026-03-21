@@ -43,7 +43,7 @@ import { computeTransitTimingDiagnostics } from "./transitTiming";
 import { projectSurfacePatchesToSky } from "../photometry/stellarSurface";
 import { assertTimeObserverContract } from "./observerContract";
 import { isPhysicsFeatureEnabled } from "./fidelity";
-import { computeDidacticSignals } from "../didactics/engine";
+import { getDidacticsHook } from "./didacticsHook";
 
 export { preloadOptionalLimbDarkening } from "./optionalLimbDarkening";
 export { sampleOrbitSky, sampleMoonOrbitSkyAbsolute } from "./sampling";
@@ -179,7 +179,8 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
     },
   };
 
-  const didacticSignals = computeDidacticSignals(params, stepBase);
+  const didacticsHook = getDidacticsHook();
+  const didacticSignals = didacticsHook ? didacticsHook(params, stepBase) : undefined;
   if (stepBase.meta) stepBase.meta.didacticSignals = didacticSignals;
 
   return stepBase;

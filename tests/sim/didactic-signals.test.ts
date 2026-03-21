@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
+import { computeDidacticSignals } from "../../src/didactics/engine";
+import { setDidacticsHook } from "../../src/sim/didacticsHook";
 import { stepSystem } from "../../src/sim/sim";
+
+beforeAll(() => {
+  setDidacticsHook(computeDidacticSignals);
+});
 
 describe("step meta didactic and decomposition signals", () => {
   it("emits flux decomposition and didactic signals when enabled", () => {

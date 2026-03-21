@@ -1,7 +1,7 @@
 import { deepClone } from "../../core/clone";
 import { toFiniteNumber } from "../../core/units";
 import type { SystemParams } from "../../core/types";
-import { evaluateDidacticsV3 } from "../../didactics/v3";
+import { getDidacticsV3Hook } from "../didacticsHook";
 import { prepareSimulation, stepSystem } from "../sim";
 import { toSystemParamsV2 } from "./adapter";
 import type {
@@ -277,7 +277,8 @@ export function createSimulation(config: SimulationConfigV3): SimulationRuntime 
       learningProgress: deepClone(progress),
     };
 
-    if (curriculum) {
+    const evaluateDidacticsV3 = getDidacticsV3Hook();
+    if (curriculum && evaluateDidacticsV3) {
       const evaluated = evaluateDidacticsV3({
         curriculum,
         progress,

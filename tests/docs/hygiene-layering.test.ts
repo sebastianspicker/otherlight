@@ -22,11 +22,11 @@ import { walkTsFiles } from "../helpers/walkTsFiles";
  *   - render/ → photometry/: FIXED (bridged via sim/limbDarkeningBridge.ts)
  *   - ui/ → app/: FIXED (cloneParams imported from core/clone)
  *
- * Remaining (deferred — requires deeper refactoring):
+ * Round 3 — fixed via hook/callback pattern (sim/didacticsHook.ts):
  *   sim/ → didactics/:
- *     - src/sim/v4/nativeEngine.ts imports from ../../didactics/engine
- *     - src/sim/v3/runtime.ts imports from ../../didactics/v3
- *     - src/sim/sim.ts imports from ../didactics/engine
+ *     - src/sim/sim.ts — uses getDidacticsHook() instead of direct import
+ *     - src/sim/v4/nativeEngine.ts — uses getDidacticsHook() instead of direct import
+ *     - src/sim/v3/runtime.ts — uses getDidacticsV3Hook() instead of direct import
  */
 
 /** Collect non-type-only import violations for a layer importing from forbidden modules. */
@@ -136,7 +136,10 @@ describe("hygiene layering", () => {
   });
 
   // ── sim/ imports from core/, physics/, photometry/, config/ ─────────────
-  // Known violation: sim/ imports from didactics/ (see top-of-file comment)
+  it("sim/ does not import from didactics/", () => {
+    expect(findViolations("sim", ["didactics"])).toEqual([]);
+  });
+
   it("sim/ does not import from app/", () => {
     expect(findViolations("sim", ["app"])).toEqual([]);
   });

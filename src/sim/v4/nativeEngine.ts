@@ -12,7 +12,7 @@ import type {
   SimulationStepV3,
 } from "../v3/types";
 import { G_SI } from "../../core/units";
-import { computeDidacticSignals } from "../../didactics/engine";
+import { getDidacticsHook } from "../didacticsHook";
 import { projectToSky } from "../../physics/frames";
 import type { Vec3 } from "../../physics/vec3";
 import { vAdd, vIsFinite, vLenSq, vNormalizeOrZero, vSub } from "../../physics/vec3";
@@ -254,19 +254,22 @@ function buildDidacticSignals(
     dynamics: config.dynamics,
     didactics: config.didactics,
   };
-  const signals = computeDidacticSignals(pseudo, {
-    fluxTotal: flux.total,
-    fluxTransitFactor: flux.transitFactor,
-    planetSky: { x: 0, y: finiteOrDefault(diag.bPlanet, 0) * Math.max(1, star.r), z: 1 },
-    moonSky: undefined,
-    meta: {
-      t: tObsSec,
-      bPlanet: diag.bPlanet,
-      bMoon: diag.bMoon,
-      tdvRatio: diag.tdvRatio,
-      observables: diag.observables,
-    },
-  });
+  const didacticsHook = getDidacticsHook();
+  const signals = didacticsHook
+    ? didacticsHook(pseudo, {
+        fluxTotal: flux.total,
+        fluxTransitFactor: flux.transitFactor,
+        planetSky: { x: 0, y: finiteOrDefault(diag.bPlanet, 0) * Math.max(1, star.r), z: 1 },
+        moonSky: undefined,
+        meta: {
+          t: tObsSec,
+          bPlanet: diag.bPlanet,
+          bMoon: diag.bMoon,
+          tdvRatio: diag.tdvRatio,
+          observables: diag.observables,
+        },
+      })
+    : undefined;
   return {
     signals,
     learningProgress: config.didactics.learningState,
