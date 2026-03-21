@@ -215,12 +215,20 @@ src/
 Primary local verification:
 
 ```bash
-pnpm ci:verify
-pnpm literature-benchmarks
-pnpm didactics-acceptance
-pnpm perf-smoke
-pnpm migration-regression
+pnpm ci:verify              # lint + typecheck + all tests + build
+pnpm literature-benchmarks   # physics correctness vs. published results
+pnpm didactics-acceptance    # educational flow validation
+pnpm perf-smoke              # interactive performance budget (<50ms/step)
+pnpm physics-regression      # transit timing and dynamics regression
+pnpm migration-regression    # V3 -> V4 backwards compatibility
 ```
+
+Code quality enforcement:
+
+- `@typescript-eslint/no-explicit-any` enforced as error in `src/`
+- 35 module layering boundary tests (core -> physics -> photometry -> sim -> render/ui -> app)
+- Property-based tests for numerical code (Kepler solver, vector ops, transit flux)
+- Hygiene tests: file size budget (720 lines), `any` budget, no experimental imports
 
 ## Known Limits
 
