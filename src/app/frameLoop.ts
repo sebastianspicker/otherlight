@@ -17,6 +17,8 @@ import {
 } from "./transitHistory";
 import type { AppSimulationRuntime } from "./v4Runtime";
 
+let noiseErrorLogged = false;
+
 export type FrameLoopState = {
   running: boolean;
   t: number;
@@ -241,7 +243,12 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
         state.lastPlottedT = state.t;
         state.lastPlotMode = plotMode;
         state.lastFluxForPlot = fluxForPlot;
-      } catch {
+      } catch (_noiseErr) {
+        // Noise pipeline error — fall back to physical flux (log once to aid debugging).
+        if (!noiseErrorLogged) {
+          noiseErrorLogged = true;
+          console.warn("[frameLoop] noise pipeline error, falling back to physical flux:", _noiseErr);
+        }
         fluxForPlot = fluxPhysical;
         plot.push(fluxForPlot);
         state.lastPlottedT = state.t;

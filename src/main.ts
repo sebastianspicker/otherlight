@@ -1,4 +1,6 @@
 import "./style.css";
 import { initApp } from "./app/bootstrap";
 
-void initApp();
+initApp().catch((err) => {
+  console.error("Fatal: app initialization failed", err);
+});

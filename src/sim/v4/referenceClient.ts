@@ -212,13 +212,19 @@ export function createReferenceSimulationV4(
         terminateWorker();
         return;
       }
-      void prepare().then(() => {
-        if (!initialized) return;
-        void request({ kind: "mode", mode: next }).catch((err) => {
+      // Fire-and-forget: prepare + mode sync runs in the background.
+      void prepare()
+        .then(() => {
+          if (!initialized) return;
+          void request({ kind: "mode", mode: next }).catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            lastStatusMessage = `Reference worker mode sync failed: ${msg}`;
+          });
+        })
+        .catch((err) => {
           const msg = err instanceof Error ? err.message : String(err);
-          lastStatusMessage = `Reference worker mode sync failed: ${msg}`;
+          lastStatusMessage = `Reference worker prepare failed: ${msg}`;
         });
-      });
     },
     getMode: (): RuntimeModeV4 => mode,
     getConfig: (): SimulationConfigV4 => fallback.getConfig(),

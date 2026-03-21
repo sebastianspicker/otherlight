@@ -291,7 +291,7 @@ export function computeTransitFlux(
       }
       // If law resolution fails, fall through to non-LD paths.
     } catch {
-      // Optional LD is explicitly "best effort": any runtime issue falls back to uniform-disk paths.
+      // LD module error; fall through to uniform-disk path (deliberate fail-open).
     }
   }
 
@@ -329,7 +329,7 @@ export function computeTransitFlux(
         return clamp01(Number.isFinite(f) ? f : 1.0);
       }
     } catch {
-      // Fall through to uniform disk paths for mixed shapes.
+      // LD module error; fall through to uniform-disk path for mixed shapes (deliberate fail-open).
     }
   }
 

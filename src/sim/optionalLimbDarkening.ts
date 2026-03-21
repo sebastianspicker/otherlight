@@ -90,7 +90,8 @@ export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
         integrators = null;
       }
     } catch {
-      // Optional module absent or failed to load: keep simulation functional.
+      // Deliberate swallow: optional LD module absent or failed to load.
+      // Simulation continues with uniform-disk fallback (tested in error-recovery tests).
       integrators = null;
     } finally {
       optionalLdTried = true;
