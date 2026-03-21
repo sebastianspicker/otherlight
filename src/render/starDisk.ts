@@ -18,7 +18,7 @@
 
 import type { BrightnessPatch, LimbDarkeningLaw, SystemParams } from "../core/types";
 import { clamp, toFinitePositiveOr } from "../core/units";
-import { intensityNonNegative, resolveAndValidateLimbDarkening } from "../photometry/limbDarkening";
+import { intensityNonNegative, resolveAndValidateLimbDarkening } from "../sim/limbDarkeningBridge";
 
 export type StarDiskRenderOptions = {
   /**

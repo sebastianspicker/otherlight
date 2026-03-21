@@ -1,6 +1,7 @@
 import { deepClone } from "../../core/clone";
 import type { PhotometryParams, SystemParams } from "../../core/types";
-import { cloneParams, SCENARIO_DEFAULTS } from "../../app/scenario";
+import { cloneParams } from "../../core/clone";
+import { SCENARIO_DEFAULTS } from "../../config/defaults";
 import type { SimulationConfigV4 } from "./types";
 
 function ensurePhotometry(p: SystemParams): PhotometryParams {

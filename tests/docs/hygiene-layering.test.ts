@@ -17,22 +17,16 @@ import { walkTsFiles } from "../helpers/walkTsFiles";
  *
  * Type-only imports (`import type`) are excluded from violation checks.
  *
- * Known violations that exist in the codebase (not tested to avoid false failures):
+ * Known violations (Round 2 status):
+ *   - sim/ → app/: FIXED (cloneParams/SCENARIO_DEFAULTS moved to core/ and config/)
+ *   - render/ → photometry/: FIXED (bridged via sim/limbDarkeningBridge.ts)
+ *   - ui/ → app/: FIXED (cloneParams imported from core/clone)
  *
+ * Remaining (deferred — requires deeper refactoring):
  *   sim/ → didactics/:
  *     - src/sim/v4/nativeEngine.ts imports from ../../didactics/engine
  *     - src/sim/v3/runtime.ts imports from ../../didactics/v3
  *     - src/sim/sim.ts imports from ../didactics/engine
- *
- *   sim/ → app/:
- *     - src/sim/v4/adapter.ts imports from ../../app/scenario
- *     - src/sim/v3/adapter.ts imports from ../../app/scenario
- *
- *   render/ → photometry/:
- *     - src/render/starDisk.ts imports from ../photometry/limbDarkening
- *
- *   ui/ → app/:
- *     - src/ui/params/read.ts imports from ../../app/scenario
  */
 
 /** Collect non-type-only import violations for a layer importing from forbidden modules. */
@@ -141,8 +135,12 @@ describe("hygiene layering", () => {
     expect(findViolations("photometry", ["app"])).toEqual([]);
   });
 
-  // ── sim/ imports from core/, physics/, photometry/ ─────────────────────
-  // Known violations: sim/ imports from didactics/ and app/ (see top-of-file comment)
+  // ── sim/ imports from core/, physics/, photometry/, config/ ─────────────
+  // Known violation: sim/ imports from didactics/ (see top-of-file comment)
+  it("sim/ does not import from app/", () => {
+    expect(findViolations("sim", ["app"])).toEqual([]);
+  });
+
   it("sim/ does not import from render/", () => {
     expect(findViolations("sim", ["render"])).toEqual([]);
   });
@@ -169,7 +167,10 @@ describe("hygiene layering", () => {
   });
 
   // ── render/ imports from core/, physics/, sim/ ─────────────────────────
-  // Known violation: render/starDisk.ts imports from photometry/ (see top-of-file comment)
+  it("render/ does not import from photometry/", () => {
+    expect(findViolations("render", ["photometry"])).toEqual([]);
+  });
+
   it("render/ does not import from didactics/", () => {
     expect(findViolations("render", ["didactics"])).toEqual([]);
   });
@@ -183,7 +184,10 @@ describe("hygiene layering", () => {
   });
 
   // ── ui/ imports from core/, physics/, ui/ ──────────────────────────────
-  // Known violation: ui/params/read.ts imports from app/ (see top-of-file comment)
+  it("ui/ does not import from app/", () => {
+    expect(findViolations("ui", ["app"])).toEqual([]);
+  });
+
   it("ui/ does not import from sim/", () => {
     expect(findViolations("ui", ["sim"])).toEqual([]);
   });

@@ -1,6 +1,6 @@
 import type { SystemDynamicsParams, SystemParams } from "../../core/types";
 import { DEG2RAD, RAD2DEG } from "../../core/units";
-import { cloneParams } from "../../app/scenario";
+import { cloneParams } from "../../core/clone";
 import { readCheckbox, readNumberInput, sanitizeFinite, sanitizePositive } from "../inputs";
 import type { UiRefs } from "../refs";
 import {

@@ -1,7 +1,8 @@
 import type { InstrumentNoiseSystematicsParams } from "../../core/instrumentNoiseTypes";
 import { deepClone } from "../../core/clone";
 import type { DidacticsParams, OrbitElements, PhotometryParams, SystemParams } from "../../core/types";
-import { cloneParams, SCENARIO_DEFAULTS } from "../../app/scenario";
+import { cloneParams } from "../../core/clone";
+import { SCENARIO_DEFAULTS } from "../../config/defaults";
 import type { DidacticsModuleConfigV3, SimulationConfigV3 } from "./types";
 
 function toFixedOrbit(orbit: unknown, path: string): OrbitElements {
