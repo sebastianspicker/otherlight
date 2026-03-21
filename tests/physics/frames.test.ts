@@ -17,9 +17,9 @@ describe("projectToSky", () => {
     // So sky.x = dot(r,ex) = -r.y, sky.y = dot(r,ey) = r.x, sky.z = dot(r,ez) = r.z.
     const r: Vec3 = { x: 3.5, y: -2, z: 7 };
     const sky = projectToSky(r, { x: 0, y: 0, z: 1 });
-    expect(sky.x).toBeCloseTo(2, 10);   // -(-2) = 2
+    expect(sky.x).toBeCloseTo(2, 10); // -(-2) = 2
     expect(sky.y).toBeCloseTo(3.5, 10); // 3.5
-    expect(sky.z).toBeCloseTo(7, 10);   // depth preserved
+    expect(sky.z).toBeCloseTo(7, 10); // depth preserved
   });
 
   it("produces positive z (depth) when a body is in front of the observer", () => {
