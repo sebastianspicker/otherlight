@@ -52,6 +52,7 @@ const DEFAULT_LTTE_ITERS = 2;
 const DEFAULT_LTTE_TOL_SEC = 1e-6;
 const DEFAULT_SHAPIRO_MIN_IMPACT = 0;
 
+/** Merge user-provided relativity config with safe defaults (c, iteration limits, enable flags). */
 export function normalizeRelativityParams(params: RelativityParams | undefined): NormalizedRelativityParams {
   const enabled = Boolean(params?.enabled);
   const ltte = enabled && (params?.ltte ?? true);
@@ -94,6 +95,7 @@ export function normalizeRelativityParams(params: RelativityParams | undefined):
   };
 }
 
+/** Apply GR apsidal precession to orbit elements at time tSec [s]. Returns new elements with advanced omega. */
 export function applyApsidalPrecession(
   el: OrbitElements,
   tSec: number,

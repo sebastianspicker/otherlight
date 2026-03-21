@@ -195,6 +195,23 @@ function normalizeBandpassGrid(phot: SystemParams["star"]["photometry"] | undefi
   return { lambdaNm: legacy.lambdaNm, weights, tauScale: legacy.tauScale };
 }
 
+/**
+ * Compute the multiplicative stellar transit attenuation factor F_transit in [0, 1].
+ *
+ * Policy chain (first match wins):
+ * 1. Atmosphere transmission enabled → transmissive grid integrator
+ * 2. Limb-darkening model + optional LD integrators → LD disk integrator
+ * 3. Brightness patches → patched uniform-disk integrator
+ * 4. Default → uniform-disk integrator
+ *
+ * Always clamps output to [0, 1] and fails open to 1.0 on non-finite results.
+ *
+ * @param params System configuration with star radius and photometry settings.
+ * @param occulters Sky-plane occulter geometries (circles, ellipses, rings).
+ * @param kin Body kinematics for atmosphere transmission geometry.
+ * @param opts Optional brightness patch override.
+ * @returns Transit flux factor in [0, 1] where 1.0 = no dimming.
+ */
 export function computeTransitFlux(
   params: SystemParams,
   occulters: OcculterShape[],

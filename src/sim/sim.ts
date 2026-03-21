@@ -49,6 +49,18 @@ export { preloadOptionalLimbDarkening } from "./optionalLimbDarkening";
 export { sampleOrbitSky, sampleMoonOrbitSkyAbsolute } from "./sampling";
 export type { OrbitSampleOptions } from "./sampling";
 
+/**
+ * Advance the simulation by computing all observables at time t.
+ *
+ * Computes body kinematics (Kepler + optional N-body), transit flux
+ * (uniform/LD/transmission), additive flux components (phase curves,
+ * stellar variability, forward scattering), timing diagnostics, and
+ * didactic signals.
+ *
+ * @param params Full system configuration (star, planet, moon, photometry, dynamics).
+ * @param t Observation time [s] since epoch.
+ * @returns Composite step result with flux, kinematics, timing, and render signals.
+ */
 export function stepSystem(params: SystemParams, t: number): StepResult {
   assertStepInputs(params, t);
 
