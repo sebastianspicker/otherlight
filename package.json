@@ -36,14 +36,20 @@
     "perf-smoke": "vitest run tests/perf/perf-smoke.test.ts",
     "migration-regression": "vitest run tests/scripts/migration-regression.test.ts tests/scripts/migrate-systemparams-v4.test.ts"
   },
+  "pnpm": {
+    "overrides": {
+      "rollup": ">=4.59.0",
+      "flatted": ">=3.4.2"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.1",
-    "eslint": "^10.0.0",
+    "eslint": "^10.1.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.4.2",
     "typescript": "^5.4.5",
-    "typescript-eslint": "^8.56.0",
+    "typescript-eslint": "^8.57.1",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   }
