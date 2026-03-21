@@ -17,7 +17,9 @@ describe("hygiene any budget", () => {
       count += matches?.length ?? 0;
     }
 
-    // Iteration-4 budget: only 2 false positives remain (comment word + constructor generic).
-    expect(count).toBeLessThanOrEqual(5);
+    // ESLint no-explicit-any (error) is the primary enforcement.
+    // This test is a secondary safety net; budget matches the 2 remaining
+    // false positives (a comment containing "any" + constructor generic `any[]`).
+    expect(count).toBeLessThanOrEqual(2);
   });
 });

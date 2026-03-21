@@ -224,7 +224,8 @@ export function getMoonStateAt(
 ): MoonStateAt | undefined {
   if (!params.moon) return undefined;
   if (!Number.isFinite(t)) throw new Error("getMoonStateAt: t must be finite.");
-  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0) throw new Error("moon.r must be > 0");
+  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0)
+    throw new Error("getMoonStateAt: moon.r must be > 0.");
 
   const exo = getExomoonConfig(params);
   const exoEnabled = Boolean(exo?.enabled);
