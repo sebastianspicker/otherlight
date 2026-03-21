@@ -63,6 +63,7 @@ function resolveMuStar(params: SystemParams, kin: BodyKinematics): number | unde
     const mu = muFromPeriodAndA(kin.planetOrbit.period, kin.planetOrbit.a);
     return Number.isFinite(mu) && mu > 0 ? mu : undefined;
   } catch {
+    // Fail-open: mu derivation from orbit elements failed; caller proceeds without star reflex correction.
     return undefined;
   }
 }

@@ -163,6 +163,7 @@ function approximateCosScatteringAngle(rBody: Vec3, observerDirUnit: Vec3): numb
   try {
     rHat = vNormalizeOrThrow(rBody, 1e-15, "rBody must be non-zero for scattering angle.");
   } catch {
+    // Fail-open: zero-length rBody cannot define a scattering angle; return cos=0 (orthogonal, no scattering).
     return 0;
   }
 
@@ -193,6 +194,7 @@ export function computeForwardScatteringFlux(params: ForwardScatteringFluxParams
   try {
     obsHat = vNormalizeOrThrow(params.observerDir, 1e-15, "observerDir must be non-zero.");
   } catch {
+    // Fail-open: degenerate observer direction; return zero scattering contribution.
     return 0;
   }
 

@@ -206,6 +206,7 @@ export function loadLearningProgressV3(params?: {
     if (parsed.schemaVersion !== PROGRESS_SCHEMA_VERSION) return undefined;
     return sanitizeLearningProgressV3(parsed.progress);
   } catch {
+    // Fail-open: corrupt or unparseable localStorage data; discard and return no progress.
     return undefined;
   }
 }

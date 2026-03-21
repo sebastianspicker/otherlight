@@ -150,6 +150,7 @@ function applySecularPlanetOrbit(params: SystemParams, t: number, el: OrbitEleme
     try {
       return muFromPeriodAndA(el.period, el.a);
     } catch {
+      // Fail-open: invalid period/semi-major axis; skip mu-dependent secular corrections for the planet.
       return undefined;
     }
   })();
@@ -185,6 +186,7 @@ function applySecularMoonOrbit(params: SystemParams, t: number, el: OrbitElement
     try {
       return muFromPeriodAndA(el.period, el.a);
     } catch {
+      // Fail-open: invalid period/semi-major axis; skip mu-dependent secular corrections for the moon.
       return undefined;
     }
   })();
@@ -317,6 +319,7 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
             const mu = muFromPeriodAndA(planetOrbit.period, planetOrbit.a);
             return Number.isFinite(mu) && mu > 0 ? mu : undefined;
           } catch {
+            // Fail-open: mu derivation failed; Shapiro delay correction will be skipped.
             return undefined;
           }
         })();

@@ -202,6 +202,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   try {
     RH = hillRadius(aP, eP, mPlanet, mStar, { usePeriapsis: true });
   } catch {
+    // Fail-open: invalid orbital elements prevent Hill-radius calculation; emit a warning and skip stability checks.
     out.push({
       severity: "warn",
       code: "HILL_COMPUTE_FAILED",

@@ -41,6 +41,7 @@ function getBodyPeriodSec(system: SystemParams, body: "planet" | "moon", tSec: n
           : undefined;
     return orbit && Number.isFinite(orbit.period) && orbit.period > 0 ? orbit.period : undefined;
   } catch {
+    // Fail-open: orbit element resolution failed; caller falls back to default dedupe window.
     return undefined;
   }
 }

@@ -133,6 +133,7 @@ export function normalizeObserverDirSafe(dir: Vec3 | undefined): Vec3 {
   try {
     return vNormalizeOrThrow(d, 1e-15, "observer.dir must be non-zero.");
   } catch {
+    // Fail-open: degenerate observer direction; fall back to default +Z view direction.
     return fallback;
   }
 }

@@ -54,6 +54,7 @@ function visibleFractionWithOcculters(rTarget: number, occulters: CircleOcculter
       gridRes: MUTUAL_OCCULTER_GRID_RES,
     });
   } catch {
+    // Fail-open: grid-based occlusion computation failed; assume full visibility (flux = 1).
     return 1;
   }
 }
