@@ -147,7 +147,7 @@ function normalizeSnapshot(raw: unknown): RealSystemsSnapshot {
   };
 }
 
-export const REAL_SYSTEMS_SNAPSHOT: RealSystemsSnapshot = normalizeSnapshot(snapshotJson);
+const REAL_SYSTEMS_SNAPSHOT: RealSystemsSnapshot = normalizeSnapshot(snapshotJson);
 
 export const REAL_SYSTEMS_OPTIONS: RealSystemOption[] = REAL_SYSTEMS_SNAPSHOT.systems.map((s) => ({
   id: s.id,

@@ -141,17 +141,6 @@ export function uniform(rng: PRNG, a = 0, b = 1): number {
 }
 
 /**
- * Bernoulli(p) -> 0 or 1.
- * If p invalid, returns 0.
- */
-export function bernoulli(rng: PRNG, p: number): 0 | 1 {
-  if (!isFiniteNumber(p)) return 0;
-
-  const pp = Math.max(0, Math.min(1, p));
-  return rng.u01() < pp ? 1 : 0;
-}
-
-/**
  * Poisson(lambda) integer deviate.
  *
  * Hybrid implementation:

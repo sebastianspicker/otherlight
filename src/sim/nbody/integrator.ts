@@ -229,7 +229,7 @@ function maxPositionDifference(a: NBodyState, b: NBodyState): number {
   return Math.sqrt(maxErr2);
 }
 
-export function integrateStepWithConfig(params: {
+function integrateStepWithConfig(params: {
   state: NBodyState;
   dt: number;
   cfg: ResolvedNBodyConfig;
@@ -408,17 +408,6 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
   }));
 
   return integrateStepWithConfig({ state: params.state, dt: params.dt, cfg });
-}
-
-export function integratePlanetMoon3BodyStep(params: NBodyStepParams): NBodyState {
-  if (Array.isArray(params.muPerturbers) && params.muPerturbers.length > 0) {
-    throw new Error("integratePlanetMoon3BodyStep does not accept perturbers; use integrateNBodyStep.");
-  }
-  if (params.state.perturbers.length > 0) {
-    throw new Error("integratePlanetMoon3BodyStep does not accept perturber states; use integrateNBodyStep.");
-  }
-
-  return integrateNBodyStep({ ...params, muPerturbers: [] });
 }
 
 export function integrateToTime(params: {

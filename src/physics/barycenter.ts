@@ -32,7 +32,7 @@ export type BarySplit = {
 };
 
 /** Returns true if m is a usable positive finite mass. */
-export function isValidMass(m: unknown): m is number {
+function isValidMass(m: unknown): m is number {
   return typeof m === "number" && Number.isFinite(m) && m > 0;
 }
 
@@ -49,7 +49,7 @@ export function isValidMass(m: unknown): m is number {
  *
  * Throws if vectors are non-finite or masses are invalid.
  */
-export function splitBarycentricPair(params: {
+function splitBarycentricPair(params: {
   rBary: Vec3;
   rRel: Vec3;
   mPrimary: number;
@@ -125,7 +125,7 @@ export function trySplitBarycentricPair(params: {
  *
  * rBary = (mP*rP + mS*rS) / (mP+mS)
  */
-export function barycenterOfPair(params: {
+function barycenterOfPair(params: {
   rPrimary: Vec3;
   rSecondary: Vec3;
   mPrimary: number;
@@ -159,7 +159,7 @@ export function barycenterOfPair(params: {
  * Micro-optimized consistency check (no sqrt):
  * Verifies that (rSecondary - rPrimary) ≈ rRel within a tolerance.
  */
-export function isSplitConsistentWithRel(
+function isSplitConsistentWithRel(
   split: Pick<BarySplit, "rPrimary" | "rSecondary">,
   rRel: Vec3,
   tol = 1e-9,

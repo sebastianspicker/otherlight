@@ -42,8 +42,8 @@ export const ORBIT_A_MIN = 0.001;
 export const ORBIT_A_MAX = 1e12;
 export const ORBIT_PERIOD_MIN = 0.001;
 export const ORBIT_PERIOD_MAX = 1e18;
-export const OBLA_MAX = 0.95;
-export const RING_INC_MAX_DEG = 90;
+const OBLA_MAX = 0.95;
+const RING_INC_MAX_DEG = 90;
 export const RADIUS_MIN = 1e3;
 export const RADIUS_MAX = 1e12;
 

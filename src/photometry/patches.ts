@@ -88,7 +88,7 @@ export function sanitizeBrightnessPatches(patches: BrightnessPatch[] | undefined
 }
 
 /** Test if point (x,y) lies inside a precomputed patch. */
-export function pointInPatch(x: number, y: number, p: PatchPre): boolean {
+function pointInPatch(x: number, y: number, p: PatchPre): boolean {
   if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
 
   if (p.kind === "circle") {

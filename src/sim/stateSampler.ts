@@ -250,7 +250,3 @@ export function radialVelocityFromState(v: Vec3, observerDir: Vec3): number {
   if (!(norm > 0)) return 0;
   return -((v.x * d.x + v.y * d.y + v.z * d.z) / norm);
 }
-
-export function lightTimeDelayFromState(r: Vec3, observerDir: Vec3, c: number): number {
-  return lightTimeDelaySec(r, observerDir, c);
-}

@@ -11,7 +11,7 @@ import {
 
 export type AppSimulationRuntime = SimulationRuntimeV4WithDispose;
 
-export function buildSimulationConfigV4FromParams(args: {
+function buildSimulationConfigV4FromParams(args: {
   system: SystemParams;
   binaryMode: boolean;
   runtimeMode: RuntimeModeV4;

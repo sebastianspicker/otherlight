@@ -30,10 +30,6 @@ export async function replaceRuntime(
   return next;
 }
 
-export function disposeRuntime(runtime: AppSimulationRuntime): void {
-  runtime.dispose();
-}
-
 export function takeRuntimeStatus(runtime: AppSimulationRuntime): string | undefined {
   return runtime.takeStatusMessage();
 }

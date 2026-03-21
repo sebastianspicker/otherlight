@@ -146,7 +146,7 @@ function canvasSizeValid(size: SizeInfo): boolean {
 }
 
 /** Cross-browser rounded rectangle path helper. */
-export function pathRoundRect(
+function pathRoundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -235,7 +235,7 @@ export function drawObserverMarkerMainView(
  * Draw an inset observer-direction gizmo (panel with eye + sphere marker).
  * This is a visualization aid only and does not influence physics. [file:119]
  */
-export function drawObserverGizmoInset(
+function drawObserverGizmoInset(
   ctx: CanvasRenderingContext2D,
   size: SizeInfo,
   observerDirRaw: Vec3,

@@ -1,4 +1,4 @@
-import type { NBodyPlanetMoonParams, SystemParams } from "../../core/types";
+import type { SystemParams } from "../../core/types";
 import { G_SI, isFinitePositive } from "../../core/units";
 import { normalizeRelativityParams } from "../../physics/relativity";
 import { resolveOrbitElements } from "../orbits";
@@ -243,17 +243,3 @@ export type KeyInputs = {
   moonEl: ReturnType<typeof resolveOrbitElements>;
   perturbers: NBodyPerturberResolved[];
 };
-
-export function nbodyCfgForLegacy(
-  cfg: NBodyPlanetMoonParams | undefined,
-  params: Pick<SystemParams, "star" | "planet" | "moon">,
-) {
-  return resolveEnabledNBodyPlanetMoonConfig(cfg, {
-    onInvalid: "throw",
-    masses: {
-      star: params.star?.m,
-      planet: params.planet?.m,
-      moon: params.moon?.m,
-    },
-  });
-}

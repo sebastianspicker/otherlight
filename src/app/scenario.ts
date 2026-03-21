@@ -50,7 +50,7 @@ export function cloneParams(p: SystemParams): SystemParams {
   return deepClone(p);
 }
 
-export function loadScenario(): ScenarioFile {
+function loadScenario(): ScenarioFile {
   const raw: unknown = scenarioJson;
 
   if (!isObject(raw)) {

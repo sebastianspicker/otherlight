@@ -1,6 +1,6 @@
 import type { FidelityProfile, PhysicsFeatureFlags, SystemParams } from "../core/types";
 
-export function resolveFidelityProfile(system: SystemParams): FidelityProfile {
+function resolveFidelityProfile(system: SystemParams): FidelityProfile {
   return system.dynamics?.fidelityProfile ?? "interactive";
 }
 

@@ -11,7 +11,7 @@ import {
 import type { UiRefs } from "../refs";
 import { ORBIT_A_MAX, ORBIT_A_MIN, ORBIT_PERIOD_MAX, ORBIT_PERIOD_MIN } from "./common";
 
-export const NBODY_MU_MIN = 1e-12;
+const NBODY_MU_MIN = 1e-12;
 
 type PerturberInputRefs = {
   enabled: HTMLInputElement;

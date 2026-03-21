@@ -40,7 +40,7 @@ export function getExomoonConfig(params: SystemParams): ExomoonTimingShapeParams
   return params.dynamics?.exomoonTimingShape;
 }
 
-export function computeMoonSkyDriftY(exo: ExomoonTimingShapeParams | undefined, t: number): number {
+function computeMoonSkyDriftY(exo: ExomoonTimingShapeParams | undefined, t: number): number {
   const enabled = Boolean(exo?.enabled);
   if (!enabled) return 0;
   const tRef = toFiniteNumber(exo?.tRef, 0);

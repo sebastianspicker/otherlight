@@ -68,20 +68,6 @@ export function mustGetAs<T extends Element>(
   return el as T;
 }
 
-/**
- * Like querySelector, but throws if missing.
- *
- * Prefer mustGet() for ids; use mustQuery() for class selectors or more complex selectors.
- */
-export function mustQuery<T extends Element = HTMLElement>(
-  selector: string,
-  root: Document | DocumentFragment | HTMLElement = document,
-): T {
-  const el = root.querySelector(selector);
-  if (!el) throw new Error(`Missing element for selector: ${selector}`);
-  return el as T;
-}
-
 /** Set textContent (safe against HTML injection). */
 export function setText(el: HTMLElement, text: string): void {
   el.textContent = text;

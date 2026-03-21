@@ -54,7 +54,7 @@ export type PhaseCurveModel = PhaseCurveParams;
  * Normalized/sanitized PhaseCurveModel used internally.
  * This keeps behavior deterministic and protects against NaNs in user presets.
  */
-export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
+function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   enabled: boolean;
   reflAmp: number;
   thermAmp: number;
@@ -127,7 +127,7 @@ export function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
  *
  * where Φ is chosen by the reflected phase model and alpha_eff is optionally offset.
  */
-export function reflectedFluxTerm(params: {
+function reflectedFluxTerm(params: {
   alpha: number;
   reflAmp: number;
   model: ReflectedPhaseModel;
@@ -155,7 +155,7 @@ export function reflectedFluxTerm(params: {
  * - For model="constant", W=1.
  * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
  */
-export function thermalFluxTerm(params: {
+function thermalFluxTerm(params: {
   alpha: number;
   thermAmp: number;
   model: ThermalPhaseModel;
@@ -328,19 +328,6 @@ export function bodyPhaseFlux(params: {
 
   // Enforce non-negativity (physical for these toy additive terms).
   return Number.isFinite(total) ? Math.max(0, total) : 0;
-}
-
-/** Backwards-compatible wrapper: existing call sites can keep using planetPhaseFlux(...). */
-export function planetPhaseFlux(params: {
-  rPlanet: Vec3;
-  observerDir: Vec3;
-  model?: PhaseCurveModel;
-}): number {
-  return bodyPhaseFlux({
-    rBody: params.rPlanet,
-    observerDir: params.observerDir,
-    model: params.model,
-  });
 }
 
 // ---------------------------

@@ -155,7 +155,7 @@ function findBandLaw(
  * - mu is clamped to [0,1].
  * - If coefficients are non-finite, the result may be non-finite (caller may validate/sanitize).
  */
-export function evaluateLimbDarkeningIntensity(mu: number, law: LimbDarkeningLaw): number {
+function evaluateLimbDarkeningIntensity(mu: number, law: LimbDarkeningLaw): number {
   const m = clamp01(mu);
 
   switch (law.kind) {
@@ -321,22 +321,4 @@ export function resolveAndValidateLimbDarkening(params: {
   validateLimbDarkeningLaw(law, params.model.constraints);
 
   return law;
-}
-
-/**
- * Lightweight deterministic debug helper (no framework).
- */
-export function debugLimbDarkeningResolverMatrix(params: {
-  model: LimbDarkeningModel;
-  bandsToTry: Array<PassbandId | undefined>;
-}): Array<{ band: PassbandId | undefined; resolvedKind: string | "none" }> {
-  const out: Array<{
-    band: PassbandId | undefined;
-    resolvedKind: string | "none";
-  }> = [];
-  for (const b of params.bandsToTry) {
-    const law = resolveLimbDarkeningForBand(params.model, b);
-    out.push({ band: b, resolvedKind: law ? law.kind : "none" });
-  }
-  return out;
 }

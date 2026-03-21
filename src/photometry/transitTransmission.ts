@@ -234,7 +234,7 @@ export function fluxStarWithTransmissiveOcculters(params: FluxStarWithTransmissi
 }
 
 /** Helper: hard opaque disk occulter. */
-export function hardDiskOcculter(dx: number, dy: number, r: number): TransmissionOcculter {
+function hardDiskOcculter(dx: number, dy: number, r: number): TransmissionOcculter {
   return {
     dx,
     dy,
@@ -252,7 +252,7 @@ export function hardDiskOcculter(dx: number, dy: number, r: number): Transmissio
  *     tau(rho) = tau0 * exp(-(rho - r0)/h)
  *     T(rho) = exp(-tau(rho))
  */
-export function exponentialHaloOcculter(params: {
+function exponentialHaloOcculter(params: {
   dx: number;
   dy: number;
   r0: number;

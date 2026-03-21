@@ -95,12 +95,7 @@ export function spotLifecycleWeight(params: {
  * - True anomaly: nu = trueAnomalyFromE(E, e)
  * - Return wrapTo2Pi(nu)
  */
-export function orbitalPhaseFromTrueAnomaly(params: {
-  t: number;
-  period: number;
-  t0: number;
-  e: number;
-}): number {
+function orbitalPhaseFromTrueAnomaly(params: { t: number; period: number; t0: number; e: number }): number {
   const { t, period, t0, e } = params;
 
   if (!Number.isFinite(t) || !Number.isFinite(period) || !Number.isFinite(t0) || !Number.isFinite(e))

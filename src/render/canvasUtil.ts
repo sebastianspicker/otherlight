@@ -29,7 +29,7 @@ export type SizeInfo = {
  * Get current devicePixelRatio in a robust way.
  * Falls back to 1 if window is unavailable (e.g. SSR) or DPR is invalid.
  */
-export function getDevicePixelRatio(): number {
+function getDevicePixelRatio(): number {
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
   return typeof dpr === "number" && Number.isFinite(dpr) && dpr > 0 ? dpr : 1;
 }
@@ -41,7 +41,7 @@ export function getDevicePixelRatio(): number {
  * - Uses getBoundingClientRect() so it reflects CSS layout size even if width/height attributes differ.
  * - Rounds device-pixel dimensions to integers (canvas backing store is integer).
  */
-export function getCanvasSizeInfo(canvas: HTMLCanvasElement): SizeInfo {
+function getCanvasSizeInfo(canvas: HTMLCanvasElement): SizeInfo {
   const dpr = getDevicePixelRatio();
   const rect = canvas.getBoundingClientRect();
 
@@ -114,25 +114,4 @@ export function ensureHiDPICanvas(
   ctx.setTransform(next.dpr, 0, 0, next.dpr, 0, 0);
 
   return next;
-}
-
-/**
- * Convenience helper: clear the full canvas in CSS pixel coordinates.
- *
- * This assumes ensureHiDPICanvas() was called and the transform is set to CSS pixels.
- */
-export function clearCanvasCssPixels(ctx: CanvasRenderingContext2D, size: SizeInfo): void {
-  ctx.clearRect(0, 0, size.cssW, size.cssH);
-}
-
-/**
- * Convenience helper: fill the full canvas in CSS pixel coordinates.
- *
- * This assumes ensureHiDPICanvas() was called and the transform is set to CSS pixels.
- */
-export function fillCanvasCssPixels(ctx: CanvasRenderingContext2D, size: SizeInfo, fillStyle: string): void {
-  ctx.save();
-  ctx.fillStyle = fillStyle;
-  ctx.fillRect(0, 0, size.cssW, size.cssH);
-  ctx.restore();
 }

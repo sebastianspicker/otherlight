@@ -33,10 +33,6 @@ let optionalLdTried = false;
 // Shared in-flight promise for concurrency safety.
 let loadPromise: Promise<void> | null = null;
 
-export function hasLdIntegrators(): boolean {
-  return integrators !== null;
-}
-
 export function getLdIntegrators(): OptionalLdIntegrators | null {
   return integrators;
 }

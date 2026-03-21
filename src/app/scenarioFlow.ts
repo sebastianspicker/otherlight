@@ -20,7 +20,7 @@ import type { DidacticsRuntimeState } from "./didactics";
 
 export const BINARY_MODE_VALUE = "binary-lab";
 export const PRESET_MODE_VALUE = "preset-lab";
-export const BINARY_HYPOTHESIS_VALUES: BinaryLabHypothesis[] = [
+const BINARY_HYPOTHESIS_VALUES: BinaryLabHypothesis[] = [
   "primary-eclipse-deepest",
   "secondary-eclipse-dominates",
   "eccentricity-shifts-eclipse-spacing",
@@ -55,7 +55,7 @@ export function isBinaryModeActive(refs: UiRefs): boolean {
   return (refs.simModeSelect?.value ?? BINARY_MODE_VALUE) === BINARY_MODE_VALUE;
 }
 
-export function lockParameterPanel(locked: boolean): void {
+function lockParameterPanel(locked: boolean): void {
   const form = document.getElementById("paramForm");
   if (!form) return;
   const controls = form.querySelectorAll<
@@ -76,7 +76,7 @@ export function syncBinaryLabUiState(refs: UiRefs, binaryLabState: BinaryLabStat
   lockParameterPanel(!canEdit);
 }
 
-export function setScenarioApplyBusy(refs: UiRefs, busy: boolean, statusEl?: HTMLElement | null): void {
+function setScenarioApplyBusy(refs: UiRefs, busy: boolean, statusEl?: HTMLElement | null): void {
   const controls: Array<HTMLElement | null> = [
     refs.simModeSelect,
     refs.runtimeModeSelect,

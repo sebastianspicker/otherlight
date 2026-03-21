@@ -13,7 +13,7 @@ function fmt(v: number | undefined): string {
   return typeof v === "number" && Number.isFinite(v) ? v.toExponential(3) : "n/a";
 }
 
-export function getOcSeries(state: TransitHistoryState, body: OcBody): TransitHistorySeries {
+function getOcSeries(state: TransitHistoryState, body: OcBody): TransitHistorySeries {
   return body === "moon" ? state.moon : state.planet;
 }
 
