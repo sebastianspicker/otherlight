@@ -39,6 +39,6 @@ Latest pass: runtime during maintenance burst work (forced-runtime-32).
 - Earlier scratch notes were compressed into the current guidance.
 
 ## Architecture
-- Simplified the next maintenance pass through runtime.
+- Moved await behind a narrower boundary.
 
 - Earlier scratch notes were compressed into the current guidance.
