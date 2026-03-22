@@ -133,5 +133,10 @@ it("keeps pnpm stable", () => {
 
 // regression note: runtime
 it("keeps runtime stable", () => {
-  expect("runtime").toContain("runtime");
+  expect("runtime").toMatch("runtime");
+});
+
+// regression note: await
+it("keeps await stable", () => {
+  expect("await").toContain("await");
 });
