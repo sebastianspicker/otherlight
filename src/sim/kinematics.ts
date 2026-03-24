@@ -57,12 +57,10 @@ function applyJ2SecularPrecession(
   dtSec: number,
   params: { J2?: number; centralRadius?: number; mu?: number },
 ): OrbitElements {
-  const J2 = params.J2;
-  const R = params.centralRadius;
-  const mu = params.mu;
-  if (!(Number.isFinite(J2) && (J2 as number) !== 0)) return el;
-  if (!(Number.isFinite(R) && (R as number) > 0)) return el;
-  if (!(Number.isFinite(mu) && (mu as number) > 0)) return el;
+  const { J2, centralRadius: R, mu } = params;
+  if (!isFinitePositive(mu)) return el;
+  if (!isFinitePositive(R)) return el;
+  if (!(Number.isFinite(J2) && J2 !== 0)) return el;
   if (!(Number.isFinite(el.a) && el.a > 0)) return el;
   if (!(Number.isFinite(el.e) && el.e >= 0 && el.e < 1)) return el;
   if (!(Number.isFinite(el.inc) && el.inc >= 0 && el.inc <= Math.PI)) return el;
@@ -70,10 +68,10 @@ function applyJ2SecularPrecession(
   const a = el.a;
   const e = el.e;
   const i = el.inc;
-  const n = Math.sqrt((mu as number) / (a * a * a));
-  const fac = ((R as number) * (R as number)) / (a * a * Math.pow(1 - e * e, 2));
-  const OmegaDot = -1.5 * (J2 as number) * n * fac * Math.cos(i);
-  const omegaDot = 0.75 * (J2 as number) * n * fac * (5 * Math.cos(i) * Math.cos(i) - 1);
+  const n = Math.sqrt(mu / (a * a * a));
+  const fac = (R * R) / (a * a * Math.pow(1 - e * e, 2));
+  const OmegaDot = -1.5 * J2! * n * fac * Math.cos(i);
+  const omegaDot = 0.75 * J2! * n * fac * (5 * Math.cos(i) * Math.cos(i) - 1);
 
   return {
     ...el,
@@ -95,34 +93,23 @@ function applyTidalSecularEvolution(
   if (!tides?.enabled) return el;
   if (!Number.isFinite(dtSec) || dtSec === 0) return el;
 
-  let daDt = Number.isFinite(tides.daDt) ? (tides.daDt as number) : 0;
-  let deDt = Number.isFinite(tides.deDt) ? (tides.deDt as number) : 0;
+  let daDt = Number.isFinite(tides.daDt) ? tides.daDt! : 0;
+  let deDt = Number.isFinite(tides.deDt) ? tides.deDt! : 0;
 
-  const k2 = tides.k2;
-  const Q = tides.Q;
-  const R = params.centralRadius;
-  const mu = params.mu;
-  if (
-    daDt === 0 &&
-    deDt === 0 &&
-    Number.isFinite(k2) &&
-    (k2 as number) > 0 &&
-    Number.isFinite(Q) &&
-    (Q as number) > 0
-  ) {
+  const { k2, Q } = tides;
+  const { centralRadius: R, mu } = params;
+  if (daDt === 0 && deDt === 0 && isFinitePositive(k2) && isFinitePositive(Q)) {
     if (
-      Number.isFinite(R) &&
-      (R as number) > 0 &&
-      Number.isFinite(mu) &&
-      (mu as number) > 0 &&
+      isFinitePositive(R) &&
+      isFinitePositive(mu) &&
       Number.isFinite(el.a) &&
       el.a > 0 &&
       Number.isFinite(el.e) &&
       el.e >= 0 &&
       el.e < 1
     ) {
-      const n = Math.sqrt((mu as number) / (el.a * el.a * el.a));
-      const s = ((k2 as number) / (Q as number)) * Math.pow((R as number) / el.a, 5) * n;
+      const n = Math.sqrt(mu / (el.a * el.a * el.a));
+      const s = (k2 / Q) * Math.pow(R / el.a, 5) * n;
       deDt = -s * el.e;
       daDt = -2 * s * el.a * el.e * el.e;
     }
@@ -134,10 +121,7 @@ function applyTidalSecularEvolution(
 
   const a = Math.max(1e-6, el.a + daDt * dtSec);
   const e = Math.min(0.999999, Math.max(0, el.e + deDt * dtSec));
-  const period =
-    Number.isFinite(params.mu) && (params.mu as number) > 0
-      ? 2 * Math.PI * Math.sqrt((a * a * a) / (params.mu as number))
-      : el.period;
+  const period = isFinitePositive(params.mu) ? 2 * Math.PI * Math.sqrt((a * a * a) / params.mu) : el.period;
   return { ...el, a, e, period: Number.isFinite(period) && period > 0 ? period : el.period };
 }
 
@@ -179,9 +163,9 @@ function applySecularMoonOrbit(params: SystemParams, t: number, el: OrbitElement
   const dtSec = t - toFiniteNumber(sec.tRef, 0);
 
   const mu = (() => {
-    if (Number.isFinite(params.planet.m) && (params.planet.m as number) > 0) {
-      const mMoon = Number.isFinite(params.moon?.m) ? (params.moon!.m as number) : 0;
-      return G_SI * ((params.planet.m as number) + Math.max(0, mMoon));
+    if (isFinitePositive(params.planet.m)) {
+      const mMoon = isFinitePositive(params.moon?.m) ? params.moon!.m : 0;
+      return G_SI * (params.planet.m + Math.max(0, mMoon));
     }
     try {
       return muFromPeriodAndA(el.period, el.a);
@@ -314,7 +298,7 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
 
   const muStarRel =
     nbodyActive && isFinitePositive(params.dynamics?.nbodyPlanetMoon?.muStar)
-      ? (params.dynamics!.nbodyPlanetMoon!.muStar as number)
+      ? params.dynamics!.nbodyPlanetMoon!.muStar
       : (() => {
           try {
             const mu = muFromPeriodAndA(planetOrbit.period, planetOrbit.a);
@@ -331,10 +315,10 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
           enabled: true,
           mu:
             params.dynamics?.relativityLevel === "enhanced"
-              ? (muStarRel as number) +
-                (isFinitePositive(params.planet.m) ? G_SI * (params.planet.m as number) : 0) +
-                (isFinitePositive(params.moon?.m) ? G_SI * (params.moon!.m as number) : 0)
-              : (muStarRel as number),
+              ? muStarRel +
+                (isFinitePositive(params.planet.m) ? G_SI * params.planet.m : 0) +
+                (isFinitePositive(params.moon?.m) ? G_SI * params.moon!.m! : 0)
+              : muStarRel,
           minImpact: rel.shapiroMinImpact,
         }
       : undefined;
@@ -355,16 +339,16 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
               const nb = getNBodyStateAt(params, ti);
               if (!nb) return [];
               return [
-                isFinitePositive(muStarRel) ? { mu: muStarRel as number, r: { x: 0, y: 0, z: 0 } } : null,
+                isFinitePositive(muStarRel) ? { mu: muStarRel, r: { x: 0, y: 0, z: 0 } } : null,
                 isFinitePositive(params.planet.m)
                   ? {
-                      mu: G_SI * (params.planet.m as number),
+                      mu: G_SI * params.planet.m,
                       r: vSub(nb.state.rP, nb.state.rS),
                     }
                   : null,
                 isFinitePositive(params.moon?.m)
                   ? {
-                      mu: G_SI * (params.moon!.m as number),
+                      mu: G_SI * params.moon!.m!,
                       r: vSub(nb.state.rM, nb.state.rS),
                     }
                   : null,
@@ -473,17 +457,17 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
                   massesAtTime: (ti: number) => {
                     const masses: Array<{ mu: number; r: Vec3 }> = [];
                     if (isFinitePositive(muStarRel)) {
-                      masses.push({ mu: muStarRel as number, r: { x: 0, y: 0, z: 0 } });
+                      masses.push({ mu: muStarRel, r: { x: 0, y: 0, z: 0 } });
                     }
                     if (isFinitePositive(params.planet.m)) {
                       masses.push({
-                        mu: G_SI * (params.planet.m as number),
+                        mu: G_SI * params.planet.m,
                         r: planetAbsAt(ti),
                       });
                     }
                     if (params.moon && isFinitePositive(params.moon.m)) {
                       masses.push({
-                        mu: G_SI * (params.moon.m as number),
+                        mu: G_SI * params.moon.m,
                         r: moonAbsAt(ti),
                       });
                     }
@@ -510,17 +494,17 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
                     massesAtTime: (ti: number) => {
                       const masses: Array<{ mu: number; r: Vec3 }> = [];
                       if (isFinitePositive(muStarRel)) {
-                        masses.push({ mu: muStarRel as number, r: { x: 0, y: 0, z: 0 } });
+                        masses.push({ mu: muStarRel, r: { x: 0, y: 0, z: 0 } });
                       }
                       if (isFinitePositive(params.planet.m)) {
                         masses.push({
-                          mu: G_SI * (params.planet.m as number),
+                          mu: G_SI * params.planet.m,
                           r: planetAbsAt(ti),
                         });
                       }
                       if (params.moon && isFinitePositive(params.moon.m)) {
                         masses.push({
-                          mu: G_SI * (params.moon.m as number),
+                          mu: G_SI * params.moon.m,
                           r: moonAbsAt(ti),
                         });
                       }

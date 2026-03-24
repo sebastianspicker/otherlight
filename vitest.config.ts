@@ -5,5 +5,16 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     environment: "node",
     environmentMatchGlobs: [["**/tests/ui/**/*.test.ts", "jsdom"]],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      exclude: ["src/main.ts", "src/core/types*.ts", "src/style.css"],
+      thresholds: {
+        statements: 60,
+        branches: 55,
+        functions: 55,
+        lines: 60,
+      },
+    },
   },
 });

@@ -28,7 +28,12 @@ export function runWithErrorHandling(
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const text = options.errorPrefix ? `${options.errorPrefix}${msg}` : msg;
-      if (options.statusEl) options.statusEl.textContent = text;
+      if (options.statusEl) {
+        options.statusEl.textContent = text;
+      } else {
+        // Fail-open: no status element available; log to console so errors are never silently dropped.
+        console.error("[runWithErrorHandling]", text);
+      }
     }
   };
   void run();

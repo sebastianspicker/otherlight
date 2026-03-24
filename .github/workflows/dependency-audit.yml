@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Enable Corepack (pnpm)
         run: |
@@ -38,9 +38,9 @@ jobs:
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ~/.pnpm-store
-          key: pnpm-store-${{ runner.os }}-node20-${{ hashFiles('pnpm-lock.yaml') }}
+          key: pnpm-store-${{ runner.os }}-node22-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            pnpm-store-${{ runner.os }}-node20-
+            pnpm-store-${{ runner.os }}-node22-
 
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile

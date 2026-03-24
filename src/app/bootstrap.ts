@@ -357,13 +357,23 @@ export async function initApp(): Promise<void> {
 
   didLessonSelect?.addEventListener("change", () => {
     ensureDidacticsConfig(appState.params);
-    if (appState.params.didactics) appState.params.didactics.activeLessonId = didLessonSelect.value;
+    if (appState.params.didactics) {
+      appState.params = {
+        ...appState.params,
+        didactics: { ...appState.params.didactics, activeLessonId: didLessonSelect.value },
+      };
+    }
     appState.didacticsRuntime = initDidacticsRuntime(appState.params, appState.t);
     renderDidacticSignals(uiRefs, appState.didacticsRuntime);
   });
   didAutoAssess?.addEventListener("input", () => {
     ensureDidacticsConfig(appState.params);
-    if (appState.params.didactics) appState.params.didactics.autoAssess = didAutoAssess.checked;
+    if (appState.params.didactics) {
+      appState.params = {
+        ...appState.params,
+        didactics: { ...appState.params.didactics, autoAssess: didAutoAssess.checked },
+      };
+    }
   });
   didCheckBtn?.addEventListener("click", () => {
     runWithErrorHandling(

@@ -13,8 +13,8 @@ export type SimulationRuntimeV4 = {
 };
 
 function finiteSubsteps(v: unknown): number {
-  if (!Number.isFinite(v)) return 5;
-  return Math.max(1, Math.min(25, Math.floor(v as number)));
+  if (typeof v !== "number" || !Number.isFinite(v)) return 5;
+  return Math.max(1, Math.min(25, Math.floor(v)));
 }
 
 export function createSimulationV4(input: SimulationConfigV4 | unknown): SimulationRuntimeV4 {
@@ -40,16 +40,10 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
 
       // Reference path: deterministic temporal supersampling around observation time.
       // This is intentionally conservative and stable for benchmark mode.
+      // dt is in seconds; 0.2 s is fine-grained relative to typical orbital periods (hours–days).
       const dt = 0.2;
       let acc = 0;
-      const lastOut = stepNativeSimulationV4({
-        config,
-        tObsSec,
-        mode,
-        conservationBaseline,
-      });
-      let last: SimulationStepV3 = lastOut.step;
-      conservationBaseline = lastOut.conservationBaseline;
+      let last!: SimulationStepV3;
       for (let i = 0; i < substeps; i++) {
         const alpha = substeps <= 1 ? 0 : i / (substeps - 1);
         const t = tObsSec + (alpha - 0.5) * dt;
@@ -59,10 +53,9 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
           mode,
           conservationBaseline,
         });
-        const s = out.step;
         conservationBaseline = out.conservationBaseline;
-        acc += s.flux.total;
-        last = s;
+        acc += out.step.flux.total;
+        last = out.step;
       }
       return {
         ...last,

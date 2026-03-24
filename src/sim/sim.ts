@@ -181,9 +181,10 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
 
   const didacticsHook = getDidacticsHook();
   const didacticSignals = didacticsHook ? didacticsHook(params, stepBase) : undefined;
-  if (stepBase.meta) stepBase.meta.didacticSignals = didacticSignals;
 
-  return stepBase;
+  return didacticSignals && stepBase.meta
+    ? { ...stepBase, meta: { ...stepBase.meta, didacticSignals } }
+    : stepBase;
 }
 
 // Call once before a simulation loop if limbDarkeningModel is configured.

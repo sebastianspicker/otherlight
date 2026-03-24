@@ -1,4 +1,5 @@
 import type {
+  OrbitElements,
   SystemParams,
   StepConservationDiagnostics,
   StepFluxDecomposition,
@@ -24,8 +25,15 @@ import {
   orbitStateAt,
   type ConservationBaseline,
   type FluxBundle,
+  type NativeBodyState,
   type NativeSnapshot,
 } from "./nativeModel";
+
+/** Safely extract orbit from a body source, returning undefined for StarBodyV4 (which has no orbit). */
+function sourceOrbit(body: NativeBodyState): OrbitElements | undefined {
+  const src = body.source;
+  return "orbit" in src ? (src as PlanetBodyV4 | MoonBodyV4).orbit : undefined;
+}
 
 function estimateTransitEvent(args: {
   tObsSec: number;
@@ -59,9 +67,9 @@ function estimateTransitEvent(args: {
   const ingressSec = centerSec - durationSec / 2;
   const egressSec = centerSec + durationSec / 2;
   let ttvSec: number | undefined;
-  if (Number.isFinite(periodSec) && (periodSec as number) > 0 && Number.isFinite(t0Sec)) {
-    const k = Math.round((centerSec - (t0Sec as number)) / (periodSec as number));
-    const centerEphem = (t0Sec as number) + k * (periodSec as number);
+  if (Number.isFinite(periodSec) && periodSec! > 0 && Number.isFinite(t0Sec)) {
+    const k = Math.round((centerSec - t0Sec!) / periodSec!);
+    const centerEphem = t0Sec! + k * periodSec!;
     ttvSec = centerSec - centerEphem;
   }
   return { centerSec, durationSec, ingressSec, egressSec, ttvSec };
@@ -104,11 +112,9 @@ function computeTimingAndObservables(
     sky: relPlanetSky,
     vSky: planetVSky,
     periodSec:
-      (planet.source as PlanetBodyV4).orbit?.period ??
+      sourceOrbit(planet)?.period ??
       (planet.id === snap.stars[1]?.id ? config.orbits.binary.period : undefined),
-    t0Sec:
-      (planet.source as PlanetBodyV4).orbit?.t0 ??
-      (planet.id === snap.stars[1]?.id ? config.orbits.binary.t0 : undefined),
+    t0Sec: sourceOrbit(planet)?.t0 ?? (planet.id === snap.stars[1]?.id ? config.orbits.binary.t0 : undefined),
   });
 
   let mEvent: ReturnType<typeof estimateTransitEvent> = null;
@@ -127,8 +133,8 @@ function computeTimingAndObservables(
       rBody: moon.r,
       sky: relMoonSky,
       vSky: moonVSky,
-      periodSec: (moon.source as MoonBodyV4).orbit.period,
-      t0Sec: (moon.source as MoonBodyV4).orbit.t0,
+      periodSec: sourceOrbit(moon)?.period,
+      t0Sec: sourceOrbit(moon)?.t0,
     });
   }
 
@@ -151,9 +157,7 @@ function computeTimingAndObservables(
   const vPlanetSky = Math.hypot(planetVSky.x, planetVSky.y);
   const tRef = finiteOrDefault(config.dynamics?.exomoonTimingShape?.tRef, 0);
   const pRelRef = orbitStateAt(
-    planet.id === snap.stars[1]?.id
-      ? config.orbits.binary
-      : ((planet.source as PlanetBodyV4).orbit ?? config.orbits.binary),
+    planet.id === snap.stars[1]?.id ? config.orbits.binary : (sourceOrbit(planet) ?? config.orbits.binary),
     tRef,
   );
   const vPlanetSkyRef = Math.hypot(projectToSky(pRelRef.v, obs).x, projectToSky(pRelRef.v, obs).y);
@@ -218,15 +222,12 @@ function computeConservation(
     energy,
     angularMomentum,
   };
+  const eBase = nextBaseline.energy;
+  const lBase = nextBaseline.angularMomentum;
   const physicsEnergyDrift =
-    Number.isFinite(nextBaseline.energy) && nextBaseline.energy !== 0
-      ? (energy - (nextBaseline.energy as number)) / Math.abs(nextBaseline.energy as number)
-      : undefined;
+    Number.isFinite(eBase) && eBase !== 0 ? (energy - eBase!) / Math.abs(eBase!) : undefined;
   const physicsAngularMomentumDrift =
-    Number.isFinite(nextBaseline.angularMomentum) && (nextBaseline.angularMomentum as number) !== 0
-      ? (angularMomentum - (nextBaseline.angularMomentum as number)) /
-        Math.abs(nextBaseline.angularMomentum as number)
-      : undefined;
+    Number.isFinite(lBase) && lBase !== 0 ? (angularMomentum - lBase!) / Math.abs(lBase!) : undefined;
   return { conservation, physicsEnergyDrift, physicsAngularMomentumDrift, baseline: nextBaseline };
 }
 

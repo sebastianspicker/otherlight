@@ -34,6 +34,7 @@
   <body>
     <a href="#main" class="skip-link">Skip to main content</a>
     <div id="app" class="app">
+      <!-- #region HEADER — Mode selectors, presets, real systems -->
       <header class="app-header">
         <h1>Transit-Exomoon-Lightcurve-Simulator</h1>
         <p class="help">
@@ -80,12 +81,13 @@
           <p id="realSystemMeta" class="help"></p>
         </div>
       </header>
+      <!-- #endregion HEADER -->
 
       <main id="main" class="app-main">
         <div class="mainGrid">
           <!-- LINKS: Visualisierung + Parameter -->
           <div class="mainLeft">
-            <!-- Visualisierung: Skyplane (oben) + Lightcurve (unten) -->
+            <!-- #region VISUALIZATION — Sky-plane canvas + light curve canvas -->
             <section class="panel vizStack">
               <div class="col">
                 <h2>Sky-plane</h2>
@@ -141,8 +143,9 @@
                 ></canvas>
               </div>
             </section>
+            <!-- #endregion VISUALIZATION -->
 
-            <!-- Parameter: unter der Lightcurve, in 2 Spalten -->
+            <!-- #region PARAMETERS — Two-column form (Column 1: observer/star/measurement, Column 2: planet/moon/dynamics) -->
             <section class="panel params">
               <h2>Parameter</h2>
 
@@ -169,7 +172,7 @@
 
                 <!-- 2-spaltige Parameter-Boxen -->
                 <div class="paramCols">
-                  <!-- SPALTE 1: Beobachtung + Stern + Messung -->
+                  <!-- #region COLUMN 1 — Observer, Star (LD, patches, spots, variability), Smearing -->
                   <div class="paramCol">
                     <fieldset>
                       <legend>Beobachter</legend>
@@ -357,7 +360,9 @@
                     </fieldset>
                   </div>
 
-                  <!-- SPALTE 2: Planet/Mond + Sichtbarkeit/Dynamik -->
+                  <!-- #endregion COLUMN 1 -->
+
+                  <!-- #region COLUMN 2 — Planet, Moon, Phase curves, Day/Night, Exomoon timing, N-body, Atmosphere, Relativity -->
                   <div class="paramCol">
                     <fieldset>
                       <legend>Planet</legend>
@@ -919,7 +924,9 @@
                     </fieldset>
                   </div>
 
-                  <!-- Actions über beide Spalten -->
+                  <!-- #endregion COLUMN 2 -->
+
+                  <!-- #region ACTIONS — Apply/Reset buttons -->
                   <div class="paramActions">
                     <div class="row">
                       <button id="btnApplyParams" type="button">Apply</button>
@@ -934,9 +941,10 @@
                 </div>
               </form>
             </section>
+            <!-- #endregion PARAMETERS -->
           </div>
 
-          <!-- RECHTS: Controls / Sidebar -->
+          <!-- #region SIDEBAR — Playback controls, readouts, O-C history, guided labs -->
           <aside class="panel sidebar">
             <h2>Controls</h2>
 
@@ -1085,6 +1093,7 @@
               </details>
             </section>
           </aside>
+          <!-- #endregion SIDEBAR -->
         </div>
 
         <noscript>

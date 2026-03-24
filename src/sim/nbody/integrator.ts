@@ -379,7 +379,7 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
     muPlanet: params.muPlanet,
     muMoon: params.muMoon,
     dtMaxAbs: Math.max(1e-12, Math.abs(params.dt || 1)),
-    softening: Number.isFinite(params.softening) ? Math.max(0, params.softening as number) : 0,
+    softening: Number.isFinite(params.softening) ? Math.max(0, params.softening!) : 0,
     throwOnOverlap: Boolean(params.throwOnOverlap),
     perturbers: muPerturbers.map((mu) => ({
       mu,
@@ -400,12 +400,6 @@ export function integrateNBodyStep(params: NBodyStepParams): NBodyState {
       onCloseEncounter: "warn",
     },
   };
-
-  // Replace dummy orbits with only mu values used by integrator.
-  cfg.perturbers = muPerturbers.map((mu) => ({
-    mu,
-    orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
-  }));
 
   return integrateStepWithConfig({ state: params.state, dt: params.dt, cfg });
 }
@@ -431,7 +425,7 @@ export function integrateToTime(params: {
     muPlanet: params.muPlanet,
     muMoon: params.muMoon,
     dtMaxAbs,
-    softening: Number.isFinite(params.softening) ? Math.max(0, params.softening as number) : 0,
+    softening: Number.isFinite(params.softening) ? Math.max(0, params.softening!) : 0,
     throwOnOverlap: Boolean(params.throwOnOverlap),
     perturbers: (params.muPerturbers ?? []).map((mu) => ({
       mu,

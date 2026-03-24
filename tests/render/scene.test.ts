@@ -63,7 +63,6 @@ describe("render scene v3 adapter", () => {
       step,
       tSec: 0,
       params,
-      renderConfig: { didacticMode: "scientific" },
     });
 
     expect(drawFrameV3).toHaveBeenCalledTimes(1);
@@ -85,7 +84,6 @@ describe("render scene v3 adapter", () => {
         step,
         tSec: 0,
         params,
-        renderConfig: { didacticMode: "scientific" },
       }),
     ).toThrow(/drawFrameV3/i);
     expect(drawFrame).toHaveBeenCalledTimes(0);

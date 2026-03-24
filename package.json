@@ -12,6 +12,7 @@
     "clean": "rm -rf dist .vite docs/audit",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:self": "vitest run tests/self-tests.test.ts",
     "test:watch": "vitest",
     "lint": "eslint . && prettier -c .",
@@ -45,6 +46,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.1",
+    "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^10.1.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.4.2",
