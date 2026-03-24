@@ -14,8 +14,6 @@ import type { Vec3 } from "../physics/vec3";
 import { radiusFromE, solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
 import { perifocalToInertial } from "../physics/frames";
 import { assertOrbit } from "./validation";
-import { applyApsidalPrecession } from "../physics/relativity";
-
 export function resolveOrbitElements(
   elOrProvider: OrbitElements | OrbitElementsProvider,
   t: number,
@@ -58,25 +56,5 @@ export function posFromElements(
   nameForErrors: string,
 ): Vec3 {
   const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
-  return posFromResolvedElements(el, t, nameForErrors);
-}
-
-export function resolveOrbitElementsWithPrecession(
-  elOrProvider: OrbitElements | OrbitElementsProvider,
-  t: number,
-  nameForErrors: string,
-  precessionPerOrbitRad?: number,
-): OrbitElements {
-  const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
-  return applyApsidalPrecession(el, t, precessionPerOrbitRad ?? 0);
-}
-
-export function posFromElementsWithPrecession(
-  elOrProvider: OrbitElements | OrbitElementsProvider,
-  t: number,
-  nameForErrors: string,
-  precessionPerOrbitRad?: number,
-): Vec3 {
-  const el = resolveOrbitElementsWithPrecession(elOrProvider, t, nameForErrors, precessionPerOrbitRad);
   return posFromResolvedElements(el, t, nameForErrors);
 }

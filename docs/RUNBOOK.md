@@ -4,6 +4,18 @@
 
 Repeatable commands for setup, development, verification, and security checks.
 
+## Workflow
+
+```mermaid
+flowchart TD
+  Setup["Install dependencies"] --> Dev["Run dev server"]
+  Dev --> Fast["Fast local loop: lint + typecheck + test"]
+  Fast --> Full{"Need release-level confidence?"}
+  Full -->|No| Continue["Continue feature work"]
+  Full -->|Yes| Verify["Run ci:verify + benchmark gates"]
+  Verify --> Ship["Create PR / release candidate"]
+```
+
 ## Prerequisites
 
 - Node.js 18+ (recommended)
@@ -43,7 +55,16 @@ pnpm test
 ## Full Loop (CI parity)
 
 ```bash
-pnpm verify-production-ready
+pnpm ci:verify
+```
+
+Optional release-level gates:
+
+```bash
+pnpm literature-benchmarks
+pnpm didactics-acceptance
+pnpm perf-smoke
+pnpm migration-regression
 ```
 
 ## Lint / Format
@@ -81,7 +102,7 @@ CI runs baseline security checks (secret scan, SAST, SCA). Local equivalents are
 Dependency scan (SCA):
 
 ```bash
-pnpm audit --audit-level=high
+pnpm audit --audit-level=high --prod
 ```
 
 Notes:

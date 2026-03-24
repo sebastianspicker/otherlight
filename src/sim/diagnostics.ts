@@ -1,20 +1,13 @@
 // src/sim/diagnostics.ts
 
 import type { SystemParams } from "../core/types";
-import { normalizeFiniteDiffDtSec, toFiniteNumber } from "../core/units";
+import { toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
-import { vSub } from "../physics/vec3";
-import { trySplitBarycentricPair } from "../physics/barycenter";
-import {
-  applyOrientationEvolution,
-  estimateSkyPlaneSpeed,
-  impactParameterFromSkyY,
-  tdvRatioFromSkyPlaneSpeeds,
-} from "../physics/exomoonTiming";
+import { impactParameterFromSkyY, tdvRatioFromSkyPlaneSpeeds } from "../physics/exomoonTiming";
+import { projectToSky } from "../physics/frames";
 import type { BodyKinematics } from "./kinematics";
 import { getExomoonConfig } from "./kinematics";
-import { posFromElements, resolveOrbitElements } from "./orbits";
-import { getNBodyStateAt, isNBodyEnabled } from "./dynamics";
+import { sampleSystemState } from "./stateSampler";
 
 export type ExoDiagnostics = {
   vPlanetSky?: number;
@@ -36,59 +29,30 @@ export function computeExoDiagnostics(
   }
 
   const exo = getExomoonConfig(params);
-  const nbodyActive = isNBodyEnabled(params);
-  const exoEnabled = Boolean(exo?.enabled);
 
   // Impact parameters are geometry diagnostics: always provide them.
   const bPlanet = impactParameterFromSkyY(kin.planetSky.y, params.star.r);
   const bMoon = kin.moonSky ? impactParameterFromSkyY(kin.moonSky.y, params.star.r) : undefined;
-  if (!exoEnabled) return { bPlanet, bMoon };
 
   const tRef = toFiniteNumber(exo?.tRef, 0);
-  const velDt = normalizeFiniteDiffDtSec(exo?.velDt, 2.0);
-
-  const planetAbsAt = (ti: number): Vec3 => {
-    if (nbodyActive) {
-      const nbody = getNBodyStateAt(params, ti);
-      if (nbody) return vSub(nbody.state.rP, nbody.state.rS);
-    }
-
-    const rB = posFromElements(params.planet.orbit, ti, "planet.orbit");
-
-    // If there is no moon, "planet orbit" is the planet orbit directly.
-    if (!params.moon) return rB;
-
-    // If there is a moon and masses are provided, "planet orbit" is interpreted as barycenter orbit.
-    const moonOrbitBaseEl = resolveOrbitElements(params.moon.orbitAroundPlanet, ti, "moon.orbitAroundPlanet");
-    const moonOrbitEvolvedEl = applyOrientationEvolution(moonOrbitBaseEl, ti, {
-      enabled: true,
-      tRef,
-      OmegaDot: exo?.moonOmegaDot,
-      incDot: exo?.moonIncDot,
-      omegaDot: exo?.moonOmegaSmallDot,
-      Omega0: exo?.moonOmega0,
-      inc0: exo?.moonInc0,
-      omega0: exo?.moonOmegaSmall0,
-      wrapAngles: "2pi",
-      clampInc01Pi: true,
-    });
-
-    const rRel = posFromElements(moonOrbitEvolvedEl, ti, "moon.orbitAroundPlanet");
-    const split = trySplitBarycentricPair({
-      rBary: rB,
-      rRel, // vector from planet to moon
-      mPrimary: params.planet.m,
-      mSecondary: params.moon.m,
-    });
-
-    return split ? split.rPrimary : rB;
-  };
-
-  const vPlanetSkyRaw = estimateSkyPlaneSpeed(planetAbsAt, t, observerDir, { dtSec: velDt, central: true });
-  const vPlanetSkyRefRaw = estimateSkyPlaneSpeed(planetAbsAt, tRef, observerDir, {
-    dtSec: velDt,
-    central: true,
+  const sampledNow = sampleSystemState({
+    system: params,
+    tObs: t,
+    observerDir,
+    kinAtT: kin,
+    velDtSec: exo?.velDt,
   });
+  const sampledRef = sampleSystemState({
+    system: params,
+    tObs: tRef,
+    observerDir,
+    velDtSec: exo?.velDt,
+  });
+
+  const vNowSky = projectToSky(sampledNow.planet.v, observerDir);
+  const vRefSky = projectToSky(sampledRef.planet.v, observerDir);
+  const vPlanetSkyRaw = Math.hypot(vNowSky.x, vNowSky.y);
+  const vPlanetSkyRefRaw = Math.hypot(vRefSky.x, vRefSky.y);
 
   const vPlanetSky = Number.isFinite(vPlanetSkyRaw) ? vPlanetSkyRaw : undefined;
   const vPlanetSkyRef = Number.isFinite(vPlanetSkyRefRaw) ? vPlanetSkyRefRaw : undefined;

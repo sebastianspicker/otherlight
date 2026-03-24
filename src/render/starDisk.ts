@@ -18,7 +18,7 @@
 
 import type { BrightnessPatch, LimbDarkeningLaw, SystemParams } from "../core/types";
 import { clamp, toFinitePositiveOr } from "../core/units";
-import { intensityNonNegative, resolveAndValidateLimbDarkening } from "../photometry/limbDarkening";
+import { intensityNonNegative, resolveAndValidateLimbDarkening } from "../sim/limbDarkeningBridge";
 
 export type StarDiskRenderOptions = {
   /**
@@ -170,7 +170,7 @@ function resolveLawFromParams(params: SystemParams): LimbDarkeningLaw | undefine
   // Uses photometry-layer resolver which can apply model.constraints validation.
   // Note: The returned law is structurally compatible with core/types LimbDarkeningLaw.
   const resolved = resolveAndValidateLimbDarkening({ model, bandpass: model.bandpass });
-  return resolved as unknown as LimbDarkeningLaw | undefined;
+  return resolved;
 }
 
 function chooseStops(Rpx: number): number {
@@ -192,7 +192,7 @@ function buildLimbDarkeningStops(params: {
   const nStops = Math.max(8, Math.floor(params.nStops));
 
   // Normalize by center intensity to be robust against misconfigured coefficients.
-  const Icenter = Math.max(1e-12, intensityNonNegative(1, law as any));
+  const Icenter = Math.max(1e-12, intensityNonNegative(1, law));
   const invIcenter = 1 / Icenter;
 
   const gamma = toFinitePositiveOr(params.gamma, 2.2);
@@ -204,7 +204,7 @@ function buildLimbDarkeningStops(params: {
   for (let i = 0; i <= nStops; i++) {
     const r = i / nStops; // 0..1
     const mu = Math.sqrt(Math.max(0, 1 - r * r)); // mu = cos(theta)
-    let I = intensityNonNegative(mu, law as any) * invIcenter;
+    let I = intensityNonNegative(mu, law) * invIcenter;
 
     // Display clamp (visual choice; does not affect photometry).
     I = clamp(I, 0, Imax);

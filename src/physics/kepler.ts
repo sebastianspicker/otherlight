@@ -209,7 +209,7 @@ export function solveKeplerE(
 }
 
 /** Mean motion n = 2π / P [rad/s]. */
-export function meanMotionFromPeriod(period: number): number {
+function meanMotionFromPeriod(period: number): number {
   if (!Number.isFinite(period) || period <= 0) {
     throw new Error("meanMotionFromPeriod: period must be > 0 and finite.");
   }

@@ -14,9 +14,10 @@
 // - Limb darkening visualization uses the same law resolver/validation as photometry
 //   (via starDisk.ts); it is display-only and does not affect flux computations.
 
-import type { StepResult, SystemParams } from "../core/types";
+import type { SystemParams } from "../core/types";
 import { clamp, toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
+import type { RenderOcculterGeometryV3, SimulationStepV3 } from "../sim/v3/types";
 
 import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
 import { drawStarDisk, StarDiskCache } from "./starDisk";
@@ -25,8 +26,9 @@ import {
   defaultDebugOverlayToggles,
   normalizeObserverDirSafe,
   resolveDebugOverlayToggles,
-  drawDebugOverlay,
+  drawDebugOverlayV3,
   drawObserverMarkerMainView,
+  type DebugOverlayDataV3,
   type DebugOverlayToggles,
 } from "./overlays";
 
@@ -44,17 +46,22 @@ export {
   defaultDebugOverlayToggles,
   normalizeObserverDirSafe,
   resolveDebugOverlayToggles,
-  drawDebugOverlay,
+  drawDebugOverlayV3,
+  drawDebugOverlayV3 as drawDebugOverlay,
   drawObserverMarkerMainView,
 } from "./overlays";
-export type { DebugOverlayToggles } from "./overlays";
+export type { DebugOverlayDataV3, DebugOverlayToggles } from "./overlays";
 
-type DrawableKind = "star" | "planet" | "moon";
-
-type Drawable = {
-  kind: DrawableKind;
-  z: number; // depth along observer direction; larger => closer to observer
-};
+type Drawable =
+  | {
+      kind: "star";
+      z: number; // depth along observer direction; larger => closer to observer
+    }
+  | {
+      kind: "occulter";
+      z: number;
+      geometry: RenderOcculterGeometryV3;
+    };
 
 export type Canvas2DRendererOptions = {
   /**
@@ -236,13 +243,203 @@ export class Canvas2DRenderer {
     }
   }
 
+  private drawEllipseBodyWithOcclusionHint(args: {
+    x: number;
+    y: number;
+    rx: number;
+    ry: number;
+    angle: number;
+    zBody: number;
+    rStar: number;
+    baseColor: string;
+  }): void {
+    const { x, y, rx, ry, angle, zBody, rStar, baseColor } = args;
+    const ctx = this.ctx;
+    const p = this.toPx(x, y);
+    const rxPx = toFinitePositiveOr(rx, 1e-6) * this.pixelsPerUnit;
+    const ryPx = toFinitePositiveOr(ry, 1e-6) * this.pixelsPerUnit;
+    const ang = Number.isFinite(angle) ? angle : 0;
+
+    // Visual-only depth cue; must not affect physics/flux.
+    const shade = clamp(0.35 + 0.65 * (1 / (1 + Math.abs(zBody) * 0.002)), 0.25, 1.0);
+
+    ctx.save();
+    ctx.globalAlpha = shade;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, rxPx, ryPx, ang, 0, Math.PI * 2);
+    ctx.fillStyle = baseColor;
+    ctx.fill();
+    ctx.restore();
+
+    const behindStarPlane = zBody < 0;
+    const centerInsideStarDisk = Math.hypot(x, y) < toFinitePositiveOr(rStar, 1);
+    if (behindStarPlane && centerInsideStarDisk) {
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = "rgba(255,255,255,0.70)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, rxPx, ryPx, ang, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  private drawRingAnnulus(args: {
+    x: number;
+    y: number;
+    z: number;
+    innerRadius: number;
+    outerRadius: number;
+    inclination: number;
+    angle: number;
+    color: string;
+  }): void {
+    const { x, y, z, innerRadius, outerRadius, inclination, angle, color } = args;
+    const ctx = this.ctx;
+    const p = this.toPx(x, y);
+    const q = Math.max(0.05, Math.abs(Math.cos(Number.isFinite(inclination) ? inclination : 0)));
+    const outerRx = toFinitePositiveOr(outerRadius, 1e-6) * this.pixelsPerUnit;
+    const innerRx = toFinitePositiveOr(innerRadius, 1e-6) * this.pixelsPerUnit;
+    const outerRy = outerRx * q;
+    const innerRy = innerRx * q;
+    const ang = Number.isFinite(angle) ? angle : 0;
+
+    // Visual-only depth cue; must not affect physics/flux.
+    const shade = clamp(0.25 + 0.7 * (1 / (1 + Math.abs(z) * 0.002)), 0.2, 1.0);
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(ang);
+    ctx.globalAlpha = shade;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, outerRx, outerRy, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, innerRx, innerRy, 0, 0, Math.PI * 2, true);
+    ctx.fill("evenodd");
+
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, outerRx, outerRy, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, innerRx, innerRy, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private bodyColor(body: "planet" | "moon"): string {
+    return body === "planet" ? "#4cc9f0" : "#b8c0cc";
+  }
+
+  private ringColor(body: "planet" | "moon"): string {
+    return body === "planet" ? "rgba(120, 210, 255, 0.38)" : "rgba(205, 212, 220, 0.32)";
+  }
+
+  private resolveOcculterGeometry(params: SystemParams, step: SimulationStepV3): RenderOcculterGeometryV3[] {
+    const fromSignals = step.renderSignals?.occulterGeometry ?? [];
+    if (fromSignals.length > 0) return fromSignals;
+
+    const fallback: RenderOcculterGeometryV3[] = [
+      {
+        body: "planet",
+        kind: "circle",
+        center: step.kinematics.planetSky,
+        radius: params.planet.r,
+      },
+    ];
+    if (params.moon && step.kinematics.moonSky) {
+      fallback.push({
+        body: "moon",
+        kind: "circle",
+        center: step.kinematics.moonSky,
+        radius: params.moon.r,
+      });
+    }
+    return fallback;
+  }
+
+  private toOverlayData(step: SimulationStepV3): DebugOverlayDataV3 {
+    return {
+      nOcculters: step.debug?.nOcculters ?? step.renderSignals.occulterGeometry.length,
+      bPlanet: step.debug?.bPlanet,
+      bMoon: step.debug?.bMoon,
+      tdvRatio: step.debug?.tdvRatio,
+      vPlanetSky: step.debug?.vPlanetSky,
+      vPlanetSkyRef: step.debug?.vPlanetSkyRef,
+      baselineFluxUsed: step.debug?.baselineFluxUsed ?? step.flux.stellarPreTransit,
+      stellarVariabilityFlux: step.debug?.stellarVariabilityFlux ?? step.flux.stellarVariability,
+      fluxTransitFactor: step.flux.transitFactor,
+      fluxTotal: step.flux.total,
+    };
+  }
+
+  private drawEventMarkers(step: SimulationStepV3): void {
+    const active = step.renderSignals.eventMarkers.filter((m) => m.active);
+    if (active.length === 0) return;
+
+    const ctx = this.ctx;
+    const cssH = this.size?.cssH ?? 0;
+    const x0 = 10;
+    let y = Math.max(20, cssH - 20 - active.length * 18);
+
+    ctx.save();
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    for (const marker of active) {
+      ctx.fillStyle = "rgba(20,20,20,0.65)";
+      const text = `event: ${marker.label}`;
+      const w = ctx.measureText(text).width + 12;
+      ctx.fillRect(x0 - 4, y - 10, w, 14);
+      ctx.fillStyle = "rgba(255,255,255,0.90)";
+      ctx.fillText(text, x0, y);
+      y += 16;
+    }
+    ctx.restore();
+  }
+
+  private drawOcculterGeometry(geometry: RenderOcculterGeometryV3, rStar: number): void {
+    if (geometry.kind === "circle") {
+      this.drawBodyWithOcclusionHint({
+        x: geometry.center.x,
+        y: geometry.center.y,
+        rBody: geometry.radius,
+        zBody: geometry.center.z,
+        rStar,
+        baseColor: this.bodyColor(geometry.body),
+      });
+      return;
+    }
+    if (geometry.kind === "ellipse") {
+      this.drawEllipseBodyWithOcclusionHint({
+        x: geometry.center.x,
+        y: geometry.center.y,
+        rx: geometry.rx,
+        ry: geometry.ry,
+        angle: geometry.angle,
+        zBody: geometry.center.z,
+        rStar,
+        baseColor: this.bodyColor(geometry.body),
+      });
+      return;
+    }
+    this.drawRingAnnulus({
+      x: geometry.center.x,
+      y: geometry.center.y,
+      z: geometry.center.z,
+      innerRadius: geometry.innerRadius,
+      outerRadius: geometry.outerRadius,
+      inclination: geometry.inclination,
+      angle: geometry.angle,
+      color: this.ringColor(geometry.body),
+    });
+  }
+
   /**
-   * Render one frame.
-   * @param params System parameters (read-only).
-   * @param step Simulation step output (positions + flux).
-   * @param tSec Simulation time in seconds (used for orbit path sampling keys).
+   * Render one frame with Runtime V3 output.
    */
-  drawFrame(params: SystemParams, step: StepResult, tSec: number): void {
+  drawFrameV3(params: SystemParams, step: SimulationStepV3, tSec: number): void {
     // Update HiDPI sizing & ensure CSS-pixel coordinate transform.
     this.size = ensureHiDPICanvas(this.canvas, this.ctx, this.size);
 
@@ -258,7 +455,9 @@ export class Canvas2DRenderer {
     this.drawAxes();
 
     // Observer direction (safe normalization).
-    const observerDir: Vec3 = normalizeObserverDirSafe(params.observer?.dir);
+    const observerDir: Vec3 = normalizeObserverDirSafe(
+      step.renderSignals.orbitFrames.observerDir ?? params.observer?.dir,
+    );
 
     // Resolve debug toggles once per frame.
     const dbg = resolveDebugOverlayToggles(this.debug);
@@ -281,50 +480,43 @@ export class Canvas2DRenderer {
 
     // Depth-sorted draw order (Painter's algorithm):
     // smaller z first (farther), larger z last (closer).
-    const drawList: Drawable[] = [
-      { kind: "star", z: 0 },
-      { kind: "planet", z: step.planetSky.z },
-    ];
-    if (params.moon && step.moonSky) drawList.push({ kind: "moon", z: step.moonSky.z });
+    const drawList: Drawable[] = [{ kind: "star", z: 0 }];
+    for (const geometry of this.resolveOcculterGeometry(params, step)) {
+      drawList.push({
+        kind: "occulter",
+        z: Number.isFinite(geometry.center.z) ? geometry.center.z : 0,
+        geometry,
+      });
+    }
 
-    drawList.sort((a, b) => (a.z === b.z ? a.kind.localeCompare(b.kind) : a.z - b.z));
+    drawList.sort((a, b) => {
+      if (a.z !== b.z) return a.z - b.z;
+      if (a.kind === b.kind) {
+        if (a.kind === "occulter" && b.kind === "occulter") {
+          const rank = (g: RenderOcculterGeometryV3) => (g.kind === "ring" ? 0 : 1);
+          return rank(a.geometry) - rank(b.geometry);
+        }
+        return 0;
+      }
+      return a.kind === "star" ? -1 : 1;
+    });
 
     for (const item of drawList) {
       if (item.kind === "star") {
         this.drawStar(params);
         continue;
       }
-
-      if (item.kind === "planet") {
-        this.drawBodyWithOcclusionHint({
-          x: step.planetSky.x,
-          y: step.planetSky.y,
-          rBody: params.planet.r,
-          zBody: step.planetSky.z,
-          rStar: params.star.r,
-          baseColor: "#4cc9f0",
-        });
-        continue;
-      }
-
-      if (item.kind === "moon" && params.moon && step.moonSky) {
-        this.drawBodyWithOcclusionHint({
-          x: step.moonSky.x,
-          y: step.moonSky.y,
-          rBody: params.moon.r,
-          zBody: step.moonSky.z,
-          rStar: params.star.r,
-          baseColor: "#b8c0cc",
-        });
-        continue;
-      }
+      this.drawOcculterGeometry(item.geometry, params.star.r);
     }
+
+    this.drawEventMarkers(step);
 
     // Draw overlay text/gizmo last.
     // We already drew the main-view observer marker above -> suppress duplicate marker here.
     const overlayToggles: DebugOverlayToggles =
       dbg.enabled && dbg.showObserverMarker ? { ...this.debug, showObserverMarker: false } : this.debug;
 
-    drawDebugOverlay(ctx, this.size, params, step, observerDir, overlayToggles);
+    const overlayData = this.toOverlayData(step);
+    drawDebugOverlayV3(ctx, this.size, overlayData, observerDir, overlayToggles);
   }
 }

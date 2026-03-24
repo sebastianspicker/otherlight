@@ -120,6 +120,33 @@ export type InstrumentNoiseSystematicsParams = {
       /** Phase offset for Y motion [rad]. */
       phaseY?: number;
     };
+
+    driftFamilies?: {
+      enabled?: boolean;
+      /** Additive amplitudes in flux units for each drift component. */
+      amplitudesFlux?: number[];
+      /** Component periods [s], aligned by index with amplitudesFlux. */
+      periodsSec?: number[];
+      /** Optional phase offsets [rad], aligned by index with amplitudesFlux. */
+      phasesRad?: number[];
+    };
+  };
+
+  detector?: {
+    enabled?: boolean;
+    /**
+     * Quadratic non-linearity coefficient in electron domain:
+     * e_out = e_in * (1 - coeff * e_in), clamped to >=0.
+     */
+    nonlinearityCoeff?: number;
+    /** Saturation level [e-]. Values above are clipped. */
+    saturationElectrons?: number;
+    /** Pixel-response non-uniformity sigma (dimensionless, multiplicative around 1). */
+    prnuSigma?: number;
+    /** Pointing jitter sigma in pixel units (mapped to additive flux modulation). */
+    jitterSigmaPx?: number;
+    /** CTI-like trailing coefficient (dimensionless, small positive). */
+    ctiTrailCoeff?: number;
   };
 
   /** Optional safety clamp of the returned flux value. */

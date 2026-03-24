@@ -6,9 +6,9 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 1
 fi
 
-pnpm install --frozen-lockfile
-pnpm verify-production-ready
+CI=1 pnpm install --frozen-lockfile
+pnpm ci:verify
 
 if [[ "${CI_AUDIT:-}" == "1" ]]; then
-  pnpm audit --audit-level=high
+  pnpm audit --audit-level=high --prod
 fi

@@ -9,26 +9,50 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "clean": "rm -rf dist .vite docs/audit",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:self": "vitest run tests/self-tests.test.ts",
     "test:watch": "vitest",
     "lint": "eslint . && prettier -c .",
     "lint:fix": "eslint . --fix",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "install:ci": "pnpm install --frozen-lockfile",
-    "verify-production-ready": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "turbo": "pnpm verify-production-ready"
+    "ci:lint": "pnpm lint",
+    "ci:typecheck": "pnpm typecheck",
+    "ci:test": "pnpm test",
+    "ci:build": "pnpm build",
+    "ci:verify": "pnpm ci:lint && pnpm ci:typecheck && pnpm ci:test && pnpm ci:build",
+    "audit:security": "pnpm audit --audit-level=high --prod",
+    "audit:deps": "pnpm dlx depcheck",
+    "audit:deadcode": "bash ./scripts/audit-dead-code.sh",
+    "audit:full": "pnpm audit:security && pnpm audit:deps && pnpm audit:deadcode",
+    "physics-regression": "vitest run tests/sim/transit-sequence-regression.test.ts tests/sim/transit-timing-tracker.test.ts tests/sim/dynamics-driven-diagnostics.test.ts",
+    "data:real-systems:refresh": "node scripts/fetch-real-systems-snapshot.mjs",
+    "migrate:v4": "node --experimental-strip-types scripts/migrate-systemparams-v4.ts",
+    "literature-benchmarks": "vitest run tests/benchmarks/literature-benchmarks.test.ts",
+    "didactics-acceptance": "vitest run tests/didactics/didactics-acceptance.test.ts tests/didactics/hint-levels.test.ts",
+    "perf-smoke": "vitest run tests/perf/perf-smoke.test.ts",
+    "migration-regression": "vitest run tests/scripts/migration-regression.test.ts tests/scripts/migrate-systemparams-v4.test.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "rollup": ">=4.59.0",
+      "flatted": ">=3.4.2"
+    }
   },
   "devDependencies": {
-    "@eslint/js": "^9.19.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.1",
-    "eslint": "^9.19.0",
+    "@vitest/coverage-v8": "^4.1.1",
+    "eslint": "^10.1.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.4.2",
-    "typescript-eslint": "^8.22.0",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0",
-    "vitest": "^2.1.8"
+    "typescript-eslint": "^8.57.1",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.1"
   }
 }

@@ -17,8 +17,13 @@ export type UiRefs = {
   fluxVal: HTMLElement;
 
   // Presets
+  simModeSelect: HTMLSelectElement | null;
+  runtimeModeSelect: HTMLSelectElement | null;
   presetSelect: HTMLSelectElement;
   presetDesc: HTMLElement;
+  realSystemSelect: HTMLSelectElement | null;
+  realSystemMeta: HTMLElement | null;
+  skyBlackboxHint: HTMLElement | null;
 
   // Optional readouts
   plotModeVal: HTMLSpanElement | null;
@@ -26,6 +31,30 @@ export type UiRefs = {
   nOccultersVal: HTMLSpanElement | null;
   vPlanetVal: HTMLSpanElement | null;
   vMoonVal: HTMLSpanElement | null;
+  timingHistoryVal: HTMLSpanElement | null;
+  didLessonStatus: HTMLElement | null;
+  didCheckList: HTMLElement | null;
+  didFormulaList: HTMLElement | null;
+  didCompareOut: HTMLElement | null;
+  ocCanvas: HTMLCanvasElement | null;
+  ocBodySelect: HTMLSelectElement | null;
+  ocUnitSelect: HTMLSelectElement | null;
+  ocTrendModeSelect: HTMLSelectElement | null;
+  ocExportBtn: HTMLButtonElement | null;
+  ocClearBtn: HTMLButtonElement | null;
+  ocStatsVal: HTMLElement | null;
+  ocFitVal: HTMLElement | null;
+
+  didLessonSelect: HTMLSelectElement | null;
+  didAutoAssess: HTMLInputElement | null;
+  didCheckBtn: HTMLButtonElement | null;
+  didNextBtn: HTMLButtonElement | null;
+  didExportBtn: HTMLButtonElement | null;
+  didComparePreset: HTMLSelectElement | null;
+  didCompareTime: HTMLInputElement | null;
+  didCompareBtn: HTMLButtonElement | null;
+  didHypothesisSelect: HTMLSelectElement | null;
+  didRevealSkyBtn: HTMLButtonElement | null;
 
   // Params panel
   btnApplyParams: HTMLButtonElement;
@@ -220,8 +249,13 @@ export const uiRefs: UiRefs = {
   fluxVal: mustGetAs("fluxVal", HTMLElement),
 
   // Presets
+  simModeSelect: document.getElementById("simModeSelect") as HTMLSelectElement | null,
+  runtimeModeSelect: document.getElementById("runtimeModeSelect") as HTMLSelectElement | null,
   presetSelect: mustGetAs("presetSelect", HTMLSelectElement),
   presetDesc: mustGetAs("presetDesc", HTMLElement),
+  realSystemSelect: document.getElementById("realSystemSelect") as HTMLSelectElement | null,
+  realSystemMeta: document.getElementById("realSystemMeta"),
+  skyBlackboxHint: document.getElementById("skyBlackboxHint"),
 
   // Optional readouts
   plotModeVal: document.getElementById("plotModeVal") as HTMLSpanElement | null,
@@ -229,6 +263,29 @@ export const uiRefs: UiRefs = {
   nOccultersVal: document.getElementById("nOccultersVal") as HTMLSpanElement | null,
   vPlanetVal: document.getElementById("vPlanetVal") as HTMLSpanElement | null,
   vMoonVal: document.getElementById("vMoonVal") as HTMLSpanElement | null,
+  timingHistoryVal: document.getElementById("timingHistoryVal") as HTMLSpanElement | null,
+  didLessonStatus: document.getElementById("didLessonStatus"),
+  didCheckList: document.getElementById("didCheckList"),
+  didFormulaList: document.getElementById("didFormulaList"),
+  didCompareOut: document.getElementById("didCompareOut"),
+  ocCanvas: document.getElementById("ocCanvas") as HTMLCanvasElement | null,
+  ocBodySelect: document.getElementById("ocBodySelect") as HTMLSelectElement | null,
+  ocUnitSelect: document.getElementById("ocUnitSelect") as HTMLSelectElement | null,
+  ocTrendModeSelect: document.getElementById("ocTrendModeSelect") as HTMLSelectElement | null,
+  ocExportBtn: document.getElementById("ocExportBtn") as HTMLButtonElement | null,
+  ocClearBtn: document.getElementById("ocClearBtn") as HTMLButtonElement | null,
+  ocStatsVal: document.getElementById("ocStatsVal"),
+  ocFitVal: document.getElementById("ocFitVal"),
+  didLessonSelect: document.getElementById("didLessonSelect") as HTMLSelectElement | null,
+  didAutoAssess: document.getElementById("didAutoAssess") as HTMLInputElement | null,
+  didCheckBtn: document.getElementById("didCheckBtn") as HTMLButtonElement | null,
+  didNextBtn: document.getElementById("didNextBtn") as HTMLButtonElement | null,
+  didExportBtn: document.getElementById("didExportBtn") as HTMLButtonElement | null,
+  didComparePreset: document.getElementById("didComparePreset") as HTMLSelectElement | null,
+  didCompareTime: document.getElementById("didCompareTime") as HTMLInputElement | null,
+  didCompareBtn: document.getElementById("didCompareBtn") as HTMLButtonElement | null,
+  didHypothesisSelect: document.getElementById("didHypothesisSelect") as HTMLSelectElement | null,
+  didRevealSkyBtn: document.getElementById("didRevealSkyBtn") as HTMLButtonElement | null,
 
   // Params panel
   btnApplyParams: mustGetAs("btnApplyParams", HTMLButtonElement),

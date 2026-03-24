@@ -1,15 +1,19 @@
 ---
 name: Bug report
-about: Report a reproducible bug in the simulator
+about: Report a reproducible simulator bug
 title: "[Bug] "
 labels: bug
 ---
 
-## What happened
+## Summary
+
+Describe the issue in one or two sentences.
 
 ## Expected behavior
 
-## Steps to reproduce
+What should happen instead?
+
+## Reproduction steps
 
 1.
 2.
@@ -18,13 +22,21 @@ labels: bug
 ## Environment
 
 - OS:
-- Node: (`node -v`)
-- pnpm: (`pnpm -v`)
+- Node (`node -v`):
+- pnpm (`pnpm -v`):
 - Browser:
 
-## Scenario / preset
+## Scenario details
 
 - Preset:
-- Key parameter changes (if any):
+- Key parameter changes:
+- Timestamp/range where issue is visible:
+
+## Verification evidence
+
+- [ ] Reproduced on latest `main`
+- [ ] Reproduced after `pnpm ci:verify`
 
 ## Logs / screenshots
+
+Attach console output, stack traces, screenshots, or short recordings.

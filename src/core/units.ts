@@ -90,23 +90,18 @@ export function kgToSolarMass(kg: number): number {
 
 // Canonical names (readable).
 export const TWO_PI = 2 * Math.PI;
-export const HALF_PI = 0.5 * Math.PI;
-
-// Backwards-compatible aliases (older code often expects these).
-// IMPORTANT: These must NOT redeclare the same identifier twice.
-export const TWOPI = TWO_PI;
-export const HALFPI = HALF_PI;
 
 // Practical upper bound used for UI sanitization (strictly < 1 for elliptic orbits).
 export const ECC_MAX = 0.999;
 
 /**
  * Clamp value into [min,max]. Robust even if min/max are swapped.
- * If x is NaN, returns NaN (propagates via Math.min/Math.max).
+ * If x is not finite (NaN/±Inf), returns the midpoint of [min,max] to avoid propagating non-finite values.
  */
 export function clamp(x: number, a: number, b: number): number {
   const min = Math.min(a, b);
   const max = Math.max(a, b);
+  if (!Number.isFinite(x)) return (min + max) / 2;
   return Math.max(min, Math.min(max, x));
 }
 
@@ -121,14 +116,6 @@ export function clamp01(x: number): number {
  */
 export function clamp11(x: number): number {
   return clamp(x, -1, 1);
-}
-
-/**
- * Linear interpolation.
- * Note: does not clamp t (caller decides).
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }
 
 /**
@@ -201,14 +188,6 @@ export function toFiniteNumber(v: unknown, fallback: number): number {
 }
 
 /**
- * Convert unknown input to a finite number, then clamp into [min,max].
- * If conversion fails -> fallback, then clamp.
- */
-export function toFiniteClamped(v: unknown, fallback: number, min: number, max: number): number {
-  return clamp(toFiniteNumber(v, fallback), min, max);
-}
-
-/**
  * Convert unknown input to a finite number, clamped to >= 0.
  * If conversion fails -> fallback, then clamp to >= 0.
  */
@@ -247,22 +226,6 @@ export function toFinitePos(v: unknown, fallback: number, eps = 1e-12): number {
  */
 export function normalizeFiniteDiffDtSec(v: unknown, fallback: number): number {
   return toFinitePos(v, fallback, 1e-6);
-}
-
-/**
- * Compare two angles a and b by their wrapped signed difference in (-π, π].
- * Useful for "smallest angular separation" calculations.
- */
-export function angleDeltaPi(a: number, b: number): number {
-  return wrapToPi(a - b);
-}
-
-/**
- * Compare two angles a and b by their wrapped difference in [0, 2π).
- * Useful for phase offsets where non-negative differences are desired.
- */
-export function angleDelta2Pi(a: number, b: number): number {
-  return wrapTo2Pi(a - b);
 }
 
 // ---------------------------

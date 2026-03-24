@@ -16,19 +16,19 @@ export type NoiseState = {
 
 export function getInstrumentCfgFromPhotometry(ph: unknown): InstrumentNoiseSystematicsParams | undefined {
   if (!ph || typeof ph !== "object") return undefined;
-  const anyPh = ph as any;
+  const rec = ph as Record<string, unknown>;
 
   // Canonical key in newer schema: photometry.instrument
-  const cfgA = anyPh.instrument as InstrumentNoiseSystematicsParams | undefined;
+  const cfgA = rec.instrument as InstrumentNoiseSystematicsParams | undefined;
 
   // Backwards-compat key: photometry.instrumentNoise
-  const cfgB = anyPh.instrumentNoise as InstrumentNoiseSystematicsParams | undefined;
+  const cfgB = rec.instrumentNoise as InstrumentNoiseSystematicsParams | undefined;
 
-  return (cfgA ?? cfgB) as InstrumentNoiseSystematicsParams | undefined;
+  return cfgA ?? cfgB;
 }
 
 function readNoiseSeedFromParams(p: SystemParams): number {
-  const ph = p.star.photometry as any;
+  const ph = p.star.photometry;
   const cfg = getInstrumentCfgFromPhotometry(ph);
   const seed = cfg?.seed ?? 1;
   return Number.isFinite(seed) ? seed : 1;

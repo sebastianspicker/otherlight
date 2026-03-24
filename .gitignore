@@ -26,21 +26,39 @@ yarn-error.log*
 # IDE
 .idea/
 .vscode/
+.cursor/
+.codex/
 
 # docs (local findings/logs/decisions)
+docs/audit/
+docs/AUDIT_*.md
+docs/DEAD_CODE_POLICY.md
+docs/BASELINE.md
+docs/BUGS_AND_FIXES.md
+docs/REPO_MAP.md
+docs/ci-audit.md
+docs/ci-decision.md
+docs/roadmap.md
 DECISIONS.md
 FINDINGS.md
 LOG.md
 REFACTOR_PLAN.md
 PHYSICS_AUDIT.md
-validation.md
+/validation.md
 docs/DECISIONS.md
 docs/FINDINGS.md
 docs/LOG.md
 docs/REFACTOR_PLAN.md
 docs/PHYSICS_AUDIT.md
-docs/validation.md
+docs/DEEP-INSPECTION-*.md
 
-# Env files
+# Env files & secrets
 .env
 .env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.secret*

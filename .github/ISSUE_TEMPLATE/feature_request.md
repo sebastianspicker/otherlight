@@ -1,16 +1,29 @@
 ---
 name: Feature request
-about: Propose a new feature or model improvement
+about: Propose a new simulator, physics, rendering, or didactic capability
 title: "[Feature] "
 labels: enhancement
 ---
 
-## What do you want to add?
+## Problem statement
 
-## Why is it useful?
+What user/science/didactic problem does this solve?
 
-## Proposed implementation
+## Proposed change
+
+Describe the desired behavior and UI/API impact.
+
+## Scope and non-goals
+
+- In scope:
+- Out of scope:
+
+## Implementation hints
 
 - Code anchors:
 - Validation/tests:
-- UI/Docs impact:
+- Documentation updates required:
+
+## Acceptance criteria
+
+List measurable criteria that define “done”.

@@ -33,10 +33,6 @@ let optionalLdTried = false;
 // Shared in-flight promise for concurrency safety.
 let loadPromise: Promise<void> | null = null;
 
-export function hasLdIntegrators(): boolean {
-  return integrators !== null;
-}
-
 export function getLdIntegrators(): OptionalLdIntegrators | null {
   return integrators;
 }
@@ -62,10 +58,23 @@ export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
 
   loadPromise = (async (): Promise<void> => {
     try {
-      const m1: any = await import("../photometry/transitLimbDarkened");
-      const fluxFn = (m1?.fluxLimbDarkenedDisk ?? m1?.default ?? null) as FluxLimbDarkenedDiskFn | null;
+      const m1 = (await import("../photometry/transitLimbDarkened")) as Record<string, unknown>;
+      const fluxFnDirect = (m1?.fluxLimbDarkenedDisk ?? m1?.default ?? null) as FluxLimbDarkenedDiskFn | null;
+      const fluxFnDetailed = m1?.fluxLimbDarkenedDiskDetailed as
+        | ((args: unknown) => { flux?: number } | number)
+        | undefined;
+      const fluxFn =
+        fluxFnDirect ??
+        (typeof fluxFnDetailed === "function"
+          ? (args: unknown): number => {
+              const out = fluxFnDetailed(args);
+              if (typeof out === "number") return out;
+              const flux = out?.flux;
+              return Number.isFinite(flux) ? (flux as number) : 1;
+            }
+          : null);
 
-      const m2: any = await import("../photometry/limbDarkening");
+      const m2 = (await import("../photometry/limbDarkening")) as Record<string, unknown>;
       const resolveFn = (m2?.resolveLimbDarkeningForBand ?? null) as ResolveLimbDarkeningForBandFn | null;
 
       if (fluxFn && resolveFn) {
@@ -77,7 +86,8 @@ export async function ensureOptionalLimbDarkeningLoaded(): Promise<void> {
         integrators = null;
       }
     } catch {
-      // Optional module absent or failed to load: keep simulation functional.
+      // Deliberate swallow: optional LD module absent or failed to load.
+      // Simulation continues with uniform-disk fallback (tested in error-recovery tests).
       integrators = null;
     } finally {
       optionalLdTried = true;
@@ -96,6 +106,8 @@ export async function preloadOptionalLimbDarkening(): Promise<void> {
 /**
  * Fire-and-forget background loading if LD is configured but prepareSimulation() wasn't awaited.
  * This is safe: it never throws and does not block stepSystem().
+ * Note: The first frame after prepareSimulation() resolves will use LD if loaded; call await prepareSimulation()
+ * before starting the animation loop to ensure the first frame has LD when configured.
  */
 export function kickoffOptionalLimbDarkeningIfRequested(params: SystemParams): void {
   const ldModel = params.star?.photometry?.limbDarkeningModel;

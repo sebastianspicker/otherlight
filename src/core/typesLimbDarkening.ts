@@ -5,6 +5,11 @@
 //
 
 export type PassbandId = string;
+export type StellarLimbDarkeningParams = {
+  teffK?: number;
+  loggCgs?: number;
+  metallicityDex?: number;
+};
 
 /**
  * Limb-darkening plausibility/validation policy (optional).
@@ -102,6 +107,9 @@ export type LimbDarkeningModel = {
 
   /** Multi-band coefficient table keyed by passband id. */
   bands?: Record<PassbandId, LimbDarkeningLaw>;
+
+  /** Optional stellar-parameter fallback when no explicit table/default law is provided. */
+  stellar?: StellarLimbDarkeningParams;
 
   /** Optional validation policy for the selected coefficients. */
   constraints?: LimbDarkeningConstraints;

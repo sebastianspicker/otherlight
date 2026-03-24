@@ -1,9 +1,9 @@
 # Relativity and Timing Corrections
 
-Light-time (Roemer-like) delay:
+Light-time (Roemer-like) one-way travel time:
 
-- $\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$
-- r is the body position relative to the star (sky origin)
+- $\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$ (travel time from body at r to observer at infinity)
+- r is the body position relative to the star (sky origin). Retarded time: $t_{\mathrm{emit}} = t_{\mathrm{obs}} - \Delta t$.
 
 Shapiro delay (point-mass, star at origin):
 
@@ -21,6 +21,8 @@ Behavior in this codebase:
   per-orbit override is provided.
 - N-body mode: a star-centric 1PN correction is applied; per-orbit overrides
   are ignored.
+- Enhanced timing mode (`dynamics.relativityLevel="enhanced"`):
+  approximate multi-body Shapiro aggregation is available for observables/timing diagnostics.
 
 Related code:
 

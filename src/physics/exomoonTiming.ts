@@ -19,7 +19,7 @@ import type { Vec3 } from "./vec3";
 
 import { clamp, isFiniteNumber, normalizeFiniteDiffDtSec, toFinitePos, wrapTo2Pi } from "../core/units";
 import { buildSkyBasis, projectToSkyWithBasis } from "./frames";
-import { vIsFinite, vNearlyZero, vNormalizeOrZero, vSub } from "./vec3";
+import { vIsFinite, vNearlyZero, vNormalizeOrZero } from "./vec3";
 
 export type AngleWrapMode = "none" | "2pi";
 
@@ -161,7 +161,7 @@ export function applyOrientationEvolution(
  * Estimate sky-plane speed |v⊥| from two sky-projected points and a time step.
  * Uses only x,y components (sky plane). z is ignored.
  */
-export function estimateSkyPlaneSpeedFromSkyPoints(p0: SkyPoint, p1: SkyPoint, dtSec: number): number {
+function estimateSkyPlaneSpeedFromSkyPoints(p0: SkyPoint, p1: SkyPoint, dtSec: number): number {
   if (!Number.isFinite(dtSec) || dtSec <= 0) return NaN;
   if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y) || !Number.isFinite(p1.x) || !Number.isFinite(p1.y))
     return NaN;
@@ -183,7 +183,7 @@ export function estimateSkyPlaneSpeedFromSkyPoints(p0: SkyPoint, p1: SkyPoint, d
  * Numerical stability:
  * - Uses repo-wide dt policy, then enforces dt >= dtMinSec.
  */
-export function estimateSkyPlaneSpeed(
+function estimateSkyPlaneSpeed(
   rAt: (tSec: number) => Vec3,
   tSec: number,
   observerDir: Vec3,
@@ -212,27 +212,6 @@ export function estimateSkyPlaneSpeed(
   return estimateSkyPlaneSpeedFromSkyPoints(p0, p1, t1 - t0);
 }
 
-/** Convenience helper: estimate the sky-plane relative speed |v⊥,rel| between two bodies. */
-export function estimateRelativeSkyPlaneSpeed(
-  rAAt: (tSec: number) => Vec3,
-  rBAt: (tSec: number) => Vec3,
-  tSec: number,
-  observerDir: Vec3,
-  opts: SkyPlaneSpeedOptions | undefined = {},
-): number {
-  return estimateSkyPlaneSpeed(
-    (ti) => {
-      const a = rAAt(ti);
-      const b = rBAt(ti);
-      if (!vIsFinite(a) || !vIsFinite(b)) return { x: NaN, y: NaN, z: NaN };
-      return vSub(a, b);
-    },
-    tSec,
-    observerDir,
-    opts,
-  );
-}
-
 /**
  * TDV-like diagnostic ratio under the v⊥ approximation:
  * TDV_ratio ≡ T(t)/T_ref ≈ v⊥(t_ref) / v⊥(t)
@@ -255,39 +234,6 @@ export function impactParameterFromSkyY(y: number, rStar: number): number {
 
   const b = Math.abs(y) / rStar;
   return Number.isFinite(b) ? b : NaN;
-}
-
-/**
- * Rotation-invariant alternative diagnostic:
- * b_radial ≡ ρ / Rstar, where ρ = sqrt(x^2 + y^2)
- */
-export function normalizedSkySeparation(point: { x: number; y: number }, rStar: number): number {
-  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return NaN;
-  if (!Number.isFinite(rStar) || rStar <= 0) return NaN;
-
-  const rho = Math.hypot(point.x, point.y);
-  const b = rho / rStar;
-
-  return Number.isFinite(b) ? b : NaN;
-}
-
-/** Optional phenomenological “impact-parameter drift” as a sky-plane y-shift. */
-export function applySkyPlaneImpactYDrift(
-  sky: SkyPoint,
-  tSec: number,
-  model: { enabled?: boolean; tRef?: number; yDot?: number } | undefined,
-): SkyPoint {
-  if (!model?.enabled) return sky;
-  if (!Number.isFinite(sky.x) || !Number.isFinite(sky.y) || !Number.isFinite(sky.z)) return sky;
-
-  const tRef = isFiniteNumber(model.tRef) ? model.tRef : 0;
-  const yDot = isFiniteNumber(model.yDot) ? model.yDot : 0;
-  const dt = Number.isFinite(tSec) ? tSec - tRef : NaN;
-
-  if (!Number.isFinite(dt) || !Number.isFinite(yDot) || yDot === 0) return sky;
-
-  const y = sky.y + yDot * dt;
-  return { x: sky.x, y, z: sky.z };
 }
 
 /* -----------------------------

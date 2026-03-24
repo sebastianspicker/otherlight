@@ -47,6 +47,13 @@ export type {
   RelativityParams,
   ExomoonTimingShapeParams,
   SystemDynamicsParams,
+  FidelityProfile,
+  RelativityLevel,
+  IntegratorParams,
+  IntegratorMode,
+  CollisionPolicyParams,
+  SecularEvolutionParams,
+  PhysicsFeatureFlags,
 } from "./typesDynamics";
 
 // Observer / sky geometry
@@ -61,6 +68,7 @@ export type {
   LimbDarkeningLawFourParameter,
   LimbDarkeningLaw,
   LimbDarkeningModel,
+  StellarLimbDarkeningParams,
 } from "./typesLimbDarkening";
 
 // Photometry config
@@ -70,6 +78,12 @@ export type {
   PhaseCurveParams,
   DayNightVisibilityParams,
   AtmosphereTransmissionParams,
+  AtmosphereRTParams,
+  AtmosphereRTLayer,
+  SpectralBandpassParams,
+  ThermalModelAdvancedParams,
+  RingScatteringParams,
+  StellarSurfaceParams,
   ForwardScatteringParams,
   StellarVariabilityParams,
   StellarVariabilityPhaseModel,
@@ -79,7 +93,37 @@ export type {
 } from "./typesPhotometry";
 
 // System
-export type { Body, BodyShapeParams, RingSystemParams, SystemParams } from "./typesSystem";
+export type {
+  Body,
+  BodyShapeParams,
+  RingSystemParams,
+  BodySpinParams,
+  BodyGravityHarmonicsParams,
+  BodyTidesParams,
+  SystemParamsV2,
+  SystemParams,
+} from "./typesSystem";
 
 // Results
-export type { StepMeta, StepResult } from "./typesResults";
+export type {
+  StepMeta,
+  StepResult,
+  StepObservables,
+  StepTimingDiagnostics,
+  StepConservationDiagnostics,
+  StepFluxDecomposition,
+} from "./typesResults";
+
+// Didactics
+export type {
+  DidacticFormulaValue,
+  AssessmentRule,
+  LessonStep,
+  LessonSpec,
+  LearningState,
+  DidacticCheckResult,
+  DidacticSignals,
+  RubricCriterionV2,
+  AssessmentRubricV2,
+  DidacticsParams,
+} from "./typesDidactics";

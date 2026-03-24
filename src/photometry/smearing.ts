@@ -72,7 +72,7 @@ export type SmearingConfig = {
   nonFinitePolicy?: "ignore" | "zero";
 };
 
-export function normalizeSmearingConfig(cfg: SmearingConfig | undefined): {
+function normalizeSmearingConfig(cfg: SmearingConfig | undefined): {
   cadenceSec: number;
   nSubsamples: number;
   clampTo01: boolean;

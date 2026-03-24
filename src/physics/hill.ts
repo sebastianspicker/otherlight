@@ -38,7 +38,7 @@ function assertEccentricity(e: number, name: string): void {
  * Hill radius at instantaneous separation r between primary and secondary:
  *   R_H(r) ≈ r * cbrt( mSecondary / (3 (mPrimary + mSecondary)) )
  */
-export function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: number): number {
+function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: number): number {
   assertFinitePositive(r, "r");
   assertFinitePositive(mSecondary, "mSecondary");
   assertFinitePositive(mPrimary, "mPrimary");
@@ -53,7 +53,7 @@ export function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: nu
  * For eccentric orbits, Hill radius varies; for stability checks it is common to use
  * the periapsis distance (minimum Hill radius): r_p = a (1 - e).
  */
-export function hillRadius(
+function hillRadius(
   aPlanet: number,
   ePlanet: number,
   mPlanet: number,
@@ -76,7 +76,7 @@ export function hillRadius(
  * Simple rule-of-thumb for maximum stable prograde satellite semi-major axis:
  *   a_moon,max ≈ fraction * R_H
  */
-export function maxStableProgradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.5): number {
+function maxStableProgradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.5): number {
   assertFinitePositive(hillR, "hillR");
   if (!Number.isFinite(fraction) || fraction <= 0 || fraction >= 1) {
     throw new Error("fraction must be in (0, 1).");
@@ -90,7 +90,7 @@ export function maxStableProgradeMoonAxisRuleOfThumb(hillR: number, fraction = 0
  *
  * Output is clamped to [0, R_H] for robustness.
  */
-export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eSat = 0): number {
+function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eSat = 0): number {
   assertFinitePositive(hillR, "hillR");
   assertEccentricity(ePlanet, "ePlanet");
   assertEccentricity(eSat, "eSat");
@@ -106,27 +106,12 @@ export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eS
  * Retrograde satellites can remain stable farther out than prograde.
  * A conservative rule-of-thumb is ~0.67 R_H for retrograde.
  */
-export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.67): number {
+function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.67): number {
   assertFinitePositive(hillR, "hillR");
   if (!Number.isFinite(fraction) || fraction <= 0 || fraction >= 1) {
     throw new Error("fraction must be in (0, 1).");
   }
   return hillR * fraction;
-}
-
-/**
- * Mutual Hill radius for two bodies orbiting the same primary:
- *   R_H,mut ≈ ((a1 + a2)/2) * cbrt( (m1 + m2) / (3 M_primary) )
- */
-export function mutualHillRadius(a1: number, a2: number, m1: number, m2: number, mPrimary: number): number {
-  assertFinitePositive(a1, "a1");
-  assertFinitePositive(a2, "a2");
-  assertFinitePositive(m1, "m1");
-  assertFinitePositive(m2, "m2");
-  assertFinitePositive(mPrimary, "mPrimary");
-
-  const aMean = 0.5 * (a1 + a2);
-  return aMean * Math.cbrt((m1 + m2) / (3 * mPrimary));
 }
 
 /** Validation warning severity. */
@@ -217,6 +202,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   try {
     RH = hillRadius(aP, eP, mPlanet, mStar, { usePeriapsis: true });
   } catch {
+    // Fail-open: invalid orbital elements prevent Hill-radius calculation; emit a warning and skip stability checks.
     out.push({
       severity: "warn",
       code: "HILL_COMPUTE_FAILED",
@@ -225,8 +211,11 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     return out;
   }
 
-  // Compare moon orbit semi-major axis against a conservative prograde limit.
-  const aMaxPrograde = maxStableProgradeMoonAxisDomingos(RH, eP, eM);
+  // Compare moon orbit semi-major axis against a conservative sense-aware limit.
+  const retro = p.moon?.sense === "retrograde";
+  const aMaxSense = retro
+    ? maxStableRetrogradeMoonAxisRuleOfThumb(RH)
+    : maxStableProgradeMoonAxisDomingos(RH, eP, eM);
   const fracOfHill = aM / RH;
   const apoM = aM * (1 + eM);
 
@@ -235,7 +224,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
       severity: "warn",
       code: "MOON_APO_OUTSIDE_HILL",
       message:
-        "Mond-Apozentrum liegt außerhalb der Hill-Sphäre (bei Planeten-Periapsis); gebundene Bahn ist unwahrscheinlich.",
+        "Moon apoapsis lies outside the Hill sphere (at planetary periapsis); a bound orbit is unlikely.",
       details: {
         aMoon: aM,
         eMoon: eM,
@@ -245,17 +234,19 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     });
   }
 
-  if (Number.isFinite(aMaxPrograde) && aM > aMaxPrograde) {
+  if (Number.isFinite(aMaxSense) && aM > aMaxSense) {
     out.push({
       severity: "warn",
       code: "MOON_BEYOND_HILL_STABILITY",
-      message:
-        "Moon semi-major axis exceeds a conservative prograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable.",
+      message: retro
+        ? "Moon semi-major axis exceeds a conservative retrograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable."
+        : "Moon semi-major axis exceeds a conservative prograde stability limit (Hill-sphere heuristic). The configuration may be dynamically unstable.",
       details: {
         aMoon: aM,
         eMoon: eM,
         hillR_periapsis: RH,
-        aCrit_prograde: aMaxPrograde,
+        aCrit_sense: aMaxSense,
+        sense: retro ? "retrograde" : "prograde",
         aMoon_over_RH: fracOfHill,
       },
     });
@@ -263,11 +254,14 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
     out.push({
       severity: "info",
       code: "MOON_HILL_OK",
-      message: "Moon orbit is within a conservative Hill-sphere prograde stability heuristic.",
+      message: retro
+        ? "Moon orbit is within a conservative Hill-sphere retrograde stability heuristic."
+        : "Moon orbit is within a conservative Hill-sphere prograde stability heuristic.",
       details: {
         aMoon: aM,
         hillR_periapsis: RH,
-        aCrit_prograde: aMaxPrograde,
+        aCrit_sense: aMaxSense,
+        sense: retro ? "retrograde" : "prograde",
         aMoon_over_RH: fracOfHill,
       },
     });

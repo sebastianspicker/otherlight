@@ -1,6 +1,6 @@
 # Contributing
 
-## Development
+## Development setup
 
 Prerequisites:
 
@@ -13,23 +13,40 @@ Install:
 pnpm install --frozen-lockfile
 ```
 
-Run:
+Run locally:
 
 ```bash
 pnpm dev
 ```
 
-## Quality gates
+## Required quality gate
 
-Before opening a PR, run:
+Before opening a pull request, run:
 
 ```bash
-pnpm verify-production-ready
+pnpm ci:verify          # lint + typecheck + all tests + build
 ```
 
-## Commit messages
+Additional verification gates (run before release):
 
-Prefer Conventional Commits-style prefixes:
+```bash
+pnpm literature-benchmarks   # physics correctness vs. published results
+pnpm didactics-acceptance    # educational flow validation
+pnpm perf-smoke              # interactive performance budget
+pnpm migration-regression    # V3 -> V4 backwards compatibility
+pnpm audit:security          # dependency vulnerability scan
+```
+
+## Code quality rules
+
+- **No explicit `any` in source**: `@typescript-eslint/no-explicit-any` is enforced as `error` for `src/`. Tests and scripts are exempt. Use proper types, type guards, or narrowing instead of `as any`.
+- **Module layering**: Architectural boundaries are enforced by 34 automated tests in `tests/docs/hygiene-layering.test.ts`. Layers: core -> physics -> photometry -> sim -> render/ui -> app.
+- **Property-based tests**: Numerical code (Kepler solver, vector ops, transit flux) should have property-based tests in `tests/property/`.
+- **Fail-open catch blocks**: All `catch` blocks must have a comment explaining the fallback policy.
+
+## Commit message style
+
+Prefer Conventional Commits prefixes:
 
 - `feat: ...`
 - `fix: ...`
@@ -38,8 +55,8 @@ Prefer Conventional Commits-style prefixes:
 - `refactor: ...`
 - `chore: ...`
 
-For physics changes, include:
+For physics-facing changes, include in your PR description:
 
-- the model/assumption (what is being approximated),
-- the invariants/tests used to validate it,
-- any parameter/unit implications.
+- the model/assumption changed,
+- the invariants/tests used for validation,
+- parameter or unit implications.

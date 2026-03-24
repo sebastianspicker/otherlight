@@ -6,17 +6,6 @@ import type { CircleOcculter } from "../photometry/occulterCircle";
 import type { EllipseOcculter, OcculterShape, RingOcculter } from "../photometry/occulterEllipse";
 import type { BodyKinematics } from "./kinematics";
 
-export function couldOverlapStarOnSky(dx: number, dy: number, rOcc: number, rStar: number): boolean {
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
-  if (!isFinitePositive(rOcc) || !isFinitePositive(rStar)) return false;
-
-  const d = Math.hypot(dx, dy);
-  if (!Number.isFinite(d)) return false;
-
-  // Tangency is measure-zero: exclude d == rStar + rOcc.
-  return d < rStar + rOcc;
-}
-
 function buildBodyOcculters(args: {
   rStar: number;
   sky: { x: number; y: number; z: number } | undefined;

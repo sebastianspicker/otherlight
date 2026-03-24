@@ -92,7 +92,7 @@ export function phaseAngleRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number
  * - Phi(pi) = 0
  * - Smooth and monotone decreasing on [0, pi]
  */
-export function lambertPhaseFunction(alphaRad: number): number {
+function lambertPhaseFunction(alphaRad: number): number {
   const a = clamp(alphaRad, 0, Math.PI);
   const s = Math.sin(a);
   const c = Math.cos(a);
@@ -108,19 +108,9 @@ export function lambertPhaseFunction(alphaRad: number): number {
  * - This equals the illuminated fraction of the *visible disk area* for a sphere.
  * - It does not include Lambertian surface-brightness weighting across the disk.
  */
-export function cosinePhaseFunction(alphaRad: number): number {
+function cosinePhaseFunction(alphaRad: number): number {
   const a = clamp(alphaRad, 0, Math.PI);
   return clamp01((1 + Math.cos(a)) / 2);
-}
-
-/**
- * Illuminated fraction of the *visible disk area* (pure geometry, no intensity weighting):
- *   f_area(alpha) = (1 + cos(alpha)) / 2
- *
- * This is identical to cosinePhaseFunction(alpha).
- */
-export function illuminatedVisibleAreaFraction(alphaRad: number): number {
-  return cosinePhaseFunction(alphaRad);
 }
 
 /**
@@ -129,20 +119,6 @@ export function illuminatedVisibleAreaFraction(alphaRad: number): number {
  */
 export function reflectedLightGeometricWeight(alphaRad: number, model: ReflectedPhaseModel): number {
   return model === "lambert" ? lambertPhaseFunction(alphaRad) : cosinePhaseFunction(alphaRad);
-}
-
-/**
- * Reflected-light geometric weight from body position.
- * Convenient entry-point to avoid duplicating alpha conventions.
- */
-export function reflectedLightWeightFromBodyPos(params: {
-  rBody: Vec3;
-  observerDir: Vec3;
-  model?: ReflectedPhaseModel;
-}): number {
-  const model = params.model ?? "lambert";
-  const alpha = phaseAngleRadFromBodyPos(params.rBody, params.observerDir);
-  return reflectedLightGeometricWeight(alpha, model);
 }
 
 /**
@@ -158,20 +134,6 @@ export function thermalLightGeometricWeight(alphaRad: number, model: ThermalPhas
 }
 
 /**
- * Thermal visibility geometric weight from body position.
- * Kept here so phaseCurve.ts does not re-implement alpha conventions.
- */
-export function thermalLightWeightFromBodyPos(params: {
-  rBody: Vec3;
-  observerDir: Vec3;
-  model?: ThermalPhaseModel;
-}): number {
-  const model = params.model ?? "constant";
-  const alpha = phaseAngleRadFromBodyPos(params.rBody, params.observerDir);
-  return thermalLightGeometricWeight(alpha, model);
-}
-
-/**
  * Utility: apply an optional phase offset (radians) to alpha and clamp into [0, pi].
  *
  * NOTE:
@@ -184,20 +146,6 @@ export function applyPhaseOffset(alphaRad: number, offsetRad: number): number {
 
   // Shift then clamp back into [0, pi] (no periodic continuation in alpha beyond [0,pi] is physical).
   return clamp(a + offsetRad, 0, Math.PI);
-}
-
-/**
- * Compute geometric visibility factors for reflected and thermal light based on phase angle.
- * Added for compatibility with other modules expecting a unified calculator.
- */
-export function computeDayNightVisibility(
-  alphaRad: number,
-  reflModel: ReflectedPhaseModel = "lambert",
-  thermModel: ThermalPhaseModel = "constant",
-): { reflected: number; thermal: number } {
-  const reflected = reflectedLightGeometricWeight(alphaRad, reflModel);
-  const thermal = thermalLightGeometricWeight(alphaRad, thermModel);
-  return { reflected, thermal };
 }
 
 // ---------------------------

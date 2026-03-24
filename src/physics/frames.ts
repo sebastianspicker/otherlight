@@ -89,13 +89,6 @@ export function perifocalToInertial(rPQW: Vec3, Omega: number, inc: number, omeg
  * For rotations: inverse = transpose => negate angles and reverse order:
  * r_PQW = Rz(-omega) * Rx(-inc) * Rz(-Omega) * r_IJK
  */
-export function inertialToPerifocal(rIJK: Vec3, Omega: number, inc: number, omega: number): Vec3 {
-  let v = rotateZ(rIJK, -Omega);
-  v = rotateX(v, -inc);
-  v = rotateZ(v, -omega);
-  return v;
-}
-
 /**
  * Pick a stable reference vector not nearly parallel to ez.
  * Strategy:
@@ -171,43 +164,4 @@ export function projectToSkyWithBasis(r: Vec3, basis: SkyBasis): SkyPoint {
     y: vDot(r, basis.ey),
     z: vDot(r, basis.ez),
   };
-}
-
-/**
- * Optional debug/self-test helper (does not run automatically).
- * Useful for unit tests without a test framework.
- */
-export function framesSelfTest(): void {
-  // 1) Identity projection for default observerDir
-  const p: Vec3 = { x: 3.5, y: -2, z: 7 };
-  const sky0 = projectToSky(p, { x: 0, y: 0, z: 1 });
-
-  if (Math.abs(sky0.x - p.x) > 1e-12 || Math.abs(sky0.y - p.y) > 1e-12 || Math.abs(sky0.z - p.z) > 1e-12) {
-    throw new Error("framesSelfTest: projectToSky identity test failed.");
-  }
-
-  // 2) Orthonormal + right-handed test for a generic direction
-  const { ex, ey, ez } = buildSkyBasis({ x: 1, y: 2, z: 3 });
-  const dotXY = vDot(ex, ey);
-  const dotXZ = vDot(ex, ez);
-  const dotYZ = vDot(ey, ez);
-  const lx = vLen(ex);
-  const ly = vLen(ey);
-  const lz = vLen(ez);
-
-  if (Math.abs(dotXY) > 1e-10 || Math.abs(dotXZ) > 1e-10 || Math.abs(dotYZ) > 1e-10) {
-    throw new Error("framesSelfTest: basis is not orthogonal.");
-  }
-
-  if (Math.abs(lx - 1) > 1e-10 || Math.abs(ly - 1) > 1e-10 || Math.abs(lz - 1) > 1e-10) {
-    throw new Error("framesSelfTest: basis vectors are not unit length.");
-  }
-
-  // Right-handed: ex × ey should align with ez
-  const rhs = vCross(ex, ey);
-  const align = vDot(rhs, ez);
-
-  if (!(align > 0.999999999)) {
-    throw new Error("framesSelfTest: basis is not right-handed.");
-  }
 }

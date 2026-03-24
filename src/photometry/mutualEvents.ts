@@ -91,7 +91,7 @@ export function circleIntersectionArea(d: number, r1: number, r2: number): numbe
  *
  * Returns a value in [0,1].
  */
-export function occultedAreaFraction(d: number, rTarget: number, rOcculter: number): number {
+function occultedAreaFraction(d: number, rTarget: number, rOcculter: number): number {
   if (!Number.isFinite(d) || d < 0) return 0;
   if (!isFinitePositive(rTarget) || !isFinitePositive(rOcculter)) return 0;
 
@@ -108,7 +108,7 @@ export function occultedAreaFraction(d: number, rTarget: number, rOcculter: numb
  * Returns a value in [0,1]:
  *   visible = 1 - occultedAreaFraction(...)
  */
-export function visibleAreaFraction(d: number, rTarget: number, rOcculter: number): number {
+function visibleAreaFraction(d: number, rTarget: number, rOcculter: number): number {
   return clamp01(1 - occultedAreaFraction(d, rTarget, rOcculter));
 }
 
@@ -148,50 +148,6 @@ export function visibleFractionWhenOcculted(params: {
 
   const d = Math.hypot(occulterSky.x - targetSky.x, occulterSky.y - targetSky.y);
   return visibleAreaFraction(d, rTarget, rOcculter);
-}
-
-/**
- * Alias for clarity in higher-level code:
- * visibleFractionWhenOcculted already returns a visible *area* fraction for uniform-brightness disks.
- */
-export const visibleDiskFractionWhenOcculted = visibleFractionWhenOcculted;
-
-/**
- * Compute visible fraction without any z-ordering rule.
- *
- * Use-case:
- * - Caller already checked which object is in front (or wants purely geometric overlap).
- */
-export function visibleFractionNoDepthCheck(params: {
-  dx: number;
-  dy: number;
-  rTarget: number;
-  rOcculter: number;
-}): number {
-  const { dx, dy, rTarget, rOcculter } = params;
-
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return 1;
-  if (!isFinitePositive(rTarget) || !isFinitePositive(rOcculter)) return 1;
-
-  const d = Math.hypot(dx, dy);
-  return visibleAreaFraction(d, rTarget, rOcculter);
-}
-
-/**
- * Convenience: occulted fraction with the same z-ordering convention as visibleFractionWhenOcculted.
- *
- * Returns:
- * - 0 if occulter is not in front or inputs invalid
- * - otherwise 1 - visibleFractionWhenOcculted(...)
- */
-export function occultedFractionWhenOcculting(params: {
-  targetSky: SkyPoint3;
-  occulterSky: SkyPoint3;
-  rTarget: number;
-  rOcculter: number;
-}): number {
-  const vis = visibleFractionWhenOcculted(params);
-  return clamp01(1 - vis);
 }
 
 // ---------------------------

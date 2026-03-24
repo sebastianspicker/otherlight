@@ -222,6 +222,7 @@ export class LightCurvePlot {
 
     const n = this.flux.length;
     if (n < 2) return;
+    if (!Number.isFinite(w) || w < 1 || !Number.isFinite(h) || h < 1) return;
 
     // Determine y-range
     const qLo = clamp(this.opts.yQuantiles.lo, 0, 0.499999);
