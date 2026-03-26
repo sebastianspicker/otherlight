@@ -1,0 +1,511 @@
+{
+  "meta": {
+    "name": "Default scientific scenario",
+    "version": 1,
+    "schema": "SystemParams+Controls/v1",
+    "units": {
+      "length": "m",
+      "time": "s",
+      "angles": "rad",
+      "mass": "kg"
+    },
+    "notes": [
+      "defaults.* use SI units (angles in radians).",
+      "UI may expose degrees; use control.transform=degToRad / radToDeg accordingly.",
+      "instrumentNoise is included under star.photometry because main.ts currently reads ph.instrumentNoise."
+    ]
+  },
+  "defaults": {
+    "observer": {
+      "dir": { "x": 1, "y": 0, "z": 1 }
+    },
+    "star": {
+      "r": 695700000,
+      "m": 1.98847e30,
+      "photometry": {
+        "cadenceSec": 60,
+        "nSubsamples": 9,
+        "gridRes": 220,
+        "baselineFlux": 1,
+        "limbDarkeningModel": {
+          "default": { "kind": "quadratic", "u1": 0.35, "u2": 0.25 }
+        },
+        "brightnessPatches": [],
+        "phaseCurve": {
+          "enabled": true,
+          "reflAmp": 0.001,
+          "thermAmp": 0.0005,
+          "reflOffset": 0,
+          "thermOffset": 0,
+          "lambertian": true,
+          "constant": 0
+        },
+        "moonPhaseCurve": {
+          "enabled": false,
+          "reflAmp": 0,
+          "thermAmp": 0,
+          "lambertian": true
+        },
+        "forwardScattering": {
+          "enabled": false,
+          "amp": 0,
+          "g": 0.8,
+          "sigmaPhase": 0.12,
+          "phaseOffset": 0,
+          "gateWhenBehindStar": true,
+          "clampNonNegative": true
+        },
+        "atmosphereTransmission": {
+          "enabled": false,
+          "target": "planet",
+          "kind": "hard",
+          "r0": 0,
+          "H": 0,
+          "tau0": 0
+        },
+        "stellarVariability": {
+          "enabled": true,
+          "beamingAmp": 0.00002,
+          "ellipsoidalAmp": 0.00003,
+          "beamingOffset": 0,
+          "ellipsoidalOffset": 0,
+          "constant": 0
+        },
+        "dayNightVisibility": {
+          "enabled": false,
+          "clamp": true,
+          "reflectedModel": "lambert",
+          "thermalModel": "constant"
+        },
+        "instrumentNoise": {
+          "enabled": false,
+          "seed": 123,
+          "electronsPerUnitFlux": 1000000,
+          "exposureSec": 60,
+          "throughput": 1,
+          "photonNoise": { "enabled": true, "gaussianApproxMinElectrons": 50 },
+          "readNoise": { "enabled": false, "sigmaElectrons": 10 },
+          "correlatedNoise": {
+            "enabled": false,
+            "sigmaFlux": 0.0001,
+            "tauSec": 200
+          },
+          "trends": { "enabled": false }
+        }
+      }
+    },
+    "planet": {
+      "r": 69911000,
+      "m": 1.89813e27,
+      "orbit": {
+        "a": 7479893535,
+        "e": 0.08,
+        "inc": 1.3962634015954636,
+        "Omega": 0,
+        "omega": 0,
+        "period": 352657.7453,
+        "t0": 0
+      }
+    },
+    "moon": {
+      "r": 6371000,
+      "m": 5.9722e24,
+      "orbitAroundPlanet": {
+        "a": 200000000,
+        "e": 0.02,
+        "inc": 0.17453292519943295,
+        "Omega": 0,
+        "omega": 0,
+        "period": 49928.74206,
+        "t0": 0
+      }
+    },
+    "dynamics": {
+      "exomoonTimingShape": {
+        "enabled": true,
+        "tRef": 0,
+        "velDt": 2,
+        "moonOmegaDot": 0,
+        "moonIncDot": 0,
+        "moonOmegaSmallDot": 0,
+        "moonImpactYDot": 0
+      },
+      "nbodyPlanetMoon": {
+        "enabled": false,
+        "muStar": 1.3271645321e20,
+        "muPlanet": 1.2668689059e17,
+        "muMoon": 3.986025446e14,
+        "dtMax": 60,
+        "softening": 0,
+        "perturbers": []
+      },
+      "relativity": {
+        "enabled": false,
+        "ltte": true,
+        "grPrecession": true,
+        "c": 299792458,
+        "planetPrecessionPerOrbit": 0,
+        "moonPrecessionPerOrbit": 0
+      }
+    },
+    "didactics": {
+      "enabled": true,
+      "activeLessonId": "kepler-geometry",
+      "autoAssess": true
+    }
+  },
+  "ui": {
+    "overrideModeDefault": false,
+    "controls": [
+      {
+        "id": "observerX",
+        "path": "observer.dir.x",
+        "ui": { "kind": "slider", "min": -1, "max": 1, "step": 0.01, "unit": "arb" },
+        "override": {
+          "enabled": true,
+          "min": -1000,
+          "max": 1000,
+          "step": 0.1
+        }
+      },
+      {
+        "id": "observerY",
+        "path": "observer.dir.y",
+        "ui": { "kind": "slider", "min": -1, "max": 1, "step": 0.01, "unit": "arb" },
+        "override": {
+          "enabled": true,
+          "min": -1000,
+          "max": 1000,
+          "step": 0.1
+        }
+      },
+      {
+        "id": "observerZ",
+        "path": "observer.dir.z",
+        "ui": { "kind": "slider", "min": -1, "max": 1, "step": 0.01, "unit": "arb" },
+        "override": {
+          "enabled": true,
+          "min": -1000,
+          "max": 1000,
+          "step": 0.1
+        }
+      },
+      {
+        "id": "starR",
+        "path": "star.r",
+        "ui": { "kind": "slider", "min": 1e6, "max": 2e9, "step": 1e6, "unit": "m" },
+        "override": {
+          "enabled": true,
+          "min": 1e5,
+          "max": 1e12,
+          "step": 1e6
+        }
+      },
+      {
+        "id": "baselineFlux",
+        "path": "star.photometry.baselineFlux",
+        "ui": {
+          "kind": "slider",
+          "min": 0.5,
+          "max": 2,
+          "step": 0.0001,
+          "unit": "stellar"
+        },
+        "override": {
+          "enabled": true,
+          "min": 0,
+          "max": 1000000000,
+          "step": 0.001
+        }
+      },
+      {
+        "id": "gridRes",
+        "path": "star.photometry.gridRes",
+        "ui": { "kind": "slider", "min": 50, "max": 800, "step": 1, "unit": "px" },
+        "override": { "enabled": true, "min": 10, "max": 5000, "step": 1 }
+      },
+      {
+        "id": "ldU1",
+        "path": "star.photometry.limbDarkeningModel.default.u1",
+        "ui": { "kind": "slider", "min": 0, "max": 1, "step": 0.001, "unit": "1" },
+        "override": { "enabled": true, "min": -2, "max": 2, "step": 0.001 }
+      },
+      {
+        "id": "ldU2",
+        "path": "star.photometry.limbDarkeningModel.default.u2",
+        "ui": { "kind": "slider", "min": 0, "max": 1, "step": 0.001, "unit": "1" },
+        "override": { "enabled": true, "min": -2, "max": 2, "step": 0.001 }
+      },
+      {
+        "id": "planetR",
+        "path": "planet.r",
+        "ui": { "kind": "slider", "min": 1e6, "max": 2e8, "step": 1e6, "unit": "m" },
+        "override": {
+          "enabled": true,
+          "min": 1e5,
+          "max": 1e9,
+          "step": 1e6
+        }
+      },
+      {
+        "id": "planetA",
+        "path": "planet.orbit.a",
+        "ui": { "kind": "slider", "min": 1e8, "max": 1e12, "step": 1e7, "unit": "m" },
+        "override": {
+          "enabled": true,
+          "min": 1e7,
+          "max": 1e13,
+          "step": 1e7
+        }
+      },
+      {
+        "id": "planetE",
+        "path": "planet.orbit.e",
+        "ui": { "kind": "slider", "min": 0, "max": 0.3, "step": 0.001, "unit": "1" },
+        "override": {
+          "enabled": true,
+          "min": -0.5,
+          "max": 0.9999,
+          "step": 0.0001
+        }
+      },
+      {
+        "id": "planetInc",
+        "path": "planet.orbit.inc",
+        "ui": {
+          "kind": "slider",
+          "min": 80,
+          "max": 100,
+          "step": 0.01,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -720,
+          "max": 720,
+          "step": 0.1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "planetPeriod",
+        "path": "planet.orbit.period",
+        "ui": {
+          "kind": "slider",
+          "min": 10000,
+          "max": 10000000,
+          "step": 100,
+          "unit": "s"
+        },
+        "override": { "enabled": true, "min": 1, "max": 1e9, "step": 100 }
+      },
+      {
+        "id": "planetMass",
+        "path": "planet.m",
+        "ui": { "kind": "slider", "min": 0, "max": 1e29, "step": 1e24, "unit": "kg" },
+        "override": { "enabled": true, "min": 0, "max": 1e31, "step": 1e24 }
+      },
+      {
+        "id": "planetOmega",
+        "path": "planet.orbit.Omega",
+        "ui": {
+          "kind": "slider",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -10000,
+          "max": 10000,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "planetArgPeri",
+        "path": "planet.orbit.omega",
+        "ui": {
+          "kind": "slider",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -10000,
+          "max": 10000,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "planetT0",
+        "path": "planet.orbit.t0",
+        "ui": { "kind": "slider", "min": -10000, "max": 10000, "step": 10, "unit": "s" },
+        "override": { "enabled": true, "min": -1e15, "max": 1e15, "step": 1 }
+      },
+      {
+        "id": "moonR",
+        "path": "moon.r",
+        "ui": { "kind": "slider", "min": 1e5, "max": 5e7, "step": 1e5, "unit": "m" },
+        "override": {
+          "enabled": true,
+          "min": 1e4,
+          "max": 1e8,
+          "step": 1e5
+        }
+      },
+      {
+        "id": "moonA",
+        "path": "moon.orbitAroundPlanet.a",
+        "ui": { "kind": "slider", "min": 1e7, "max": 1e9, "step": 1e6, "unit": "m" },
+        "override": {
+          "enabled": true,
+          "min": 1e6,
+          "max": 1e11,
+          "step": 1e6
+        }
+      },
+      {
+        "id": "moonE",
+        "path": "moon.orbitAroundPlanet.e",
+        "ui": { "kind": "slider", "min": 0, "max": 0.5, "step": 0.001, "unit": "1" },
+        "override": {
+          "enabled": true,
+          "min": -0.5,
+          "max": 0.9999,
+          "step": 0.0001
+        }
+      },
+      {
+        "id": "moonInc",
+        "path": "moon.orbitAroundPlanet.inc",
+        "ui": {
+          "kind": "slider",
+          "min": 0,
+          "max": 45,
+          "step": 0.1,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -720,
+          "max": 720,
+          "step": 0.1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "moonPeriod",
+        "path": "moon.orbitAroundPlanet.period",
+        "ui": { "kind": "slider", "min": 200, "max": 10000, "step": 10, "unit": "s" },
+        "override": { "enabled": true, "min": 0.001, "max": 1e15, "step": 1 }
+      },
+      {
+        "id": "moonMass",
+        "path": "moon.m",
+        "ui": { "kind": "slider", "min": 0, "max": 1e27, "step": 1e23, "unit": "kg" },
+        "override": { "enabled": true, "min": 0, "max": 1e30, "step": 1e23 }
+      },
+      {
+        "id": "moonOmega",
+        "path": "moon.orbitAroundPlanet.Omega",
+        "ui": {
+          "kind": "slider",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -10000,
+          "max": 10000,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "moonArgPeri",
+        "path": "moon.orbitAroundPlanet.omega",
+        "ui": {
+          "kind": "slider",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        },
+        "override": {
+          "enabled": true,
+          "min": -10000,
+          "max": 10000,
+          "step": 1,
+          "unit": "deg",
+          "transform": "degToRad"
+        }
+      },
+      {
+        "id": "moonT0",
+        "path": "moon.orbitAroundPlanet.t0",
+        "ui": { "kind": "slider", "min": -5000, "max": 5000, "step": 10, "unit": "s" },
+        "override": { "enabled": true, "min": -1e15, "max": 1e15, "step": 1 }
+      },
+      {
+        "id": "exoTimingVelDt",
+        "path": "dynamics.exomoonTimingShape.velDt",
+        "ui": { "kind": "slider", "min": 0.1, "max": 50, "step": 0.1, "unit": "s" },
+        "override": { "enabled": true, "min": 1e-9, "max": 10000, "step": 0.01 }
+      },
+      {
+        "id": "exoTimingMoonOmegaDot",
+        "path": "dynamics.exomoonTimingShape.moonOmegaDot",
+        "ui": {
+          "kind": "slider",
+          "min": -0.001,
+          "max": 0.001,
+          "step": 0.00001,
+          "unit": "rad/s"
+        },
+        "override": { "enabled": true, "min": -1, "max": 1, "step": 1e-8 }
+      },
+      {
+        "id": "exoTimingMoonIncDot",
+        "path": "dynamics.exomoonTimingShape.moonIncDot",
+        "ui": {
+          "kind": "slider",
+          "min": -0.001,
+          "max": 0.001,
+          "step": 0.00001,
+          "unit": "rad/s"
+        },
+        "override": { "enabled": true, "min": -1, "max": 1, "step": 1e-8 }
+      },
+      {
+        "id": "exoTimingImpactYDot",
+        "path": "dynamics.exomoonTimingShape.moonImpactYDot",
+        "ui": {
+          "kind": "slider",
+          "min": -0.1,
+          "max": 0.1,
+          "step": 0.001,
+          "unit": "m/s"
+        },
+        "override": { "enabled": true, "min": -100, "max": 100, "step": 0.0001 }
+      }
+    ]
+  }
+}

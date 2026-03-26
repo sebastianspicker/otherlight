@@ -1,0 +1,31 @@
+# Relativity and Timing Corrections
+
+Light-time (Roemer-like) one-way travel time:
+
+- $\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$ (travel time from body at r to observer at infinity)
+- r is the body position relative to the star (sky origin). Retarded time: $t_{\mathrm{emit}} = t_{\mathrm{obs}} - \Delta t$.
+
+Shapiro delay (point-mass, star at origin):
+
+- $\Delta t_{\mathrm{Shapiro}} = \frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
+  where $z = \mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}$ and $r = \lVert \mathbf{r} \rVert$.
+- A minimum impact parameter can be used to regularize the log.
+
+GR apsidal precession (weak-field, two-body):
+
+- $\Delta\omega = \frac{6\pi\mu}{a(1 - e^2)c^2}$ per orbit
+
+Behavior in this codebase:
+
+- Kepler mode: precession is derived from (a, e, period, c) unless a non-zero
+  per-orbit override is provided.
+- N-body mode: a star-centric 1PN correction is applied; per-orbit overrides
+  are ignored.
+- Enhanced timing mode (`dynamics.relativityLevel="enhanced"`):
+  approximate multi-body Shapiro aggregation is available for observables/timing diagnostics.
+
+Related code:
+
+- `src/physics/relativity.ts`
+- `src/sim/kinematics.ts`
+- `src/sim/dynamics.ts`
