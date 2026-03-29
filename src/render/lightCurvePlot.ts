@@ -84,7 +84,7 @@ function safeQuantile(sorted: number[], q: number): number {
 }
 
 // Reusable scratch buffer to avoid allocating a filtered array every frame.
-let _robustScratch: number[] = [];
+const _robustScratch: number[] = [];
 
 function computeRobustRange(values: number[], qLo: number, qHi: number): { lo: number; hi: number } | null {
   // Collect finite values into scratch buffer (avoids filter+new array per call).

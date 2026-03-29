@@ -1,5 +1,5 @@
 import type { BrightnessPatch, StellarSurfaceParams } from "../core/types";
-import { clamp01 } from "../core/units";
+
 import type { Vec3 } from "../physics/vec3";
 import { projectToSky } from "../physics/frames";
 
