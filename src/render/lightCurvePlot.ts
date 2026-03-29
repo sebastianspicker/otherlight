@@ -83,13 +83,26 @@ function safeQuantile(sorted: number[], q: number): number {
   return sorted[i0] * (1 - f) + sorted[i1] * f;
 }
 
-function computeRobustRange(values: number[], qLo: number, qHi: number): { lo: number; hi: number } | null {
-  const finite = values.filter((v) => Number.isFinite(v));
-  if (finite.length < 2) return null;
+// Reusable scratch buffer to avoid allocating a filtered array every frame.
+const _robustScratch: number[] = [];
 
-  finite.sort((a, b) => a - b);
-  const lo = safeQuantile(finite, qLo);
-  const hi = safeQuantile(finite, qHi);
+function computeRobustRange(values: number[], qLo: number, qHi: number): { lo: number; hi: number } | null {
+  // Collect finite values into scratch buffer (avoids filter+new array per call).
+  let count = 0;
+  for (let i = 0; i < values.length; i++) {
+    if (Number.isFinite(values[i])) {
+      _robustScratch[count++] = values[i];
+    }
+  }
+  if (count < 2) return null;
+
+  // Sort only the populated portion.
+  // We create a view only if scratch grew beyond count, otherwise sort in-place.
+  if (_robustScratch.length > count) _robustScratch.length = count;
+  _robustScratch.sort((a, b) => a - b);
+
+  const lo = safeQuantile(_robustScratch, qLo);
+  const hi = safeQuantile(_robustScratch, qHi);
 
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
   if (hi <= lo) return null;
@@ -161,9 +174,9 @@ export class LightCurvePlot {
     const nn = Math.max(10, Math.floor(isFiniteNumber(n) ? n : 2000));
     this.capacity = nn;
 
-    // Trim if needed.
-    while (this.flux.length > this.capacity) this.flux.shift();
-    while (this.t.length > this.capacity) this.t.shift();
+    // Trim if needed — use slice to avoid O(n^2) from repeated shift().
+    if (this.flux.length > this.capacity) this.flux = this.flux.slice(-this.capacity);
+    if (this.t.length > this.capacity) this.t = this.t.slice(-this.capacity);
   }
 
   /**
@@ -225,7 +238,9 @@ export class LightCurvePlot {
 
     const ticks: number[] = [];
     const start = Math.ceil(lo / niceStep) * niceStep;
-    for (let v = start; v <= hi + niceStep * 0.001; v += niceStep) {
+    for (let i = 0; ; i++) {
+      const v = start + i * niceStep;
+      if (v > hi + niceStep * 0.001) break;
       if (v >= lo && v <= hi) ticks.push(v);
       if (ticks.length > maxTicks + 2) break;
     }
@@ -256,6 +271,9 @@ export class LightCurvePlot {
     const w = this.size.cssW;
     const h = this.size.cssH;
 
+    // P2-Render-1: Dimension validity must be checked before any drawing.
+    if (!Number.isFinite(w) || w < 1 || !Number.isFinite(h) || h < 1) return;
+
     // Plot margins for axis labels and tick marks
     const marginLeft = 62;
     const marginRight = 12;
@@ -281,7 +299,6 @@ export class LightCurvePlot {
       ctx.fillText("Awaiting data...", marginLeft + plotW * 0.5 - 40, marginTop + plotH * 0.5);
       return;
     }
-    if (!Number.isFinite(w) || w < 1 || !Number.isFinite(h) || h < 1) return;
 
     // Determine y-range
     const qLo = clamp(this.opts.yQuantiles.lo, 0, 0.499999);
@@ -304,11 +321,13 @@ export class LightCurvePlot {
     const xOfPlot = (px: number) => marginLeft + px;
 
     // X mapping
-    const haveTime =
-      this.opts.xMode === "time" &&
-      this.t.length === n &&
-      this.t.some((v) => Number.isFinite(v)) &&
-      this.t.filter((v) => Number.isFinite(v)).length >= 2;
+    let finiteCount = 0;
+    if (this.opts.xMode === "time" && this.t.length === n) {
+      for (const v of this.t) {
+        if (Number.isFinite(v) && ++finiteCount >= 2) break;
+      }
+    }
+    const haveTime = finiteCount >= 2;
 
     let tMin = 0;
     let tMax = 0;
@@ -326,9 +345,7 @@ export class LightCurvePlot {
       const tSpan = Math.max(1e-12, tMax - tMin);
       xOf = (i: number) => {
         const tt = this.t[i];
-        return Number.isFinite(tt)
-          ? xOfPlot(((tt - tMin) / tSpan) * plotW)
-          : xOfPlot((i / (n - 1)) * plotW);
+        return Number.isFinite(tt) ? xOfPlot(((tt - tMin) / tSpan) * plotW) : xOfPlot((i / (n - 1)) * plotW);
       };
     }
 
@@ -501,6 +518,7 @@ export class LightCurvePlot {
         let chunkMin = Number.POSITIVE_INFINITY;
         let chunkMax = Number.NEGATIVE_INFINITY;
         let chunkMinIdx = -1;
+        let chunkMaxIdx = -1;
 
         const limit = Math.min(n, i + step);
         for (let j = i; j < limit; j++) {
@@ -511,13 +529,19 @@ export class LightCurvePlot {
           }
           if (v > chunkMax) {
             chunkMax = v;
+            chunkMaxIdx = j;
           }
         }
 
-        if (chunkMinIdx !== -1) {
+        if (chunkMinIdx !== -1 && chunkMaxIdx !== -1) {
           const x = xOf(Math.floor((i + limit) / 2));
-          ctx.lineTo(x, yOf(chunkMin));
-          ctx.lineTo(x, yOf(chunkMax));
+          if (chunkMinIdx <= chunkMaxIdx) {
+            ctx.lineTo(x, yOf(chunkMin));
+            ctx.lineTo(x, yOf(chunkMax));
+          } else {
+            ctx.lineTo(x, yOf(chunkMax));
+            ctx.lineTo(x, yOf(chunkMin));
+          }
         }
       }
     }

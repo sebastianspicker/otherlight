@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
-import { getNBodyStateAt } from "../../src/sim/dynamics";
+import { getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
+
+beforeEach(() => {
+  resetNBodyCache();
+});
 
 describe("n-body non-finite distance handling", () => {
   it("throws when pairwise squared distance becomes non-finite", () => {

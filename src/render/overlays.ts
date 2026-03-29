@@ -139,7 +139,8 @@ export function normalizeObserverDirSafe(dir: Vec3 | undefined): Vec3 {
 }
 
 function themeResolved(theme?: Partial<OverlayTheme>): OverlayTheme {
-  return { ...DEFAULT_THEME, ...(theme ?? {}) };
+  if (!theme || Object.keys(theme).length === 0) return DEFAULT_THEME;
+  return { ...DEFAULT_THEME, ...theme };
 }
 
 function canvasSizeValid(size: SizeInfo): boolean {
@@ -187,6 +188,8 @@ export function drawObserverMarkerMainView(
 ): void {
   if (!canvasSizeValid(size) || size.cssW < 40 || size.cssH < 40) return;
 
+  // TODO: The caller (canvas2d.ts drawFrameV3) already normalizes observerDir.
+  // Accept a pre-normalized Vec3 to avoid redundant normalization (3-4x per frame).
   const observerDir = normalizeObserverDirSafe(observerDirRaw);
 
   const cx = size.cssW * 0.5;
@@ -355,6 +358,8 @@ export function drawDebugOverlayV3(
   if (!canvasSizeValid(size)) return;
 
   const th = themeResolved(opts.theme);
+  // TODO: The caller (canvas2d.ts drawFrameV3) already normalizes observerDir.
+  // Accept a pre-normalized Vec3 to avoid redundant normalization (3-4x per frame).
   const observerDir = normalizeObserverDirSafe(observerDirRaw);
 
   // Optional inset gizmo first (top-right).

@@ -1,3 +1,7 @@
+// The "Deg" suffixes in field paths (e.g. "inclinationDeg", "positionAngleDeg") are
+// display-unit names used as slider override IDs, not direct model field paths.
+// The model stores radians internally; these IDs match the HTML input elements whose
+// values are in degrees.
 const LEGACY_TO_NAMESPACED: Record<string, string> = {
   nbodyMuStar: "dynamics.nbody.muStar",
   nbodyMuPlanet: "dynamics.nbody.muPlanet",

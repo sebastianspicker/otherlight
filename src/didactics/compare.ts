@@ -24,6 +24,8 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
   };
 }
 
+// TODO: toExponential is called on every delta value each invocation.
+// Not a significant cost in practice, but could be cached if this becomes a hot path.
 export function interpretDidacticComparison(cmp: DidacticComparison): string {
   const lines: string[] = [];
   lines.push(`ΔfluxTotal=${cmp.fluxTotalDelta.toExponential(3)}`);
@@ -38,7 +40,9 @@ export function interpretDidacticComparison(cmp: DidacticComparison): string {
   const absRvPlanet = Math.abs(cmp.rvPlanetDelta ?? 0);
 
   if (absTransit > 1e-4) {
-    lines.push("Interpretation: Transit geometry changed significantly (impact parameter / radius / inclination).");
+    lines.push(
+      "Interpretation: Transit geometry changed significantly (impact parameter / radius / inclination).",
+    );
   } else if (absTotal > 1e-4) {
     lines.push(
       "Interpretation: Additive photometry dominates the change (reflection / emission / stellar variability).",

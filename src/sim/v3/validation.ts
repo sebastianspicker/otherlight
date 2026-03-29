@@ -70,14 +70,33 @@ export function validateSimulationConfigV3(config: SimulationConfigV3): Validati
 
   const nbody = config?.dynamics?.nbodyPlanetMoon;
   if (nbody?.enabled) {
-    if (!finite(nbody.muStar) || nbody.muStar <= 0) {
-      pushIssue(issues, "dynamics.nbodyPlanetMoon.muStar", "must be > 0 when n-body is enabled.");
+    // Accept either muX or mX (mass-based fallback), mirroring resolveMuFromInputs in nbody/config.ts.
+    const hasValidMuStar =
+      (finite(nbody.muStar) && nbody.muStar > 0) || (finite(nbody.mStar) && nbody.mStar > 0);
+    if (!hasValidMuStar) {
+      pushIssue(
+        issues,
+        "dynamics.nbodyPlanetMoon.muStar",
+        "muStar or mStar must be > 0 when n-body is enabled.",
+      );
     }
-    if (!finite(nbody.muPlanet) || nbody.muPlanet <= 0) {
-      pushIssue(issues, "dynamics.nbodyPlanetMoon.muPlanet", "must be > 0 when n-body is enabled.");
+    const hasValidMuPlanet =
+      (finite(nbody.muPlanet) && nbody.muPlanet > 0) || (finite(nbody.mPlanet) && nbody.mPlanet > 0);
+    if (!hasValidMuPlanet) {
+      pushIssue(
+        issues,
+        "dynamics.nbodyPlanetMoon.muPlanet",
+        "muPlanet or mPlanet must be > 0 when n-body is enabled.",
+      );
     }
-    if (!finite(nbody.muMoon) || nbody.muMoon <= 0) {
-      pushIssue(issues, "dynamics.nbodyPlanetMoon.muMoon", "must be > 0 when n-body is enabled.");
+    const hasValidMuMoon =
+      (finite(nbody.muMoon) && nbody.muMoon > 0) || (finite(nbody.mMoon) && nbody.mMoon > 0);
+    if (!hasValidMuMoon) {
+      pushIssue(
+        issues,
+        "dynamics.nbodyPlanetMoon.muMoon",
+        "muMoon or mMoon must be > 0 when n-body is enabled.",
+      );
     }
     if (!finite(nbody.dtMax) || nbody.dtMax <= 0) {
       pushIssue(issues, "dynamics.nbodyPlanetMoon.dtMax", "must be > 0 when n-body is enabled.");

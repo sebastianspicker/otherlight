@@ -203,6 +203,7 @@ export function createReferenceSimulationV4(
 
       scheduleWorkerStep(tObsSec);
       if (lastWorkerStep && lastWorkerStepT === tObsSec) return lastWorkerStep;
+      console.debug("[referenceClient] worker result not yet available for t=%f, using fallback", tObsSec);
       return fallback.step(tObsSec);
     },
     setMode: (next: RuntimeModeV4): void => {

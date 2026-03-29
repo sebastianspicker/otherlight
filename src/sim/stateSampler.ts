@@ -203,10 +203,15 @@ export function sampleSystemState(params: {
     };
   }
 
+  // TODO: Performance – kinAt (computeBodyKinematics) is called redundantly
+  // by planetPosAt and moonPosAt, meaning each finite-difference velocity
+  // computation evaluates the full system state 6+ extra times per step.
+  // Optimisation: compute sampleSystemState once per timestep and share
+  // the result across diagnostics, observables, and timing callers.
   const kinAt = (t: number) => computeBodyKinematics(system, t, observerDir);
 
   const planetPosAt = (t: number) => kinAt(t).rPlanetAbs;
-  const moonPosAt = (t: number) => kinAt(t).rMoonAbs ?? kinAt(t).rPlanetAbs;
+  const moonPosAt = (t: number) => kinAt(t).rMoonAbs ?? VEC3ZERO;
 
   const planet: SampledBodyState = {
     r: kinAtT.rPlanetAbs,

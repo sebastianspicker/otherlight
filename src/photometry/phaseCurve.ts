@@ -293,13 +293,19 @@ export function bodyPhaseFlux(params: {
     clamp: clampWeights,
   });
 
+  // When thermalModelAdvanced is enabled it supersedes the simpler thermalInertia model
+  // to avoid double thermal scaling (both apply redistribution + response gain independently).
+  const effectiveThermalInertia = params.thermalModelAdvanced?.enabled
+    ? { ...norm.thermalInertia, enabled: false }
+    : norm.thermalInertia;
+
   const therm = thermalFluxTerm({
     alpha,
     thermAmp: norm.thermAmp * thermScale,
     model: thermalModel,
     thermOffset: norm.thermOffset,
     clamp: clampWeights,
-    thermalInertia: norm.thermalInertia,
+    thermalInertia: effectiveThermalInertia,
     orbitPeriodSec: params.orbitPeriodSec,
   });
 
@@ -325,6 +331,9 @@ export function bodyPhaseFlux(params: {
     thermAdvancedBoost = Math.max(0, redistribution + (1 - redistribution) * eqScale * irr * response);
   }
 
+  // thermScale (= rBody^2 / rStar^2) is applied to the constant floor so that the
+  // baseline thermal emission scales with the body's emitting area relative to the star,
+  // consistent with how the thermal amplitude term is scaled.
   const constant = norm.physicalScaling ? norm.constant * thermScale : norm.constant;
   const total = refl + therm * thermAdvancedBoost + constant;
 

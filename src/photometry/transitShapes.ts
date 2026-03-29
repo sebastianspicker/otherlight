@@ -37,6 +37,9 @@ export function fluxUniformDiskShapes(params: {
     intensityAt: () => 1,
   }).blocked;
 
+  // Note: starArea is the analytical pi*r^2 rather than the integrated pixel area.
+  // This introduces a ~0.002% systematic bias but is intentional: the analytical
+  // denominator is exact and avoids an extra integration pass for performance.
   return clamp01(1.0 - blockedArea / starArea);
 }
 

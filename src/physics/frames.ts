@@ -30,7 +30,7 @@
 // sky-basis construction in the codebase.
 
 import type { Vec3 } from "./vec3";
-import { vCross, vDot, vIsFinite, vLen, vNormalizeOrThrow, vNormalizeOrZero } from "./vec3";
+import { vCross, vDot, vIsFinite, vNormalizeOrThrow, vNormalizeOrZero } from "./vec3";
 
 export type SkyPoint = { x: number; y: number; z: number };
 
@@ -84,11 +84,11 @@ export function perifocalToInertial(rPQW: Vec3, Omega: number, inc: number, omeg
   return v;
 }
 
-/**
- * Inverse of perifocalToInertial for the same active-rotation convention.
- * For rotations: inverse = transpose => negate angles and reverse order:
- * r_PQW = Rz(-omega) * Rx(-inc) * Rz(-Omega) * r_IJK
- */
+// NOTE: The inverse of perifocalToInertial (inertialToPerifocal) is not
+// implemented as a standalone function. It can be computed by negating all
+// three angles and reversing the rotation order:
+//   r_PQW = Rz(-omega) * Rx(-inc) * Rz(-Omega) * r_IJK
+
 /**
  * Pick a stable reference vector not nearly parallel to ez.
  * Strategy:
@@ -129,7 +129,7 @@ export function buildSkyBasis(observerDir: Vec3): SkyBasis {
   let exRaw = vCross(ref, ez);
   let ex = vNormalizeOrZero(exRaw, 1e-15);
 
-  if (vLen(ex) === 0) {
+  if (ex.x === 0 && ex.y === 0 && ex.z === 0) {
     const ref2: Vec3 = ref.x === 1 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
     exRaw = vCross(ref2, ez);
     ex = vNormalizeOrThrow(exRaw, 1e-15, "buildSkyBasis: failed to construct ex (degenerate observerDir).");
@@ -148,6 +148,12 @@ export function buildSkyBasis(observerDir: Vec3): SkyBasis {
  * - z depth along the observer direction ez
  *
  * Default convention: observer looks along +Z.
+ *
+ * **Performance note:** This function recomputes the sky basis on every call.
+ * When projecting multiple bodies per simulation step with the same observer
+ * direction, prefer calling {@link buildSkyBasis} once and then using
+ * {@link projectToSkyWithBasis} for each body to avoid redundant basis
+ * construction.
  */
 export function projectToSky(r: Vec3, observerDir: Vec3 = DEFAULT_OBSERVER_DIR): SkyPoint {
   const { ex, ey, ez } = buildSkyBasis(observerDir);

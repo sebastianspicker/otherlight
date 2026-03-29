@@ -102,6 +102,9 @@ export const PRESETS: ScenarioPreset[] = [
     const muPlanet = G_SI * JUPITER_MASS_KG;
     const muMoon = G_SI * EARTH_MASS_KG;
 
+    const pertA = 0.1 * AU_M;
+    const pertPeriod = 2 * Math.PI * Math.sqrt(pertA ** 3 / muStar);
+
     dyn.nbodyPlanetMoon = {
       enabled: true,
       muStar,
@@ -114,12 +117,12 @@ export const PRESETS: ScenarioPreset[] = [
           enabled: true,
           mu: G_SI * (0.1 * JUPITER_MASS_KG),
           orbit: {
-            a: 0.1 * AU_M,
+            a: pertA,
             e: 0.12,
             inc: 0.1,
             Omega: 0,
             omega: 0,
-            period: 997466.7326,
+            period: pertPeriod,
             t0: 0,
           },
         },

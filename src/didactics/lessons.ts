@@ -121,7 +121,8 @@ export const LESSONS: LessonSpec[] = [
 
 export const DEFAULT_LESSON_ID = LESSONS[0].id;
 
-export function getLessonById(id: string | undefined): LessonSpec {
+export function getLessonById(id: string | undefined): LessonSpec | undefined {
   if (!id) return LESSONS[0];
-  return LESSONS.find((l) => l.id === id) ?? LESSONS[0];
+  const found = LESSONS.find((l) => l.id === id);
+  return found?.id === id ? found : undefined;
 }

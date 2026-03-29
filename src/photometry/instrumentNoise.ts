@@ -337,16 +337,22 @@ export function applyInstrumentNoiseAndSystematics(args: {
   // Optional detector realism hooks in flux domain.
   const det = cfg.detector;
   if (det?.enabled) {
+    // Always draw PRNG samples to keep the stream deterministic regardless of
+    // which detector features are enabled/disabled (avoids conditional consumption).
+    const prnuDraw = normalSample(state.rng, 0, 1);
+    const jitterDrawX = normalSample(state.rng, 0, 1);
+    const jitterDrawY = normalSample(state.rng, 0, 1);
+
     const prnuSigma = Math.max(0, toFiniteNumber(det.prnuSigma, 0));
     if (prnuSigma > 0) {
-      const gain = 1 + normalSample(state.rng, 0, prnuSigma);
+      const gain = 1 + prnuDraw * prnuSigma;
       fluxPreNoise *= Math.max(0, gain);
     }
 
     const jitterSigmaPx = Math.max(0, toFiniteNumber(det.jitterSigmaPx, 0));
     if (jitterSigmaPx > 0) {
-      const jx = normalSample(state.rng, 0, jitterSigmaPx);
-      const jy = normalSample(state.rng, 0, jitterSigmaPx);
+      const jx = jitterDrawX * jitterSigmaPx;
+      const jy = jitterDrawY * jitterSigmaPx;
       const r2 = jx * jx + jy * jy;
       fluxPreNoise *= Math.max(0, 1 - 0.02 * r2);
     }
@@ -389,6 +395,10 @@ export function applyInstrumentNoiseAndSystematics(args: {
       if (s > 0) electrons += normalSample(state.rng, 0, s);
     }
 
+    // Detector nonlinearity and CTI are applied after read noise rather than before.
+    // Physically, nonlinearity occurs during charge accumulation and CTI during readout,
+    // so both should precede additive read noise. However, for typical CTI coefficients
+    // (~1e-4) and nonlinearity coefficients (~1e-6), the ordering effect is negligible.
     if (det?.enabled) {
       const nonlin = Math.max(0, toFiniteNumber(det.nonlinearityCoeff, 0));
       if (nonlin > 0) {
@@ -419,7 +429,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
   }
 
   // Guard: if NaN/Inf produced by extreme inputs, fall back to pre-noise.
-  if (!Number.isFinite(fluxOut)) return fluxPreNoise;
+  if (!Number.isFinite(fluxOut)) return Number.isFinite(fluxPreNoise) ? fluxPreNoise : 1.0;
 
   return fluxOut;
 }

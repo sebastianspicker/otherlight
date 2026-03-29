@@ -96,6 +96,9 @@ function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eSat = 0)
   assertEccentricity(eSat, "eSat");
 
   const factor = 0.4895 * (1 - 1.0305 * ePlanet - 0.2738 * eSat);
+
+  // When factor < 0 (high combined eccentricities), no stable prograde orbit
+  // is possible at this eccentricity combination; aCrit will clamp to 0.
   const aCrit = hillR * factor;
 
   if (!Number.isFinite(aCrit)) return 0;
@@ -212,7 +215,7 @@ export function validateSystemParamsPhysics(p: SystemParams): PhysicsValidationM
   }
 
   // Compare moon orbit semi-major axis against a conservative sense-aware limit.
-  const retro = p.moon?.sense === "retrograde";
+  const retro = p.moon.sense === "retrograde";
   const aMaxSense = retro
     ? maxStableRetrogradeMoonAxisRuleOfThumb(RH)
     : maxStableProgradeMoonAxisDomingos(RH, eP, eM);

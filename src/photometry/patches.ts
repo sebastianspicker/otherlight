@@ -94,7 +94,7 @@ function pointInPatch(x: number, y: number, p: PatchPre): boolean {
   if (p.kind === "circle") {
     const dx = x - p.x;
     const dy = y - p.y;
-    return dx * dx + dy * dy <= p.r2;
+    return dx * dx + dy * dy < p.r2;
   }
 
   // p.kind === "ellipse"
@@ -107,7 +107,7 @@ function pointInPatch(x: number, y: number, p: PatchPre): boolean {
   const xp = p.cosA * dx + p.sinA * dy;
   const yp = -p.sinA * dx + p.cosA * dy;
 
-  return xp * xp * p.invRx2 + yp * yp * p.invRy2 <= 1;
+  return xp * xp * p.invRx2 + yp * yp * p.invRy2 < 1;
 }
 
 /**

@@ -363,6 +363,17 @@ export function integrateToTimeWithConfig(params: {
       continue;
     }
 
+    // Accepted at dtMin with error above tolerance — the integrator cannot
+    // refine further.  Log a warning so the caller can diagnose stiff or
+    // pathological configurations.
+    if (!canShrink && Number.isFinite(err) && err > tol) {
+      console.warn(
+        `nbody adaptive integrator: accepted step at dtMin (${dtMin}) with error ` +
+          `${err.toExponential(3)} > tol ${tol.toExponential(3)}. ` +
+          `Consider reducing dtMin or relaxing tolerance.`,
+      );
+    }
+
     s = half2;
     if (Number.isFinite(err) && err < 0.25 * tol) {
       dtAdaptive = Math.min(dtMaxAbs, dtTryMag * growth);

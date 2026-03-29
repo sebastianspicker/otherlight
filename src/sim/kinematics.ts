@@ -122,8 +122,32 @@ function applyTidalSecularEvolution(
   if (!Number.isFinite(deDt)) deDt = 0;
   if (daDt === 0 && deDt === 0) return el;
 
-  const a = Math.max(1e-6, el.a + daDt * dtSec);
-  const e = Math.min(0.999999, Math.max(0, el.e + deDt * dtSec));
+  let a = Math.max(1e-6, el.a + daDt * dtSec);
+  let e = Math.min(0.999999, Math.max(0, el.e + deDt * dtSec));
+
+  // Clamp: if the relative change exceeds 50%, the Euler step has grown
+  // unboundedly and the result is physically meaningless.  Clamp to +/-50%
+  // of the original value and warn.
+  const MAX_REL_CHANGE = 0.5;
+  const relDaRaw = Math.abs(a - el.a) / Math.max(el.a, 1e-15);
+  const relDeRaw = el.e > 1e-12 ? Math.abs(e - el.e) / el.e : Math.abs(e - el.e);
+
+  if (relDaRaw > MAX_REL_CHANGE) {
+    const sign = a >= el.a ? 1 : -1;
+    a = Math.max(1e-6, el.a * (1 + sign * MAX_REL_CHANGE));
+    console.warn(
+      `applyTidalSecularEvolution: clamped da/a from ${relDaRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
+        `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
+    );
+  }
+  if (relDeRaw > MAX_REL_CHANGE && el.e > 1e-12) {
+    const sign = e >= el.e ? 1 : -1;
+    e = Math.min(0.999999, Math.max(0, el.e * (1 + sign * MAX_REL_CHANGE)));
+    console.warn(
+      `applyTidalSecularEvolution: clamped de/e from ${relDeRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
+        `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
+    );
+  }
 
   // Warn if secular changes are large relative to the orbit (> 10% per step),
   // which may indicate an excessively large time step or pathological tidal parameters.
@@ -308,6 +332,9 @@ export function getMoonStateAt(
   return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
 }
 
+// TODO: The LTTE + Shapiro time-correction logic is duplicated between the N-body
+// branch and the Kepler branch below.  Extract a shared helper (e.g.
+// `applyTimeCorrectionPipeline`) to eliminate the duplication.
 export function computeBodyKinematics(params: SystemParams, t: number, observerDir: Vec3): BodyKinematics {
   if (!Number.isFinite(t)) throw new Error("computeBodyKinematics: t must be finite.");
 

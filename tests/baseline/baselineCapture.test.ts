@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { performance } from "node:perf_hooks";
 
 import type { SystemParams } from "../../src/core/types";
@@ -6,7 +6,11 @@ import { PRESETS } from "../../src/app/presets";
 import { stepSystem } from "../../src/sim/sim";
 import { computeBodyKinematics } from "../../src/sim/kinematics";
 import { getObserverDir } from "../../src/sim/observerContract";
-import { getNBodyStateAt } from "../../src/sim/dynamics";
+import { getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
+
+beforeEach(() => {
+  resetNBodyCache();
+});
 import { G_SI } from "../../src/core/units";
 import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/sim/nbody/config";
 import { vLenSq, vSub } from "../../src/physics/vec3";

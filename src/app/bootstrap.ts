@@ -63,6 +63,9 @@ import {
 import { createFrameLoopController, type FrameLoopState } from "./frameLoop";
 import { replaceRuntime, takeRuntimeStatus } from "./runtimeLifecycle";
 
+// TODO: AppState merges all state into a single intersection type (god object).
+// Consider separating concerns: simulation state, UI state, and scenario flow state
+// could each be managed independently with explicit coordination points.
 type AppState = ScenarioFlowState & FrameLoopState;
 
 export async function initApp(): Promise<void> {
@@ -129,8 +132,7 @@ export async function initApp(): Promise<void> {
     lastStepV3: null,
     transitHistory: createTransitHistoryState(),
   };
-  appState.params = cloneParams(appState.scenarioDefaults);
-  ensureDidacticsConfig(appState.params);
+  appState.params = ensureDidacticsConfig(cloneParams(appState.scenarioDefaults));
   appState.didacticsRuntime = initDidacticsRuntime(appState.params, 0);
   appState.noise = initNoiseState(appState.params);
 
@@ -240,8 +242,9 @@ export async function initApp(): Promise<void> {
     runWithErrorHandling(
       () =>
         withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-          appState.params = readUIIntoParams(appState.params, uiRefs, appState.scenarioDefaults);
-          ensureDidacticsConfig(appState.params);
+          appState.params = ensureDidacticsConfig(
+            readUIIntoParams(appState.params, uiRefs, appState.scenarioDefaults),
+          );
           appState.didacticsRuntime = initDidacticsRuntime(appState.params, appState.t);
           syncAllEnableStates(uiRefs);
           await rebuildSimulationFromParams();
@@ -260,8 +263,7 @@ export async function initApp(): Promise<void> {
     runWithErrorHandling(
       () =>
         withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-          appState.params = cloneParams(appState.scenarioDefaults);
-          ensureDidacticsConfig(appState.params);
+          appState.params = ensureDidacticsConfig(cloneParams(appState.scenarioDefaults));
           appState.didacticsRuntime = initDidacticsRuntime(appState.params, appState.t);
           syncAllEnableStates(uiRefs);
           syncSliderMirrorsFromInputs();
@@ -356,24 +358,20 @@ export async function initApp(): Promise<void> {
   }
 
   didLessonSelect?.addEventListener("change", () => {
-    ensureDidacticsConfig(appState.params);
-    if (appState.params.didactics) {
-      appState.params = {
-        ...appState.params,
-        didactics: { ...appState.params.didactics, activeLessonId: didLessonSelect.value },
-      };
-    }
+    appState.params = ensureDidacticsConfig(appState.params);
+    appState.params = {
+      ...appState.params,
+      didactics: { ...appState.params.didactics!, activeLessonId: didLessonSelect.value },
+    };
     appState.didacticsRuntime = initDidacticsRuntime(appState.params, appState.t);
     renderDidacticSignals(uiRefs, appState.didacticsRuntime);
   });
   didAutoAssess?.addEventListener("input", () => {
-    ensureDidacticsConfig(appState.params);
-    if (appState.params.didactics) {
-      appState.params = {
-        ...appState.params,
-        didactics: { ...appState.params.didactics, autoAssess: didAutoAssess.checked },
-      };
-    }
+    appState.params = ensureDidacticsConfig(appState.params);
+    appState.params = {
+      ...appState.params,
+      didactics: { ...appState.params.didactics!, autoAssess: didAutoAssess.checked },
+    };
   });
   didCheckBtn?.addEventListener("click", () => {
     runWithErrorHandling(
@@ -483,11 +481,13 @@ export async function initApp(): Promise<void> {
   wireEnableHandlers(uiRefs);
   wireDebugDOM(renderer);
 
-  runWithErrorHandling(() => applyActive(), {
-    statusEl: warnVal,
-    errorPrefix: "Startup: ",
-    getSuccessMessage: () => uiWarningText(appState.params) ?? "",
-  });
+  try {
+    await applyActive();
+    if (warnVal) warnVal.textContent = uiWarningText(appState.params) ?? "";
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (warnVal) warnVal.textContent = `Startup: ${msg}`;
+  }
   renderDidacticSignals(uiRefs, appState.didacticsRuntime);
   syncBinaryUi();
   renderOcPanel();

@@ -3,6 +3,7 @@ import type {
   DidacticCheckResult,
   DidacticSignals,
   LearningState,
+  LessonSpec,
   RubricCriterionV2,
   StepResult,
   SystemParams,
@@ -20,6 +21,8 @@ type NumericSignals = {
   depthObserved: number;
 };
 
+// TODO: buildHintLevels allocates three arrays on every call (once per frame).
+// Consider caching or pooling when profiling shows this matters.
 function buildHintLevels(params: {
   checksFailed: boolean;
   bPlanetFinite: boolean;
@@ -94,7 +97,7 @@ function collectNumericSignals(system: SystemParams, step: StepResult): NumericS
 }
 
 function evaluateChecks(
-  lessonId: string,
+  lesson: LessonSpec,
   stepIndex: number,
   signals: NumericSignals,
 ): {
@@ -105,7 +108,6 @@ function evaluateChecks(
   stepTitle: string;
   prompt: string;
 } {
-  const lesson = getLessonById(lessonId);
   const safeIndex = Math.max(0, Math.min(stepIndex, Math.max(lesson.steps.length - 1, 0)));
   const step = lesson.steps[safeIndex];
   const checks: DidacticCheckResult[] = [];
@@ -149,12 +151,12 @@ function evaluateChecks(
   }
 
   const passedCount = checks.filter((c) => c.passed).length;
-  const score = checks.length > 0 ? passedCount / checks.length : 1;
+  const score = checks.length > 0 ? passedCount / checks.length : 0;
 
   return {
     checks,
     score,
-    allChecksPassed: passedCount === checks.length,
+    allChecksPassed: checks.length > 0 && passedCount === checks.length,
     stepId: step.id,
     stepTitle: step.title,
     prompt: step.prompt,
@@ -163,9 +165,8 @@ function evaluateChecks(
 
 function defaultRubricCriteria(): RubricCriterionV2[] {
   return [
-    { id: "check-pass-rate", label: "Check pass rate", weight: 0.6, metric: "check-pass-rate" },
-    { id: "depth-consistency", label: "Depth consistency", weight: 0.25, metric: "depth-consistency" },
-    { id: "timing-signal", label: "Timing signal awareness", weight: 0.15, metric: "timing-signal" },
+    { id: "check-pass-rate", label: "Check pass rate", weight: 0.7, metric: "check-pass-rate" },
+    { id: "depth-consistency", label: "Depth consistency", weight: 0.3, metric: "depth-consistency" },
   ];
 }
 
@@ -220,6 +221,16 @@ export function resolveLearningState(system: SystemParams, tSec: number): Learni
   const did = system.didactics;
   const lesson = getLessonById(did?.activeLessonId ?? DEFAULT_LESSON_ID);
   const prev = did?.learningState;
+  if (!lesson) {
+    // Unknown lesson ID: preserve previous state unchanged to avoid silent reset every frame.
+    if (prev) return { ...prev };
+    return {
+      lessonId: DEFAULT_LESSON_ID,
+      stepIndex: 0,
+      passedStepIds: [],
+      updatedAtSec: tSec,
+    };
+  }
   if (!prev || prev.lessonId !== lesson.id) {
     return {
       lessonId: lesson.id,
@@ -240,10 +251,12 @@ export function resolveLearningState(system: SystemParams, tSec: number): Learni
 export function computeDidacticSignals(system: SystemParams, step: StepResult): DidacticSignals | undefined {
   if (!system.didactics?.enabled) return undefined;
 
-  const lesson = getLessonById(system.didactics.activeLessonId ?? DEFAULT_LESSON_ID);
+  const lesson =
+    getLessonById(system.didactics.activeLessonId ?? DEFAULT_LESSON_ID) ?? getLessonById(DEFAULT_LESSON_ID)!;
+  // TODO: resolveLearningState is called again here redundantly — consider reusing the result above.
   const state = resolveLearningState(system, toFiniteNumber(step.meta?.t, 0));
   const numeric = collectNumericSignals(system, step);
-  const evalResult = evaluateChecks(lesson.id, state.stepIndex, numeric);
+  const evalResult = evaluateChecks(lesson, state.stepIndex, numeric);
   const hints: string[] = [];
 
   if (!Number.isFinite(numeric.bPlanet)) {
@@ -333,7 +346,7 @@ export function advanceLearningState(
   if (didacticSignals.allChecksPassed && stepId && !next.passedStepIds.includes(stepId)) {
     next.passedStepIds = [...next.passedStepIds, stepId];
     if (autoAdvance) {
-      const lesson = getLessonById(state.lessonId);
+      const lesson = getLessonById(state.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
       const maxStep = Math.max(lesson.steps.length - 1, 0);
       next.stepIndex = Math.min(maxStep, state.stepIndex + 1);
     }

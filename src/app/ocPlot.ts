@@ -77,7 +77,7 @@ export function fitLinearEphemeris(points: Array<{ x: number; y: number }>):
     const r = p.y - (intercept + slope * p.x);
     rss += r * r;
   }
-  return { slope, intercept, rmsResidual: Math.sqrt(rss / n) };
+  return { slope, intercept, rmsResidual: Math.sqrt(rss / Math.max(1, n - 2)) };
 }
 
 export function formatOcPanelStats(
@@ -136,7 +136,7 @@ export function buildOcCsv(state: TransitHistoryState, body: OcBody, opts: OcCsv
     "body,index,center_sec,oc_raw_sec,oc_fit_sec,oc_residual_sec,oc_display,duration_sec,ingress_sec,egress_sec,detected_at_sec,unit,trend_mode";
   const rows = series.events.map((e, i) => {
     const raw = finite(e.ocSec);
-    const fitSec = finite(e.centerSec) !== undefined ? fitByCenter.get(e.centerSec) : undefined;
+    const fitSec = fitByCenter.get(e.centerSec);
     const residual = raw !== undefined && fitSec !== undefined ? raw - fitSec : undefined;
     const displayRaw = trendMode === "detrended" ? residual : raw;
     const display = displayRaw !== undefined ? displayRaw * scale : undefined;

@@ -222,6 +222,9 @@ export function syncAllEnableStates(r: UiRefs): void {
   syncRelativityEnabled(r);
 }
 
+// TODO: Each checkbox handler calls syncAllEnableStates which syncs all sections.
+// Consider targeted per-handler sync functions (e.g. syncMoonEnabled, syncSpotEnabled)
+// to avoid redundant DOM traversals on every single checkbox change.
 export function wireEnableHandlers(r: UiRefs): void {
   r.moonEnabled.addEventListener("change", () => syncAllEnableStates(r));
   r.moonPhaseEnabled.addEventListener("change", () => syncAllEnableStates(r));

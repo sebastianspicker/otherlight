@@ -165,7 +165,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
       conservation,
       fluxDecomposition: {
         stellarA: baselineFluxUsed * spotFluxFactor * fluxTransitFactor,
-        stellarB: fluxPlanetPhase,
+        stellarB: 0, // V3 has no secondary star, so stellarB is always 0.
         binaryEclipseTerms: fluxTransitFactor,
         additivePlanetary: fluxPlanetPhase + fluxForwardScattering + fluxRingScattering,
         additiveLunar: fluxMoonPhase,

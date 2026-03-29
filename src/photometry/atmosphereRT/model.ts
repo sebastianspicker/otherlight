@@ -16,7 +16,9 @@ export function layerOpticalDepthAtRadius(params: {
   if (!(Number.isFinite(layer.r0) && layer.r0 > 0)) return 0;
   if (!(Number.isFinite(layer.H) && layer.H > 0)) return 0;
   if (!(Number.isFinite(layer.tau0) && layer.tau0 >= 0)) return 0;
-  if (!(rho > layer.r0)) return 0;
+  // Points at or inside the solid body surface are fully opaque (not transparent).
+  // Return a large optical depth so that exp(-tau) ≈ 0.
+  if (!(rho > layer.r0)) return 100;
 
   const alpha = finiteOr(layer.alpha, 0);
   const hazeSlope = finiteOr(layer.hazeSlope, 0);

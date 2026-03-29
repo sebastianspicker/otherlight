@@ -22,6 +22,9 @@ import { cloneState, findClosestEntry, makeCacheKey, storeEntry } from "./nbody/
 import { computeConservationDiagnostics } from "./nbody/diagnostics";
 import { integrateToTimeWithConfig, unpackBodyArrays } from "./nbody/integrator";
 
+// Module-level singleton cache.  This is shared across all callers within
+// the same JS context.  Tests MUST call resetNBodyCache() in beforeEach to
+// prevent cross-test contamination via stale cache entries.
 let cacheKey = "";
 let cache: NBodyCacheEntry[] = [];
 

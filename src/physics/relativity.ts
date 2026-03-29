@@ -7,32 +7,13 @@
 // - Speed of light `c` must be provided in SI units (m/s).
 
 import type { OrbitElements } from "../core/types";
+import type { RelativityParams } from "../core/typesDynamics";
 import { wrapTo2Pi } from "../core/units";
 import { muFromPeriodAndA } from "./kepler";
 import type { Vec3 } from "./vec3";
 import { vDot, vIsFinite, vLen, vNormalizeOrZero } from "./vec3";
 
-export type RelativityParams = {
-  enabled?: boolean;
-  /** Apply light-travel time effect (LTTE) timing correction. */
-  ltte?: boolean;
-  /** Apply apsidal precession (toy GR). */
-  grPrecession?: boolean;
-  /** Apply Shapiro delay (gravitational time delay). */
-  shapiro?: boolean;
-  /** Speed of light in SI units [m/s]. */
-  c?: number;
-  /** Planet apsidal precession per orbit [rad/orbit]. */
-  planetPrecessionPerOrbit?: number;
-  /** Moon apsidal precession per orbit [rad/orbit]. */
-  moonPrecessionPerOrbit?: number;
-  /** Iterations for LTTE fixed-point solve. */
-  ltteIters?: number;
-  /** Convergence tolerance for LTTE [s]. */
-  ltteTolSec?: number;
-  /** Optional minimum impact parameter used to regularize Shapiro delay [m]. */
-  shapiroMinImpact?: number;
-};
+export type { RelativityParams };
 
 export type NormalizedRelativityParams = {
   enabled: boolean;
@@ -104,6 +85,13 @@ export function applyApsidalPrecession(
   if (!Number.isFinite(precessionPerOrbitRad) || precessionPerOrbitRad === 0) return { ...el };
   if (!Number.isFinite(tSec) || !Number.isFinite(el.period) || el.period <= 0) return { ...el };
 
+  if (Math.abs(precessionPerOrbitRad) > 0.1) {
+    console.warn(
+      `applyApsidalPrecession: |precessionPerOrbitRad| = ${Math.abs(precessionPerOrbitRad).toFixed(4)} rad (~${((Math.abs(precessionPerOrbitRad) * 180) / Math.PI).toFixed(2)} deg/orbit). ` +
+        `The linear secular model may be inaccurate for rates above ~0.1 rad/orbit.`,
+    );
+  }
+
   const nOrbits = (tSec - el.t0) / el.period;
   const omega = wrapTo2Pi(el.omega + precessionPerOrbitRad * nOrbits);
   return { ...el, omega };
@@ -119,7 +107,7 @@ export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number
   if (!Number.isFinite(c) || c <= 0) return 0;
 
   const dir = vNormalizeOrZero(observerDir, 1e-15);
-  if (!vIsFinite(dir)) return 0;
+  if (vLen(dir) === 0) return 0;
 
   const z = vDot(r, dir);
   return Number.isFinite(z) ? -z / c : 0;
@@ -128,6 +116,13 @@ export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number
 /**
  * Shapiro delay for a point mass at the origin, relative to a reference constant.
  * This returns a small, geometry-dependent timing correction (can be +/-).
+ *
+ * Note: this is a *relative-delay* model only. It computes an absolute Shapiro
+ * delay without subtracting a baseline/reference geometry. This is acceptable
+ * for differential timing work (e.g., TTV computation) because both the
+ * reference and observed epochs receive the same systematic offset, which
+ * cancels in the difference. Do not use the raw return value as a calibrated
+ * absolute time delay.
  */
 export function shapiroDelaySec(params: {
   r: Vec3;
@@ -142,7 +137,7 @@ export function shapiroDelaySec(params: {
   if (!(Number.isFinite(c) && c > 0)) return 0;
 
   const dir = vNormalizeOrZero(observerDir, 1e-15);
-  if (!vIsFinite(dir)) return 0;
+  if (vLen(dir) === 0) return 0;
 
   const rMag = vLen(r);
   if (!(rMag > 0) || !Number.isFinite(rMag)) return 0;

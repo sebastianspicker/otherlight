@@ -16,6 +16,8 @@ export function wireParamSliders(r: UiRefs): void {
   const nums = Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
 
   for (const num of nums) {
+    if (!num.id) continue; // Skip inputs without an ID to avoid duplicate slider-param IDs
+
     const minAttr = num.getAttribute("min");
     const maxAttr = num.getAttribute("max");
     if (minAttr === null || maxAttr === null) continue;

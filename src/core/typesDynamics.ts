@@ -63,14 +63,21 @@ export type PhysicsFeatureFlags = {
 
 export type RelativityParams = {
   enabled?: boolean;
+  /** Apply light-travel time effect (LTTE) timing correction. */
   ltte?: boolean;
+  /** Apply apsidal precession (toy GR). */
   grPrecession?: boolean;
   /** Apply Shapiro delay (gravitational time delay). */
   shapiro?: boolean;
+  /** Speed of light in SI units [m/s]. */
   c?: number;
+  /** Planet apsidal precession per orbit [rad/orbit]. */
   planetPrecessionPerOrbit?: number;
+  /** Moon apsidal precession per orbit [rad/orbit]. */
   moonPrecessionPerOrbit?: number;
+  /** Iterations for LTTE fixed-point solve. */
   ltteIters?: number;
+  /** Convergence tolerance for LTTE [s]. */
   ltteTolSec?: number;
   /** Optional minimum impact parameter used to regularize Shapiro delay [m]. */
   shapiroMinImpact?: number;
@@ -145,6 +152,10 @@ export type ExomoonTimingShapeParams = {
   velDt?: number;
 
   // --- Moon orbit orientation evolution (applied to moon.orbitAroundPlanet) ---
+  // Field mapping to OrbitOrientationEvolution (src/physics/exomoonTiming.ts):
+  //   moonOmegaDot      → OmegaDot      (nodal precession dΩ/dt)
+  //   moonOmegaSmallDot → omegaDot      (apsidal precession dω/dt)
+  //   moonIncDot        → incDot        (inclination drift di/dt)
   moonOmegaDot?: number; // dΩ/dt [rad/s]
   moonIncDot?: number; // di/dt [rad/s]
   moonOmegaSmallDot?: number; // dω/dt [rad/s]

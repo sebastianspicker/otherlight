@@ -161,7 +161,7 @@ export function fluxStarWithTransmissiveOcculters(params: FluxStarWithTransmissi
   // Deterministic, bounded resolution using the canonical clampGridRes policy.
   // Keep minRes=16 here to preserve the performance envelope of this (square-grid) integrator.
   const N = clampGridRes(isFiniteNumber(params.gridRes) ? Math.floor(params.gridRes) : params.gridRes, 256, {
-    minRes: 16,
+    minRes: 32,
     maxRes: 4096,
   });
 

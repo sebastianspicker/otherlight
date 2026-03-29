@@ -199,8 +199,12 @@ export function computeForwardScatteringFlux(params: ForwardScatteringFluxParams
   }
 
   // Optional gate for when body is behind the star (secondary eclipse region).
-  // In this codebase's convention: vDot(rBody, observerDir) > 0 means "in front".
-  // Toy Model assumption: scattering disabled in entire rear hemisphere.
+  // Convention (see dayNightVisibility.ts): observerDir points star -> observer,
+  // rBody points star -> body. When the body is between star and observer (transit
+  // geometry), both vectors point in roughly the same direction, so vDot > 0.
+  // Therefore vDot(rBody, observerDir) > 0 correctly means "body in front of the
+  // star from the observer's perspective" — exactly when forward scattering is
+  // physically expected. The rear hemisphere (vDot <= 0) is gated off.
   if (gateBehind) {
     const front = vDot(params.rBody, obsHat) > 0;
     if (!front) return 0;

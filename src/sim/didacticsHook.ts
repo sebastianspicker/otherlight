@@ -6,6 +6,8 @@
 // Same pattern as optionalLimbDarkening.ts.
 
 import type { DidacticSignals, SystemParams, StepResult } from "../core/types";
+// Cross-layer import: V3 types are still the active didactics interface.
+// This import is intentional and should remain until V5 introduces its own didactics types.
 import type {
   DidacticCurriculumV3,
   HintPolicyV3,
@@ -39,6 +41,7 @@ export type EvaluateDidacticsV3Fn = (params: {
   hintPolicy?: HintPolicyV3;
 }) => {
   rubricScore?: number;
+  rubricPass?: boolean;
   hints: string[];
   nextProgress: LearningProgressV3;
 };

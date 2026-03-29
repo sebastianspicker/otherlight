@@ -114,9 +114,10 @@ function cssEscapeId(id: string): string {
     return `#\\3${base[0]} ${base.slice(1)}`;
   }
 
-  // If it starts with "-", escape the hyphen to keep it an identifier start.
+  // If it starts with "-" followed by a digit, escape both the hyphen and the digit
+  // using CSS 2.1 hex escape syntax: \- \3<digit> <rest>
   if (/^-\d/.test(base)) {
-    return `#\\-${base.slice(1)}`;
+    return `#\\-\\3${base[1]} ${base.slice(2)}`;
   }
 
   return `#${base}`;

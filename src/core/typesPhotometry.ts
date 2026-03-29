@@ -22,7 +22,12 @@ export type BrightnessPatch = {
    */
   factor: number;
 
-  /** Circle radius (required if shape==="circle"). */
+  /**
+   * Circle radius (required if shape==="circle").
+   * @remarks When shape === "circle", `r` must be provided. The type keeps
+   * this field optional to avoid a breaking discriminated-union refactor,
+   * but omitting it for a circle patch will cause incorrect geometry.
+   */
   r?: number;
 
   /** Ellipse semi-axes (required if shape==="ellipse"). */
@@ -370,6 +375,8 @@ export type StellarSurfaceParams = {
   differentialRotationK?: number;
   /** Granulation RMS amplitude in stellar units (toy/phenomenological). */
   granulationSigma?: number;
+  /** Granulation timescale [s]. Solar-like default ≈ 300 s (Mathur et al. 2011). */
+  granulationTimescaleSec?: number;
   /** Activity cycle period [s] for slow baseline modulation. */
   activityCyclePeriodSec?: number;
   /** Activity cycle amplitude in stellar units. */

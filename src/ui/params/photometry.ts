@@ -116,6 +116,8 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.moonReflAmp, ph?.moonPhaseCurve?.reflAmp ?? 0);
   writeNumberInput(r.moonThermAmp, ph?.moonPhaseCurve?.thermAmp ?? 0);
   r.moonLambertian.checked = Boolean(ph?.moonPhaseCurve?.lambertian ?? true);
+  // Note: moonPhaseCurve.reflOffset / thermOffset have no dedicated HTML inputs;
+  // values are preserved in readPhotometryFromUI via the existing params object.
 
   const mThermal = ph?.moonPhaseCurve?.thermalInertia;
   r.moonThermalInertiaEnabled.checked = Boolean(mThermal?.enabled);
@@ -124,7 +126,7 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
   writeNumberInput(r.moonThermalTimescale, mThermal?.thermalTimescaleSec ?? 0);
   writeNumberInput(r.moonRedistribution, mThermal?.redistribution ?? 0);
 
-  r.smearEnabled.checked = Boolean((ph?.cadenceSec ?? 0) > 0 && (ph?.nSubsamples ?? 1) > 1);
+  r.smearEnabled.checked = Boolean((ph?.cadenceSec ?? 0) > 0);
   writeNumberInput(r.cadenceSec, ph?.cadenceSec ?? 60);
   writeNumberInput(r.nSubsamples, ph?.nSubsamples ?? 9);
 
@@ -291,6 +293,8 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
       enabled: true,
       reflAmp: sanitizePositive(readNumberInput(r.moonReflAmp, ph.moonPhaseCurve?.reflAmp ?? 0), 0, 10),
       thermAmp: sanitizePositive(readNumberInput(r.moonThermAmp, ph.moonPhaseCurve?.thermAmp ?? 0), 0, 10),
+      reflOffset: ph.moonPhaseCurve?.reflOffset ?? 0,
+      thermOffset: ph.moonPhaseCurve?.thermOffset ?? 0,
       lambertian: readCheckbox(r.moonLambertian),
       physicalScaling: ph.moonPhaseCurve?.physicalScaling,
       thermalInertia: readCheckbox(r.moonThermalInertiaEnabled)

@@ -132,8 +132,7 @@ export async function applyPresetById(deps: ScenarioFlowDeps, id: string): Promi
   const { state, refs } = deps;
   const preset = getPresetById(id);
   state.scenarioDefaults = cloneParams(preset.params);
-  state.params = cloneParams(state.scenarioDefaults);
-  ensureDidacticsConfig(state.params);
+  state.params = ensureDidacticsConfig(cloneParams(state.scenarioDefaults));
   state.didacticsRuntime = initDidacticsRuntime(state.params, deps.getTimeSec());
   loadParamsIntoUI(state.params, refs);
   syncAllEnableStates(refs);
@@ -151,8 +150,7 @@ export async function applyRealSystemById(deps: ScenarioFlowDeps, id: string): P
   const entry = getRealSystemById(id);
   if (!entry) return;
   state.scenarioDefaults = buildParamsFromRealSystem(id);
-  state.params = cloneParams(state.scenarioDefaults);
-  ensureDidacticsConfig(state.params);
+  state.params = ensureDidacticsConfig(cloneParams(state.scenarioDefaults));
   state.didacticsRuntime = initDidacticsRuntime(state.params, deps.getTimeSec());
   loadParamsIntoUI(state.params, refs);
   syncAllEnableStates(refs);
@@ -168,8 +166,7 @@ export async function applyRealSystemById(deps: ScenarioFlowDeps, id: string): P
 export async function applyBinaryLabScenario(deps: ScenarioFlowDeps): Promise<void> {
   const { state, refs } = deps;
   state.scenarioDefaults = buildBinaryLabParams(DEFAULT_BINARY_LAB_CONFIG_V4);
-  state.params = cloneParams(state.scenarioDefaults);
-  ensureDidacticsConfig(state.params);
+  state.params = ensureDidacticsConfig(cloneParams(state.scenarioDefaults));
   state.didacticsRuntime = initDidacticsRuntime(state.params, deps.getTimeSec());
   state.binaryLabState = createBinaryLabState(DEFAULT_BINARY_LAB_CONFIG_V4.binaryLab);
   if (refs.realSystemSelect) refs.realSystemSelect.value = "";

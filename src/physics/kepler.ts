@@ -185,6 +185,11 @@ export function solveKeplerE(
     }
 
     E = wrapToPi(E + dE);
+    // Note: |dE| here is pre-wrap, so it reflects the Newton step magnitude
+    // rather than the wrapped angular distance. This is benign because the
+    // residual check (|f| <= tol) above catches convergence first; the step-
+    // size check below is a secondary safeguard that terminates slightly
+    // early at worst.
     const absDE = Math.abs(dE);
     lastAbsDE = absDE;
 

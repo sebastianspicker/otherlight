@@ -1,5 +1,5 @@
 import type { BrightnessPatch, StellarSurfaceParams } from "../core/types";
-import { clamp01 } from "../core/units";
+
 import type { Vec3 } from "../physics/vec3";
 import { projectToSky } from "../physics/frames";
 
@@ -58,7 +58,7 @@ export function projectSurfacePatchesToSky(params: {
       x: sky.x,
       y: sky.y,
       r: radius,
-      factor: clamp01(p.factor) === p.factor ? p.factor : Math.max(0, p.factor),
+      factor: Math.max(0, p.factor),
     });
   }
 
