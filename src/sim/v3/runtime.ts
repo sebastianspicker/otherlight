@@ -295,6 +295,7 @@ export function createSimulation(config: SimulationConfigV3): SimulationRuntime 
           : signals,
         learningProgress: deepClone(progress),
         rubricScore: evaluated.rubricScore,
+        rubricPass: evaluated.rubricPass,
         adaptiveHints: evaluated.hints,
       };
     }
@@ -312,8 +313,9 @@ export function createSimulation(config: SimulationConfigV3): SimulationRuntime 
       const steps: SimulationStepV3[] = [];
 
       // Inclusive upper bound with a small tolerance to avoid floating-point fencepost misses.
+      // Use index-based loop to prevent floating-point drift from repeated accumulation.
       const tol = Math.abs(range.stepSec) * 1e-9;
-      for (let t = range.startSec; t <= range.endSec + tol; t += range.stepSec) {
+      for (let i = 0, t = range.startSec; t <= range.endSec + tol; i++, t = range.startSec + i * range.stepSec) {
         steps.push(stepAt(t));
       }
 

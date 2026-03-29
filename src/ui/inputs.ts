@@ -4,6 +4,8 @@
 
 import { clamp, toFiniteNumber, ECC_MAX } from "../core/units";
 
+// TODO: plotMode and clampSmearedFlux are read directly from the DOM via getElementById.
+// They should be added to UiRefs for consistency with all other UI element lookups.
 type PlotMode = "physical" | "measured";
 
 export function readPlotModeFromDOM(): PlotMode {
@@ -48,6 +50,11 @@ export function sanitizeEcc(v: number): number {
   return clamp(v, 0, ECC_MAX);
 }
 
+/**
+ * Clamps `v` into [lo, hi]. The name is misleading: it does not enforce positivity,
+ * it is effectively `clamp(v, lo, hi)`. Callers frequently pass `lo = 0`.
+ * Kept as-is to avoid a large rename across ~40 call sites.
+ */
 export function sanitizePositive(v: number, lo: number, hi: number): number {
   return clamp(v, lo, hi);
 }

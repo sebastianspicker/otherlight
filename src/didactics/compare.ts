@@ -24,6 +24,8 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
   };
 }
 
+// TODO: toExponential is called on every delta value each invocation.
+// Not a significant cost in practice, but could be cached if this becomes a hot path.
 export function interpretDidacticComparison(cmp: DidacticComparison): string {
   const lines: string[] = [];
   lines.push(`ΔfluxTotal=${cmp.fluxTotalDelta.toExponential(3)}`);

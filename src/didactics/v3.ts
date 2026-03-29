@@ -110,7 +110,7 @@ export function nextLearningProgress(
   didactics: Pick<SimulationDidacticsV3, "signals">,
   curriculum: DidacticCurriculumV3,
 ): LearningProgressV3 {
-  const next: LearningProgressV3 = {
+  let next: LearningProgressV3 = {
     lessonId: progress.lessonId ?? curriculum.id,
     stepIndex: progress.stepIndex ?? 0,
     passedStepIds: Array.isArray(progress.passedStepIds) ? [...progress.passedStepIds] : [],
@@ -125,10 +125,14 @@ export function nextLearningProgress(
   if (!step) return next;
   if (!dependencySatisfied(step, next)) return next;
 
-  if (!next.passedStepIds!.includes(step.id)) next.passedStepIds!.push(step.id);
+  if (!next.passedStepIds!.includes(step.id)) {
+    next = { ...next, passedStepIds: [...next.passedStepIds!, step.id] };
+  }
   const idx = curriculum.steps.findIndex((s) => s.id === step.id);
-  if (idx >= 0) next.stepIndex = Math.min(curriculum.steps.length - 1, idx + 1);
-  next.lastScore = sig.score;
+  if (idx >= 0) {
+    next = { ...next, stepIndex: Math.min(curriculum.steps.length - 1, idx + 1) };
+  }
+  next = { ...next, lastScore: sig.score };
   return next;
 }
 
@@ -139,6 +143,7 @@ export function evaluateDidacticsV3(params: {
   hintPolicy?: HintPolicyV3;
 }): {
   rubricScore?: number;
+  rubricPass?: boolean;
   hints: string[];
   nextProgress: LearningProgressV3;
 } {
@@ -170,7 +175,8 @@ export function evaluateDidacticsV3(params: {
   });
 
   const nextProgress = nextLearningProgress(progress, { signals }, curriculum);
-  return { rubricScore, hints, nextProgress };
+  const rubricPass = rubricScore !== undefined ? rubricScore >= 0.6 : undefined;
+  return { rubricScore, rubricPass, hints, nextProgress };
 }
 
 export function saveLearningProgressV3(params: {

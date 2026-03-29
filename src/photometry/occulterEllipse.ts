@@ -232,7 +232,7 @@ function pointInEllipse(
  * (overlapping opaque occulters don't double-block).
  */
 export function pointOccultedFraction(x: number, y: number, occ: OcculterPre[]): number {
-  let maxBlocked = 0;
+  let transparencyProduct = 1;
 
   for (const o of occ) {
     if (o.kind === "circle") {
@@ -269,11 +269,11 @@ export function pointOccultedFraction(x: number, y: number, occ: OcculterPre[]):
 
     if (inRing) {
       if (o.opacity >= 1) return 1; // fully opaque, short-circuit
-      maxBlocked = Math.max(maxBlocked, o.opacity);
+      transparencyProduct *= 1 - o.opacity;
     }
   }
 
-  return maxBlocked;
+  return 1 - transparencyProduct;
 }
 
 /**

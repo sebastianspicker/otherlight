@@ -89,7 +89,7 @@ export function createMulberry32(seed: unknown = 1): PRNG {
     let u1 = u01();
     const u2 = u01();
 
-    if (u1 <= 0 || u1 < 1e-12) u1 = 1e-12;
+    if (u1 < 1e-12) u1 = 1e-12;
 
     const r = Math.sqrt(-2 * Math.log(u1));
     const theta = 2 * Math.PI * u2;

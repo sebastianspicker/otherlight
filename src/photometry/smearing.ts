@@ -117,6 +117,9 @@ export function boxcarAverageFlux(
   const nonFinitePolicy: "ignore" | "zero" = opts?.nonFinitePolicy === "zero" ? "zero" : "ignore";
 
   // Disabled / trivial case:
+  // nSubsamples <= 1 is treated as "no smearing" (pass-through). The config UI
+  // enforces nSubsamples >= 2 when smearing is enabled, so the Math.max(2, ...)
+  // fallback below only fires on direct function calls with an out-of-range value.
   if (!Number.isFinite(cadenceSec) || cadenceSec <= 0 || !Number.isFinite(nSubsamples) || nSubsamples <= 1) {
     const f0 = fluxAt(tCenterSec);
     const out0 = Number.isFinite(f0) ? f0 : 0;

@@ -19,6 +19,9 @@ export function migrateSystemParamsToV4(input: SystemParams): SimulationConfigV4
     luminosityScale: 1,
   };
 
+  // Inert placeholder for the secondary star in V3→V4 migration.
+  // luminosityScale: 0 makes it invisible and non-contributing; the radius
+  // (0.95 × primary) is arbitrary and has no effect on the simulation output.
   const secondary = {
     id: "star-b",
     r: Math.max(0, (input.star?.r ?? 1) * 0.95),

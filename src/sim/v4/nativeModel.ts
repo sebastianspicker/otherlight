@@ -99,6 +99,10 @@ function safeBodyRadius(body: StarBodyV4 | PlanetBodyV4 | MoonBodyV4): number {
   return r0 * f;
 }
 
+// TODO: The velocity here is computed via central finite differences (3 Kepler
+// solves).  An analytical velocity from the vis-viva equation and the orbital
+// state vector would eliminate 2 of the 3 solves and improve both accuracy and
+// performance.
 export function orbitStateAt(
   el: { a: number; e: number; inc: number; Omega: number; omega: number; period: number; t0: number },
   t: number,
@@ -106,7 +110,7 @@ export function orbitStateAt(
   r: Vec3;
   v: Vec3;
 } {
-  const dt = 1;
+  const dt = Math.max(0.01, el.period * 1e-4);
   const r = posFromResolvedElements(el, t, "v4.orbit");
   const rp = posFromResolvedElements(el, t + dt, "v4.orbit");
   const rm = posFromResolvedElements(el, t - dt, "v4.orbit");
@@ -301,7 +305,8 @@ export function computeFluxBundle(
   const surf = phot?.stellarSurface;
   const granulation =
     surf?.enabled && Number.isFinite(surf.granulationSigma)
-      ? (surf.granulationSigma as number) * Math.sin((2 * Math.PI * tObsSec) / 67)
+      ? (surf.granulationSigma as number) *
+        Math.sin((2 * Math.PI * tObsSec) / Math.max(1, surf.granulationTimescaleSec ?? 300))
       : 0;
   const activity =
     surf?.enabled && Number.isFinite(surf.activityCyclePeriodSec) && Number.isFinite(surf.activityCycleAmp)
@@ -309,7 +314,10 @@ export function computeFluxBundle(
         Math.sin((2 * Math.PI * tObsSec) / Math.max(1, surf.activityCyclePeriodSec as number))
       : 0;
   const stellarVariability = variability + granulation + activity;
-  const stellarPreTransit = stellarFromEclipses + stellarVariability;
+  // Stellar variability is photospheric — it must be attenuated by the same
+  // transit visibility factor that dims the primary star's baseline luminosity.
+  const primaryVis = visByStar.get(snap.stars[0]?.id ?? "") ?? 1;
+  const stellarPreTransit = stellarFromEclipses + stellarVariability * primaryVis;
 
   const planetPhaseModel = phot?.phaseCurve;
   const moonPhaseModel = phot?.moonPhaseCurve;

@@ -66,8 +66,8 @@ export function deriveQuadraticLimbDarkeningFromStellarParams(
   let u2 = 0.24 - 0.08 * tNorm + 0.03 * gNorm - 0.02 * zNorm + 0.5 * bandShift;
   u1 = Math.max(0, Math.min(1.3, u1));
   u2 = Math.max(0, Math.min(1.1, u2));
-  if (u1 + u2 >= 1.95) {
-    const s = 1.95 / (u1 + u2);
+  if (u1 + u2 > 1.0) {
+    const s = 1.0 / (u1 + u2);
     u1 *= s;
     u2 *= s;
   }

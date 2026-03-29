@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
-import { getNBodyConservationAt, getNBodyStateAt } from "../../src/sim/dynamics";
+import { getNBodyConservationAt, getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
+
+beforeEach(() => {
+  resetNBodyCache();
+});
 
 function circularPeriod(a: number, muCentral: number): number {
   return 2 * Math.PI * Math.sqrt((a * a * a) / muCentral);

@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
 import { integrateNBodyStep } from "../../src/sim/nbody/integrator";
 import type { NBodyState } from "../../src/sim/nbody/types";
-import { getNBodyStateAt } from "../../src/sim/dynamics";
+import { getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
+
+beforeEach(() => {
+  resetNBodyCache();
+});
 import { vLenSq, vSub } from "../../src/physics/vec3";
 
 function circularPeriod(a: number, muCentral: number): number {

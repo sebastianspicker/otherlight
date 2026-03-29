@@ -54,7 +54,19 @@ function loadDefaults(): SystemParams {
   }
   assertScenarioUnitsSI(rawObj.meta);
 
-  // Trust schema for size/speed, but deep-clone to prevent accidental mutation of the import object.
+  // Basic structural validation of critical numeric fields before the cast.
+  const d = defaults as Record<string, unknown>;
+  const star = d.star as Record<string, unknown> | undefined;
+  const planet = d.planet as Record<string, unknown> | undefined;
+  if (!star || typeof star.r !== "number" || !(star.r > 0)) {
+    throw new Error("scenario.default.json defaults.star.r must be a positive number.");
+  }
+  const planetOrbit = planet?.orbit as Record<string, unknown> | undefined;
+  if (!planet || !planetOrbit || typeof planetOrbit.period !== "number" || !(planetOrbit.period > 0)) {
+    throw new Error("scenario.default.json defaults.planet.orbit.period must be a positive number.");
+  }
+
+  // Deep-clone to prevent accidental mutation of the import object.
   return cloneParams(defaults as SystemParams);
 }
 

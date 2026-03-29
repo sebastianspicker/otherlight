@@ -96,7 +96,9 @@ export const ECC_MAX = 0.999;
 
 /**
  * Clamp value into [min,max]. Robust even if min/max are swapped.
- * If x is not finite (NaN/±Inf), returns min (the safe lower bound) to avoid propagating non-finite values.
+ * If x is not finite (NaN/±Inf), returns min (the safe lower bound) to avoid propagating
+ * non-finite values. This is intentional fail-safe behavior: NaN silently maps to the
+ * lower bound rather than propagating, which prevents downstream NaN cascades in the simulation.
  */
 export function clamp(x: number, a: number, b: number): number {
   const min = Math.min(a, b);
@@ -194,12 +196,18 @@ export function toFiniteNumber(v: unknown, fallback: number): number {
 export function toFiniteNonNeg(v: unknown, fallback: number): number {
   const x = toFiniteNumber(v, fallback);
   const fb = Number.isFinite(fallback) ? fallback : 0;
-  return Number.isFinite(x) ? Math.max(0, x) : Math.max(0, fb);
+  const result = Number.isFinite(x) ? Math.max(0, x) : Math.max(0, fb);
+  // Final guard: if both v and fallback were NaN, result would be NaN. Guarantee >= 0 contract.
+  return Number.isFinite(result) ? result : 0;
 }
 
 /**
  * Convert unknown input to a finite number; if not strictly > 0, return fallback.
  * Useful for positive-only values where a sensible default is preferred over eps.
+ *
+ * **Implicit fallback:** When both `v` and `fallback` are non-finite or <= 0,
+ * the function returns `1e-12` as a last-resort positive value to satisfy the
+ * "always positive" contract.
  */
 export function toFinitePositiveOr(v: unknown, fallback: number): number {
   const fb = toFiniteNumber(fallback, 1e-12);

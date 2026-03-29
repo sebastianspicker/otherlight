@@ -40,6 +40,10 @@ function getDevicePixelRatio(): number {
  * Notes:
  * - Uses getBoundingClientRect() so it reflects CSS layout size even if width/height attributes differ.
  * - Rounds device-pixel dimensions to integers (canvas backing store is integer).
+ *
+ * TODO: Replace per-frame getBoundingClientRect() with a ResizeObserver + dirty flag
+ * pattern to avoid forced layout/reflow every frame. This would require the caller to
+ * set up the observer once and only re-query dimensions when the flag is set.
  */
 function getCanvasSizeInfo(canvas: HTMLCanvasElement): SizeInfo {
   const dpr = getDevicePixelRatio();

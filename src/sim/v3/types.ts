@@ -53,7 +53,7 @@ export type HintPolicyV3 = {
 export type LearningProgressV3 = {
   lessonId?: string;
   stepIndex?: number;
-  passedStepIds?: string[];
+  passedStepIds?: readonly string[];
   lastScore?: number;
   updatedAtSec?: number;
 };
@@ -152,6 +152,7 @@ export type SimulationDidacticsV3 = {
   signals?: DidacticSignals;
   learningProgress?: LearningProgressV3;
   rubricScore?: number;
+  rubricPass?: boolean;
   adaptiveHints?: string[];
 };
 

@@ -45,6 +45,8 @@ export type FrameLoopDeps = {
   renderOcPanel: () => void;
 };
 
+// TODO: fallbackStepV3 is 81 lines of manual default assignment.
+// Consider simplifying with a deep-merge of a defaults object over the fallback step.
 function fallbackStepV3(
   tObsSec: number,
   params: SystemParams,
@@ -157,6 +159,7 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     const simulation = getSimulation();
     const params = getParams();
     setRunning(false);
+    noiseErrorLogged = false;
     state.t = 0;
     state.lastPlottedT = Number.NaN;
     state.lastPlotMode = null;

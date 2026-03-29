@@ -30,10 +30,13 @@ import {
   drawObserverMarkerMainView,
   type DebugOverlayDataV3,
   type DebugOverlayToggles,
+  type RequiredDebugOverlayToggles,
 } from "./overlays";
 
+const MONO_FONT = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+
 // Re-export the other renderers so existing callers can continue to import from canvas2d.ts
-// (requested “integration of remaining renderers”).
+// (requested "integration of remaining renderers").
 export { LightCurvePlot } from "./lightCurvePlot";
 export type { LightCurvePlotOptions, LightCurveSample } from "./lightCurvePlot";
 
@@ -104,6 +107,12 @@ export class Canvas2DRenderer {
   private opts: Required<Canvas2DRendererOptions>;
   private orbitCache: OrbitPathCache;
   private starDiskCache = new StarDiskCache();
+  private drawList: Drawable[] = [];
+  /** Reusable overlay toggles object with showObserverMarker suppressed (avoids spread per frame). */
+  private overlayTogglesNoMarker: RequiredDebugOverlayToggles = {
+    ...defaultDebugOverlayToggles(),
+    showObserverMarker: false,
+  };
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -125,6 +134,8 @@ export class Canvas2DRenderer {
   }
 
   /** Convert sky-plane world coords (x,y) to CSS pixel coords. */
+  // TODO: toPx allocates a {x,y} object per call. Inlining would reduce GC pressure
+  // in hot loops but would hurt readability — not worth it unless profiling shows impact.
   private toPx(x: number, y: number): { x: number; y: number } {
     const cssW = this.size?.cssW ?? this.canvas.clientWidth ?? this.canvas.width;
     const cssH = this.size?.cssH ?? this.canvas.clientHeight ?? this.canvas.height;
@@ -198,6 +209,8 @@ export class Canvas2DRenderer {
     const rr = toFinitePositiveOr(r, 1e-6) * this.pixelsPerUnit;
 
     // Visual-only depth cue; must not affect physics/flux.
+    // The 0.002 constant is a world-unit scale factor calibrated to typical star radii
+    // (R* ~ 100–500 world units), mapping depth offsets to a perceptible opacity range.
     const shade = clamp(0.35 + 0.65 * (1 / (1 + Math.abs(z) * 0.002)), 0.25, 1.0);
 
     ctx.save();
@@ -386,7 +399,7 @@ export class Canvas2DRenderer {
     let y = Math.max(20, cssH - 20 - active.length * 18);
 
     ctx.save();
-    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    ctx.font = MONO_FONT;
     for (const marker of active) {
       ctx.fillStyle = "rgba(20,20,20,0.65)";
       const text = `event: ${marker.label}`;
@@ -480,7 +493,9 @@ export class Canvas2DRenderer {
 
     // Depth-sorted draw order (Painter's algorithm):
     // smaller z first (farther), larger z last (closer).
-    const drawList: Drawable[] = [{ kind: "star", z: 0 }];
+    const drawList = this.drawList;
+    drawList.length = 0;
+    drawList.push({ kind: "star", z: 0 });
     for (const geometry of this.resolveOcculterGeometry(params, step)) {
       drawList.push({
         kind: "occulter",
@@ -492,9 +507,10 @@ export class Canvas2DRenderer {
     drawList.sort((a, b) => {
       if (a.z !== b.z) return a.z - b.z;
       if (a.kind === b.kind) {
-        if (a.kind === "occulter" && b.kind === "occulter") {
+        // Both are the same kind; if both are occulters, sort rings before disks.
+        if (a.kind === "occulter") {
           const rank = (g: RenderOcculterGeometryV3) => (g.kind === "ring" ? 0 : 1);
-          return rank(a.geometry) - rank(b.geometry);
+          return rank(a.geometry) - rank((b as typeof a).geometry);
         }
         return 0;
       }
@@ -513,8 +529,22 @@ export class Canvas2DRenderer {
 
     // Draw overlay text/gizmo last.
     // We already drew the main-view observer marker above -> suppress duplicate marker here.
-    const overlayToggles: DebugOverlayToggles =
-      dbg.enabled && dbg.showObserverMarker ? { ...this.debug, showObserverMarker: false } : this.debug;
+    // Pass the already-resolved toggles to avoid resolving them twice per frame.
+    // Reuse a pre-allocated instance to avoid allocating a spread object every frame.
+    let overlayToggles: RequiredDebugOverlayToggles;
+    if (dbg.enabled && dbg.showObserverMarker) {
+      const cached = this.overlayTogglesNoMarker;
+      cached.enabled = dbg.enabled;
+      cached.showObserverDir = dbg.showObserverDir;
+      cached.showObserverMarker = false;
+      cached.showOcculters = dbg.showOcculters;
+      cached.showImpactParams = dbg.showImpactParams;
+      cached.showTDV = dbg.showTDV;
+      cached.showFluxDecomposition = dbg.showFluxDecomposition;
+      overlayToggles = cached;
+    } else {
+      overlayToggles = dbg;
+    }
 
     const overlayData = this.toOverlayData(step);
     drawDebugOverlayV3(ctx, this.size, overlayData, observerDir, overlayToggles);

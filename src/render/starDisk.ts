@@ -111,6 +111,7 @@ export class StarDiskCache {
   setStops(key: string, stops: Array<{ pos: number; color: string }>): void {
     this.stops.set(key, stops);
     // Evict oldest entries if cache exceeds bound.
+    // Map iteration order follows insertion order (ES2015+).
     if (this.stops.size > StarDiskCache.MAX_ENTRIES) {
       const firstKey = this.stops.keys().next().value;
       if (firstKey !== undefined) this.stops.delete(firstKey);
@@ -402,14 +403,20 @@ export function drawStarDisk(
     }
   }
 
-  // Outline
+  ctx.restore();
+
+  // Outline drawn in a separate save/restore so that (a) the arc path is
+  // reconstructed (drawBrightnessPatches may have replaced it) and (b) stroke
+  // state does not leak to the caller.
   if (opts.drawOutline ?? true) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerPx.x, centerPx.y, Rpx, 0, Math.PI * 2);
     ctx.strokeStyle = opts.outlineStyle?.strokeStyle ?? "rgba(0,0,0,0.25)";
     ctx.lineWidth = toFinitePositiveOr(opts.outlineStyle?.lineWidth, 1);
     ctx.stroke();
+    ctx.restore();
   }
-
-  ctx.restore();
 }
 
 /**

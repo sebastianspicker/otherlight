@@ -231,16 +231,15 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
       }
 
       if (isBlocked) blocked += dI;
-
-      // Optional early exit for deep eclipses (approximation).
-      if (earlyExitFluxEps > 0 && total > 0) {
-        const remainingFrac = (total - blocked) / total;
-        if (remainingFrac <= earlyExitFluxEps) {
-          earlyExit = true;
-          break;
-        }
-      }
     } // end for ix
+
+    // Optional early exit for deep eclipses (approximation).
+    if (earlyExitFluxEps > 0 && total > 0) {
+      const remainingFrac = (total - blocked) / total;
+      if (remainingFrac <= earlyExitFluxEps) {
+        earlyExit = true;
+      }
+    }
 
     if (earlyExit) break;
   } // end for iy

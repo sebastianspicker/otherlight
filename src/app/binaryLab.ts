@@ -8,7 +8,7 @@ const DAY_SEC = 86_400;
 export const DEFAULT_BINARY_LAB_CONFIG_V4: SimulationConfigV4 = {
   version: "4",
   mode: "detached-binary-lab",
-  observer: { dir: { x: 1, y: 0, z: 1 } },
+  observer: { dir: { x: 1 / Math.SQRT2, y: 0, z: 1 / Math.SQRT2 } },
   binaryLab: {
     enabled: true,
     hideSkyUntilReveal: true,

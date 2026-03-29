@@ -14,6 +14,10 @@ export type RunWithErrorHandlingOptions = {
 /**
  * Runs fn (sync or async). On success, sets statusEl to getSuccessMessage() if provided.
  * On catch, sets statusEl to errorPrefix + error.message.
+ *
+ * This is a fire-and-forget wrapper: the returned `void` intentionally discards the
+ * internal Promise so callers do not need to await. If a caller needs the resolved
+ * value or wants to propagate errors, use try/catch directly instead of this helper.
  */
 export function runWithErrorHandling(
   fn: () => void | Promise<void>,

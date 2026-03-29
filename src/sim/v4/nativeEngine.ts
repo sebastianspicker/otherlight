@@ -14,6 +14,7 @@ import type {
 } from "../v3/types";
 import { G_SI } from "../../core/units";
 import { getDidacticsHook } from "../didacticsHook";
+import { estimateTransitEvent } from "../transitTiming";
 import { projectToSky } from "../../physics/frames";
 import type { Vec3 } from "../../physics/vec3";
 import { vAdd, vIsFinite, vLenSq, vNormalizeOrZero, vSub } from "../../physics/vec3";
@@ -33,46 +34,6 @@ import {
 function sourceOrbit(body: NativeBodyState): OrbitElements | undefined {
   const src = body.source;
   return "orbit" in src ? (src as PlanetBodyV4 | MoonBodyV4).orbit : undefined;
-}
-
-function estimateTransitEvent(args: {
-  tObsSec: number;
-  rStar: number;
-  rBody: number;
-  sky: { x: number; y: number; z: number };
-  vSky: { x: number; y: number; z: number };
-  periodSec?: number;
-  t0Sec?: number;
-}): {
-  centerSec: number;
-  durationSec: number;
-  ingressSec: number;
-  egressSec: number;
-  ttvSec?: number;
-} | null {
-  const { tObsSec, rStar, rBody, sky, vSky, periodSec, t0Sec } = args;
-  const speed2 = vSky.x * vSky.x + vSky.y * vSky.y;
-  if (!(rStar > 0 && rBody > 0 && speed2 > 0 && sky.z > 0)) return null;
-  const dtCenter = -((sky.x * vSky.x + sky.y * vSky.y) / speed2);
-  const cx = sky.x + vSky.x * dtCenter;
-  const cy = sky.y + vSky.y * dtCenter;
-  const cz = sky.z + vSky.z * dtCenter;
-  if (!(cz > 0)) return null;
-  const b = Math.hypot(cx, cy);
-  const rSum = rStar + rBody;
-  if (!(b < rSum)) return null;
-  const chord = Math.sqrt(Math.max(0, rSum * rSum - b * b)) * 2;
-  const durationSec = chord / Math.sqrt(speed2);
-  const centerSec = tObsSec + dtCenter;
-  const ingressSec = centerSec - durationSec / 2;
-  const egressSec = centerSec + durationSec / 2;
-  let ttvSec: number | undefined;
-  if (Number.isFinite(periodSec) && periodSec! > 0 && Number.isFinite(t0Sec)) {
-    const k = Math.round((centerSec - t0Sec!) / periodSec!);
-    const centerEphem = t0Sec! + k * periodSec!;
-    ttvSec = centerSec - centerEphem;
-  }
-  return { centerSec, durationSec, ingressSec, egressSec, ttvSec };
 }
 
 function computeTimingAndObservables(
@@ -117,7 +78,7 @@ function computeTimingAndObservables(
     t0Sec: sourceOrbit(planet)?.t0 ?? (planet.id === snap.stars[1]?.id ? config.orbits.binary.t0 : undefined),
   });
 
-  let mEvent: ReturnType<typeof estimateTransitEvent> = null;
+  let mEvent: ReturnType<typeof estimateTransitEvent> = undefined;
   let relMoonSky: { x: number; y: number; z: number } | undefined;
   let moonVSky: { x: number; y: number; z: number } | undefined;
   if (moon) {

@@ -93,6 +93,9 @@ function orbitElementsAt(orbit: OrbitElements | OrbitElementsProvider, t: number
 function orbitElementsKey(el: OrbitElements): string {
   // Includes all geometry + phase relevant fields.
   // Quantize for stable string keys (cache only).
+  // TODO: A numeric hash (e.g. combining bit patterns via imul) would be faster than
+  // string concatenation with .toFixed(12) on every call. The current approach is correct
+  // but allocates intermediate strings each frame when the cache misses.
   const q = (v: number) => (Number.isFinite(v) ? v.toFixed(12) : "NaN");
   return [el.a, el.e, el.inc, el.Omega, el.omega, el.period, el.t0].map(q).join("|");
 }
@@ -113,10 +116,7 @@ function closePathIfRequested(pts: OrbitPathPoint2D[], close: boolean): OrbitPat
   // Avoid duplicating if a caller ever provides already-closed data.
   if (first.x === last.x && first.y === last.y) return pts;
 
-  const out = new Array<OrbitPathPoint2D>(pts.length + 1);
-  for (let i = 0; i < pts.length; i++) out[i] = pts[i];
-  out[pts.length] = { x: first.x, y: first.y };
-  return out;
+  return [...pts, { x: first.x, y: first.y }];
 }
 
 class ProviderIdRegistry {
@@ -270,20 +270,29 @@ export class OrbitPathCache {
         const includeEndpoint = false;
         const denom = includeEndpoint ? Math.max(1, N - 1) : N;
         const pts: OrbitPathPoint2D[] = new Array(N);
-        let success = true;
+        let failedAt = -1;
         for (let i = 0; i < N; i++) {
           const tt = t + (i / denom) * period;
           const nb = getNBodyStateAt(params, tt);
           if (!nb) {
-            success = false;
+            failedAt = i;
             break;
           }
           const sky = projectToSky(vSub(nb.state.rP, nb.state.rS), observerDir);
           pts[i] = { x: sky.x, y: sky.y };
         }
-        if (success) {
+        if (failedAt < 0) {
+          // All points sampled successfully via N-body.
+          pts2Base = pts;
+        } else if (failedAt > 0) {
+          // Partial N-body success: fill remaining points with Keplerian fallback.
+          const fallback3 = sampleOrbitSky(params.planet.orbit, t, N, observerDir);
+          for (let i = failedAt; i < N; i++) {
+            pts[i] = { x: fallback3[i].x, y: fallback3[i].y };
+          }
           pts2Base = pts;
         }
+        // If failedAt === 0, no N-body points at all; fall through to full Keplerian below.
       } catch {
         // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
       }
@@ -355,20 +364,32 @@ export class OrbitPathCache {
         const includeEndpoint = false;
         const denom = includeEndpoint ? Math.max(1, N - 1) : N;
         const pts: OrbitPathPoint2D[] = new Array(N);
-        let success = true;
+        let failedAt = -1;
         for (let i = 0; i < N; i++) {
           const tt = t + (i / denom) * moonPeriod;
           const nb = getNBodyStateAt(params, tt);
           if (!nb) {
-            success = false;
+            failedAt = i;
             break;
           }
           const sky = projectToSky(vSub(nb.state.rM, nb.state.rS), observerDir);
           pts[i] = { x: sky.x, y: sky.y };
         }
-        if (success) {
+        if (failedAt < 0) {
+          // All points sampled successfully via N-body.
+          pts2Base = pts;
+        } else if (failedAt > 0) {
+          // Partial N-body success: fill remaining points with Keplerian fallback.
+          const paramsForFallback: SystemParams = params.observer
+            ? { ...params, observer: { ...params.observer, dir: observerDir } }
+            : { ...params, observer: { dir: observerDir } };
+          const fallback3 = sampleMoonOrbitSkyAbsolute(paramsForFallback, t, N);
+          for (let i = failedAt; i < N; i++) {
+            pts[i] = { x: fallback3[i].x, y: fallback3[i].y };
+          }
           pts2Base = pts;
         }
+        // If failedAt === 0, no N-body points at all; fall through to full Keplerian below.
       } catch {
         // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
       }

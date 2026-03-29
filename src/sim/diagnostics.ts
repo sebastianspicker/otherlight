@@ -34,7 +34,6 @@ export function computeExoDiagnostics(
   const bPlanet = impactParameterFromSkyY(kin.planetSky.y, params.star.r);
   const bMoon = kin.moonSky ? impactParameterFromSkyY(kin.moonSky.y, params.star.r) : undefined;
 
-  const tRef = toFiniteNumber(exo?.tRef, 0);
   const sampledNow = sampleSystemState({
     system: params,
     tObs: t,
@@ -42,20 +41,29 @@ export function computeExoDiagnostics(
     kinAtT: kin,
     velDtSec: exo?.velDt,
   });
-  const sampledRef = sampleSystemState({
-    system: params,
-    tObs: tRef,
-    observerDir,
-    velDtSec: exo?.velDt,
-  });
+
+  // Skip the expensive reference-epoch sample only when exomoon timing is
+  // completely absent (no config object at all). When the config exists but
+  // is disabled, still compute diagnostics so they remain available in the UI.
+  const sampledRef = exo
+    ? sampleSystemState({
+        system: params,
+        tObs: toFiniteNumber(exo.tRef, 0),
+        observerDir,
+        velDtSec: exo.velDt,
+      })
+    : undefined;
 
   const vNowSky = projectToSky(sampledNow.planet.v, observerDir);
-  const vRefSky = projectToSky(sampledRef.planet.v, observerDir);
   const vPlanetSkyRaw = Math.hypot(vNowSky.x, vNowSky.y);
-  const vPlanetSkyRefRaw = Math.hypot(vRefSky.x, vRefSky.y);
-
   const vPlanetSky = Number.isFinite(vPlanetSkyRaw) ? vPlanetSkyRaw : undefined;
-  const vPlanetSkyRef = Number.isFinite(vPlanetSkyRefRaw) ? vPlanetSkyRefRaw : undefined;
+
+  let vPlanetSkyRef: number | undefined;
+  if (sampledRef) {
+    const vRefSky = projectToSky(sampledRef.planet.v, observerDir);
+    const vPlanetSkyRefRaw = Math.hypot(vRefSky.x, vRefSky.y);
+    vPlanetSkyRef = Number.isFinite(vPlanetSkyRefRaw) ? vPlanetSkyRefRaw : undefined;
+  }
 
   let tdvRatio: number | undefined;
   if (vPlanetSkyRef !== undefined && vPlanetSky !== undefined) {

@@ -15,22 +15,28 @@ export type DidacticsRuntimeState = {
   latestSignals?: DidacticSignals;
 };
 
-export function ensureDidacticsConfig(system: SystemParams): void {
-  system.didactics = system.didactics ?? {};
-  system.didactics.enabled = system.didactics.enabled ?? true;
-  system.didactics.activeLessonId = system.didactics.activeLessonId ?? DEFAULT_LESSON_ID;
-  system.didactics.autoAssess = system.didactics.autoAssess ?? true;
+export function ensureDidacticsConfig(system: SystemParams): SystemParams {
+  const prev = system.didactics ?? {};
+  return {
+    ...system,
+    didactics: {
+      ...prev,
+      enabled: prev.enabled ?? true,
+      activeLessonId: prev.activeLessonId ?? DEFAULT_LESSON_ID,
+      autoAssess: prev.autoAssess ?? true,
+    },
+  };
 }
 
 export function initDidacticsRuntime(system: SystemParams, tSec: number): DidacticsRuntimeState {
-  ensureDidacticsConfig(system);
   const learning = resolveLearningState(system, tSec);
-  system.didactics!.learningState = learning;
+  if (system.didactics) {
+    system.didactics = { ...system.didactics, learningState: learning };
+  }
   return { learning };
 }
 
 export function syncDidacticsControlsFromParams(system: SystemParams, refs: UiRefs): void {
-  ensureDidacticsConfig(system);
   const select = refs.didLessonSelect;
   const auto = refs.didAutoAssess;
   if (select) select.value = system.didactics?.activeLessonId ?? DEFAULT_LESSON_ID;
@@ -68,7 +74,7 @@ export function forceNextLessonStep(
   runtime: DidacticsRuntimeState,
   tSec: number,
 ): DidacticsRuntimeState {
-  const lesson = getLessonById(runtime.learning.lessonId);
+  const lesson = getLessonById(runtime.learning.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
   const maxStep = Math.max(lesson.steps.length - 1, 0);
   const next = {
     ...runtime.learning,

@@ -191,6 +191,15 @@ export function computeAdditiveFluxComponents(
 
   // Mutual events: compute visible fractions for diagnostics.
   // Limitation: Mutual events assume uniform disks for the bodies, ignoring phase geometry overlap (crescent-on-crescent effects).
+  //
+  // NOTE (intentional divergence): The diagnostic visible fractions below use a
+  // simple pairwise circle-occultation model (visibleFractionWhenOcculted) so
+  // they are cheap to compute and easy to interpret.  The flux-affecting
+  // fractions computed further down use visibleFractionWithOcculters, which
+  // handles the union of all occulters simultaneously (star + mutual body).
+  // The two models can disagree when multiple occulters overlap.  This is
+  // intentional: diagnostics show the mutual-event geometry in isolation,
+  // while flux uses the physically accurate combined occlusion.
   let planetVisibleFraction: number | undefined;
   let moonVisibleFraction: number | undefined;
 

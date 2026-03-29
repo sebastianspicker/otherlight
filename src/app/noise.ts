@@ -44,6 +44,8 @@ export function initNoiseState(p: SystemParams): NoiseState {
 
 export function syncNoiseStateFromParams(state: NoiseState, p: SystemParams): NoiseState {
   const nextSeed = readNoiseSeedFromParams(p);
+  // Object.is is used instead of === so that NaN === NaN would fail but Object.is(NaN, NaN)
+  // returns true. This is harmless because seeds are always finite numbers in practice.
   if (Object.is(nextSeed, state.noiseSeed)) return state;
   return {
     noiseSeed: nextSeed,
