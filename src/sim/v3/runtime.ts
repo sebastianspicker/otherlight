@@ -315,7 +315,11 @@ export function createSimulation(config: SimulationConfigV3): SimulationRuntime 
       // Inclusive upper bound with a small tolerance to avoid floating-point fencepost misses.
       // Use index-based loop to prevent floating-point drift from repeated accumulation.
       const tol = Math.abs(range.stepSec) * 1e-9;
-      for (let i = 0, t = range.startSec; t <= range.endSec + tol; i++, t = range.startSec + i * range.stepSec) {
+      for (
+        let i = 0, t = range.startSec;
+        t <= range.endSec + tol;
+        i++, t = range.startSec + i * range.stepSec
+      ) {
         steps.push(stepAt(t));
       }
 

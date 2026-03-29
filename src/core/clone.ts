@@ -12,10 +12,7 @@ import type { SystemParams } from "./types";
  */
 export function deepClone<T>(value: T): T {
   const rec = value as Record<string, Record<string, unknown> | undefined>;
-  if (
-    typeof rec?.planet?.orbit === "function" ||
-    typeof rec?.moon?.orbitAroundPlanet === "function"
-  ) {
+  if (typeof rec?.planet?.orbit === "function" || typeof rec?.moon?.orbitAroundPlanet === "function") {
     throw new Error("deepClone: cannot clone function-valued orbit providers; resolve them first");
   }
   return JSON.parse(JSON.stringify(value)) as T;

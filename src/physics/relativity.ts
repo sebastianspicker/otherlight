@@ -87,8 +87,8 @@ export function applyApsidalPrecession(
 
   if (Math.abs(precessionPerOrbitRad) > 0.1) {
     console.warn(
-      `applyApsidalPrecession: |precessionPerOrbitRad| = ${Math.abs(precessionPerOrbitRad).toFixed(4)} rad (~${(Math.abs(precessionPerOrbitRad) * 180 / Math.PI).toFixed(2)} deg/orbit). ` +
-      `The linear secular model may be inaccurate for rates above ~0.1 rad/orbit.`,
+      `applyApsidalPrecession: |precessionPerOrbitRad| = ${Math.abs(precessionPerOrbitRad).toFixed(4)} rad (~${((Math.abs(precessionPerOrbitRad) * 180) / Math.PI).toFixed(2)} deg/orbit). ` +
+        `The linear secular model may be inaccurate for rates above ~0.1 rad/orbit.`,
     );
   }
 

@@ -323,7 +323,9 @@ export class LightCurvePlot {
     // X mapping
     let finiteCount = 0;
     if (this.opts.xMode === "time" && this.t.length === n) {
-      for (const v of this.t) { if (Number.isFinite(v) && ++finiteCount >= 2) break; }
+      for (const v of this.t) {
+        if (Number.isFinite(v) && ++finiteCount >= 2) break;
+      }
     }
     const haveTime = finiteCount >= 2;
 
@@ -343,9 +345,7 @@ export class LightCurvePlot {
       const tSpan = Math.max(1e-12, tMax - tMin);
       xOf = (i: number) => {
         const tt = this.t[i];
-        return Number.isFinite(tt)
-          ? xOfPlot(((tt - tMin) / tSpan) * plotW)
-          : xOfPlot((i / (n - 1)) * plotW);
+        return Number.isFinite(tt) ? xOfPlot(((tt - tMin) / tSpan) * plotW) : xOfPlot((i / (n - 1)) * plotW);
       };
     }
 

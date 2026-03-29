@@ -44,15 +44,16 @@
       <header class="app-header">
         <h1>Transit-Exomoon-Lightcurve-Simulator</h1>
         <p class="help">
-          Conventions: radii and distances in metres (SI), times in seconds, angles in degrees (UI) / radians (internal).
+          Conventions: radii and distances in metres (SI), times in seconds, angles in degrees (UI) / radians
+          (internal).
         </p>
 
         <details class="help">
           <summary>Measurement pipeline (Plot)</summary>
           <p class="help">
             <b>physical</b>: idealised instantaneous flux from geometric occultation.<br />
-            <b>measured</b>: optional boxcar smearing (cadence + sub-samples) plus optional
-            instrument noise / systematics with persistent state.
+            <b>measured</b>: optional boxcar smearing (cadence + sub-samples) plus optional instrument noise /
+            systematics with persistent state.
           </p>
         </details>
 
@@ -103,8 +104,9 @@
                   role="img"
                   aria-label="Sky-plane visualization"
                 ></canvas>
-                <p id=”skyBlackboxHint” class=”help” hidden>
-                  Black-box mode active: only the light curve is visible. Select a hypothesis and click “Reveal sky” to see the orbital geometry.
+                <p id="”skyBlackboxHint”" class="”help”" hidden>
+                  Black-box mode active: only the light curve is visible. Select a hypothesis and click
+                  “Reveal sky” to see the orbital geometry.
                 </p>
 
                 <details class="help">
@@ -131,7 +133,8 @@
                   </div>
 
                   <p class="help">
-                    Note: the debug overlay is purely visual and does not affect the physics or photometry calculations.
+                    Note: the debug overlay is purely visual and does not affect the physics or photometry
+                    calculations.
                   </p>
                 </details>
               </div>
@@ -200,12 +203,12 @@
                     <fieldset>
                       <legend>Star</legend>
                       <div class="grid">
-                        <label for="starR"
-                          data-tooltip="Stellar radius. Solar value: 6.957 x 10^8 m."
+                        <label for="starR" data-tooltip="Stellar radius. Solar value: 6.957 x 10^8 m."
                           >R<sub>*</sub> [m]
                           <input id="starR" type="number" min="1e6" max="2e9" step="1e6" value="695700000"
                         /></label>
-                        <label for="baselineFlux"
+                        <label
+                          for="baselineFlux"
                           data-tooltip="Out-of-transit normalised flux (typically 1.0)."
                           >F<sub>0</sub>
                           <input id="baselineFlux" type="number" min="0" step="0.000001" value="1"
@@ -219,16 +222,20 @@
                         </label>
                       </div>
 
-                      <label class="inline" for="ldEnabled"
+                      <label
+                        class="inline"
+                        for="ldEnabled"
                         data-tooltip="Quadratic limb-darkening law: I(mu)/I(1) = 1 - u1(1-mu) - u2(1-mu)^2"
                         >Limb darkening (quadratic) <input id="ldEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label for="ldU1"
+                        <label
+                          for="ldU1"
                           data-tooltip="Linear limb-darkening coefficient. Typical solar: ~0.40."
                           >u<sub>1</sub> <input id="ldU1" type="number" step="0.01" value="0.35"
                         /></label>
-                        <label for="ldU2"
+                        <label
+                          for="ldU2"
                           data-tooltip="Quadratic limb-darkening coefficient. Typical solar: ~0.25."
                           >u<sub>2</sub> <input id="ldU2" type="number" step="0.01" value="0.25"
                         /></label>
@@ -303,12 +310,15 @@
 
                       <details>
                         <summary>Starspot evolution (rotation)</summary>
-                        <label class="inline" for="spotEvolutionEnabled"
+                        <label
+                          class="inline"
+                          for="spotEvolutionEnabled"
                           data-tooltip="Simulate starspot rotation across the visible disk, producing quasi-periodic flux modulation."
                           >Enabled <input id="spotEvolutionEnabled" type="checkbox"
                         /></label>
                         <div class="grid">
-                          <label for="spotRotationPeriod"
+                          <label
+                            for="spotRotationPeriod"
                             data-tooltip="Stellar rotation period. The Sun: ~2.16 x 10^6 s (25 days)."
                             >P<sub>rot</sub> [s]
                             <input id="spotRotationPeriod" type="number" min="1" step="1" value="20000"
@@ -330,16 +340,20 @@
 
                     <fieldset>
                       <legend>Measurement / Smearing</legend>
-                      <label class="inline" for="smearEnabled"
+                      <label
+                        class="inline"
+                        for="smearEnabled"
                         data-tooltip="Simulate finite integration time by averaging sub-samples within each cadence window (boxcar smearing)."
                         >Enabled <input id="smearEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label for="cadenceSec"
+                        <label
+                          for="cadenceSec"
                           data-tooltip="Integration time per measurement point. Kepler long cadence: ~1800 s; TESS: ~120 s."
                           >Cadence [s] <input id="cadenceSec" type="number" min="0" step="1" value="60"
                         /></label>
-                        <label for="nSubsamples"
+                        <label
+                          for="nSubsamples"
                           data-tooltip="Number of sub-exposures averaged per cadence. More sub-samples improve accuracy of the smeared light curve."
                           >N<sub>sub</sub>
                           <input id="nSubsamples" type="number" min="1" max="4096" step="1" value="9"
@@ -381,12 +395,14 @@
                     <fieldset>
                       <legend>Planet</legend>
                       <div class="grid">
-                        <label for="planetR"
+                        <label
+                          for="planetR"
                           data-tooltip="Planetary radius. Jupiter: 6.99 x 10^7 m; Earth: 6.37 x 10^6 m."
                           >R<sub>p</sub> [m]
                           <input id="planetR" type="number" min="1e6" max="2e8" step="1e6" value="69911000"
                         /></label>
-                        <label for="planetA"
+                        <label
+                          for="planetA"
                           data-tooltip="Semi-major axis of the planetary orbit around the star."
                           >a<sub>p</sub> [m]
                           <input
@@ -397,16 +413,20 @@
                             step="1e7"
                             value="7479893535"
                         /></label>
-                        <label for="planetE"
+                        <label
+                          for="planetE"
                           data-tooltip="Orbital eccentricity (0 = circular, must be < 1). Capped at 0.95 for numerical stability."
-                          >e<sub>p</sub> <input id="planetE" type="number" min="0" max="0.999" step="0.001" value="0.08"
+                          >e<sub>p</sub>
+                          <input id="planetE" type="number" min="0" max="0.999" step="0.001" value="0.08"
                         /></label>
-                        <label for="planetInc"
+                        <label
+                          for="planetInc"
                           data-tooltip="Orbital inclination. 90 deg = edge-on (maximum transit probability). Related to impact parameter b."
                           >i<sub>p</sub> [deg]
                           <input id="planetInc" type="number" min="0" max="180" step="0.01" value="89.2"
                         /></label>
-                        <label for="planetPeriod"
+                        <label
+                          for="planetPeriod"
                           data-tooltip="Orbital period. Use Kepler's third law: P^2 = (4 pi^2 / G M*) a^3."
                           >P<sub>p</sub> [s]
                           <input
@@ -417,7 +437,8 @@
                             step="100"
                             value="352657.7453"
                         /></label>
-                        <label for="planetMass"
+                        <label
+                          for="planetMass"
                           data-tooltip="Planetary mass. Jupiter: 1.898 x 10^27 kg; Earth: 5.972 x 10^24 kg."
                           >M<sub>p</sub> [kg]
                           <input
@@ -430,17 +451,21 @@
                         /></label>
                       </div>
 
-                      <label class="inline" for="planetPhaseEnabled"
+                      <label
+                        class="inline"
+                        for="planetPhaseEnabled"
                         data-tooltip="Include reflected light and thermal emission phase curves. These produce flux variations as a function of orbital phase."
                         >Phase curve <input id="planetPhaseEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label for="planetReflAmp"
+                        <label
+                          for="planetReflAmp"
                           data-tooltip="Amplitude of the reflected-light component (geometric albedo contribution)."
                           >A<sub>refl</sub>
                           <input id="planetReflAmp" type="number" min="0" step="0.0001" value="0.001"
                         /></label>
-                        <label for="planetThermAmp"
+                        <label
+                          for="planetThermAmp"
                           data-tooltip="Amplitude of the thermal emission component (day-side temperature contribution)."
                           >A<sub>therm</sub>
                           <input id="planetThermAmp" type="number" min="0" step="0.0001" value="0.0005"
@@ -572,7 +597,9 @@
 
                       <details>
                         <summary>Atmosphere transmission</summary>
-                        <label class="inline" for="atmEnabled"
+                        <label
+                          class="inline"
+                          for="atmEnabled"
                           data-tooltip="Simulate wavelength-dependent atmospheric absorption during transit (transmission spectroscopy). The effective transit radius increases at wavelengths with stronger absorption."
                           >Enabled <input id="atmEnabled" type="checkbox"
                         /></label>
@@ -606,32 +633,36 @@
 
                     <fieldset>
                       <legend>Moon (Exomoon)</legend>
-                      <label class="inline" for="moonEnabled"
+                      <label
+                        class="inline"
+                        for="moonEnabled"
                         data-tooltip="Enable an exomoon orbiting the planet. Its transit signature appears as additional dips or TTV/TDV signals."
                         >Enabled <input id="moonEnabled" type="checkbox" checked
                       /></label>
                       <div class="grid">
-                        <label for="moonR"
+                        <label
+                          for="moonR"
                           data-tooltip="Moon radius. Earth: 6.37 x 10^6 m; Ganymede: 2.63 x 10^6 m."
                           >R<sub>m</sub> [m]
                           <input id="moonR" type="number" min="1e5" max="5e7" step="1e5" value="6371000"
                         /></label>
-                        <label for="moonA"
+                        <label
+                          for="moonA"
                           data-tooltip="Semi-major axis of the moon's orbit around the planet."
                           >a<sub>m</sub> [m]
                           <input id="moonA" type="number" min="1e7" max="1e9" step="1e6" value="200000000"
                         /></label>
-                        <label for="moonE"
-                          data-tooltip="Orbital eccentricity of the moon (0 = circular)."
-                          >e<sub>m</sub> <input id="moonE" type="number" min="0" max="0.999" step="0.001" value="0.02"
+                        <label for="moonE" data-tooltip="Orbital eccentricity of the moon (0 = circular)."
+                          >e<sub>m</sub>
+                          <input id="moonE" type="number" min="0" max="0.999" step="0.001" value="0.02"
                         /></label>
-                        <label for="moonInc"
+                        <label
+                          for="moonInc"
                           data-tooltip="Inclination of the moon's orbit relative to the planet's orbital plane."
                           >i<sub>m</sub> [deg]
                           <input id="moonInc" type="number" min="0" max="180" step="0.01" value="10"
                         /></label>
-                        <label for="moonPeriod"
-                          data-tooltip="Orbital period of the moon around the planet."
+                        <label for="moonPeriod" data-tooltip="Orbital period of the moon around the planet."
                           >P<sub>m</sub> [s]
                           <input
                             id="moonPeriod"
@@ -641,7 +672,8 @@
                             step="100"
                             value="49928.74206"
                         /></label>
-                        <label for="moonMass"
+                        <label
+                          for="moonMass"
                           data-tooltip="Moon mass. Earth: 5.972 x 10^24 kg; Ganymede: 1.48 x 10^23 kg."
                           >M<sub>m</sub> [kg]
                           <input id="moonMass" type="number" min="0" max="1e27" step="1e23" value="5.9722e24"
@@ -808,12 +840,15 @@
 
                     <fieldset>
                       <legend>N-body dynamics</legend>
-                      <label class="inline" for="nbodyEnabled"
+                      <label
+                        class="inline"
+                        for="nbodyEnabled"
                         data-tooltip="Enable full N-body gravitational integration (Leapfrog). Required for transit timing variations (TTV/TDV)."
                         >Enabled <input id="nbodyEnabled" type="checkbox"
                       /></label>
                       <div class="grid">
-                        <label for="nbodyMuStar"
+                        <label
+                          for="nbodyMuStar"
                           data-tooltip="Standard gravitational parameter of the star: mu = G x M. Sun: 1.327 x 10^20 m^3 s^-2."
                           >&mu;<sub>*</sub> [m<sup>3</sup> s<sup>-2</sup>]
                           <input
@@ -824,7 +859,8 @@
                             step="1e18"
                             value="1.3271645321e20"
                         /></label>
-                        <label for="nbodyMuPlanet"
+                        <label
+                          for="nbodyMuPlanet"
                           data-tooltip="Standard gravitational parameter of the planet. Jupiter: 1.267 x 10^17 m^3 s^-2."
                           >&mu;<sub>p</sub> [m<sup>3</sup> s<sup>-2</sup>]
                           <input
@@ -835,7 +871,8 @@
                             step="1e16"
                             value="1.2668689059e17"
                         /></label>
-                        <label for="nbodyMuMoon"
+                        <label
+                          for="nbodyMuMoon"
                           data-tooltip="Standard gravitational parameter of the moon. Earth: 3.986 x 10^14 m^3 s^-2."
                           >&mu;<sub>m</sub> [m<sup>3</sup> s<sup>-2</sup>]
                           <input
@@ -846,12 +883,14 @@
                             step="1e14"
                             value="3.986025446e14"
                         /></label>
-                        <label for="nbodyDtMax"
+                        <label
+                          for="nbodyDtMax"
                           data-tooltip="Maximum integrator time step. Smaller values improve accuracy but reduce performance."
                           >&Delta;t<sub>max</sub> [s]
                           <input id="nbodyDtMax" type="number" min="0.1" max="1e6" step="1" value="60"
                         /></label>
-                        <label for="nbodySoftening"
+                        <label
+                          for="nbodySoftening"
                           data-tooltip="Gravitational softening length to prevent singularities at close approach. 0 = no softening."
                           >&epsilon;<sub>soft</sub> [m]
                           <input id="nbodySoftening" type="number" min="0" max="1e8" step="1e5" value="0"
@@ -933,34 +972,45 @@
 
                     <fieldset>
                       <legend>Relativistic effects</legend>
-                      <label class="inline" for="relEnabled"
+                      <label
+                        class="inline"
+                        for="relEnabled"
                         data-tooltip="Enable relativistic corrections: light-travel time (Roemer delay), Shapiro delay, and GR apsidal precession."
                         >Enabled <input id="relEnabled" type="checkbox"
                       /></label>
                       <div class="grid">
-                        <label class="inline" for="relLTTE"
+                        <label
+                          class="inline"
+                          for="relLTTE"
                           data-tooltip="Light-travel time effect (Roemer delay). Produces asymmetric transit timing for eccentric orbits."
                           >LTTE <input id="relLTTE" type="checkbox" checked
                         /></label>
-                        <label class="inline" for="relShapiro"
+                        <label
+                          class="inline"
+                          for="relShapiro"
                           data-tooltip="Shapiro time delay from the gravitational field of the star."
                           >Shapiro <input id="relShapiro" type="checkbox" checked
                         /></label>
-                        <label class="inline" for="relGR"
+                        <label
+                          class="inline"
+                          for="relGR"
                           data-tooltip="General-relativistic apsidal precession (periapsis advance)."
                           >GR precession <input id="relGR" type="checkbox" checked
                         /></label>
                         <label for="relC"
-                          >c [m s<sup>-1</sup>] <input id="relC" type="number" min="1e6" step="1" value="299792458"
+                          >c [m s<sup>-1</sup>]
+                          <input id="relC" type="number" min="1e6" step="1" value="299792458"
                         /></label>
                       </div>
                       <div class="grid">
-                        <label for="relPlanetPrec"
+                        <label
+                          for="relPlanetPrec"
                           data-tooltip="Apsidal precession rate of the planetary orbit per orbital period."
                           >&Delta;&omega;<sub>p</sub>/orbit [deg]
                           <input id="relPlanetPrec" type="number" step="0.001" value="0"
                         /></label>
-                        <label for="relMoonPrec"
+                        <label
+                          for="relMoonPrec"
                           data-tooltip="Apsidal precession rate of the moon's orbit per orbital period."
                           >&Delta;&omega;<sub>m</sub>/orbit [deg]
                           <input id="relMoonPrec" type="number" step="0.001" value="0"
@@ -1088,11 +1138,13 @@
 
             <section class="panel">
               <h3>Guided Labs</h3>
-              <p class="help" style="margin-bottom: 8px;">
-                Work through structured exercises: form a hypothesis, adjust parameters, and verify predictions against the simulated light curve.
+              <p class="help" style="margin-bottom: 8px">
+                Work through structured exercises: form a hypothesis, adjust parameters, and verify
+                predictions against the simulated light curve.
               </p>
               <div class="row">
-                <label class="inline"
+                <label
+                  class="inline"
                   data-tooltip="In black-box mode, the sky view is hidden. Form your hypothesis about the system geometry based on the light curve alone, then reveal the sky to test it."
                 >
                   Hypothesis
@@ -1108,13 +1160,16 @@
                 <button id="didRevealSkyBtn" type="button">Reveal sky</button>
               </div>
               <div class="row">
-                <label class="inline"
+                <label
+                  class="inline"
                   data-tooltip="Select a guided lesson with step-by-step checks. Each step verifies quantitative criteria against your simulation state."
                 >
                   Lesson
                   <select id="didLessonSelect" aria-label="Select lesson"></select>
                 </label>
-                <label class="inline" for="didAutoAssess"
+                <label
+                  class="inline"
+                  for="didAutoAssess"
                   data-tooltip="Automatically evaluate check criteria on each simulation frame."
                 >
                   Auto assess
@@ -1132,9 +1187,9 @@
 
               <details class="help">
                 <summary>A/B scenario comparison</summary>
-                <p class="help" style="margin-bottom: 6px;">
-                  Compare the current parameter set (A) against a preset (B) at a given time
-                  to isolate which parameter changes drive the observed flux difference.
+                <p class="help" style="margin-bottom: 6px">
+                  Compare the current parameter set (A) against a preset (B) at a given time to isolate which
+                  parameter changes drive the observed flux difference.
                 </p>
                 <div class="row">
                   <label class="inline">

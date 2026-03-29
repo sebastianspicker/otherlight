@@ -242,7 +242,9 @@ export async function initApp(): Promise<void> {
     runWithErrorHandling(
       () =>
         withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-          appState.params = ensureDidacticsConfig(readUIIntoParams(appState.params, uiRefs, appState.scenarioDefaults));
+          appState.params = ensureDidacticsConfig(
+            readUIIntoParams(appState.params, uiRefs, appState.scenarioDefaults),
+          );
           appState.didacticsRuntime = initDidacticsRuntime(appState.params, appState.t);
           syncAllEnableStates(uiRefs);
           await rebuildSimulationFromParams();

@@ -40,7 +40,9 @@ export function interpretDidacticComparison(cmp: DidacticComparison): string {
   const absRvPlanet = Math.abs(cmp.rvPlanetDelta ?? 0);
 
   if (absTransit > 1e-4) {
-    lines.push("Interpretation: Transit geometry changed significantly (impact parameter / radius / inclination).");
+    lines.push(
+      "Interpretation: Transit geometry changed significantly (impact parameter / radius / inclination).",
+    );
   } else if (absTotal > 1e-4) {
     lines.push(
       "Interpretation: Additive photometry dominates the change (reflection / emission / stellar variability).",

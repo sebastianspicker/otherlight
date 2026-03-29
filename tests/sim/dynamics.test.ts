@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
-import { isNBodyEnabled, getNBodyStateAt, getNBodyConservationAt, resetNBodyCache } from "../../src/sim/dynamics";
+import {
+  isNBodyEnabled,
+  getNBodyStateAt,
+  getNBodyConservationAt,
+  resetNBodyCache,
+} from "../../src/sim/dynamics";
 import type { SystemParams } from "../../src/core/types";
 
 beforeEach(() => {

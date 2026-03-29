@@ -251,8 +251,8 @@ export function resolveLearningState(system: SystemParams, tSec: number): Learni
 export function computeDidacticSignals(system: SystemParams, step: StepResult): DidacticSignals | undefined {
   if (!system.didactics?.enabled) return undefined;
 
-  const lesson = getLessonById(system.didactics.activeLessonId ?? DEFAULT_LESSON_ID)
-    ?? getLessonById(DEFAULT_LESSON_ID)!;
+  const lesson =
+    getLessonById(system.didactics.activeLessonId ?? DEFAULT_LESSON_ID) ?? getLessonById(DEFAULT_LESSON_ID)!;
   // TODO: resolveLearningState is called again here redundantly — consider reusing the result above.
   const state = resolveLearningState(system, toFiniteNumber(step.meta?.t, 0));
   const numeric = collectNumericSignals(system, step);

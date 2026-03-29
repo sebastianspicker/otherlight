@@ -295,10 +295,9 @@ export function bodyPhaseFlux(params: {
 
   // When thermalModelAdvanced is enabled it supersedes the simpler thermalInertia model
   // to avoid double thermal scaling (both apply redistribution + response gain independently).
-  const effectiveThermalInertia =
-    params.thermalModelAdvanced?.enabled
-      ? { ...norm.thermalInertia, enabled: false }
-      : norm.thermalInertia;
+  const effectiveThermalInertia = params.thermalModelAdvanced?.enabled
+    ? { ...norm.thermalInertia, enabled: false }
+    : norm.thermalInertia;
 
   const therm = thermalFluxTerm({
     alpha,
