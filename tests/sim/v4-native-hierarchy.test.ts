@@ -63,4 +63,37 @@ describe("v4 native hierarchy runtime", () => {
     expect(step.kinematics.moonSky).toBeDefined();
     expect((step.debug?.nOcculters ?? 0) >= 1).toBe(true);
   });
+
+  it("rejects broken hierarchy references instead of falling back to the origin", async () => {
+    const cfg: SimulationConfigV4 = {
+      version: "4",
+      mode: "general-lab",
+      runtime: { mode: "realtime" },
+      observer: { dir: { x: 1, y: 0, z: 0 } },
+      bodies: {
+        stars: [
+          { id: "star-a", r: 1, m: 2, luminosityScale: 1 },
+          { id: "star-b", r: 0.8, m: 1, luminosityScale: 0 },
+        ],
+        planets: [
+          {
+            id: "planet-a",
+            r: 0.25,
+            m: 0.01,
+            orbit: { a: 0.05, e: 0, inc: 0, Omega: 0, omega: 0, period: 8, t0: 0 },
+            parentStarId: "missing-star",
+            parentSystem: "star",
+          },
+        ],
+        moons: [],
+      },
+      orbits: {
+        binary: { a: 3, e: 0, inc: 0, Omega: 0, omega: 0, period: 20, t0: 0 },
+        hierarchy: [{ childId: "planet-a", parentId: "missing-star", relation: "orbits" }],
+      },
+      photometry: { baselineFlux: 1 },
+    };
+
+    expect(() => createSimulationV4(cfg)).toThrow("invalid V4 config");
+  });
 });

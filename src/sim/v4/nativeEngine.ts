@@ -344,7 +344,7 @@ export function stepNativeSimulationV4(args: {
   const decomposition: StepFluxDecomposition = {
     stellarA: flux.stellarA,
     stellarB: flux.stellarB,
-    binaryEclipseTerms: flux.transitFactor,
+    binaryEclipseTerms: flux.binaryEclipseFactor,
     additivePlanetary: flux.additivePlanetary + flux.forwardScattering + flux.ringScattering,
     additiveLunar: flux.additiveLunar,
     instrumental: 0,
@@ -370,7 +370,7 @@ export function stepNativeSimulationV4(args: {
     },
     integratorStats: {
       mode: mode === "reference" ? "adaptive-verlet" : "fixed-verlet",
-      nbodyEnabled: true,
+      nbodyEnabled: Boolean(config.dynamics?.nbodyPlanetMoon?.enabled),
     },
     energyDrift: conservation.physicsEnergyDrift,
     angularMomentumDrift: conservation.physicsAngularMomentumDrift,

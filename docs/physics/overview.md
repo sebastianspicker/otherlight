@@ -50,6 +50,11 @@ flowchart LR
 The default runtime entry point is `createSimulationV4(config).step(tObsSec)` in `src/sim/v4/runtime.ts`.
 `stepSystem(params, tSec)` in `src/sim/sim.ts` remains the internal physics kernel used by compatibility and focused module tests.
 
+Current runtime note:
+
+- The active V4 runtime strips `photometry.forwardScattering` and `photometry.ringScattering` on input.
+- Those terms remain available in the legacy/V3 photometry path, but not yet in native V4.
+
 Runtime contracts and consistency:
 
 - `src/sim/observerContract.ts` enforces strict time/observer invariants.

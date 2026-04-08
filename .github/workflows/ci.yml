@@ -191,6 +191,12 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Coverage thresholds
+        run: pnpm test:coverage
+
+      - name: Dependency hygiene
+        run: pnpm audit:deps
+
       - name: Literature benchmarks
         run: pnpm literature-benchmarks
 

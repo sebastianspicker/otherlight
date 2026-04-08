@@ -21,4 +21,14 @@ describe("v4 runtime migration loader", () => {
     expect(out.bodies.planets).toHaveLength(1);
     expect(out.orbits.binary.period).toBe(8.0e5);
   });
+
+  it("rejects malformed V4 payloads instead of treating them as legacy configs", () => {
+    expect(() =>
+      normalizeScenarioInputToV4({
+        version: "4",
+        mode: "general-lab",
+        bodies: {},
+      }),
+    ).toThrow("invalid V4 config");
+  });
 });
