@@ -10,11 +10,20 @@
 
 ```mermaid
 flowchart LR
-  PR["pull_request / push"] --> CI["CI workflow: verify"]
+  PR["pull_request / push"] --> CI["CI workflow"]
   PR --> SEC["Security workflow: gitleaks"]
   PR --> CQL["CodeQL workflow: analyze"]
   SCH["weekly schedule"] --> DEP["Dependency audit workflow"]
-  CI --> GATE["Required quality gate"]
+  CI --> LINT["lint"]
+  CI --> TYPE["typecheck"]
+  CI --> TEST["test matrix"]
+  CI --> BUILD["build"]
+  TEST --> QG["quality gates"]
+  LINT --> GATE["Required quality gate"]
+  TYPE --> GATE
+  TEST --> GATE
+  BUILD --> GATE
+  QG --> GATE
   SEC --> GATE
   CQL --> GATE
   DEP --> REPORT["Security report and remediation backlog"]
@@ -24,8 +33,12 @@ flowchart LR
 
 - `CI` (`.github/workflows/ci.yml`)
   - Triggers: `pull_request`, `push` on `main`
-  - Job: `verify` (Node 22)
-  - Main command: `pnpm ci:verify`
+  - Jobs:
+    - `lint` (Node 22): `pnpm ci:lint`
+    - `typecheck` (Node 22): `pnpm ci:typecheck`
+    - `test` (Node 20 and 22 matrix): `pnpm ci:test`
+    - `build` (Node 22): `pnpm ci:build`
+    - `quality-gates` (Node 22): `pnpm test:coverage`, `pnpm audit:deps`, `pnpm literature-benchmarks`, `pnpm didactics-acceptance`, `pnpm perf-smoke`, `pnpm physics-regression`, `pnpm migration-regression`
   - Cache: pnpm store via `actions/cache` (`~/.pnpm-store`)
 
 - `Security` (`.github/workflows/security.yml`)
@@ -43,7 +56,7 @@ flowchart LR
 
 ## Local execution
 
-Full local CI parity:
+Core local verification helper:
 
 ```bash
 ./scripts/ci-local.sh
@@ -60,7 +73,19 @@ Equivalent manual steps:
 ```bash
 pnpm install --frozen-lockfile
 pnpm ci:verify
+pnpm test:coverage
+pnpm audit:deps
 pnpm audit:security
+```
+
+Additional CI `quality-gates` commands not covered by `./scripts/ci-local.sh`:
+
+```bash
+pnpm literature-benchmarks
+pnpm didactics-acceptance
+pnpm perf-smoke
+pnpm physics-regression
+pnpm migration-regression
 ```
 
 ## Determinism controls
@@ -76,11 +101,13 @@ pnpm audit:security
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
-- Optional strict gates used in release prep:
-  - `pnpm literature-benchmarks`
-  - `pnpm didactics-acceptance`
-  - `pnpm perf-smoke`
-  - `pnpm migration-regression`
+- `pnpm test:coverage`
+- `pnpm audit:deps`
+- `pnpm literature-benchmarks`
+- `pnpm didactics-acceptance`
+- `pnpm perf-smoke`
+- `pnpm physics-regression`
+- `pnpm migration-regression`
 
 ## Secrets and permissions
 
@@ -95,14 +122,16 @@ If deployment/secrets are added later:
 
 Before cutting a release (tag or GitHub release):
 
-1. Run full verification: `pnpm ci:verify`
-2. Optionally run strict gates: `pnpm literature-benchmarks`, `pnpm didactics-acceptance`, `pnpm perf-smoke`, `pnpm migration-regression`
-3. Ensure `CHANGELOG.md` has a versioned section for the release
-4. Tag the version (e.g. `git tag v0.1.0`) and push
-5. Optional: refresh real-systems snapshot with `pnpm data:real-systems:refresh` if you want the release to ship updated NASA data
+1. Run the core local verification helper: `./scripts/ci-local.sh`
+2. Run the remaining specialty gates: `pnpm literature-benchmarks`, `pnpm didactics-acceptance`, `pnpm perf-smoke`, `pnpm physics-regression`, `pnpm migration-regression`
+3. Optionally run production dependency audit too: `CI_AUDIT=1 ./scripts/ci-local.sh`
+4. Ensure `CHANGELOG.md` has a versioned section for the release
+5. Tag the version (e.g. `git tag v0.1.0`) and push
+6. Optional: refresh real-systems snapshot with `pnpm data:real-systems:refresh` if you want the release to ship updated NASA data
 
 ## Extending CI safely
 
-- Keep PR checks fast (`lint`, `typecheck`, `test`, `build`).
-- Run expensive or non-deterministic checks on schedule/manual triggers.
+- Keep the core PR jobs explicit and parallelized (`lint`, `typecheck`, `test`, `build`).
+- Put additional high-signal quality gates behind a dedicated job rather than hiding them inside one opaque script step.
+- Keep scheduled/manual workflows for checks that should not block every PR.
 - Always set `timeout-minutes`, explicit permissions, and caching strategy.

@@ -185,7 +185,9 @@ This keeps app startup deterministic and avoids frontend runtime API calls.
 - `pnpm lint`: lint and formatting checks
 - `pnpm typecheck`: TypeScript checks
 - `pnpm test`: unit and smoke tests
+- `pnpm test:coverage`: coverage threshold gate
 - `pnpm ci:verify`: lint + typecheck + test + build
+- `pnpm audit:deps`: dependency hygiene gate
 - `pnpm migrate:v4`: migrate legacy scenario payloads to V4
 - `pnpm literature-benchmarks`: benchmark gate
 - `pnpm didactics-acceptance`: didactics flow gate
@@ -231,6 +233,8 @@ Primary local verification:
 
 ```bash
 pnpm ci:verify              # lint + typecheck + all tests + build
+pnpm test:coverage          # coverage thresholds
+pnpm audit:deps             # dependency hygiene
 pnpm literature-benchmarks   # physics correctness vs. published results
 pnpm didactics-acceptance    # educational flow validation
 pnpm perf-smoke              # interactive performance budget (<50ms/step)
