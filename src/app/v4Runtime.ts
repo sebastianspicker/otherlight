@@ -1,6 +1,7 @@
 import type { SystemParams } from "../core/types";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";
 import type { RuntimeModeV4, SimulationConfigV4 } from "../sim/v4";
+import { collectUnsupportedPhotometryFeaturesV4 } from "../sim/v4/migrate";
 import type { BinaryLabConfigV4 } from "../sim/v4/types";
 import { sanitizeStaticOrbit } from "../sim/v4/orbitSanitizer";
 import {
@@ -68,13 +69,32 @@ export function createSimulationRuntimeV4FromParams(args: {
   referenceClient?: ReferenceClientOptions;
 }): AppSimulationRuntime {
   const cfg = buildSimulationConfigV4FromParams(args);
+  const unsupportedFeatures = collectUnsupportedPhotometryFeaturesV4(cfg);
+  let pendingStatusMessage =
+    unsupportedFeatures.length > 0
+      ? "Forward scattering and ring scattering are disabled in V4 runtime; ignoring those parameters."
+      : undefined;
+
+  const takeStatusMessage = (delegate?: () => string | undefined): string | undefined => {
+    if (pendingStatusMessage) {
+      const message = pendingStatusMessage;
+      pendingStatusMessage = undefined;
+      return message;
+    }
+    return delegate?.();
+  };
+
   if (args.runtimeMode === "reference") {
-    return createReferenceSimulationV4(cfg, args.referenceClient);
+    const runtime = createReferenceSimulationV4(cfg, args.referenceClient);
+    return {
+      ...runtime,
+      takeStatusMessage: () => takeStatusMessage(runtime.takeStatusMessage),
+    };
   }
   const rt = createSimulationV4(cfg);
   return {
     ...rt,
     dispose: () => {},
-    takeStatusMessage: () => undefined,
+    takeStatusMessage: () => takeStatusMessage(),
   };
 }

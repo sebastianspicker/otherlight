@@ -8,6 +8,8 @@ fi
 
 CI=1 pnpm install --frozen-lockfile
 pnpm ci:verify
+pnpm test:coverage
+pnpm audit:deps
 
 if [[ "${CI_AUDIT:-}" == "1" ]]; then
   pnpm audit --audit-level=high --prod

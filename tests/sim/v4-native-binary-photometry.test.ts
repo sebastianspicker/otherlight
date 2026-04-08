@@ -34,6 +34,7 @@ describe("v4 native binary photometry", () => {
     // transitFactor only reflects planet/moon transits, not binary eclipses.
     // With no planets, transitFactor should be 1.
     expect(step.flux.transitFactor).toBe(1);
+    expect(step.flux.decomposition?.binaryEclipseTerms).toBeLessThan(1);
     expect(step.flux.decomposition?.stellarA).toBeLessThan(1);
     expect(step.flux.decomposition?.stellarB).toBeGreaterThan(0);
   });

@@ -42,6 +42,7 @@ export type FluxBundle = {
   stellarA: number;
   stellarB: number;
   stellarPreTransit: number;
+  binaryEclipseFactor: number;
   transitFactor: number;
   additivePlanetary: number;
   additiveLunar: number;
@@ -180,12 +181,30 @@ export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number)
   byId.set(starBState.id, starBState);
   stars.push(starAState, starBState);
 
+  const requireKnownParent = (
+    bodyKind: "planet" | "moon",
+    bodyId: string,
+    parentId?: string,
+  ): NativeBodyState | undefined => {
+    if (!parentId) {
+      if (bodyKind === "moon") {
+        throw new Error(`buildNativeSnapshot: moon "${bodyId}" is missing a parent planet reference.`);
+      }
+      return undefined;
+    }
+    const parent = byId.get(parentId);
+    if (!parent) {
+      throw new Error(`buildNativeSnapshot: unknown parent "${parentId}" for ${bodyKind} "${bodyId}".`);
+    }
+    return parent;
+  };
+
   for (const p of config.bodies.planets) {
     const rel = orbitStateAt(p.orbit, tObsSec);
     const parentFromHierarchy = hmap.get(p.id);
     const parentId =
       p.parentSystem === "circumbinary" ? undefined : (p.parentStarId ?? parentFromHierarchy ?? starA.id);
-    const parent = parentId ? byId.get(parentId) : undefined;
+    const parent = requireKnownParent("planet", p.id, parentId);
     const rBase = parent ? parent.rAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
     const vBase = parent ? parent.vAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
     const rAbs = vAdd(rBase, rel.r);
@@ -211,7 +230,7 @@ export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number)
     const rel = orbitStateAt(m.orbit, tObsSec);
     const parentFromHierarchy = hmap.get(m.id);
     const parentId = m.parentPlanetId ?? parentFromHierarchy;
-    const parent = parentId ? byId.get(parentId) : undefined;
+    const parent = requireKnownParent("moon", m.id, parentId);
     const rBase = parent ? parent.rAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
     const vBase = parent ? parent.vAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
     const rAbs = vAdd(rBase, rel.r);
@@ -266,6 +285,7 @@ export function computeFluxBundle(
 ): FluxBundle {
   const luminousStars = snap.stars.filter((s) => s.active && s.luminosity > 0 && s.r > 0);
   const visByStar = new Map<string, number>();
+  const visByStarBinary = new Map<string, number>();
 
   const nonStars = snap.bodies.filter((b) => b.kind !== "star" && b.active && b.r > 0);
   let nOcculters = 0;
@@ -273,6 +293,7 @@ export function computeFluxBundle(
   for (const st of luminousStars) {
     const areaStar = Math.PI * st.r * st.r;
     let blocked = 0;
+    let blockedByStars = 0;
     const occulters: NativeBodyState[] = [
       ...nonStars,
       ...luminousStars.filter((o) => o.id !== st.id && o.sky.z > st.sky.z),
@@ -284,15 +305,24 @@ export function computeFluxBundle(
       const overlap = circleOverlapArea(st.r, oc.r, d);
       const opacity = oc.kind === "star" ? 1 : atmosphereOpacityForOcculter(config, oc);
       blocked += overlap * opacity;
+      if (oc.kind === "star") blockedByStars += overlap;
       if (st.id === snap.stars[0]?.id && oc.kind !== "star") nOcculters++;
     }
     const vis = clamp01(1 - Math.min(1, blocked / areaStar));
+    const visBinary = clamp01(1 - Math.min(1, blockedByStars / areaStar));
     visByStar.set(st.id, vis);
+    visByStarBinary.set(st.id, visBinary);
   }
 
   const stellarA = (snap.stars[0]?.luminosity ?? 0) * (visByStar.get(snap.stars[0]?.id ?? "") ?? 1);
   const stellarB = (snap.stars[1]?.luminosity ?? 0) * (visByStar.get(snap.stars[1]?.id ?? "") ?? 1);
+  const stellarBaseline = luminousStars.reduce((sum, star) => sum + star.luminosity, 0);
+  const stellarFromBinaryEclipses = luminousStars.reduce(
+    (sum, star) => sum + star.luminosity * (visByStarBinary.get(star.id) ?? 1),
+    0,
+  );
   const stellarFromEclipses = stellarA + stellarB;
+  const binaryEclipseFactor = stellarBaseline > 0 ? clamp01(stellarFromBinaryEclipses / stellarBaseline) : 1;
 
   const primaryStar = snap.stars[0];
   const phot = config.photometry;
@@ -398,6 +428,7 @@ export function computeFluxBundle(
     stellarA,
     stellarB,
     stellarPreTransit,
+    binaryEclipseFactor,
     transitFactor,
     additivePlanetary,
     additiveLunar,

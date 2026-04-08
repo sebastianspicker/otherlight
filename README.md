@@ -46,6 +46,7 @@ Interactive browser simulation for exoplanet transit photometry, binary eclipses
 - Detached eclipsing binary lab as default teaching mode.
 - Realtime and reference runtime profiles.
 - Transit, limb darkening, atmosphere hooks, phase curves, and instrument noise.
+- Forward and ring scattering remain V3-only for now and are stripped from the active V4 runtime path.
 - Dynamic diagnostics (timing, conservation, RV, astrometry).
 - Didactics: black-box flow, hypothesis gate, locks, hints, compare labs, rubric scoring.
 - Versioned "real systems" snapshot from NASA Exoplanet Archive.
@@ -249,6 +250,7 @@ Code quality enforcement:
 - Relativity corrections are modelled with practical approximations for browser execution.
 - Atmospheric and stellar modules expose advanced hooks but are not a full radiative-transfer research solver.
 - Some high-fidelity effects are intentionally profile-gated to preserve interactive performance.
+- Forward scattering and ring scattering are intentionally disabled in the active V4 runtime until a native implementation lands.
 
 ## Contributing and Security
 
