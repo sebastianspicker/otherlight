@@ -1,0 +1,547 @@
+import type {
+  OrbitElements,
+  StepEventTimingSolveBundle,
+  SystemParams,
+  StepConservationDiagnostics,
+  StepFluxDecomposition,
+  StepObservables,
+  StepTimingDiagnostics,
+} from "../../core/types";
+import { impactParameterFromProjectedSky } from "../../physics/exomoonTiming";
+import type {
+  PhysicsDiagnosticsV3,
+  RenderSignalsV3,
+  SimulationDidacticsV3,
+  SimulationStepV3,
+} from "../v3/types";
+import { G_SI } from "../../core/units";
+import { getDidacticsHook } from "../didacticsHook";
+import { estimateTransitEventWithDiagnostics } from "../transitTiming";
+import { projectToSky } from "../../physics/frames";
+import type { Vec3 } from "../../physics/vec3";
+import { vAdd, vIsFinite, vLenSq, vNormalizeOrZero, vSub } from "../../physics/vec3";
+import type {
+  MoonBodyV4,
+  PlanetBodyV4,
+  RuntimeExecutionModeV4,
+  RuntimeModeV4,
+  SimulationConfigV4,
+} from "./types";
+import {
+  buildNativeSnapshot,
+  computeFluxBundle,
+  finiteOrDefault,
+  orbitStateAt,
+  type ConservationBaseline,
+  type FluxBundle,
+  type NativeBodyState,
+  type NativeSnapshot,
+} from "./nativeModel";
+import {
+  detachedBinaryBaselineFlux as resolveDetachedBinaryBaselineFlux,
+  displayFluxValueForConfig,
+} from "./binaryBaseline";
+
+/** Safely extract orbit from a body source, returning undefined for StarBodyV4 (which has no orbit). */
+function sourceOrbit(body: NativeBodyState): OrbitElements | undefined {
+  const src = body.source;
+  return "orbit" in src ? (src as PlanetBodyV4 | MoonBodyV4).orbit : undefined;
+}
+
+function computeTimingAndObservables(
+  config: SimulationConfigV4,
+  snap: NativeSnapshot,
+  tObsSec: number,
+): {
+  timing?: StepTimingDiagnostics;
+  eventTimingConvergence?: StepEventTimingSolveBundle;
+  observables?: StepObservables;
+  bPlanet?: number;
+  bMoon?: number;
+  relPlanetSky: { x: number; y: number; z: number };
+  relMoonSky?: { x: number; y: number; z: number };
+  vPlanetSky?: number;
+  vPlanetSkyRef?: number;
+  tdvRatio?: number;
+} {
+  const starRef = snap.stars[0];
+  const planet = snap.planets[0] ?? snap.stars[1];
+  const moon = snap.moons[0];
+  const obs = snap.observerDir;
+  const useExactTiming = config.runtime?.executionMode === "scientific-browser";
+
+  const rv = (v: Vec3): number => {
+    const d = vNormalizeOrZero(obs);
+    if (!vIsFinite(v) || vLenSq(d) <= 0) return 0;
+    return -(v.x * d.x + v.y * d.y + v.z * d.z);
+  };
+
+  const relPlanetSky = {
+    x: planet.sky.x - starRef.sky.x,
+    y: planet.sky.y - starRef.sky.y,
+    z: planet.sky.z - starRef.sky.z,
+  };
+  const planetVSky = projectToSky(vSub(planet.vAbs, starRef.vAbs), obs);
+  const pEvent = estimateTransitEventWithDiagnostics({
+    tObsSec,
+    rStar: starRef.r,
+    rBody: planet.r,
+    sky: relPlanetSky,
+    vSky: planetVSky,
+    periodSec:
+      sourceOrbit(planet)?.period ??
+      (planet.id === snap.stars[1]?.id ? config.orbits.binary.period : undefined),
+    t0Sec: sourceOrbit(planet)?.t0 ?? (planet.id === snap.stars[1]?.id ? config.orbits.binary.t0 : undefined),
+    sampleAt: useExactTiming
+      ? (trialSec) => {
+          const trialSnap = buildNativeSnapshot(config, trialSec);
+          const trialStar = trialSnap.stars[0];
+          const trialPlanet = trialSnap.planets[0] ?? trialSnap.stars[1];
+          if (!trialStar || !trialPlanet) return undefined;
+          return {
+            sky: {
+              x: trialPlanet.sky.x - trialStar.sky.x,
+              y: trialPlanet.sky.y - trialStar.sky.y,
+              z: trialPlanet.sky.z - trialStar.sky.z,
+            },
+            vSky: projectToSky(vSub(trialPlanet.vAbs, trialStar.vAbs), obs),
+          };
+        }
+      : undefined,
+  });
+
+  let mEvent: ReturnType<typeof estimateTransitEventWithDiagnostics> | undefined;
+  let relMoonSky: { x: number; y: number; z: number } | undefined;
+  let moonVSky: { x: number; y: number; z: number } | undefined;
+  if (moon) {
+    relMoonSky = {
+      x: moon.sky.x - starRef.sky.x,
+      y: moon.sky.y - starRef.sky.y,
+      z: moon.sky.z - starRef.sky.z,
+    };
+    moonVSky = projectToSky(vSub(moon.vAbs, starRef.vAbs), obs);
+    mEvent = estimateTransitEventWithDiagnostics({
+      tObsSec,
+      rStar: starRef.r,
+      rBody: moon.r,
+      sky: relMoonSky,
+      vSky: moonVSky,
+      periodSec: sourceOrbit(moon)?.period,
+      t0Sec: sourceOrbit(moon)?.t0,
+      sampleAt: useExactTiming
+        ? (trialSec) => {
+            const trialSnap = buildNativeSnapshot(config, trialSec);
+            const trialStar = trialSnap.stars[0];
+            const trialMoon = trialSnap.moons[0];
+            if (!trialStar || !trialMoon) return undefined;
+            return {
+              sky: {
+                x: trialMoon.sky.x - trialStar.sky.x,
+                y: trialMoon.sky.y - trialStar.sky.y,
+                z: trialMoon.sky.z - trialStar.sky.z,
+              },
+              vSky: projectToSky(vSub(trialMoon.vAbs, trialStar.vAbs), obs),
+            };
+          }
+        : undefined,
+    });
+  }
+
+  const timing: StepTimingDiagnostics | undefined =
+    pEvent.event || mEvent?.event
+      ? {
+          planetTransitCenterSec: pEvent.event?.centerSec,
+          planetTransitDurationSec: pEvent.event?.durationSec,
+          planetIngressSec: pEvent.event?.ingressSec,
+          planetEgressSec: pEvent.event?.egressSec,
+          planetTtvSec: pEvent.event?.ttvSec,
+          moonTransitCenterSec: mEvent?.event?.centerSec,
+          moonTransitDurationSec: mEvent?.event?.durationSec,
+          moonIngressSec: mEvent?.event?.ingressSec,
+          moonEgressSec: mEvent?.event?.egressSec,
+          moonTtvSec: mEvent?.event?.ttvSec,
+        }
+      : undefined;
+  const eventTimingConvergence: StepEventTimingSolveBundle = {
+    planet: pEvent.diagnostics,
+    moon: mEvent?.diagnostics,
+  };
+
+  const vPlanetSky = Math.hypot(planetVSky.x, planetVSky.y);
+  const rawTRef = config.dynamics?.exomoonTimingShape?.tRef;
+  const tRef =
+    config.runtime?.executionMode === "scientific-browser"
+      ? typeof rawTRef === "number" && Number.isFinite(rawTRef)
+        ? rawTRef
+        : undefined
+      : finiteOrDefault(rawTRef, 0);
+  const pRelRef =
+    tRef !== undefined
+      ? orbitStateAt(
+          planet.id === snap.stars[1]?.id
+            ? config.orbits.binary
+            : (sourceOrbit(planet) ?? config.orbits.binary),
+          tRef,
+        )
+      : undefined;
+  const vPlanetSkyRef =
+    pRelRef !== undefined
+      ? Math.hypot(projectToSky(pRelRef.v, obs).x, projectToSky(pRelRef.v, obs).y)
+      : undefined;
+  const tdvRatio = vPlanetSky > 0 && vPlanetSkyRef !== undefined ? vPlanetSkyRef / vPlanetSky : undefined;
+  const bPlanetRaw = impactParameterFromProjectedSky(relPlanetSky, starRef.r);
+  const bPlanet = Number.isFinite(bPlanetRaw) ? bPlanetRaw : undefined;
+  const bMoonRaw = relMoonSky ? impactParameterFromProjectedSky(relMoonSky, starRef.r) : Number.NaN;
+  const bMoon = Number.isFinite(bMoonRaw) ? bMoonRaw : undefined;
+
+  const observables: StepObservables = {
+    rvStar: rv(starRef.vAbs),
+    rvPlanet: rv(planet.vAbs),
+    rvMoon: moon ? rv(moon.vAbs) : undefined,
+    astrometricOffsetStar: { x: starRef.sky.x, y: starRef.sky.y },
+    timing,
+  };
+
+  return {
+    timing,
+    observables,
+    eventTimingConvergence,
+    bPlanet,
+    bMoon,
+    relPlanetSky,
+    relMoonSky,
+    vPlanetSky,
+    vPlanetSkyRef,
+    tdvRatio,
+  };
+}
+
+function computeConservation(
+  snapshot: NativeSnapshot,
+  baseline?: ConservationBaseline,
+): {
+  conservation?: StepConservationDiagnostics;
+  physicsEnergyDrift?: number;
+  physicsAngularMomentumDrift?: number;
+  baseline: ConservationBaseline;
+} {
+  const dynBodies = snapshot.bodies.filter((b) => b.m > 0 && b.active);
+  if (dynBodies.length < 2) return { baseline: baseline ?? {} };
+
+  let kinetic = 0;
+  let potential = 0;
+  let l = { x: 0, y: 0, z: 0 };
+  for (const b of dynBodies) {
+    const v2 = vLenSq(b.vAbs);
+    kinetic += 0.5 * b.m * v2;
+    l = vAdd(l, {
+      x: b.m * (b.rAbs.y * b.vAbs.z - b.rAbs.z * b.vAbs.y),
+      y: b.m * (b.rAbs.z * b.vAbs.x - b.rAbs.x * b.vAbs.z),
+      z: b.m * (b.rAbs.x * b.vAbs.y - b.rAbs.y * b.vAbs.x),
+    });
+  }
+  for (let i = 0; i < dynBodies.length; i++) {
+    for (let j = i + 1; j < dynBodies.length; j++) {
+      const rij = Math.sqrt(vLenSq(vSub(dynBodies[i].rAbs, dynBodies[j].rAbs)));
+      if (rij > 0) potential += (-G_SI * dynBodies[i].m * dynBodies[j].m) / rij;
+    }
+  }
+  const energy = kinetic + potential;
+  const angularMomentum = Math.sqrt(vLenSq(l));
+
+  const nextBaseline: ConservationBaseline = baseline ?? { energy, angularMomentum };
+  const conservation: StepConservationDiagnostics = {
+    energy,
+    angularMomentum,
+  };
+  const eBase = nextBaseline.energy;
+  const lBase = nextBaseline.angularMomentum;
+  const physicsEnergyDrift =
+    Number.isFinite(eBase) && eBase !== 0 ? (energy - eBase!) / Math.abs(eBase!) : undefined;
+  const physicsAngularMomentumDrift =
+    Number.isFinite(lBase) && lBase !== 0 ? (angularMomentum - lBase!) / Math.abs(lBase!) : undefined;
+  return { conservation, physicsEnergyDrift, physicsAngularMomentumDrift, baseline: nextBaseline };
+}
+
+function buildDidacticSignals(
+  config: SimulationConfigV4,
+  tObsSec: number,
+  flux: FluxBundle,
+  diag: ReturnType<typeof computeTimingAndObservables>,
+): SimulationDidacticsV3 | undefined {
+  if (!config.didactics?.enabled) return undefined;
+  const star = config.bodies.stars[0];
+  const binaryOccultor = config.bodies.stars[1];
+  const planet =
+    config.bodies.planets[0] ??
+    (binaryOccultor
+      ? {
+          r: binaryOccultor.r,
+          m: binaryOccultor.m,
+          orbit: config.orbits.binary,
+        }
+      : undefined);
+  if (!planet) return { signals: undefined };
+  const pseudo: SystemParams = {
+    observer: config.observer,
+    star: { r: star.r, m: star.m, photometry: config.photometry },
+    planet: { r: planet.r, m: planet.m, orbit: planet.orbit },
+    moon: config.bodies.moons[0]
+      ? {
+          r: config.bodies.moons[0].r,
+          m: config.bodies.moons[0].m,
+          orbitAroundPlanet: config.bodies.moons[0].orbit,
+        }
+      : undefined,
+    dynamics: config.dynamics,
+    didactics: config.didactics,
+  };
+  const didacticsHook = getDidacticsHook();
+  const signals = didacticsHook
+    ? didacticsHook(pseudo, {
+        fluxTotal: flux.total,
+        fluxTransitFactor: flux.transitFactor,
+        planetSky: diag.relPlanetSky,
+        moonSky: diag.relMoonSky,
+        meta: {
+          t: tObsSec,
+          bPlanet: diag.bPlanet,
+          bMoon: diag.bMoon,
+          tdvRatio: diag.tdvRatio,
+          observables: diag.observables,
+          baselineFluxUsed: detachedBinaryBaselineFlux(config, flux),
+          displayFluxValue: displayFluxValueForConfig(config, flux.total),
+        },
+      })
+    : undefined;
+  return {
+    signals,
+    learningProgress: config.didactics.learningState,
+  };
+}
+
+function detachedBinaryBaselineFlux(config: SimulationConfigV4, flux: FluxBundle): number {
+  if (config.mode !== "detached-binary-lab") {
+    return Math.max(0, flux.stellarPreTransit - flux.stellarVariability);
+  }
+  return resolveDetachedBinaryBaselineFlux(config) as number;
+}
+
+function renderSignalsFromSnapshot(
+  snap: NativeSnapshot,
+  flux: FluxBundle,
+  timing: StepTimingDiagnostics | undefined,
+): RenderSignalsV3 {
+  const starRef = snap.stars[0];
+  const relSky = (body: NativeBodyState | undefined) => {
+    if (!body || !starRef) return undefined;
+    return {
+      x: body.sky.x - starRef.sky.x,
+      y: body.sky.y - starRef.sky.y,
+      z: body.sky.z - starRef.sky.z,
+    };
+  };
+  const visualPlanet = snap.planets[0] ?? snap.stars[1];
+  const visualMoon = snap.moons[0];
+  const occulterGeometry: RenderSignalsV3["occulterGeometry"] = [];
+  const visualPlanetSky = relSky(visualPlanet);
+  if (visualPlanet && visualPlanet.r > 0 && visualPlanetSky) {
+    occulterGeometry.push({
+      body: visualPlanet.kind === "star" ? "star" : "planet",
+      kind: "circle",
+      center: visualPlanetSky,
+      radius: visualPlanet.r,
+    });
+  }
+  const visualMoonSky = relSky(visualMoon);
+  if (visualMoon && visualMoon.r > 0 && visualMoonSky) {
+    occulterGeometry.push({
+      body: "moon",
+      kind: "circle",
+      center: visualMoonSky,
+      radius: visualMoon.r,
+    });
+  }
+  const transitActive = flux.transitFactor < 0.999999;
+  const mutual = (flux.planetVisibleFraction ?? 1) < 0.999999 || (flux.moonVisibleFraction ?? 1) < 0.999999;
+
+  const timingMarkers: RenderSignalsV3["timingMarkers"] = [];
+  if (timing) {
+    const items: Array<[string, number | undefined]> = [
+      ["planetTransitCenterSec", timing.planetTransitCenterSec],
+      ["planetTransitDurationSec", timing.planetTransitDurationSec],
+      ["planetTtvSec", timing.planetTtvSec],
+      ["moonTransitCenterSec", timing.moonTransitCenterSec],
+      ["moonTransitDurationSec", timing.moonTransitDurationSec],
+      ["moonTtvSec", timing.moonTtvSec],
+    ];
+    for (const [id, seconds] of items) {
+      if (Number.isFinite(seconds)) timingMarkers.push({ id, seconds });
+    }
+  }
+
+  return {
+    occulterGeometry,
+    eventMarkers: [
+      { id: "transit", kind: "transit", label: "Transit attenuation active", active: transitActive },
+      { id: "mutual", kind: "mutual-event", label: "Mutual event active", active: mutual },
+      {
+        id: "timing-correction",
+        kind: "timing",
+        label: "Timing diagnostics available",
+        active: timingMarkers.length > 0,
+      },
+      {
+        id: "conjunction",
+        kind: "conjunction",
+        label: "Conjunction",
+        active: false,
+      },
+    ],
+    timingMarkers,
+    visibilityFractions: {
+      planet: flux.planetVisibleFraction,
+      moon: flux.moonVisibleFraction,
+    },
+    fluxComponents: {
+      transitFactor: flux.transitFactor,
+      stellarPreTransit: flux.stellarPreTransit,
+      stellarVariability: flux.stellarVariability,
+      planetPhase: flux.additivePlanetary,
+      moonPhase: flux.additiveLunar,
+      forwardScattering: flux.forwardScattering,
+      ringScattering: flux.ringScattering,
+      total: flux.total,
+    },
+    orbitFrames: {
+      observerDir: snap.observerDir,
+      planetSky: visualPlanetSky ?? { x: 0, y: 0, z: 0 },
+      moonSky: visualMoonSky,
+    },
+    uncertaintyFlags: [],
+  };
+}
+
+export function stepNativeSimulationV4(args: {
+  config: SimulationConfigV4;
+  tObsSec: number;
+  mode: RuntimeModeV4;
+  executionMode?: RuntimeExecutionModeV4;
+  conservationBaseline?: ConservationBaseline;
+}): {
+  step: SimulationStepV3;
+  conservationBaseline: ConservationBaseline;
+} {
+  const { config, tObsSec, mode } = args;
+  const snap = buildNativeSnapshot(
+    {
+      ...config,
+      runtime: {
+        ...(config.runtime ?? {}),
+        executionMode: args.executionMode ?? config.runtime?.executionMode,
+      },
+    },
+    tObsSec,
+  );
+  const flux = computeFluxBundle(config, snap, tObsSec);
+  const diag = computeTimingAndObservables(config, snap, tObsSec);
+  const conservation = computeConservation(snap, args.conservationBaseline);
+  const didactics = buildDidacticSignals(config, tObsSec, flux, diag);
+  const renderSignals = renderSignalsFromSnapshot(snap, flux, diag.timing);
+
+  const planet = snap.planets[0] ?? snap.stars[1];
+  const moon = snap.moons[0];
+  const decomposition: StepFluxDecomposition = {
+    stellarA: flux.stellarA,
+    stellarB: flux.stellarB,
+    binaryEclipseTerms: flux.binaryEclipseFactor,
+    additivePlanetary: flux.additivePlanetary + flux.forwardScattering + flux.ringScattering,
+    additiveLunar: flux.additiveLunar,
+    instrumental: 0,
+    stellarPreTransit: flux.stellarPreTransit,
+    stellarVariability: flux.stellarVariability,
+    transitFactor: flux.transitFactor,
+    planetPhase: flux.additivePlanetary,
+    moonPhase: flux.additiveLunar,
+    forwardScattering: flux.forwardScattering,
+    ringScattering: flux.ringScattering,
+    total: flux.total,
+  };
+
+  const physicsDiagnostics: PhysicsDiagnosticsV3 = {
+    ltteConvergence: {
+      enabled: Boolean(config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.ltte !== false),
+      status:
+        config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.ltte !== false
+          ? "unavailable"
+          : "disabled",
+      validityFlags:
+        config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.ltte !== false
+          ? ["solver-not-run-native-path"]
+          : undefined,
+    },
+    shapiroConvergence: {
+      enabled: Boolean(
+        config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.shapiro !== false,
+      ),
+      status:
+        config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.shapiro !== false
+          ? "unavailable"
+          : "disabled",
+      validityFlags:
+        config.dynamics?.relativity?.enabled && config.dynamics?.relativity?.shapiro !== false
+          ? ["solver-not-run-native-path"]
+          : undefined,
+    },
+    integratorStats: {
+      mode: mode === "reference" ? "adaptive-verlet" : "fixed-verlet",
+      nbodyEnabled: Boolean(config.dynamics?.nbodyPlanetMoon?.enabled),
+    },
+    energyDrift: conservation.physicsEnergyDrift,
+    angularMomentumDrift: conservation.physicsAngularMomentumDrift,
+    closeEncounterFlags: [],
+  };
+
+  const step: SimulationStepV3 = {
+    tObsSec,
+    kinematics: {
+      planetSky: planet?.sky ?? { x: 0, y: 0, z: 0 },
+      moonSky: moon?.sky,
+    },
+    flux: {
+      total: flux.total,
+      transitFactor: flux.transitFactor,
+      stellarPreTransit: flux.stellarPreTransit,
+      stellarVariability: flux.stellarVariability,
+      planetPhase: flux.additivePlanetary,
+      moonPhase: flux.additiveLunar,
+      forwardScattering: flux.forwardScattering,
+      ringScattering: flux.ringScattering,
+      decomposition,
+    },
+    timing: diag.timing,
+    observables: diag.observables,
+    conservation: conservation.conservation,
+    renderSignals,
+    physicsDiagnostics,
+    didactics,
+    debug: {
+      nOcculters: flux.nOcculters,
+      bPlanet: diag.bPlanet,
+      bMoon: diag.bMoon,
+      tdvRatio: diag.tdvRatio,
+      vPlanetSky: diag.vPlanetSky,
+      vPlanetSkyRef: diag.vPlanetSkyRef,
+      baselineFluxUsed: detachedBinaryBaselineFlux(config, flux),
+      displayFluxValue: displayFluxValueForConfig(config, flux.total),
+      stellarVariabilityFlux: flux.stellarVariability,
+      eventTimingSolvePlanet: diag.eventTimingConvergence?.planet,
+      eventTimingSolveMoon: diag.eventTimingConvergence?.moon,
+    },
+  };
+
+  return {
+    step,
+    conservationBaseline: conservation.baseline,
+  };
+}
