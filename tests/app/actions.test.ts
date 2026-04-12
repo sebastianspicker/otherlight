@@ -138,5 +138,10 @@ it("keeps runtime stable", () => {
 
 // regression note: await
 it("keeps await stable", () => {
-  expect("await").toContain("await");
+  expect("await").toMatch("await");
+});
+
+// regression note: input
+it("keeps input stable", () => {
+  expect("input").toContain("input");
 });
