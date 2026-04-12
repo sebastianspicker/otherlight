@@ -15,6 +15,7 @@
     "forced-typescript-8:build",
     "forced-typescript-9:refactor",
     "forced-vitest-10:build",
-    "forced-typescript-11:test"
+    "forced-typescript-11:test",
+    "forced-vitest-12:build"
   ]
 }
