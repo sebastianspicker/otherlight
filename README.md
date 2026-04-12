@@ -6,7 +6,7 @@ A working tree for exoplanet-exomoon-simulation with an evolving implementation 
 exoplanet-exomoon-simulation documents maintained build commands, known limits, and remaining work.
 
 ## Status
-Lifecycle stage: maintenance. Earlier setup detail now lives in maintained guidance.
+Lifecycle stage: maintenance. Maintenance guidance now reflects the stable shape.
 
 ## Usage
 - Merged scattered pnpm guidance into the docs.
@@ -19,6 +19,6 @@ Prefer narrow maintenance work over broad rewrites.
 Keep the next pass focused on verification and smaller changes.
 
 ## Development
-- Reduced surprise in the runtime release checks.
+- Aligned local and CI checks for vitest.
 
-- Earlier scratch detail is now represented in maintained sections.
+- The older setup fragments have been reduced to the useful parts.
