@@ -68,6 +68,12 @@ docs/LOG.md
 docs/REFACTOR_PLAN.md
 docs/PHYSICS_AUDIT.md
 docs/DEEP-INSPECTION-*.md
+docs/refactor-plan.md
+docs/github-refresh-plan.md
+docs/github-refresh-progress.md
+docs/physics/alignment-audit.md
+docs/didactics/visualization-progress.md
+docs/didactics/edge-case-milestones.md
 
 # Env files & secrets
 .env
