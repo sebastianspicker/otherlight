@@ -18,10 +18,7 @@ function findExtremeSample(args: {
     const tSec = (args.periodSec * index) / samples;
     const value = args.metric(args.stepAt(tSec));
     if (!Number.isFinite(value)) continue;
-    if (
-      (args.mode === "min" && value < bestValue) ||
-      (args.mode === "max" && value > bestValue)
-    ) {
+    if ((args.mode === "min" && value < bestValue) || (args.mode === "max" && value > bestValue)) {
       bestValue = value;
       bestT = tSec;
     }
@@ -148,9 +145,7 @@ describe("v4 atmosphere edge-case flux wiring", () => {
     const featureStep = featureRuntime.step(center.tSec);
     const continuumStep = continuumRuntime.step(center.tSec);
 
-    expect(Math.abs(featureStep.flux.transitFactor - continuumStep.flux.transitFactor)).toBeGreaterThan(
-      1e-5,
-    );
+    expect(Math.abs(featureStep.flux.transitFactor - continuumStep.flux.transitFactor)).toBeGreaterThan(1e-5);
   });
 
   it("adds the configured atmosphereRT refraction term into the V4 plotted total flux", async () => {

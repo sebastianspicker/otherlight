@@ -228,22 +228,22 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 
 ## Documentation
 
-| Topic                     | Path                              |
-| ------------------------- | --------------------------------- |
-| Docs index                | `docs/README.md`                  |
-| Parameters and UI mapping | `docs/params.md`                  |
-| Physics overview          | `docs/physics/overview.md`        |
-| Full derivation           | `docs/physics/full-derivation.md` |
-| N-body details            | `docs/physics/nbody.md`           |
-| Orbit model               | `docs/physics/orbits.md`          |
-| Relativity model          | `docs/physics/relativity.md`      |
-| Photometry model          | `docs/physics/photometry.md`      |
+| Topic                     | Path                                               |
+| ------------------------- | -------------------------------------------------- |
+| Docs index                | `docs/README.md`                                   |
+| Parameters and UI mapping | `docs/params.md`                                   |
+| Physics overview          | `docs/physics/overview.md`                         |
+| Full derivation           | `docs/physics/full-derivation.md`                  |
+| N-body details            | `docs/physics/nbody.md`                            |
+| Orbit model               | `docs/physics/orbits.md`                           |
+| Relativity model          | `docs/physics/relativity.md`                       |
+| Photometry model          | `docs/physics/photometry.md`                       |
 | Visualization contract    | `docs/rendering/physics-visualization-contract.md` |
-| Validation and warnings   | `docs/validation.md`              |
-| CI model                  | `docs/ci.md`                      |
-| Runbook                   | `docs/RUNBOOK.md`                 |
-| Contributing              | `CONTRIBUTING.md`                 |
-| Security policy           | `SECURITY.md`                     |
+| Validation and warnings   | `docs/validation.md`                               |
+| CI model                  | `docs/ci.md`                                       |
+| Runbook                   | `docs/RUNBOOK.md`                                  |
+| Contributing              | `CONTRIBUTING.md`                                  |
+| Security policy           | `SECURITY.md`                                      |
 
 ## Project Layout
 

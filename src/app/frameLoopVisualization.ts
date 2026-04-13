@@ -27,11 +27,7 @@ import {
   pushCappedOverlayPoint,
   sampleBandOverlaySeries,
 } from "./visualizationDidactics";
-import {
-  finitePositive,
-  FIXED_PLOT_MIN_HALF_WINDOW_SEC,
-  FIXED_PLOT_SAMPLE_COUNT,
-} from "./frameLoopFallback";
+import { finitePositive, FIXED_PLOT_MIN_HALF_WINDOW_SEC, FIXED_PLOT_SAMPLE_COUNT } from "./frameLoopFallback";
 
 type FrameLoopVisualizationState = {
   t: number;
@@ -162,10 +158,10 @@ export function pushHistorySamples(
 function shouldShowEpochGhost(params: SystemParams): boolean {
   return Boolean(
     params.dynamics?.exomoonTimingShape?.enabled ||
-      params.dynamics?.nbodyPlanetMoon?.enabled ||
-      params.dynamics?.relativity?.enabled ||
-      params.star.photometry?.spotEvolution?.enabled ||
-      params.star.photometry?.stellarSurface?.enabled,
+    params.dynamics?.nbodyPlanetMoon?.enabled ||
+    params.dynamics?.relativity?.enabled ||
+    params.star.photometry?.spotEvolution?.enabled ||
+    params.star.photometry?.stellarSurface?.enabled,
   );
 }
 
@@ -304,8 +300,9 @@ export function applyDynamicVisualizationState(args: {
   if (range && bandVariants.length > 1) {
     const sampleCount = Math.min(96, Math.max(24, physicalHistory.length));
     const spanSec = Math.max(1, range.endSec - range.startSec);
-    const times = Array.from({ length: sampleCount }, (_, index) =>
-      range.startSec + (index / Math.max(1, sampleCount - 1)) * spanSec,
+    const times = Array.from(
+      { length: sampleCount },
+      (_, index) => range.startSec + (index / Math.max(1, sampleCount - 1)) * spanSec,
     );
     overlaySeries.push(...sampleBandOverlaySeries({ variants: bandVariants, times }));
   }
@@ -408,7 +405,15 @@ export function rebuildFixedPlot(args: {
     const dtSec = i === 0 ? 0 : spanSec / Math.max(1, sampleCount - 1);
     const sampledStep = simulation.step(tSec);
     const physicalFlux = displayFluxFromStep(sampledStep, state.displayFluxScale);
-    const measuredFlux = sampleFluxForPlot(simulation, params, "measured", tSec, dtSec, previewNoiseState, sampledStep);
+    const measuredFlux = sampleFluxForPlot(
+      simulation,
+      params,
+      "measured",
+      tSec,
+      dtSec,
+      previewNoiseState,
+      sampledStep,
+    );
     const fluxForPlot = plotMode === "measured" ? measuredFlux : physicalFlux;
     if (Number.isFinite(fluxForPlot)) {
       lo = Math.min(lo, fluxForPlot);
@@ -459,14 +464,18 @@ export function rebuildFixedPlot(args: {
   );
   overlaySeries.push(...componentOverlaySeriesFromSamples(stepPreview));
   const bandVariants = buildBandVariantSystems(params);
-  if (bandVariants.length > 1) overlaySeries.push(...sampleBandOverlaySeries({ variants: bandVariants, times }));
+  if (bandVariants.length > 1)
+    overlaySeries.push(...sampleBandOverlaySeries({ variants: bandVariants, times }));
   if (state.comparisonCurveSeries?.length) overlaySeries.push(...state.comparisonCurveSeries);
 
   const badges = [...buildMeasurementBadges(params, anchorStep, state.t), ...(state.comparisonBadges ?? [])];
   if (bandVariants.length > 1) badges.push({ label: "chromatic lane", color: "#ffb703" });
   setters.setOverlaySeries(overlaySeries);
   setters.setWindowOverlays(
-    buildGapWindowOverlays(getInstrumentCfgFromPhotometry(params.star.photometry)?.observer, { startSec, endSec }),
+    buildGapWindowOverlays(getInstrumentCfgFromPhotometry(params.star.photometry)?.observer, {
+      startSec,
+      endSec,
+    }),
   );
   setters.setBadges(badges);
   setters.setMarkers(buildLightCurveMarkers(anchorStep));

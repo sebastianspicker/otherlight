@@ -3,10 +3,7 @@ import type { SystemParams } from "../core/types";
 import type { SimulationStepV3 } from "../sim/v3";
 import type { BinaryLabState } from "../didactics/binaryLab";
 import { scaleFluxForDisplay } from "./displayFlux";
-import {
-  applyInstrumentNoiseAndSystematics,
-  resetInstrumentNoiseState,
-} from "../photometry/instrumentNoise";
+import { applyInstrumentNoiseAndSystematics, resetInstrumentNoiseState } from "../photometry/instrumentNoise";
 import { smearedFluxAt } from "../photometry/smearing";
 import { renderScene } from "../render/scene";
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
@@ -15,7 +12,6 @@ import type {
   LightCurveComparisonInset,
   LightCurveOverlayPoint,
   LightCurveOverlaySeries,
-  LightCurveWindowOverlay,
 } from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 import { readClampSmearedFlux, readPlotMode, readPlotTrackingMode } from "../ui/inputs";
@@ -256,7 +252,16 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
 
     if (trackingMode === "fixed") {
       try {
-        rebuildFixedPlot({ simulation, params, plotMode, state, plot, renderer, sampleFluxForPlot, step0: stepV3 });
+        rebuildFixedPlot({
+          simulation,
+          params,
+          plotMode,
+          state,
+          plot,
+          renderer,
+          sampleFluxForPlot,
+          step0: stepV3,
+        });
         state.lastPlottedT = Number.NaN;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = "fixed";

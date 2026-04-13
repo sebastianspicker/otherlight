@@ -22,7 +22,11 @@ import {
   type BinaryLabState,
 } from "../didactics/binaryLab";
 import type { DidacticsRuntimeState } from "./didactics";
-import type { LightCurveBadge, LightCurveComparisonInset, LightCurveOverlaySeries } from "../render/lightCurvePlotTypes";
+import type {
+  LightCurveBadge,
+  LightCurveComparisonInset,
+  LightCurveOverlaySeries,
+} from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 
 export const BINARY_MODE_VALUE = "binary-lab";

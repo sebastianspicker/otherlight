@@ -107,7 +107,13 @@ function drawWindowOverlays(args: {
   if (!timeInfo.haveTime) return;
 
   for (const overlay of windows) {
-    if (!(Number.isFinite(overlay.startSec) && Number.isFinite(overlay.endSec) && overlay.endSec > overlay.startSec)) {
+    if (
+      !(
+        Number.isFinite(overlay.startSec) &&
+        Number.isFinite(overlay.endSec) &&
+        overlay.endSec > overlay.startSec
+      )
+    ) {
       continue;
     }
     const x0 = Math.max(marginLeft, Math.min(marginLeft + plotW, xOfTime(timeInfo, overlay.startSec)));
@@ -115,7 +121,9 @@ function drawWindowOverlays(args: {
     if (!(x1 > x0)) continue;
     ctx.save();
     ctx.fillStyle = overlay.color;
-    ctx.globalAlpha = Number.isFinite(overlay.alpha) ? Math.min(0.75, Math.max(0.08, overlay.alpha as number)) : 0.18;
+    ctx.globalAlpha = Number.isFinite(overlay.alpha)
+      ? Math.min(0.75, Math.max(0.08, overlay.alpha as number))
+      : 0.18;
     ctx.fillRect(x0, marginTop, x1 - x0, plotH);
     if (overlay.label) {
       ctx.fillStyle = "rgba(225, 233, 239, 0.88)";

@@ -453,7 +453,13 @@ export function computeFluxBundle(
       target: "planet" | "moon",
       parentStar: NativeBodyState | undefined,
     ): number => {
-      if (!body || !parentStar || !(body.sky.z > parentStar.sky.z) || (rt.target ?? "planet") !== target || amp <= 0) {
+      if (
+        !body ||
+        !parentStar ||
+        !(body.sky.z > parentStar.sky.z) ||
+        (rt.target ?? "planet") !== target ||
+        amp <= 0
+      ) {
         return 0;
       }
       const contactRadius = parentStar.r + body.r;

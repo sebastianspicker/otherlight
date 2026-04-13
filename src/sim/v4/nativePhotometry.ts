@@ -1,6 +1,9 @@
 import { clamp01, clamp11 } from "../../core/units";
 import type { CircleOcculter } from "../../photometry/occulterCircle";
-import { effectiveCircleAtmosphereOpacity, spectralContaminationWeight } from "../../photometry/atmosphereRT/model";
+import {
+  effectiveCircleAtmosphereOpacity,
+  spectralContaminationWeight,
+} from "../../photometry/atmosphereRT/model";
 import { resolveAndValidateLimbDarkeningForStar } from "../../photometry/limbDarkening";
 import { fluxLimbDarkenedDiskDetailed } from "../../photometry/transitLimbDarkened";
 import type { SimulationConfigV4, StarBodyV4 } from "./types";
@@ -65,12 +68,11 @@ export function resolveWeightedPhotometryBands(config: SimulationConfigV4): Weig
         legacy && legacy.lambdaNm.length === lambdaNm.length ? legacy.tauScale : lambdaNm.map(() => 1);
       const weighted = rawWeights.map((value, index) => {
         const base = Number.isFinite(value) && value > 0 ? value : 0;
-        return (
-          base * spectralContaminationWeight({ lambdaNm: lambdaNm[index], config: phot?.atmosphereRT })
-        );
+        return base * spectralContaminationWeight({ lambdaNm: lambdaNm[index], config: phot?.atmosphereRT });
       });
       const sum = weighted.reduce((acc, value) => acc + value, 0);
-      const normalized = sum > 0 ? weighted.map((value) => value / sum) : lambdaNm.map(() => 1 / lambdaNm.length);
+      const normalized =
+        sum > 0 ? weighted.map((value) => value / sum) : lambdaNm.map(() => 1 / lambdaNm.length);
       return lambdaNm.map((value, index) => ({
         lambdaNm: value,
         weight: normalized[index],
