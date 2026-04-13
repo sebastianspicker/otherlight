@@ -26,7 +26,15 @@ GR correction (approximate):
 - A 1PN Schwarzschild correction is applied for bodies relative to the star.
 - This is a star-centric approximation (valid when muStar dominates).
 
+Learner-visible diagnostics:
+
+- The current UI does not expose the raw integrator state directly. Instead it maps N-body consequences into timing markers, O-C history, barycenter/drift cues, epoch ghosts, and compare overlays.
+- That makes the didactic question "what changed in the observed event?" readable without requiring the learner to inspect phase-space vectors.
+- The rendering/data contract for those overlays is documented in `docs/rendering/physics-visualization-contract.md`.
+
 Related code:
 
 - `src/sim/dynamics.ts`
 - `src/sim/nbody/*`
+- `src/sim/v4/nativeEngine.ts`
+- `src/app/frameLoopVisualization.ts`

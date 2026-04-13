@@ -19,8 +19,7 @@ flowchart TD
 ## Prerequisites
 
 - Node.js 18+ (recommended)
-- pnpm 9 (recommended; lockfile present)
-- npm is supported but not the reproducible path
+- pnpm 9.x for local development (lockfile present)
 
 ## Setup
 
@@ -28,12 +27,6 @@ Recommended (reproducible):
 
 ```bash
 pnpm install --frozen-lockfile
-```
-
-Alternative (npm):
-
-```bash
-npm install
 ```
 
 ## Dev Server
@@ -114,7 +107,8 @@ Notes:
 ## Troubleshooting
 
 - If `pnpm` is missing, install pnpm 9.x and re-run `pnpm install --frozen-lockfile`.
-- If Vite fails to start, clear `node_modules` and reinstall.
+- If `npm run dev` or `pnpm dev` fails with `sh: vite: command not found`, `node_modules` is missing or incomplete. Reinstall with pnpm.
+- If Vite still fails to start after reinstall, clear `node_modules` and reinstall.
 
 ```bash
 rm -rf node_modules

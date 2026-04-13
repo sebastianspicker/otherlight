@@ -12,8 +12,8 @@ This simulator uses SI units internally:
 At each time `t` the simulator computes:
 
 1. 3D inertial positions (Kepler or N-body) and a sky-plane projection.
-2. A **multiplicative** stellar transit attenuation factor $F_{\mathrm{transit}}(t) \in [0,1]$.
-3. Optional **additive** flux terms (phase curves, variability, forward scattering, …).
+2. A stellar flux bundle together with a diagnostic **transit attenuation factor** $F_{\mathrm{transit}}(t) \in [0,1]$.
+3. Optional **additive** flux terms (phase curves, variability, forward scattering, ring scattering, refraction, ...).
 4. Optional observables bundle (RV, astrometry, timing/conservation diagnostics).
 
 ## Physics Diagram 1: Orbital State to Sky Projection
@@ -52,10 +52,10 @@ The default runtime entry point is `createSimulationV4(config).step(tObsSec)` in
 
 Current runtime note:
 
-- The active V4 runtime strips `photometry.forwardScattering` and `photometry.ringScattering` on input.
-- Those terms remain available in the legacy/V3 photometry path, but not yet in native V4.
-- The shipped default runtime is still the interactive browser contract.
-- A separate bounded `scientific-browser` execution path now exists in the V4 runtime, but it is still an `S1` fail-closed validation/runtime foundation rather than a completed scientific physics mode.
+- The shipped default path is the interactive V4 browser runtime.
+- The active native V4 path now carries forward scattering, ring scattering, and bounded atmosphere-refraction terms into `flux.total` and into the exported `renderSignals.fluxComponents` decomposition.
+- The separate `scientific-browser` execution path is stricter than the default interactive shell and may reject some additive photometry channels until they are explicitly supported there.
+- The `scientific-browser` path remains a bounded validation/runtime contract rather than a claim of finished high-fidelity scientific coverage.
 
 Runtime contracts and consistency:
 
@@ -73,6 +73,15 @@ Rendering/debug contract:
   - `simulationStep.debug`
   - `simulationStep.flux`
   - `simulationStep.renderSignals`
+
+Learner-visible visualization contract:
+
+- The light-curve plot reads `eventMarkers`, `timingMarkers`, `fluxComponents`, comparison insets, and observer-side window overlays from the step payload and app state.
+- The sky-plane canvas reads the same step payload plus scene ghosts and didactic overlay badges.
+- The current contract is documented in `docs/rendering/physics-visualization-contract.md`.
+- The active UI distinguishes `physical` and `measured` lanes:
+  - `physical`: the native/runtime flux surface and its decomposition
+  - `measured`: the same underlying physics after cadence smearing and bounded instrument/observer contamination
 
 Fidelity and feature gates:
 
@@ -113,3 +122,4 @@ Key files:
 - V3 render entry: `src/render/scene.ts`, `src/render/canvas2d.ts`
 - V3 debug overlay: `src/render/overlays.ts`
 - Rendering contract: `docs/rendering/physics-visualization-contract.md`
+- Photometry details: `docs/physics/photometry.md`

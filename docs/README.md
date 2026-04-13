@@ -8,6 +8,7 @@ This folder contains architecture, physics, runtime, and operations documentatio
 - Physics deep dive: `physics/overview.md` -> `physics/full-derivation.md`
 - CI and release checks: `ci.md`, `validation.md`
 - Didactics flow: `didactics/curriculum-v3.md`
+- GitHub screenshot capture command: `pnpm capture:github-screenshots`
 
 ## Map
 
