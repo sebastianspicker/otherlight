@@ -102,6 +102,19 @@ export function buildLessonReportMarkdown(params: {
     ) {
       lines.push(`- ΔrvPlanet: ${latestComparison.rvPlanetDelta.toExponential(3)}`);
     }
+    if (latestComparison.visual?.curveSeries?.length) {
+      lines.push(
+        `- Visual overlays: ${latestComparison.visual.curveSeries.map((series) => series.label).join(", ")}`,
+      );
+    }
+    if (latestComparison.visual?.comparisonInset) {
+      lines.push(`- Compare inset: ${latestComparison.visual.comparisonInset.title}`);
+    }
+    if (latestComparison.visual?.sceneGhosts?.length) {
+      lines.push(
+        `- Scene ghosts: ${latestComparison.visual.sceneGhosts.map((ghost) => ghost.label).join(", ")}`,
+      );
+    }
   }
   if (latestComparisonText) {
     lines.push(latestComparisonText);

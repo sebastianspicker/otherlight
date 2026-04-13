@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs";
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
+import { installAppShellDocument } from "../helpers/appShell";
 
 function installDom(): void {
-  document.documentElement.innerHTML = html;
+  installAppShellDocument();
 }
 
 describe("normal-mode quick controls", () => {

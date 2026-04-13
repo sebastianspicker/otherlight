@@ -80,4 +80,43 @@ describe("lesson report markdown", () => {
     expect(markdown).toContain("interpretation not recorded");
     expect(markdown).not.toContain("no comparison recorded");
   });
+
+  it("lists visual compare evidence when present", () => {
+    const markdown = buildLessonReportMarkdown({
+      courseTitle: "Guided Lab",
+      state: {
+        lessonId: "binary-eclipse-lab",
+        stepIndex: 0,
+        phaseIndex: 0,
+        passedStepIds: [],
+      },
+      latestComparison: {
+        tSec: 120,
+        fluxTotalDelta: 1e-5,
+        fluxDisplayDelta: 3e-4,
+        fluxTransitDelta: 0,
+        rvStarDelta: 0,
+        rvPlanetDelta: 0,
+        visual: {
+          curveSeries: [
+            { id: "a", label: "scenario A", color: "#8ecae6", samples: [] },
+            { id: "b", label: "scenario B", color: "#f28482", samples: [] },
+          ],
+          comparisonInset: {
+            title: "A/B delta",
+            series: [{ label: "B-A", color: "#ffb703", samples: [] }],
+          },
+          sceneGhosts: [
+            { label: "scenario A", geometry: [] },
+            { label: "scenario B", geometry: [] },
+          ],
+          badges: [],
+        },
+      },
+    });
+
+    expect(markdown).toContain("Visual overlays: scenario A, scenario B");
+    expect(markdown).toContain("Compare inset: A/B delta");
+    expect(markdown).toContain("Scene ghosts: scenario A, scenario B");
+  });
 });

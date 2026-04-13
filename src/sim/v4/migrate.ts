@@ -60,8 +60,29 @@ function isOrbitElements(x: unknown): boolean {
 }
 
 export function collectUnsupportedPhotometryFeaturesV4(config: SimulationConfigV4): string[] {
-  void config;
-  return [];
+  const phot = config.photometry;
+  const rt = phot?.atmosphereRT;
+  if (!rt?.enabled) return [];
+
+  const issues: string[] = [];
+
+  if (Array.isArray(rt.temperatureProfileK) && rt.temperatureProfileK.length > 0) {
+    issues.push("photometry.atmosphereRT.temperatureProfileK");
+  }
+  if (rt.scattering?.enabled) {
+    issues.push("photometry.atmosphereRT.scattering");
+  }
+  if (rt.emission?.enabled) {
+    issues.push("photometry.atmosphereRT.emission");
+  }
+
+  for (const [index, layer] of (rt.layers ?? []).entries()) {
+    if (layer.temperatureK !== undefined) {
+      issues.push(`photometry.atmosphereRT.layers[${index}].temperatureK`);
+    }
+  }
+
+  return issues;
 }
 
 function sanitizeSimulationConfigV4(config: SimulationConfigV4): SimulationConfigV4 {

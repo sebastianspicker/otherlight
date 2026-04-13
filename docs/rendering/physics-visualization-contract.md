@@ -13,12 +13,50 @@ Renderer modules must not infer physics by re-computing orbital/photometric stat
 | --------------------------------------- | ------------------------------------ | ------------------------------------------------------ |
 | Body shape (spherical/oblate)           | `occulterGeometry[]`                 | Circle or ellipse body representation                  |
 | Ring system                             | `occulterGeometry[]` (`kind="ring"`) | Ring annulus overlays with inclination/orientation     |
-| Transit and mutual events               | `eventMarkers[]`                     | Event badges and timeline markers                      |
-| LTTE / Shapiro timing                   | `timingMarkers[]`                    | Timing annotation labels                               |
-| Visibility fractions                    | `visibilityFractions`                | Planet/moon visibility indicators                      |
-| Flux decomposition                      | `fluxComponents`                     | Light-curve component overlay and debug decomposition  |
+| Transit and mutual events               | `eventMarkers[]`                     | Event badges, plot landmarks, and contact annotations  |
+| LTTE / Shapiro timing                   | `timingMarkers[]`                    | Timing badges, curve markers, and scene timing labels  |
+| Visibility fractions                    | `visibilityFractions`                | Planet/moon visibility indicators and scene badges     |
+| Flux decomposition                      | `fluxComponents`                     | Light-curve component overlays and decomposition lanes |
 | Observer-frame geometry                 | `orbitFrames`                        | Observer direction widget and sky-plane geometry lines |
 | Numerical uncertainty / missing signals | `uncertaintyFlags[]`                 | Warning badges (scientific mode)                       |
+
+## Visualization View Models
+
+The learner-facing visualization layer now uses explicit render-side view models in addition to `SimulationStepV3.renderSignals`.
+
+### Light-Curve Overlay Contract
+
+`LightCurvePlot` accepts the primary sampled history plus optional overlay state:
+
+- `overlaySeries[]`: extra curves for component decomposition, measured vs physical, chromatic lanes, and A/B comparison
+- `markers[]`: event, contact, and timing landmarks keyed in seconds
+- `windowOverlays[]`: shaded windows such as deterministic data gaps
+- `badges[]`: didactic state summaries such as contamination, chromatic, or compare labels
+- `comparisonInset`: delta-only inset series for compare labs
+
+These surfaces are applied via the plot API (`setOverlaySeries`, `setMarkers`, `setWindowOverlays`, `setBadges`, `setComparisonInset`) and must be treated as derived visualization state, not independent physics.
+
+### Scene Didactic Overlay Contract
+
+`Canvas2DRenderer.setDidacticOverlay(...)` accepts a derived scene annotation layer with:
+
+- `lines[]`: geometry cues such as transit chords and path references
+- `points[]`: contacts, barycenters, and highlighted reference points
+- `badges[]`: semantic tags such as visibility, ring orientation, or bounded timing cues
+- `ghosts[]`: compare or epoch geometry outlines
+
+This overlay is sourced from the active `SimulationStepV3`, didactics compare state, and bounded timing/measurement diagnostics. The scene renderer must not invent unsupported physics to populate it.
+
+### Compare-Lab Contract
+
+Didactic compare runs may emit a visual bundle with:
+
+- paired curve overlays
+- a delta inset
+- scene ghosts
+- compare badges
+
+Reports may export these visual labels, but the canonical rendered state remains the live plot/canvas pair.
 
 ## Rendering Modes
 
@@ -44,6 +82,13 @@ active so the visible shell stays consistent with the detached-binary contract.
 
 Use `renderScene({ step, renderConfig, ... })` as the rendering entrypoint.
 `renderScene` requires `drawFrameV3(...)`; legacy `drawFrame(...)` is removed from the standard render path.
+
+Didactic overlays must be driven from app/frame-loop state, not from ad hoc DOM mutations. The frame loop is responsible for synchronizing:
+
+- active curve history
+- derived overlay series and badges
+- compare-lab visual state
+- scene didactic overlays
 
 ## Debug Overlay Contract
 

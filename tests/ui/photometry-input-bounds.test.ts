@@ -2,8 +2,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import { readFileSync } from "node:fs";
-
 import type { SystemParams } from "../../src/core/types";
 import {
   MAX_NUMBER_LIST_ENTRIES,
@@ -11,6 +9,7 @@ import {
   parseNumberList,
   parseQuadraticBands,
 } from "../../src/ui/params/common";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("photometry UI input bounds", () => {
   it("caps parsed numeric lists from free-form text input", () => {
@@ -37,7 +36,7 @@ describe("photometry UI input bounds", () => {
   });
 
   it("caps atmosphere spectral arrays when reading photometry from the browser form", async () => {
-    document.documentElement.innerHTML = readFileSync(`${process.cwd()}/index.html`, "utf8");
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { readPhotometryFromUI } = await import("../../src/ui/params/photometry");
@@ -62,5 +61,31 @@ describe("photometry UI input bounds", () => {
 
     expect(next.star.photometry?.atmosphereTransmission?.lambdaNm).toHaveLength(MAX_NUMBER_LIST_ENTRIES);
     expect(next.star.photometry?.atmosphereTransmission?.tauScale).toHaveLength(MAX_NUMBER_LIST_ENTRIES);
+  });
+
+  it("uses star-scaled default patch inputs when no explicit brightness patches exist", async () => {
+    installAppShellDocument();
+
+    const { uiRefs } = await import("../../src/ui/refs");
+    const { loadPhotometryIntoUI } = await import("../../src/ui/params/photometry");
+
+    const starRadius = 6.957e8;
+    const next: SystemParams = {
+      star: { r: starRadius, photometry: {} },
+      planet: {
+        r: 1,
+        orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
+      },
+    };
+
+    loadPhotometryIntoUI(next, uiRefs);
+
+    expect(Number(uiRefs.p1x.value)).toBe(-195000000);
+    expect(Number(uiRefs.p1y.value)).toBe(153000000);
+    expect(Number(uiRefs.p1r.value)).toBe(111000000);
+    expect(Number(uiRefs.p2x.value)).toBe(230000000);
+    expect(Number(uiRefs.p2y.value)).toBe(-118000000);
+    expect(Number(uiRefs.p2rx.value)).toBe(146000000);
+    expect(Number(uiRefs.p2ry.value)).toBe(63000000);
   });
 });

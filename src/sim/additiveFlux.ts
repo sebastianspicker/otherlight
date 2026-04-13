@@ -86,6 +86,7 @@ export type AdditiveFluxComponents = {
   fluxStellarVarOnly: number;
   fluxForwardScatteringOnly: number;
   fluxRingScatteringOnly: number;
+  fluxRefractionOnly: number;
   planetVisibleFraction?: number;
   moonVisibleFraction?: number;
 };
@@ -121,6 +122,11 @@ function gaussianPhaseWeight(phase: number, sigma: number): number {
   const d = Math.atan2(Math.sin(phase), Math.cos(phase));
   const s = Math.max(1e-6, sigma);
   return Math.exp(-(d * d) / (2 * s * s));
+}
+
+function gaussianDistanceWeight(distance: number, sigma: number): number {
+  const s = Math.max(1e-9, sigma);
+  return Math.exp(-(distance * distance) / (2 * s * s));
 }
 
 function hasActiveThermalPhaseChannel(args: {
@@ -354,6 +360,41 @@ export function computeAdditiveFluxComponents(
     }
   }
 
+  let fluxRefractionOnly = 0;
+  if (rt?.enabled && rt.refraction?.enabled) {
+    const refraction = rt.refraction;
+    const amp = Number.isFinite(refraction.amp) ? Math.max(0, refraction.amp as number) : 0;
+    const lambdaRef = Number.isFinite(rt.lambdaRefNm) ? Math.max(1, rt.lambdaRefNm as number) : 550;
+    const chromaticSlope = Number.isFinite(refraction.chromaticSlope)
+      ? (refraction.chromaticSlope as number)
+      : 0;
+    const refractionForBody = (
+      body: { r: number },
+      sky: { x: number; y: number; z: number } | undefined,
+      target: "planet" | "moon",
+    ): number => {
+      if (!sky || !(sky.z > 0) || (rt.target ?? "planet") !== target || amp <= 0) return 0;
+      const contactRadius = starRadius + body.r;
+      const b = Math.hypot(sky.x, sky.y);
+      const sigma =
+        Number.isFinite(refraction.width) && (refraction.width as number) > 0
+          ? (refraction.width as number)
+          : Math.max(body.r * 0.8, starRadius * 0.04);
+      const weight = gaussianDistanceWeight(b - contactRadius, sigma);
+      let bandWeighted = 0;
+      for (const band of bands) {
+        const wlScale = Math.pow(Math.max(1, band.lambdaNm) / lambdaRef, -chromaticSlope);
+        bandWeighted += band.w * wlScale;
+      }
+      return amp * weight * bandWeighted;
+    };
+
+    fluxRefractionOnly += refractionForBody(params.planet, kin.planetSky, "planet");
+    if (params.moon && kin.moonSky) {
+      fluxRefractionOnly += refractionForBody(params.moon, kin.moonSky, "moon");
+    }
+  }
+
   // Robustness: enforce finite outputs (fail-open to 0 for additive components).
   return {
     fluxPlanetOnly: toFiniteNumber(fluxPlanetOnly, 0),
@@ -361,6 +402,7 @@ export function computeAdditiveFluxComponents(
     fluxStellarVarOnly: toFiniteNumber(fluxStellarVarOnly, 0),
     fluxForwardScatteringOnly: toFiniteNumber(fluxForwardScatteringOnly, 0),
     fluxRingScatteringOnly: toFiniteNumber(fluxRingScatteringOnly, 0),
+    fluxRefractionOnly: toFiniteNumber(fluxRefractionOnly, 0),
     planetVisibleFraction,
     moonVisibleFraction,
   };

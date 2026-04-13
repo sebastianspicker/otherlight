@@ -34,8 +34,7 @@ if [[ ! -s "${tmp_dir}/index.html" ]]; then
   exit 1
 fi
 
-grep -q 'id="app"' "${tmp_dir}/index.html"
-grep -q 'id="runtimeModeSelect"' "${tmp_dir}/index.html"
+grep -q 'id="appShellRoot"' "${tmp_dir}/index.html"
 main_path="$(
   grep -Eo 'src="/assets/[^"]+\.js"' "${tmp_dir}/index.html" |
     head -n 1 |

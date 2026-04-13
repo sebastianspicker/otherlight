@@ -69,8 +69,14 @@ export type RelativityParams = {
   grPrecession?: boolean;
   /** Apply Shapiro delay (gravitational time delay). */
   shapiro?: boolean;
+  /** Apply a bounded weak-field Einstein-delay surrogate. */
+  einsteinDelay?: boolean;
+  /** Report a weak-field light-bending scale surrogate. */
+  lightBending?: boolean;
   /** Speed of light in SI units [m/s]. */
   c?: number;
+  /** Reference epoch for bounded advanced timing surrogates [s]. */
+  timingRefSec?: number;
   /** Planet apsidal precession per orbit [rad/orbit]. */
   planetPrecessionPerOrbit?: number;
   /** Moon apsidal precession per orbit [rad/orbit]. */

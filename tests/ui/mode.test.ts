@@ -40,6 +40,22 @@ describe("UI mode visibility", () => {
     expect((document.getElementById("expertDetails") as HTMLDetailsElement).hidden).toBe(false);
   });
 
+  it("keeps mixed normal/expert didactic sections visible in both modes", () => {
+    document.body.innerHTML = `
+      <details id="sharedDetails" data-ui-tier="normal expert" open>
+        <summary>Shared</summary>
+        <p>available in both modes</p>
+      </details>
+    `;
+
+    syncUiModeVisibility("normal");
+    expect((document.getElementById("sharedDetails") as HTMLDetailsElement).hidden).toBe(false);
+    expect((document.getElementById("sharedDetails") as HTMLDetailsElement).open).toBe(true);
+
+    syncUiModeVisibility("expert");
+    expect((document.getElementById("sharedDetails") as HTMLDetailsElement).hidden).toBe(false);
+  });
+
   it("defaults unknown values to simulation product mode", () => {
     expect(readProductMode("simulation")).toBe("simulation");
     expect(readProductMode("lab")).toBe("lab");

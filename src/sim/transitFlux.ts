@@ -27,7 +27,7 @@ import {
   fluxStarWithTransmissiveOcculters,
   type TransmissionOcculter,
 } from "../photometry/transitTransmission";
-import { totalAtmosphereTransmission } from "../photometry/atmosphereRT/model";
+import { spectralContaminationWeight, totalAtmosphereTransmission } from "../photometry/atmosphereRT/model";
 import type { BodyKinematics } from "./kinematics";
 import { getLdIntegrators } from "./optionalLimbDarkening";
 import { isPhysicsFeatureEnabled } from "./fidelity";
@@ -204,12 +204,16 @@ function normalizeBandpassGrid(phot: SystemParams["star"]["photometry"] | undefi
     const lambdaNm = bp.lambdaNm.filter((x) => isFinitePositive(x)).slice(0, MAX_SPECTRAL_SAMPLES);
     if (lambdaNm.length > 0) {
       const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
-      const weights =
+      const weightsRaw =
         rawWeights.length === lambdaNm.length
           ? rawWeights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0))
           : lambdaNm.map(() => 1);
-      const sumW = weights.reduce((a, b) => a + b, 0);
-      const normWeights = sumW > 0 ? weights.map((w) => w / sumW) : lambdaNm.map(() => 1 / lambdaNm.length);
+      const contaminated = weightsRaw.map(
+        (w, i) => w * spectralContaminationWeight({ lambdaNm: lambdaNm[i], config: phot?.atmosphereRT }),
+      );
+      const sumW = contaminated.reduce((a, b) => a + b, 0);
+      const normWeights =
+        sumW > 0 ? contaminated.map((w) => w / sumW) : lambdaNm.map(() => 1 / lambdaNm.length);
       return { lambdaNm, weights: normWeights, tauScale: lambdaNm.map(() => 1) };
     }
   }

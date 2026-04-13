@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs";
-
 import { beforeEach, describe, expect, it } from "vitest";
 
-const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
+import { installAppShellDocument } from "../helpers/appShell";
 
 function installDom(): void {
-  document.documentElement.innerHTML = html;
+  installAppShellDocument();
 }
 
 describe("observer mode contract", () => {

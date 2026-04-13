@@ -9,6 +9,9 @@
 import type { LimbDarkeningModel, SystemDynamicsParams, SystemParams } from "../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
 import { AU_M, EARTH_MASS_KG, G_SI, JUPITER_MASS_KG, SOLAR_MASS_KG } from "../core/units";
+import { DYNAMICS_EDGE_CASE_PRESETS } from "./presetsEdgeCasesDynamics";
+import { MEASUREMENT_EDGE_CASE_PRESETS } from "./presetsEdgeCasesMeasurement";
+import { SURFACE_EDGE_CASE_PRESETS } from "./presetsEdgeCasesSurface";
 
 export type ScenarioPreset = {
   id: string;
@@ -27,6 +30,12 @@ function withoutPatches(p: SystemParams): void {
   ph.brightnessPatches = [];
   delete ph.spotEvolution;
 }
+
+const EDGE_CASE_PRESETS: ScenarioPreset[] = [
+  ...SURFACE_EDGE_CASE_PRESETS,
+  ...MEASUREMENT_EDGE_CASE_PRESETS,
+  ...DYNAMICS_EDGE_CASE_PRESETS,
+];
 
 export const PRESETS: ScenarioPreset[] = [
   {
@@ -138,6 +147,7 @@ export const PRESETS: ScenarioPreset[] = [
       params: p,
     } satisfies ScenarioPreset;
   })(),
+  ...EDGE_CASE_PRESETS,
 ];
 
 export function getPresetById(id: string): ScenarioPreset {

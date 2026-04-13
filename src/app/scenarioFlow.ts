@@ -22,6 +22,8 @@ import {
   type BinaryLabState,
 } from "../didactics/binaryLab";
 import type { DidacticsRuntimeState } from "./didactics";
+import type { LightCurveBadge, LightCurveComparisonInset, LightCurveOverlaySeries } from "../render/lightCurvePlotTypes";
+import type { SceneGhostGeometry } from "../render/sceneTypes";
 
 export const BINARY_MODE_VALUE = "binary-lab";
 export const PRESET_MODE_VALUE = "preset-lab";
@@ -39,6 +41,10 @@ export type ScenarioFlowState = {
   didacticsRuntime: DidacticsRuntimeState;
   noise: NoiseState;
   binaryLabState: BinaryLabState;
+  comparisonCurveSeries?: LightCurveOverlaySeries[];
+  comparisonInset?: LightCurveComparisonInset;
+  comparisonGhosts?: SceneGhostGeometry[];
+  comparisonBadges?: LightCurveBadge[];
 };
 
 export type ScenarioFlowDeps = {
@@ -201,6 +207,10 @@ export async function applyScenarioParams(
 ): Promise<void> {
   const { state, refs } = deps;
   state.params = ensureDidacticsConfig(cloneParams(nextParams));
+  state.comparisonCurveSeries = undefined;
+  state.comparisonInset = undefined;
+  state.comparisonGhosts = undefined;
+  state.comparisonBadges = undefined;
   applyObserverModeContract(state.params, readUiMode(refs.uiModeSelect.value));
   state.didacticsRuntime = initDidacticsRuntime(state.params, deps.getTimeSec());
   if (options.syncUi !== false) {
