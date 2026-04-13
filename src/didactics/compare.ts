@@ -56,7 +56,10 @@ export type DidacticComparison = {
   };
 };
 
-function deriveComparisonWindow(stepA: SimulationStepV3, stepB: SimulationStepV3): { startSec: number; endSec: number } {
+function deriveComparisonWindow(
+  stepA: SimulationStepV3,
+  stepB: SimulationStepV3,
+): { startSec: number; endSec: number } {
   const durationSec = Math.max(
     Math.abs(stepA.timing?.planetTransitDurationSec ?? 0),
     Math.abs(stepB.timing?.planetTransitDurationSec ?? 0),
@@ -86,7 +89,10 @@ function createGhost(label: string, step: SimulationStepV3, color: string): Comp
   };
 }
 
-function buildComparisonInset(aSamples: ComparisonCurvePoint[], bSamples: ComparisonCurvePoint[]): ComparisonInset {
+function buildComparisonInset(
+  aSamples: ComparisonCurvePoint[],
+  bSamples: ComparisonCurvePoint[],
+): ComparisonInset {
   const deltaSamples: ComparisonCurvePoint[] = [];
   const count = Math.min(aSamples.length, bSamples.length);
   for (let i = 0; i < count; i++) {
@@ -116,11 +122,15 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
     const stepB = runtimeB.step(tSample);
     aSamples.push({
       t: tSample,
-      flux: Number.isFinite(stepA.debug?.displayFluxValue) ? (stepA.debug?.displayFluxValue as number) : stepA.flux.total,
+      flux: Number.isFinite(stepA.debug?.displayFluxValue)
+        ? (stepA.debug?.displayFluxValue as number)
+        : stepA.flux.total,
     });
     bSamples.push({
       t: tSample,
-      flux: Number.isFinite(stepB.debug?.displayFluxValue) ? (stepB.debug?.displayFluxValue as number) : stepB.flux.total,
+      flux: Number.isFinite(stepB.debug?.displayFluxValue)
+        ? (stepB.debug?.displayFluxValue as number)
+        : stepB.flux.total,
     });
   }
 
@@ -152,7 +162,10 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
         },
       ],
       comparisonInset: buildComparisonInset(aSamples, bSamples),
-      sceneGhosts: [createGhost("scenario A", sa, "rgba(142, 202, 230, 0.45)"), createGhost("scenario B", sb, "rgba(242, 132, 130, 0.42)")],
+      sceneGhosts: [
+        createGhost("scenario A", sa, "rgba(142, 202, 230, 0.45)"),
+        createGhost("scenario B", sb, "rgba(242, 132, 130, 0.42)"),
+      ],
       badges: [
         { label: `compare @ ${tSec.toFixed(0)} s`, color: "#ffb703" },
         {

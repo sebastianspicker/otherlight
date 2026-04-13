@@ -355,7 +355,13 @@ describe("LightCurvePlot", () => {
     plot.setBadges([{ label: "observer gaps", color: "#ef476f" }]);
     plot.setComparisonInset({
       title: "A/B delta",
-      series: [{ label: "B-A", color: "#ffb703", samples: Array.from({ length: 8 }, (_, i) => ({ t: i * 60, flux: i * 1e-5 })) }],
+      series: [
+        {
+          label: "B-A",
+          color: "#ffb703",
+          samples: Array.from({ length: 8 }, (_, i) => ({ t: i * 60, flux: i * 1e-5 })),
+        },
+      ],
     });
 
     expect(() => plot.draw()).not.toThrow();

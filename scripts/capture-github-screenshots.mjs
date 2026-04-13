@@ -1,3 +1,5 @@
+/* global fetch, setTimeout, console, process, document, HTMLSelectElement, HTMLDetailsElement, Event, HTMLInputElement, HTMLButtonElement */
+
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

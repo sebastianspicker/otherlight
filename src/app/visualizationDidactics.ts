@@ -50,7 +50,15 @@ export function buildLightCurveMarkers(step: SimulationStepV3): LightCurveMarker
   addMarker(markers, "planet-ingress", step.timing?.planetIngressSec, "P ingress", "#8ecae6", "contact");
   addMarker(markers, "planet-mid", step.timing?.planetTransitCenterSec, "P mid", "#8ecae6", "event");
   addMarker(markers, "planet-egress", step.timing?.planetEgressSec, "P egress", "#8ecae6", "contact");
-  addMarker(markers, "moon-ingress", step.timing?.moonIngressSec, "M ingress", "#adb5bd", "contact", "bottom");
+  addMarker(
+    markers,
+    "moon-ingress",
+    step.timing?.moonIngressSec,
+    "M ingress",
+    "#adb5bd",
+    "contact",
+    "bottom",
+  );
   addMarker(markers, "moon-mid", step.timing?.moonTransitCenterSec, "M mid", "#adb5bd", "event", "bottom");
   addMarker(markers, "moon-egress", step.timing?.moonEgressSec, "M egress", "#adb5bd", "contact", "bottom");
   for (const timing of step.renderSignals.timingMarkers) {
@@ -66,7 +74,10 @@ export function buildLightCurveMarkers(step: SimulationStepV3): LightCurveMarker
     markers.push({
       id: timing.id,
       tSec: timing.seconds as number,
-      label: timing.id.replace(/Sec$/, "").replace(/([A-Z])/g, " $1").trim(),
+      label: timing.id
+        .replace(/Sec$/, "")
+        .replace(/([A-Z])/g, " $1")
+        .trim(),
       color: "#ffd166",
       kind: "timing",
       align: "top",
@@ -87,7 +98,9 @@ export function buildGapWindowOverlays(
   for (const [index, window] of (gaps.windowsSec ?? []).entries()) {
     const startSec = window.startSec;
     const endSec = window.endSec;
-    if (!(Number.isFinite(startSec) && Number.isFinite(endSec) && (endSec as number) > (startSec as number))) {
+    if (
+      !(Number.isFinite(startSec) && Number.isFinite(endSec) && (endSec as number) > (startSec as number))
+    ) {
       continue;
     }
     overlays.push({
@@ -143,12 +156,18 @@ export function estimateMeasurementSigma(system: SystemParams, tSec: number): nu
     sigma2 += (inst.correlatedNoise.sigmaFlux as number) ** 2;
   }
   if (inst.readNoise?.enabled && Number.isFinite(inst.readNoise.sigmaElectrons)) {
-    const denom =
-      Math.max(1e-9, (inst.throughput ?? 1) * (inst.electronsPerUnitFlux ?? 1e6) * Math.max(1, inst.exposureSec ?? 1));
+    const denom = Math.max(
+      1e-9,
+      (inst.throughput ?? 1) * (inst.electronsPerUnitFlux ?? 1e6) * Math.max(1, inst.exposureSec ?? 1),
+    );
     sigma2 += ((inst.readNoise.sigmaElectrons as number) / denom) ** 2;
   }
   const atmosphere = inst.observer?.enabled ? inst.observer.atmosphere : undefined;
-  if (atmosphere?.enabled && atmosphere.scintillation?.enabled && Number.isFinite(atmosphere.scintillation.sigmaFlux)) {
+  if (
+    atmosphere?.enabled &&
+    atmosphere.scintillation?.enabled &&
+    Number.isFinite(atmosphere.scintillation.sigmaFlux)
+  ) {
     const airmass = currentAirmass(atmosphere, tSec);
     const exposureSec = Math.max(1, inst.exposureSec ?? 1);
     const airmassExponent = Math.max(0, atmosphere.scintillation.airmassExponent ?? 1.5);
@@ -161,7 +180,11 @@ export function estimateMeasurementSigma(system: SystemParams, tSec: number): nu
   return sigma2 > 0 ? Math.sqrt(sigma2) : undefined;
 }
 
-export function buildMeasurementBadges(system: SystemParams, step: SimulationStepV3, tSec: number): LightCurveBadge[] {
+export function buildMeasurementBadges(
+  system: SystemParams,
+  step: SimulationStepV3,
+  tSec: number,
+): LightCurveBadge[] {
   const badges: LightCurveBadge[] = [];
   const inst = getInstrumentCfgFromPhotometry(system.star.photometry);
   const hasPlanetSideAtmosphere = Boolean(
@@ -177,7 +200,8 @@ export function buildMeasurementBadges(system: SystemParams, step: SimulationSte
   if (atmosphere?.enabled) {
     badges.push({ label: "observer-side contamination", color: "#ef476f" });
     const air = currentAirmass(atmosphere, tSec);
-    if (Number.isFinite(air) && air > 1.02) badges.push({ label: `airmass ${air.toFixed(2)}`, color: "#f4a261" });
+    if (Number.isFinite(air) && air > 1.02)
+      badges.push({ label: `airmass ${air.toFixed(2)}`, color: "#f4a261" });
     if (atmosphere.clouds?.enabled) badges.push({ label: "cloud extinction", color: "#f28482" });
     if (atmosphere.tellurics?.enabled) badges.push({ label: "telluric bias", color: "#ffb703" });
     if (atmosphere.scintillation?.enabled) badges.push({ label: "scintillation", color: "#8ecae6" });
@@ -236,7 +260,9 @@ export function componentOverlaySeriesFromSamples(
   return [baseline, transitOnly, scatterShoulder];
 }
 
-export function buildBandVariantSystems(system: SystemParams): Array<{ label: string; color: string; system: SystemParams }> {
+export function buildBandVariantSystems(
+  system: SystemParams,
+): Array<{ label: string; color: string; system: SystemParams }> {
   const cfg = migrateSystemParamsToV4(system);
   const bands = resolveWeightedPhotometryBands(cfg);
   if (bands.length <= 1) return [];
@@ -274,7 +300,9 @@ export function sampleBandOverlaySeries(args: {
     const samples: LightCurveOverlayPoint[] = [];
     for (const t of args.times) {
       const step = runtime.step(t);
-      const flux = Number.isFinite(step.debug?.displayFluxValue) ? (step.debug?.displayFluxValue as number) : step.flux.total;
+      const flux = Number.isFinite(step.debug?.displayFluxValue)
+        ? (step.debug?.displayFluxValue as number)
+        : step.flux.total;
       samples.push({ t, flux });
     }
     series.push({
@@ -290,16 +318,24 @@ export function sampleBandOverlaySeries(args: {
   return series;
 }
 
-function detectOccultedPatchLabel(params: SystemParams, center: { x: number; y: number }, radius: number): string[] {
+function detectOccultedPatchLabel(
+  params: SystemParams,
+  center: { x: number; y: number },
+  radius: number,
+): string[] {
   const patches = params.star.photometry?.brightnessPatches ?? [];
   const labels: string[] = [];
   for (const patch of patches) {
     if (!Number.isFinite(patch.x) || !Number.isFinite(patch.y)) continue;
     const d = Math.hypot((patch.x as number) - center.x, (patch.y as number) - center.y);
-    const patchScale =
-      Number.isFinite(patch.r) ? (patch.r as number) : Number.isFinite(patch.rx) ? Math.max(patch.rx as number, patch.ry ?? 0) : 0;
+    const patchScale = Number.isFinite(patch.r)
+      ? (patch.r as number)
+      : Number.isFinite(patch.rx)
+        ? Math.max(patch.rx as number, patch.ry ?? 0)
+        : 0;
     if (!(d <= radius + Math.max(0, patchScale))) continue;
-    const kind = Number.isFinite(patch.factor) && (patch.factor as number) < 1 ? "occulted spot" : "occulted facula";
+    const kind =
+      Number.isFinite(patch.factor) && (patch.factor as number) < 1 ? "occulted spot" : "occulted facula";
     labels.push(kind);
   }
   return labels;
@@ -354,7 +390,15 @@ export function buildSceneDidacticOverlay(args: {
   }
 
   if (planet && planet.body === "planet") {
-    for (const label of detectOccultedPatchLabel(params, planet.center, planet.kind === "circle" ? planet.radius : planet.kind === "ellipse" ? Math.max(planet.rx, planet.ry) : planet.outerRadius)) {
+    for (const label of detectOccultedPatchLabel(
+      params,
+      planet.center,
+      planet.kind === "circle"
+        ? planet.radius
+        : planet.kind === "ellipse"
+          ? Math.max(planet.rx, planet.ry)
+          : planet.outerRadius,
+    )) {
       overlay.badges?.push({ label, color: "#f28482" });
     }
   }
@@ -378,10 +422,17 @@ export function buildSceneDidacticOverlay(args: {
     });
   }
 
-  if (params.planet?.rings && Number.isFinite(params.planet.rings.outerRadius) && params.planet.rings.outerRadius > 0) {
+  if (
+    params.planet?.rings &&
+    Number.isFinite(params.planet.rings.outerRadius) &&
+    params.planet.rings.outerRadius > 0
+  ) {
     overlay.badges?.push({ label: "ring orientation active", color: "#ffb703" });
   }
-  if (params.star.photometry?.atmosphereTransmission?.enabled || params.star.photometry?.atmosphereRT?.enabled) {
+  if (
+    params.star.photometry?.atmosphereTransmission?.enabled ||
+    params.star.photometry?.atmosphereRT?.enabled
+  ) {
     overlay.badges?.push({ label: "transmissive halo", color: "#cdb4db" });
   }
 
@@ -405,20 +456,35 @@ export function buildSceneDidacticOverlay(args: {
     });
   }
 
-  if (Number.isFinite(step.timing?.planetTransitCenterSec) && Number.isFinite(step.timing?.moonTransitCenterSec)) {
-    const leadLagSec = (step.timing?.moonTransitCenterSec as number) - (step.timing?.planetTransitCenterSec as number);
+  if (
+    Number.isFinite(step.timing?.planetTransitCenterSec) &&
+    Number.isFinite(step.timing?.moonTransitCenterSec)
+  ) {
+    const leadLagSec =
+      (step.timing?.moonTransitCenterSec as number) - (step.timing?.planetTransitCenterSec as number);
     if (Math.abs(leadLagSec) > 1) {
       overlay.badges?.push({
-        label: leadLagSec < 0 ? `moon leads by ${Math.abs(leadLagSec).toFixed(0)} s` : `moon trails by ${Math.abs(leadLagSec).toFixed(0)} s`,
+        label:
+          leadLagSec < 0
+            ? `moon leads by ${Math.abs(leadLagSec).toFixed(0)} s`
+            : `moon trails by ${Math.abs(leadLagSec).toFixed(0)} s`,
         color: "#ffd166",
       });
     }
   }
   if (planet && moon) {
     const planetRadius =
-      planet.kind === "circle" ? planet.radius : planet.kind === "ellipse" ? Math.max(planet.rx, planet.ry) : planet.outerRadius;
+      planet.kind === "circle"
+        ? planet.radius
+        : planet.kind === "ellipse"
+          ? Math.max(planet.rx, planet.ry)
+          : planet.outerRadius;
     const moonRadius =
-      moon.kind === "circle" ? moon.radius : moon.kind === "ellipse" ? Math.max(moon.rx, moon.ry) : moon.outerRadius;
+      moon.kind === "circle"
+        ? moon.radius
+        : moon.kind === "ellipse"
+          ? Math.max(moon.rx, moon.ry)
+          : moon.outerRadius;
     const separation = Math.hypot(planet.center.x - moon.center.x, planet.center.y - moon.center.y);
     if (separation < planetRadius + moonRadius) {
       overlay.badges?.push({ label: "mutual overlap", color: "#ffd166" });
@@ -432,8 +498,7 @@ export function buildSceneDidacticOverlay(args: {
     });
   }
   const advancedTiming = step.physicsDiagnostics.advancedTiming;
-  const einsteinDelaySec =
-    (advancedTiming?.einsteinPlanetSec ?? 0) + (advancedTiming?.einsteinMoonSec ?? 0);
+  const einsteinDelaySec = (advancedTiming?.einsteinPlanetSec ?? 0) + (advancedTiming?.einsteinMoonSec ?? 0);
   if (Number.isFinite(einsteinDelaySec) && Math.abs(einsteinDelaySec) > 0) {
     overlay.badges?.push({
       label: `Einstein delay ${einsteinDelaySec.toExponential(1)} s`,
@@ -449,7 +514,11 @@ export function buildSceneDidacticOverlay(args: {
   return overlay;
 }
 
-export function createGhostGeometry(label: string, step: SimulationStepV3, color: string): SceneGhostGeometry {
+export function createGhostGeometry(
+  label: string,
+  step: SimulationStepV3,
+  color: string,
+): SceneGhostGeometry {
   return {
     label,
     color,
@@ -468,7 +537,14 @@ export function buildComparisonInset(args: {
   for (let i = 0; i < count; i++) {
     const sampleA = a.samples[i];
     const sampleB = b.samples[i];
-    if (!(Number.isFinite(sampleA.t) && Number.isFinite(sampleB.t) && Number.isFinite(sampleA.flux) && Number.isFinite(sampleB.flux))) {
+    if (
+      !(
+        Number.isFinite(sampleA.t) &&
+        Number.isFinite(sampleB.t) &&
+        Number.isFinite(sampleA.flux) &&
+        Number.isFinite(sampleB.flux)
+      )
+    ) {
       continue;
     }
     deltaSamples.push({ t: sampleA.t, flux: sampleB.flux - sampleA.flux });

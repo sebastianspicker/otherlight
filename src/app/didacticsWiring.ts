@@ -2,7 +2,11 @@ import type { SystemParams } from "../core/types";
 import { compareScenariosAtTime, interpretDidacticComparison } from "../didactics";
 import { revealSky, setHypothesis, type BinaryLabState } from "../didactics/binaryLab";
 import type { UiRefs } from "../ui/refs";
-import type { LightCurveBadge, LightCurveComparisonInset, LightCurveOverlaySeries } from "../render/lightCurvePlotTypes";
+import type {
+  LightCurveBadge,
+  LightCurveComparisonInset,
+  LightCurveOverlaySeries,
+} from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 import { cloneParams } from "./scenario";
 import {

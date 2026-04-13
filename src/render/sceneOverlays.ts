@@ -5,12 +5,7 @@ import { bodyColor, drawBodyWithOcclusionHint, drawEllipseBodyWithOcclusionHint 
 import { atmosphereHaloStyle, drawAtmosphereHalo, drawRingAnnulus, ringColor } from "./sceneAtmosphereRings";
 import { drawStarGeometry } from "./sceneStars";
 import type { DebugOverlayDataV3 } from "./overlays";
-import type {
-  SceneDidacticOverlayState,
-  ScratchPoint,
-  SceneGhostGeometry,
-  ToPxInto,
-} from "./sceneTypes";
+import type { SceneDidacticOverlayState, ScratchPoint, SceneGhostGeometry, ToPxInto } from "./sceneTypes";
 import type { StarDiskCache } from "./starDisk";
 
 const MONO_FONT = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -128,7 +123,10 @@ function drawGhostGeometry(args: {
         Math.PI * 2,
       );
     } else {
-      const q = Math.max(0.05, Math.abs(Math.cos(Number.isFinite(geometry.inclination) ? geometry.inclination : 0)));
+      const q = Math.max(
+        0.05,
+        Math.abs(Math.cos(Number.isFinite(geometry.inclination) ? geometry.inclination : 0)),
+      );
       ctx.ellipse(
         p.x,
         p.y,

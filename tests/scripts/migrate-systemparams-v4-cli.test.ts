@@ -5,11 +5,7 @@ describe("migrate-systemparams-v4 CLI", () => {
   it("runs with the published Node invocation", () => {
     const stdout = execFileSync(
       process.execPath,
-      [
-        "--experimental-strip-types",
-        "scripts/migrate-systemparams-v4.ts",
-        "src/config/scenario.default.json",
-      ],
+      ["scripts/migrate-systemparams-v4.mjs", "src/config/scenario.default.json"],
       {
         cwd: process.cwd(),
         encoding: "utf8",
