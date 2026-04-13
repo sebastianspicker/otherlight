@@ -4,6 +4,34 @@ function finiteOr(v: unknown, fb: number): number {
   return typeof v === "number" && Number.isFinite(v) ? v : fb;
 }
 
+function gaussianFeatureStrength(
+  lambdaNm: number | undefined,
+  feature:
+    | {
+        enabled?: boolean;
+        centerNm?: number[];
+        widthNm?: number[];
+        strength?: number[];
+      }
+    | undefined,
+): number {
+  if (!feature?.enabled || !Number.isFinite(lambdaNm)) return 0;
+  const centers = Array.isArray(feature.centerNm) ? feature.centerNm : [];
+  const widths = Array.isArray(feature.widthNm) ? feature.widthNm : [];
+  const strengths = Array.isArray(feature.strength) ? feature.strength : [];
+  const n = Math.min(centers.length, widths.length, strengths.length);
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const c = centers[i];
+    const w = widths[i];
+    const s = strengths[i];
+    if (!(Number.isFinite(c) && Number.isFinite(w) && w > 0 && Number.isFinite(s) && s > 0)) continue;
+    const d = (lambdaNm as number) - c;
+    sum += s * Math.exp(-(d * d) / (2 * w * w));
+  }
+  return Math.max(0, sum);
+}
+
 export function layerOpticalDepthAtRadius(params: {
   rho: number;
   layer: AtmosphereRTLayer;
@@ -57,7 +85,21 @@ export function totalAtmosphereTransmission(params: {
     tau += hazeTau * Math.pow(Math.max(1e-6, wl) / wlRef, -slope);
   }
 
+  tau += gaussianFeatureStrength(params.lambdaNm, cfg.molecularFeatures);
+
   return Math.exp(-Math.max(0, tau));
+}
+
+export function spectralContaminationWeight(params: {
+  lambdaNm: number;
+  config: AtmosphereRTParams | undefined;
+}): number {
+  const lambdaNm = params.lambdaNm;
+  if (!(Number.isFinite(lambdaNm) && lambdaNm > 0)) return 1;
+  const cfg = params.config;
+  if (!cfg?.spectralContamination?.enabled) return 1;
+  const loss = gaussianFeatureStrength(lambdaNm, cfg.spectralContamination);
+  return Math.max(0, Math.exp(-Math.max(0, loss)));
 }
 
 export function effectiveCircleAtmosphereOpacity(params: {

@@ -4,30 +4,50 @@
 ![Security](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/security.yml/badge.svg)
 ![CodeQL](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/codeql.yml/badge.svg)
 
-Interactive browser simulation for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. The core is deterministic and SI-based, with a didactic UI flow for black-box exploration and hypothesis-driven learning.
+Interactive browser simulation for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. The core is deterministic and SI-based, with didactic curve/canvas overlays for contact timing, component decomposition, chromatic observer lanes, A/B comparison, and black-box lesson flows.
 
-## Screenshot
+## Screenshots
 
 ![UI Screenshot](docs/media/github/hero-overview.png)
 
-### More Screenshots
+Feature gallery:
 
-**Main Simulation View** -- Full application layout with sky-plane, light curve, parameter controls, and sidebar.
+**Main simulation shell**: sky-plane, light curve, controls, diagnostics, and the fixed-range didactic plot surface.
 
 ![Main Simulation](docs/screenshots/01-main-simulation.png)
 
-**Controls Panel** -- Simulation controls including Start/Stop, time speed, plot mode, O-C history, guided labs, and hypothesis selection.
+**Light-curve landmarks**: contact markers, component overlays, and teaching badges on the active transit plot.
 
-![Controls Panel](docs/screenshots/02-controls-panel.png)
+![Light Curve Landmarks](docs/screenshots/02-light-curve-landmarks.png)
 
-**Light Curve Plot** -- Real-time light curve display showing normalized flux over time during transit simulation.
+**Scene geometry overlays**: chord/lead-lag style annotations and separated moon geometry on the sky canvas.
 
-![Light Curve](docs/screenshots/03-light-curve.png)
+![Scene Geometry](docs/screenshots/03-scene-geometry.png)
+
+**A/B compare lab**: overplotted scenarios, delta inset, and scene ghosts for false-positive style comparison work.
+
+![Compare Lab](docs/screenshots/04-compare-lab.png)
+
+**Chromatic lane**: weighted broadband band overlays on the measured curve.
+
+![Chromatic Lane](docs/screenshots/05-chromatic-lane.png)
+
+**Observer contamination lane**: measured-vs-physical separation with observer-side contamination cues.
+
+![Observer Contamination](docs/screenshots/06-observer-contamination.png)
+
+**Timing and dynamics**: timing markers, drift cues, and epoch-aware overlays on the combined visual surface.
+
+![Timing Dynamics](docs/screenshots/07-timing-dynamics.png)
+
+**Binary black-box lab**: guided detached-binary lesson flow with hypothesis gating and reveal.
+
+![Binary Lab](docs/screenshots/08-binary-lab.png)
 
 ## Table of Contents
 
 - [Highlights](#highlights)
-- [Screenshot](#screenshot)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [How it works](#how-it-works)
 - [Application lifecycle](#application-lifecycle)
@@ -45,8 +65,10 @@ Interactive browser simulation for exoplanet transit photometry, binary eclipses
 - Native V4 runtime path with automatic legacy input migration.
 - Preset and real-system flow as the default teaching entry.
 - Realtime and reference runtime profiles.
-- Transit, limb darkening, atmosphere hooks, phase curves, and instrument noise.
-- Forward and ring scattering are available on the active V4 runtime path.
+- Transit, limb darkening, atmosphere hooks, phase curves, measurement smearing, and instrument noise.
+- Active learner-facing overlays for event landmarks, timing markers, flux decomposition, compare insets, scene ghosts, and geometry annotations.
+- Physical-vs-measured curve lanes with bounded chromatic overlays, observer contamination badges, and fixed shared-scale comparison support.
+- Forward scattering, ring scattering, and bounded refraction are available on the active V4 runtime path.
 - Detached-binary lab uses a curated detached eclipsing-binary scenario with explicit per-star stellar metadata in V4 configs and stays normalized to the combined stellar baseline.
 - Dynamic diagnostics (timing, conservation, RV, astrometry).
 - Didactics: black-box flow, hypothesis gate, locks, hints, compare labs, rubric scoring.
@@ -117,6 +139,12 @@ flowchart TD
 ```
 
 User actions (Apply, Reset, Preset, Real system, or mode change) update params and call `rebuildSimulationFromParams()` or `resetSimTimeAndLC()` as in the Architecture flow; the frame loop keeps running and reflects the new state on the next frame.
+
+The learner-facing shell now exposes three complementary views of the same step state:
+
+- sky-plane geometry and semantic overlays from `renderSignals`
+- light-curve overlays, markers, compare insets, and contamination windows
+- didactics/lab controls that lock or reveal parts of the interface depending on the active lesson mode
 
 ## Application lifecycle
 
@@ -196,24 +224,26 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 - `pnpm didactics-acceptance`: didactics flow gate
 - `pnpm perf-smoke`: performance smoke gate
 - `pnpm migration-regression`: migration gate
+- `pnpm capture:github-screenshots`: regenerate the GitHub screenshot set from the live app shell
 
 ## Documentation
 
-| Topic                     | Path                              |
-| ------------------------- | --------------------------------- |
-| Docs index                | `docs/README.md`                  |
-| Parameters and UI mapping | `docs/params.md`                  |
-| Physics overview          | `docs/physics/overview.md`        |
-| Full derivation           | `docs/physics/full-derivation.md` |
-| N-body details            | `docs/physics/nbody.md`           |
-| Orbit model               | `docs/physics/orbits.md`          |
-| Relativity model          | `docs/physics/relativity.md`      |
-| Photometry model          | `docs/physics/photometry.md`      |
-| Validation and warnings   | `docs/validation.md`              |
-| CI model                  | `docs/ci.md`                      |
-| Runbook                   | `docs/RUNBOOK.md`                 |
-| Contributing              | `CONTRIBUTING.md`                 |
-| Security policy           | `SECURITY.md`                     |
+| Topic                     | Path                                               |
+| ------------------------- | -------------------------------------------------- |
+| Docs index                | `docs/README.md`                                   |
+| Parameters and UI mapping | `docs/params.md`                                   |
+| Physics overview          | `docs/physics/overview.md`                         |
+| Full derivation           | `docs/physics/full-derivation.md`                  |
+| N-body details            | `docs/physics/nbody.md`                            |
+| Orbit model               | `docs/physics/orbits.md`                           |
+| Relativity model          | `docs/physics/relativity.md`                       |
+| Photometry model          | `docs/physics/photometry.md`                       |
+| Visualization contract    | `docs/rendering/physics-visualization-contract.md` |
+| Validation and warnings   | `docs/validation.md`                               |
+| CI model                  | `docs/ci.md`                                       |
+| Runbook                   | `docs/RUNBOOK.md`                                  |
+| Contributing              | `CONTRIBUTING.md`                                  |
+| Security policy           | `SECURITY.md`                                      |
 
 ## Project Layout
 

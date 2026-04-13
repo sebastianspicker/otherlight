@@ -110,6 +110,7 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
       let accMoonPhase = 0;
       let accForwardScattering = 0;
       let accRingScattering = 0;
+      let accRefraction = 0;
       let last!: SimulationStepV3;
       for (let i = 0; i < substeps; i++) {
         const alpha = substeps <= 1 ? 0 : i / (substeps - 1);
@@ -131,6 +132,7 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
         accMoonPhase += out.step.flux.moonPhase;
         accForwardScattering += out.step.flux.forwardScattering;
         accRingScattering += out.step.flux.ringScattering;
+        accRefraction += out.step.flux.refraction ?? 0;
         last = out.step;
       }
       return {
@@ -145,6 +147,7 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
           moonPhase: accMoonPhase / substeps,
           forwardScattering: accForwardScattering / substeps,
           ringScattering: accRingScattering / substeps,
+          refraction: accRefraction / substeps,
         },
       };
     },

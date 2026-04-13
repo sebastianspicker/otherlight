@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  einsteinDelaySurrogateSec,
+  lightBendingAngleRad,
   lightTimeDelaySec,
   shapiroDelaySec,
   normalizeRelativityParams,
@@ -127,9 +129,54 @@ describe("normalizeRelativityParams", () => {
     expect(n.shapiro).toBe(false);
   });
 
+  it("keeps advanced surrogate channels opt-in by default", () => {
+    const n = normalizeRelativityParams({ enabled: true });
+    expect(n.einsteinDelay).toBe(false);
+    expect(n.lightBending).toBe(false);
+    expect(n.timingRefSec).toBe(0);
+  });
+
   it("uses default c when an invalid value is provided", () => {
     const n = normalizeRelativityParams({ enabled: true, c: -1 });
     expect(n.c).toBe(299_792_458);
+  });
+});
+
+describe("einsteinDelaySurrogateSec", () => {
+  it("returns a positive bounded weak-field surrogate delay for valid inputs", () => {
+    const delay = einsteinDelaySurrogateSec({
+      r: { x: 1.5e11, y: 0, z: 0 },
+      v: { x: 0, y: 3e4, z: 0 },
+      mu: 1.3271244e20,
+      c: 299_792_458,
+      tObs: 10_000,
+      tRef: 0,
+    });
+
+    expect(delay).toBeGreaterThan(0);
+    expect(delay).toBeLessThan(1);
+  });
+});
+
+describe("lightBendingAngleRad", () => {
+  it("returns a larger bending angle for smaller impact parameter", () => {
+    const mu = 1.3271244e20;
+    const c = 299_792_458;
+    const largeImpact = lightBendingAngleRad({
+      r: { x: 1e10, y: 0, z: 1e11 },
+      observerDir: { x: 0, y: 0, z: 1 },
+      mu,
+      c,
+    });
+    const smallImpact = lightBendingAngleRad({
+      r: { x: 1e8, y: 0, z: 1e11 },
+      observerDir: { x: 0, y: 0, z: 1 },
+      mu,
+      c,
+    });
+
+    expect(largeImpact).toBeGreaterThan(0);
+    expect(smallImpact).toBeGreaterThan(largeImpact);
   });
 });
 

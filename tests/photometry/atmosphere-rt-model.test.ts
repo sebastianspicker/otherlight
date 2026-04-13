@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   effectiveCircleAtmosphereOpacity,
   layerOpticalDepthAtRadius,
+  spectralContaminationWeight,
   totalAtmosphereTransmission,
 } from "../../src/photometry/atmosphereRT/model";
 
@@ -60,5 +61,43 @@ describe("atmosphereRT model", () => {
     expect(integratedOpacity).toBeGreaterThan(0);
     expect(integratedOpacity).toBeLessThan(1);
     expect(integratedOpacity).toBeLessThan(edgeOpacity);
+  });
+
+  it("increases molecular opacity near configured line centers", () => {
+    const config = {
+      enabled: true as const,
+      lambdaRefNm: 550,
+      layers: [{ r0: 1, H: 0.3, tau0: 0.25 }],
+      molecularFeatures: {
+        enabled: true as const,
+        centerNm: [589],
+        widthNm: [8],
+        strength: [1.2],
+      },
+    };
+
+    const atLine = totalAtmosphereTransmission({ rho: 1.2, config, lambdaNm: 589 });
+    const offLine = totalAtmosphereTransmission({ rho: 1.2, config, lambdaNm: 650 });
+
+    expect(atLine).toBeLessThan(offLine);
+  });
+
+  it("downweights contaminated wavelengths in the synthetic bandpass", () => {
+    const config = {
+      enabled: true as const,
+      spectralContamination: {
+        enabled: true as const,
+        centerNm: [760],
+        widthNm: [10],
+        strength: [1.6],
+      },
+    };
+
+    const inBand = spectralContaminationWeight({ lambdaNm: 760, config });
+    const cleanBand = spectralContaminationWeight({ lambdaNm: 550, config });
+
+    expect(inBand).toBeGreaterThanOrEqual(0);
+    expect(inBand).toBeLessThan(cleanBand);
+    expect(cleanBand).toBeLessThanOrEqual(1);
   });
 });

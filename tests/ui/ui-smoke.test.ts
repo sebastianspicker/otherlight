@@ -1,14 +1,11 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-
-import { readFileSync } from "node:fs";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("UI smoke", () => {
   it("wires enable handlers and slider mirroring without throwing", async () => {
-    const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
-
-    document.documentElement.innerHTML = html;
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { wireEnableHandlers, syncAllEnableStates } = await import("../../src/ui/enable");

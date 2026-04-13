@@ -27,4 +27,17 @@ describe("didactic A/B comparison", () => {
 
     expect(Number.isFinite(cmp.fluxDisplayDelta ?? Number.NaN)).toBe(true);
   });
+
+  it("includes visual comparison overlays for compare labs", () => {
+    const a = cloneParams(getPresetById("default").params);
+    const b = cloneParams(getPresetById("nbody-with-perturber").params);
+
+    const cmp = compareScenariosAtTime(a, b, 0);
+
+    expect(cmp.visual?.curveSeries).toHaveLength(2);
+    expect(cmp.visual?.curveSeries.map((series) => series.label)).toEqual(["scenario A", "scenario B"]);
+    expect(cmp.visual?.comparisonInset?.title).toBe("A/B delta");
+    expect(cmp.visual?.sceneGhosts.map((ghost) => ghost.label)).toEqual(["scenario A", "scenario B"]);
+    expect(cmp.visual?.badges.some((badge) => badge.label.includes("compare @"))).toBe(true);
+  });
 });

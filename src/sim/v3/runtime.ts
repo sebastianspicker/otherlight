@@ -103,6 +103,9 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
       active: Boolean(
         step.meta?.timing?.lttePlanetSec ||
         step.meta?.timing?.shapiroPlanetSec ||
+        step.meta?.timing?.einsteinPlanetSec ||
+        step.meta?.timing?.barycentricClockOffsetSec ||
+        step.meta?.advancedTiming?.lightBendingPlanetRad ||
         step.meta?.timing?.planetTransitDurationSec,
       ),
     },
@@ -113,6 +116,9 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
     { id: "ltteMoonSec", seconds: step.meta?.timing?.ltteMoonSec },
     { id: "shapiroPlanetSec", seconds: step.meta?.timing?.shapiroPlanetSec },
     { id: "shapiroMoonSec", seconds: step.meta?.timing?.shapiroMoonSec },
+    { id: "einsteinPlanetSec", seconds: step.meta?.timing?.einsteinPlanetSec },
+    { id: "einsteinMoonSec", seconds: step.meta?.timing?.einsteinMoonSec },
+    { id: "barycentricClockOffsetSec", seconds: step.meta?.timing?.barycentricClockOffsetSec },
     { id: "planetTransitCenterSec", seconds: step.meta?.timing?.planetTransitCenterSec },
     { id: "planetTransitDurationSec", seconds: step.meta?.timing?.planetTransitDurationSec },
     { id: "planetTtvSec", seconds: step.meta?.timing?.planetTtvSec },
@@ -128,6 +134,9 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
   }
   if (system.dynamics?.relativity?.enabled && !step.meta?.timing) {
     uncertaintyFlags.push("missing-timing-diagnostics");
+  }
+  for (const flag of step.meta?.advancedTiming?.validityFlags ?? []) {
+    if (!uncertaintyFlags.includes(flag)) uncertaintyFlags.push(flag);
   }
 
   return {
@@ -146,6 +155,7 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
       moonPhase: toFiniteNumber(step.fluxMoonPhase, 0),
       forwardScattering: toFiniteNumber(step.fluxForwardScattering, 0),
       ringScattering: toFiniteNumber(step.fluxRingScattering, 0),
+      refraction: toFiniteNumber(step.fluxRefraction, 0),
       total: toFiniteNumber(step.fluxTotal, 1),
     },
     orbitFrames: {
@@ -175,6 +185,7 @@ function buildPhysicsDiagnostics(
     ? Math.abs(timing!.shapiroPlanetSec as number)
     : undefined;
   const timingConvergence = step.meta?.timingConvergence?.planet;
+  const advancedTiming = step.meta?.advancedTiming;
 
   const mode = nbodyEnabled
     ? ((nbody?.integrator?.mode ?? system.dynamics?.integrator?.mode ?? "fixed-verlet") as
@@ -185,6 +196,17 @@ function buildPhysicsDiagnostics(
   const closeEncounterFlags: string[] = [];
   if (nbodyEnabled && toFiniteNumber(nbody?.softening, 0) === 0) closeEncounterFlags.push("zero-softening");
   if (nbodyEnabled && !step.meta?.conservation) closeEncounterFlags.push("no-conservation-data");
+  if (
+    Number.isFinite(advancedTiming?.closeEncounterDistance) &&
+    Number.isFinite(system.dynamics?.collisionPolicy?.minSeparation) &&
+    (advancedTiming!.closeEncounterDistance as number) <
+      (system.dynamics!.collisionPolicy!.minSeparation as number)
+  ) {
+    closeEncounterFlags.push("below-min-separation");
+  }
+  if (advancedTiming?.validityFlags?.includes("clock-frame-mismatch"))
+    closeEncounterFlags.push("clock-frame-mismatch");
+  if (advancedTiming?.validityFlags?.includes("surrogate-model")) closeEncounterFlags.push("surrogate-model");
 
   return {
     ltteConvergence: {
@@ -224,6 +246,7 @@ function buildPhysicsDiagnostics(
     energyDrift: step.meta?.conservation?.energy,
     angularMomentumDrift: step.meta?.conservation?.angularMomentum,
     closeEncounterFlags,
+    advancedTiming,
   };
 }
 
@@ -254,6 +277,7 @@ function mapStepToV3(
       moonPhase: toFiniteNumber(step.fluxMoonPhase, 0),
       forwardScattering: toFiniteNumber(step.fluxForwardScattering, 0),
       ringScattering: toFiniteNumber(step.fluxRingScattering, 0),
+      refraction: toFiniteNumber(step.fluxRefraction, 0),
       decomposition: step.meta?.fluxDecomposition,
     },
     timing: step.meta?.timing,

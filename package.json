@@ -32,12 +32,13 @@
     "physics-regression": "vitest run tests/sim/transit-sequence-regression.test.ts tests/sim/transit-timing-tracker.test.ts tests/sim/dynamics-driven-diagnostics.test.ts",
     "scientific-calibration": "vitest run tests/benchmarks/literature-benchmarks.test.ts tests/sim/transit-timing-tracker.test.ts tests/sim/v4-native-parity.test.ts tests/perf/perf-scenarios.test.ts",
     "data:real-systems:refresh": "node scripts/fetch-real-systems-snapshot.mjs",
-    "migrate:v4": "node --experimental-strip-types scripts/migrate-systemparams-v4.ts",
+    "migrate:v4": "node scripts/migrate-systemparams-v4.mjs",
     "literature-benchmarks": "vitest run tests/benchmarks/literature-benchmarks.test.ts",
     "didactics-acceptance": "vitest run tests/didactics/didactics-acceptance.test.ts tests/didactics/hint-levels.test.ts",
     "perf-smoke": "vitest run tests/perf/perf-smoke.test.ts",
     "migration-regression": "vitest run tests/scripts/migration-regression.test.ts tests/scripts/migrate-systemparams-v4.test.ts tests/scripts/migrate-systemparams-v4-cli.test.ts",
-    "smoke:served": "bash ./scripts/smoke-served-app.sh"
+    "smoke:served": "bash ./scripts/smoke-served-app.sh",
+    "capture:github-screenshots": "node ./scripts/capture-github-screenshots.mjs"
   },
   "pnpm": {
     "overrides": {
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^10.1.0",

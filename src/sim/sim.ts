@@ -24,8 +24,13 @@
 // - stepSystem() is synchronous by design (simulation stepping).
 // - Optional limb darkening requires prepareSimulation() to be awaited for deterministic usage.
 
-import type { StepResult, StepTimingDiagnostics, SystemParams } from "../core/types";
-import { toFiniteNumber } from "../core/units";
+import type {
+  StepAdvancedTimingDiagnostics,
+  StepResult,
+  StepTimingDiagnostics,
+  SystemParams,
+} from "../core/types";
+import { G_SI, toFiniteNumber } from "../core/units";
 import { assertStepInputs } from "./validation";
 import {
   kickoffOptionalLimbDarkeningIfRequested,
@@ -44,6 +49,15 @@ import { projectSurfacePatchesToSky } from "../photometry/stellarSurface";
 import { assertTimeObserverContract } from "./observerContract";
 import { isPhysicsFeatureEnabled } from "./fidelity";
 import { getDidacticsHook } from "./didacticsHook";
+import { resolveDynamicSystemState } from "./systemState";
+import { getNBodyStateAt, isNBodyEnabled } from "./dynamics";
+import {
+  einsteinDelaySurrogateSec,
+  lightBendingAngleRad,
+  normalizeRelativityParams,
+} from "../physics/relativity";
+import { muFromPeriodAndA } from "../physics/kepler";
+import { resolvePlanetOrbitForKinematics } from "./kinematics";
 
 export { preloadOptionalLimbDarkening } from "./optionalLimbDarkening";
 export { sampleOrbitSky, sampleMoonOrbitSkyAbsolute } from "./sampling";
@@ -83,6 +97,167 @@ function mapTimingSolveDiagnostics(
       residualSec: timingSolve.moon.residualSec,
     },
   };
+}
+
+function resolveObserverClockOffsetSec(params: SystemParams, tObsSec: number): number {
+  const tk = params.observer?.timekeeping;
+  if (!tk?.enabled) return 0;
+  const constant = Number.isFinite(tk.barycentricOffsetSec) ? (tk.barycentricOffsetSec as number) : 0;
+  const amp = Number.isFinite(tk.periodicErrorAmpSec) ? (tk.periodicErrorAmpSec as number) : 0;
+  const periodSec = Number.isFinite(tk.periodSec) ? (tk.periodSec as number) : Number.NaN;
+  const phaseSec = Number.isFinite(tk.phaseSec) ? (tk.phaseSec as number) : 0;
+  const periodic =
+    Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0
+      ? amp * Math.sin((2 * Math.PI * (tObsSec - phaseSec)) / periodSec)
+      : 0;
+  const offset = constant + periodic;
+  return Number.isFinite(offset) ? offset : 0;
+}
+
+function applyClockOffsetToTiming(
+  timing: StepTimingDiagnostics | undefined,
+  offsetSec: number,
+): StepTimingDiagnostics | undefined {
+  if (!timing || !Number.isFinite(offsetSec) || offsetSec === 0) return timing;
+  const shift = (value: number | undefined): number | undefined =>
+    Number.isFinite(value) ? (value as number) + offsetSec : value;
+  return {
+    ...timing,
+    barycentricClockOffsetSec: offsetSec,
+    planetTransitCenterSec: shift(timing.planetTransitCenterSec),
+    planetIngressSec: shift(timing.planetIngressSec),
+    planetEgressSec: shift(timing.planetEgressSec),
+    planetTtvSec: shift(timing.planetTtvSec),
+    moonTransitCenterSec: shift(timing.moonTransitCenterSec),
+    moonIngressSec: shift(timing.moonIngressSec),
+    moonEgressSec: shift(timing.moonEgressSec),
+    moonTtvSec: shift(timing.moonTtvSec),
+  };
+}
+
+function deriveCentralMu(params: SystemParams, tObsSec: number): number | undefined {
+  if (Number.isFinite(params.star.m) && (params.star.m as number) > 0) {
+    return G_SI * (params.star.m as number);
+  }
+  try {
+    const orbit = resolvePlanetOrbitForKinematics(params, tObsSec, "planet.orbit");
+    const mu = muFromPeriodAndA(orbit.period, orbit.a);
+    return Number.isFinite(mu) && mu > 0 ? mu : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function currentCloseEncounterDistance(params: SystemParams, tObsSec: number): number | undefined {
+  if (!isNBodyEnabled(params)) return undefined;
+  const sample = getNBodyStateAt(params, tObsSec);
+  if (!sample) return undefined;
+  const bodies = [
+    sample.state.rS,
+    sample.state.rP,
+    sample.state.rM,
+    ...(sample.state.perturbers?.map((p) => p.r) ?? []),
+  ];
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const dx = bodies[j].x - bodies[i].x;
+      const dy = bodies[j].y - bodies[i].y;
+      const dz = bodies[j].z - bodies[i].z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (Number.isFinite(d) && d < best) best = d;
+    }
+  }
+  return Number.isFinite(best) ? best : undefined;
+}
+
+function computeAdvancedTimingDiagnostics(
+  params: SystemParams,
+  tObsSec: number,
+  observerDir: ReturnType<typeof getObserverDir>,
+  kin: ReturnType<typeof computeBodyKinematics>,
+  clockOffsetSec: number,
+): StepAdvancedTimingDiagnostics | undefined {
+  const rel = normalizeRelativityParams(params.dynamics?.relativity);
+  const mu = deriveCentralMu(params, tObsSec);
+  const dynamic = resolveDynamicSystemState({ system: params, tObs: tObsSec, observerDir, kinAtT: kin });
+  const validityFlags: string[] = [];
+
+  const einsteinPlanetSec =
+    rel.einsteinDelay && mu
+      ? einsteinDelaySurrogateSec({
+          r: dynamic.planet.r,
+          v: dynamic.planet.v,
+          mu,
+          c: rel.c,
+          tObs: tObsSec,
+          tRef: rel.timingRefSec,
+        })
+      : undefined;
+  const einsteinMoonSec =
+    rel.einsteinDelay && mu && dynamic.moon
+      ? einsteinDelaySurrogateSec({
+          r: dynamic.moon.r,
+          v: dynamic.moon.v,
+          mu,
+          c: rel.c,
+          tObs: tObsSec,
+          tRef: rel.timingRefSec,
+        })
+      : undefined;
+
+  const lightBendingPlanetRad =
+    rel.lightBending && mu
+      ? lightBendingAngleRad({
+          r: dynamic.planet.r,
+          observerDir,
+          mu,
+          c: rel.c,
+          minImpact: rel.shapiroMinImpact,
+        })
+      : undefined;
+  const lightBendingMoonRad =
+    rel.lightBending && mu && dynamic.moon
+      ? lightBendingAngleRad({
+          r: dynamic.moon.r,
+          observerDir,
+          mu,
+          c: rel.c,
+          minImpact: rel.shapiroMinImpact,
+        })
+      : undefined;
+
+  const closeEncounterDistance = currentCloseEncounterDistance(params, tObsSec);
+
+  if ((rel.einsteinDelay || rel.lightBending) && validityFlags.indexOf("surrogate-model") === -1) {
+    validityFlags.push("surrogate-model");
+  }
+  if (Number.isFinite(clockOffsetSec) && clockOffsetSec !== 0) validityFlags.push("clock-frame-mismatch");
+  const minSeparation = params.dynamics?.collisionPolicy?.minSeparation;
+  if (
+    Number.isFinite(closeEncounterDistance) &&
+    Number.isFinite(minSeparation) &&
+    (closeEncounterDistance as number) < (minSeparation as number)
+  ) {
+    validityFlags.push("close-encounter");
+  }
+
+  const out: StepAdvancedTimingDiagnostics = {
+    einsteinPlanetSec: Number.isFinite(einsteinPlanetSec) ? einsteinPlanetSec : undefined,
+    einsteinMoonSec: Number.isFinite(einsteinMoonSec) ? einsteinMoonSec : undefined,
+    barycentricClockOffsetSec:
+      Number.isFinite(clockOffsetSec) && clockOffsetSec !== 0 ? clockOffsetSec : undefined,
+    lightBendingPlanetRad: Number.isFinite(lightBendingPlanetRad) ? lightBendingPlanetRad : undefined,
+    lightBendingMoonRad: Number.isFinite(lightBendingMoonRad) ? lightBendingMoonRad : undefined,
+    closeEncounterDistance: Number.isFinite(closeEncounterDistance) ? closeEncounterDistance : undefined,
+    validityFlags,
+  };
+
+  return Object.values(out).some((value) =>
+    Array.isArray(value) ? value.length > 0 : typeof value === "number",
+  )
+    ? out
+    : undefined;
 }
 
 /**
@@ -149,6 +324,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
   const fluxMoonPhase = additive.fluxMoonOnly;
   const fluxForwardScattering = additive.fluxForwardScatteringOnly;
   const fluxRingScattering = additive.fluxRingScatteringOnly;
+  const fluxRefraction = additive.fluxRefractionOnly;
 
   const fluxStellarPreTransit = baselineFluxUsed * spotFluxFactor + fluxStellarVar;
 
@@ -156,19 +332,35 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
   // Assumption: Stellar variability is photospheric.
   const fluxTotal =
     fluxStellarPreTransit * fluxTransitFactor +
-    (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering + fluxRingScattering);
+    (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering + fluxRingScattering + fluxRefraction);
 
   const exoDiag = computeExoDiagnostics(params, t, observerDir, kin);
-  const observables = computeStepObservables(params, t, observerDir, kin);
+  const observablesRaw = computeStepObservables(params, t, observerDir, kin);
   const dynamicTiming = computeTransitTimingDiagnostics(params, t, observerDir, kin);
+  const clockOffsetSec = resolveObserverClockOffsetSec(params, t);
   const mergedTiming: StepTimingDiagnostics = {
-    ...(observables?.timing ?? {}),
+    ...(observablesRaw?.timing ?? {}),
     ...(dynamicTiming.timing ?? {}),
   };
-  const timing = Object.values(mergedTiming).some((v) => typeof v === "number" && Number.isFinite(v))
-    ? mergedTiming
+  const advancedTiming = computeAdvancedTimingDiagnostics(params, t, observerDir, kin, clockOffsetSec);
+  if (advancedTiming?.einsteinPlanetSec !== undefined)
+    mergedTiming.einsteinPlanetSec = advancedTiming.einsteinPlanetSec;
+  if (advancedTiming?.einsteinMoonSec !== undefined)
+    mergedTiming.einsteinMoonSec = advancedTiming.einsteinMoonSec;
+  if (advancedTiming?.barycentricClockOffsetSec !== undefined) {
+    mergedTiming.barycentricClockOffsetSec = advancedTiming.barycentricClockOffsetSec;
+  }
+  const timingWithClock = applyClockOffsetToTiming(mergedTiming, clockOffsetSec);
+  const timing = Object.values(timingWithClock ?? {}).some((v) => typeof v === "number" && Number.isFinite(v))
+    ? timingWithClock
     : undefined;
-  const conservation = observables?.conservation;
+  const observables = observablesRaw
+    ? {
+        ...observablesRaw,
+        timing,
+      }
+    : undefined;
+  const conservation = observablesRaw?.conservation;
 
   const stepBase: StepResult = {
     // UI robustness: never return NaN/Inf; fail-open to 1.0 (normalized no-event level).
@@ -180,6 +372,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
     fluxMoonPhase,
     fluxForwardScattering,
     fluxRingScattering,
+    fluxRefraction,
     planetSky: kin.planetSky,
     moonSky: kin.moonSky,
     meta: {
@@ -198,6 +391,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
       bMoon: exoDiag.bMoon,
       observables,
       timing,
+      advancedTiming,
       eventTimingConvergence: dynamicTiming.eventTimingConvergence,
       timingConvergence: mapTimingSolveDiagnostics(kin.timingSolve),
       conservation,
@@ -215,6 +409,7 @@ export function stepSystem(params: SystemParams, t: number): StepResult {
         moonPhase: fluxMoonPhase,
         forwardScattering: fluxForwardScattering,
         ringScattering: fluxRingScattering,
+        refraction: fluxRefraction,
         total: toFiniteNumber(fluxTotal, 1.0),
       },
     },

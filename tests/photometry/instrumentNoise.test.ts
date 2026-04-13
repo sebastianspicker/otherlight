@@ -142,4 +142,158 @@ describe("instrument noise determinism", () => {
     expect(a).toBe(b);
     expect(a).not.toBe(1);
   });
+
+  it("returns NaN for configured data-gap windows without throwing", () => {
+    const cfg: InstrumentNoiseSystematicsParams = {
+      enabled: true,
+      seed: 5,
+      photonNoise: { enabled: false },
+      readNoise: { enabled: false },
+      correlatedNoise: { enabled: false },
+      trends: { enabled: false },
+      observer: {
+        enabled: true,
+        dataGaps: {
+          enabled: true,
+          windowsSec: [{ startSec: 10, endSec: 20 }],
+        },
+      },
+    };
+
+    const state = createInstrumentNoiseState(cfg.seed);
+    const outside = applyInstrumentNoiseAndSystematics({
+      flux: 0.99,
+      tSec: 5,
+      dtSec: 1,
+      cfg,
+      state,
+    });
+    const inside = applyInstrumentNoiseAndSystematics({
+      flux: 0.99,
+      tSec: 15,
+      dtSec: 10,
+      cfg,
+      state,
+    });
+
+    expect(outside).toBe(0.99);
+    expect(Number.isNaN(inside)).toBe(true);
+  });
+
+  it("applies bounded observer-atmosphere attenuation and sky-background residuals", () => {
+    const cfg: InstrumentNoiseSystematicsParams = {
+      enabled: true,
+      seed: 9,
+      electronsPerUnitFlux: 1e4,
+      exposureSec: 10,
+      throughput: 1,
+      photonNoise: { enabled: false },
+      readNoise: { enabled: false },
+      correlatedNoise: { enabled: false },
+      trends: { enabled: false },
+      observer: {
+        enabled: true,
+        atmosphere: {
+          enabled: true,
+          airmass: {
+            enabled: true,
+            base: 1.8,
+            extinctionCoeff: 0.1,
+          },
+          clouds: {
+            enabled: true,
+            meanOpticalDepth: 0.2,
+            sigmaOpticalDepth: 0,
+          },
+          seeing: {
+            enabled: true,
+            meanLoss: 0.03,
+            sigmaLoss: 0,
+            airmassExponent: 0.5,
+            maxLoss: 0.2,
+          },
+          tellurics: {
+            enabled: true,
+            meanOpticalDepth: 0.12,
+            sigmaOpticalDepth: 0,
+            airmassCoupling: 0.4,
+          },
+          skyBackground: {
+            enabled: true,
+            electronsPerSec: 500,
+            subtractionResidualFraction: 0.05,
+          },
+        },
+      },
+    };
+
+    const state = createInstrumentNoiseState(cfg.seed);
+    const out = applyInstrumentNoiseAndSystematics({
+      flux: 1,
+      tSec: 0,
+      dtSec: 1,
+      cfg,
+      state,
+    });
+
+    expect(out).toBeLessThan(1);
+    expect(out).toBeGreaterThan(0.3);
+  });
+
+  it("can detrend a linear baseline drift back toward unity after warmup", () => {
+    const rawCfg: InstrumentNoiseSystematicsParams = {
+      enabled: true,
+      seed: 17,
+      photonNoise: { enabled: false },
+      readNoise: { enabled: false },
+      correlatedNoise: { enabled: false },
+      trends: {
+        enabled: true,
+        temperature: {
+          enabled: true,
+          linearSlopeFluxPerSec: 2e-4,
+          randomWalkSigmaFluxPerSqrtSec: 0,
+        },
+      },
+    };
+    const detrendedCfg: InstrumentNoiseSystematicsParams = {
+      ...rawCfg,
+      postprocess: {
+        enabled: true,
+        detrend: {
+          enabled: true,
+          mode: "linear",
+          windowSec: 30,
+          minSamples: 4,
+          preserveBaseline: true,
+        },
+      },
+    };
+
+    const rawState = createInstrumentNoiseState(rawCfg.seed);
+    const detrendedState = createInstrumentNoiseState(detrendedCfg.seed);
+    let raw = 1;
+    let detrended = 1;
+
+    for (let t = 0; t <= 8; t++) {
+      raw = applyInstrumentNoiseAndSystematics({
+        flux: 1,
+        tSec: t,
+        dtSec: 1,
+        cfg: rawCfg,
+        state: rawState,
+      });
+      detrended = applyInstrumentNoiseAndSystematics({
+        flux: 1,
+        tSec: t,
+        dtSec: 1,
+        cfg: detrendedCfg,
+        state: detrendedState,
+      });
+    }
+
+    expect(Math.abs(raw - 1)).toBeGreaterThan(1e-3);
+    expect(Math.abs(detrended - 1)).toBeLessThan(Math.abs(raw - 1));
+    expect(Math.abs(detrended - 1)).toBeLessThan(2e-4);
+  });
 });

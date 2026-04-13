@@ -1,16 +1,19 @@
 import { setText } from "../core/dom";
 import type { SystemParams } from "../core/types";
-import type { PhysicsDiagnosticsV3, RenderSignalsV3, SimulationStepV3 } from "../sim/v3";
+import type { SimulationStepV3 } from "../sim/v3";
 import type { BinaryLabState } from "../didactics/binaryLab";
 import { scaleFluxForDisplay } from "./displayFlux";
-import {
-  applyInstrumentNoiseAndSystematics,
-  createInstrumentNoiseState,
-  resetInstrumentNoiseState,
-} from "../photometry/instrumentNoise";
+import { applyInstrumentNoiseAndSystematics, resetInstrumentNoiseState } from "../photometry/instrumentNoise";
 import { smearedFluxAt } from "../photometry/smearing";
 import { renderScene } from "../render/scene";
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
+import type {
+  LightCurveBadge,
+  LightCurveComparisonInset,
+  LightCurveOverlayPoint,
+  LightCurveOverlaySeries,
+} from "../render/lightCurvePlotTypes";
+import type { SceneGhostGeometry } from "../render/sceneTypes";
 import { readClampSmearedFlux, readPlotMode, readPlotTrackingMode } from "../ui/inputs";
 import type { UiRefs } from "../ui/refs";
 import { computeFrameDt, readTimeSpeed, resetNoiseState, setRunningState } from "./actions";
@@ -21,74 +24,24 @@ import {
   type TransitHistoryState,
 } from "./transitHistory";
 import type { AppSimulationRuntime } from "./v4Runtime";
+import {
+  applyDynamicVisualizationState,
+  clearFixedComparisonRange,
+  displayFluxFromStep,
+  initializeVisualizationState,
+  pushFinitePlotSample,
+  pushHistorySamples,
+  rebuildFixedPlot,
+  resolveDisplayFlux,
+  setPlotBadges,
+  setPlotComparisonInset,
+  setPlotMarkers,
+  setPlotOverlaySeries,
+  setPlotWindowOverlays,
+} from "./frameLoopVisualization";
+import { fallbackStepV3 } from "./frameLoopFallback";
 
 let noiseErrorLogged = false;
-const FIXED_PLOT_SAMPLE_COUNT = 256;
-const FIXED_PLOT_MIN_HALF_WINDOW_SEC = 6 * 3600;
-
-function finitePositive(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
-function fallbackFlux(step?: SimulationStepV3): SimulationStepV3["flux"] {
-  return {
-    total: step?.flux.total ?? 1,
-    transitFactor: step?.flux.transitFactor ?? 1,
-    stellarPreTransit: step?.flux.stellarPreTransit ?? 1,
-    stellarVariability: step?.flux.stellarVariability ?? 0,
-    planetPhase: step?.flux.planetPhase ?? 0,
-    moonPhase: step?.flux.moonPhase ?? 0,
-    forwardScattering: step?.flux.forwardScattering ?? 0,
-    ringScattering: step?.flux.ringScattering ?? 0,
-    decomposition: step?.flux.decomposition,
-  };
-}
-
-function fallbackRenderSignals(
-  params: SystemParams,
-  step: SimulationStepV3 | undefined,
-  kinematics: SimulationStepV3["kinematics"],
-  flux: SimulationStepV3["flux"],
-): RenderSignalsV3 {
-  return {
-    occulterGeometry: step?.renderSignals.occulterGeometry ?? [],
-    eventMarkers: step?.renderSignals.eventMarkers ?? [],
-    timingMarkers: step?.renderSignals.timingMarkers ?? [],
-    visibilityFractions: step?.renderSignals.visibilityFractions ?? {},
-    fluxComponents: {
-      transitFactor: flux.transitFactor,
-      stellarPreTransit: flux.stellarPreTransit,
-      stellarVariability: flux.stellarVariability,
-      planetPhase: flux.planetPhase,
-      moonPhase: flux.moonPhase,
-      forwardScattering: flux.forwardScattering,
-      ringScattering: flux.ringScattering,
-      total: flux.total,
-    },
-    orbitFrames: {
-      observerDir: step?.renderSignals.orbitFrames.observerDir ?? params.observer?.dir,
-      planetSky: step?.renderSignals.orbitFrames.planetSky ?? kinematics.planetSky,
-      moonSky: step?.renderSignals.orbitFrames.moonSky ?? kinematics.moonSky,
-    },
-    uncertaintyFlags: [...(step?.renderSignals.uncertaintyFlags ?? []), "fallback-step-used"],
-  };
-}
-
-function fallbackPhysicsDiagnostics(params: SystemParams, step?: SimulationStepV3): PhysicsDiagnosticsV3 {
-  return {
-    ltteConvergence: { enabled: false, status: "disabled" },
-    shapiroConvergence: { enabled: false, status: "disabled" },
-    integratorStats: {
-      mode: params.dynamics?.nbodyPlanetMoon?.enabled ? "fixed-verlet" : "kepler",
-      nbodyEnabled: Boolean(params.dynamics?.nbodyPlanetMoon?.enabled),
-      dtMaxSec: params.dynamics?.nbodyPlanetMoon?.dtMax,
-      softening: params.dynamics?.nbodyPlanetMoon?.softening,
-    },
-    closeEncounterFlags: [...(step?.physicsDiagnostics.closeEncounterFlags ?? [])],
-    energyDrift: step?.physicsDiagnostics.energyDrift,
-    angularMomentumDrift: step?.physicsDiagnostics.angularMomentumDrift,
-  };
-}
 
 export type FrameLoopState = {
   running: boolean;
@@ -101,8 +54,19 @@ export type FrameLoopState = {
   lastStepV3: SimulationStepV3 | null;
   displayFluxScale: number;
   displayFluxTitle: string;
+  fixedPlotYRange?: { lo: number; hi: number };
+  fixedPlotYRangeMode?: string | null;
   noise: NoiseState;
   transitHistory: TransitHistoryState;
+  physicalHistory: LightCurveOverlayPoint[];
+  measuredHistory: LightCurveOverlayPoint[];
+  componentBaselineHistory: LightCurveOverlayPoint[];
+  componentTransitHistory: LightCurveOverlayPoint[];
+  componentScatterHistory: LightCurveOverlayPoint[];
+  comparisonCurveSeries?: LightCurveOverlaySeries[];
+  comparisonInset?: LightCurveComparisonInset;
+  comparisonGhosts?: SceneGhostGeometry[];
+  comparisonBadges?: LightCurveBadge[];
 };
 
 export type FrameLoopDeps = {
@@ -118,40 +82,6 @@ export type FrameLoopDeps = {
   onSampleStep: (step: SimulationStepV3, tSec: number) => void;
   renderOcPanel: () => void;
 };
-
-function fallbackStepV3(
-  tObsSec: number,
-  params: SystemParams,
-  fallback?: SimulationStepV3,
-): SimulationStepV3 {
-  const kinematics: SimulationStepV3["kinematics"] = {
-    planetSky: fallback?.kinematics.planetSky ?? { x: 0, y: 0, z: 0 },
-    moonSky: fallback?.kinematics.moonSky,
-  };
-  const flux = fallbackFlux(fallback);
-  return {
-    tObsSec,
-    kinematics,
-    flux,
-    timing: fallback?.timing,
-    observables: fallback?.observables,
-    conservation: fallback?.conservation,
-    didactics: fallback?.didactics,
-    debug: {
-      nOcculters: fallback?.debug?.nOcculters,
-      bPlanet: fallback?.debug?.bPlanet,
-      bMoon: fallback?.debug?.bMoon,
-      tdvRatio: fallback?.debug?.tdvRatio,
-      vPlanetSky: fallback?.debug?.vPlanetSky,
-      vPlanetSkyRef: fallback?.debug?.vPlanetSkyRef,
-      baselineFluxUsed: fallback?.debug?.baselineFluxUsed ?? flux.stellarPreTransit,
-      displayFluxValue: fallback?.debug?.displayFluxValue ?? flux.total,
-      stellarVariabilityFlux: fallback?.debug?.stellarVariabilityFlux ?? flux.stellarVariability,
-    },
-    renderSignals: fallbackRenderSignals(params, fallback, kinematics, flux),
-    physicsDiagnostics: fallbackPhysicsDiagnostics(params, fallback),
-  };
-}
 
 export function createFrameLoopController(deps: FrameLoopDeps): {
   frame: (now: number) => void;
@@ -172,6 +102,8 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     onSampleStep,
     renderOcPanel,
   } = deps;
+
+  initializeVisualizationState(state);
 
   function setRunning(next: boolean): void {
     const uiState = setRunningState(next, refs.btnStart);
@@ -217,59 +149,6 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     return scaleFluxForDisplay(fluxForPlot, state.displayFluxScale);
   }
 
-  function displayFluxFromStep(step: SimulationStepV3): number {
-    const displayFlux = step.debug?.displayFluxValue;
-    return displayFlux !== undefined && Number.isFinite(displayFlux)
-      ? displayFlux
-      : scaleFluxForDisplay(step.flux.total, state.displayFluxScale);
-  }
-
-  function deriveFixedPlotWindow(
-    step0: SimulationStepV3,
-    params: SystemParams,
-  ): { startSec: number; endSec: number } {
-    const timing = step0.timing;
-    const durationSec = Math.max(
-      finitePositive(timing?.planetTransitDurationSec) ?? 0,
-      finitePositive(timing?.moonTransitDurationSec) ?? 0,
-    );
-    const eventExtentSec = Math.max(
-      Math.abs(timing?.planetIngressSec ?? 0),
-      Math.abs(timing?.planetEgressSec ?? 0),
-      Math.abs(timing?.moonIngressSec ?? 0),
-      Math.abs(timing?.moonEgressSec ?? 0),
-    );
-    const cadenceSec = finitePositive(params.star.photometry?.cadenceSec) ?? 60;
-    const halfWindowSec = Math.max(
-      FIXED_PLOT_MIN_HALF_WINDOW_SEC,
-      cadenceSec * 256,
-      durationSec * 6,
-      eventExtentSec + durationSec * 2,
-    );
-    return { startSec: -halfWindowSec, endSec: halfWindowSec };
-  }
-
-  function rebuildFixedPlot(
-    simulation: AppSimulationRuntime,
-    params: SystemParams,
-    plotMode: string,
-    step0?: SimulationStepV3,
-  ): void {
-    plot.clear();
-    const anchorStep = step0 ?? simulation.step(0);
-    const { startSec, endSec } = deriveFixedPlotWindow(anchorStep, params);
-    const sampleCount = Math.max(32, FIXED_PLOT_SAMPLE_COUNT);
-    const spanSec = Math.max(1, endSec - startSec);
-    const previewNoiseState = createInstrumentNoiseState(state.noise.noiseSeed);
-    for (let i = 0; i < sampleCount; i++) {
-      const frac = sampleCount === 1 ? 0 : i / (sampleCount - 1);
-      const tSec = startSec + frac * spanSec;
-      const dtSec = i === 0 ? 0 : spanSec / Math.max(1, sampleCount - 1);
-      const fluxForPlot = sampleFluxForPlot(simulation, params, plotMode, tSec, dtSec, previewNoiseState);
-      plot.push(fluxForPlot, tSec);
-    }
-  }
-
   function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
     const simulation = getSimulation();
     const params = getParams();
@@ -280,8 +159,18 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     state.lastPlottedT = Number.NaN;
     state.lastPlotMode = null;
     state.lastPlotTrackingMode = null;
+    state.physicalHistory = [];
+    state.measuredHistory = [];
+    state.componentBaselineHistory = [];
+    state.componentTransitHistory = [];
+    state.componentScatterHistory = [];
     plot.clear();
-    plot.setOptions({ title: state.displayFluxTitle });
+    plot.setOptions({ title: state.displayFluxTitle, manualYRange: state.fixedPlotYRange });
+    setPlotOverlaySeries(plot, []);
+    setPlotWindowOverlays(plot, []);
+    setPlotMarkers(plot, []);
+    setPlotBadges(plot, []);
+    setPlotComparisonInset(plot, state.comparisonInset);
     state.last = performance.now();
     state.transitHistory = resetTransitHistoryState(state.transitHistory);
     if (refs.timingHistoryVal)
@@ -303,12 +192,17 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
       errorMessage = e instanceof Error ? e.message : String(e);
       step0 = fallbackStepV3(0, params, state.lastStepV3 ?? undefined);
     }
-    const fluxDisplay0 = displayFluxFromStep(step0);
+    const plotMode = readPlotMode(refs.plotMode);
+    const fluxDisplay0 = resolveDisplayFlux(
+      sampleFluxForPlot(simulation, params, plotMode, 0, 0, state.noise.noiseState, step0),
+      displayFluxFromStep(step0, state.displayFluxScale),
+      state.lastFluxForPlot,
+      { preferLastFinite: false },
+    );
     const trackingMode = readPlotTrackingMode(refs.plotTrackingMode);
     if (trackingMode === "fixed") {
       try {
-        const plotMode = readPlotMode(refs.plotMode);
-        rebuildFixedPlot(simulation, params, plotMode, step0);
+        rebuildFixedPlot({ simulation, params, plotMode, state, plot, renderer, sampleFluxForPlot, step0 });
         state.lastPlottedT = Number.NaN;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = "fixed";
@@ -317,10 +211,13 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
           refs.warnVal.textContent = e instanceof Error ? e.message : String(e);
       }
     } else {
-      plot.push(fluxDisplay0, 0);
+      clearFixedComparisonRange(state, plot);
+      pushFinitePlotSample(plot, fluxDisplay0, 0);
+      pushHistorySamples(state, step0, 0, plotMode === "measured" ? fluxDisplay0 : undefined);
       state.lastPlottedT = 0;
-      state.lastPlotMode = readPlotMode(refs.plotMode);
+      state.lastPlotMode = plotMode;
       state.lastPlotTrackingMode = trackingMode;
+      applyDynamicVisualizationState({ simulation, params, step: step0, plotMode, state, plot, renderer });
     }
     setText(refs.tVal, "0.0");
     setText(refs.fluxVal, fluxDisplay0.toFixed(6));
@@ -355,15 +252,25 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
 
     if (trackingMode === "fixed") {
       try {
-        rebuildFixedPlot(simulation, params, plotMode, stepV3);
+        rebuildFixedPlot({
+          simulation,
+          params,
+          plotMode,
+          state,
+          plot,
+          renderer,
+          sampleFluxForPlot,
+          step0: stepV3,
+        });
         state.lastPlottedT = Number.NaN;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = "fixed";
       } catch {
         // Keep the current sample rendering below even if the preview rebuild fails.
       }
-      state.lastFluxForPlot = displayFluxFromStep(stepV3);
+      state.lastFluxForPlot = displayFluxFromStep(stepV3, state.displayFluxScale);
     } else {
+      clearFixedComparisonRange(state, plot);
       if (trackingMode !== state.lastPlotTrackingMode) {
         plot.clear();
         state.lastPlottedT = Number.NaN;
@@ -378,11 +285,17 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
         state.noise.noiseState,
         stepV3,
       );
-      plot.push(fluxForPlot, state.t);
+      pushFinitePlotSample(plot, fluxForPlot, state.t);
+      pushHistorySamples(state, stepV3, state.t, plotMode === "measured" ? fluxForPlot : undefined);
       state.lastPlottedT = state.t;
       state.lastPlotMode = plotMode;
       state.lastPlotTrackingMode = trackingMode;
-      state.lastFluxForPlot = fluxForPlot;
+      state.lastFluxForPlot = resolveDisplayFlux(
+        fluxForPlot,
+        displayFluxFromStep(stepV3, state.displayFluxScale),
+        state.lastFluxForPlot,
+      );
+      applyDynamicVisualizationState({ simulation, params, step: stepV3, plotMode, state, plot, renderer });
     }
 
     if (!isBinaryModeActive() || getBinaryLabState().skyVisible) {
@@ -396,7 +309,14 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     plot.setOptions({ title: state.displayFluxTitle });
     plot.draw();
     setText(refs.tVal, state.t.toFixed(1));
-    setText(refs.fluxVal, state.lastFluxForPlot.toFixed(6));
+    setText(
+      refs.fluxVal,
+      resolveDisplayFlux(
+        state.lastFluxForPlot,
+        displayFluxFromStep(stepV3, state.displayFluxScale),
+        state.lastFluxForPlot,
+      ).toFixed(6),
+    );
     if (refs.plotModeVal) refs.plotModeVal.textContent = plotMode;
     if (refs.nOccultersVal) refs.nOccultersVal.textContent = String(stepV3.debug?.nOcculters ?? "");
     if (refs.vPlanetVal) {
@@ -433,6 +353,7 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
       stepV3 = fallbackStepV3(state.t, params, state.lastStepV3 ?? undefined);
     }
     if (plotTrackingMode !== state.lastPlotTrackingMode && plotTrackingMode !== "fixed") {
+      clearFixedComparisonRange(state, plot);
       plot.clear();
       state.lastPlottedT = Number.NaN;
       state.lastPlotMode = null;
@@ -445,7 +366,7 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
         !Number.isFinite(state.lastPlottedT))
     ) {
       try {
-        rebuildFixedPlot(simulation, params, plotMode);
+        rebuildFixedPlot({ simulation, params, plotMode, state, plot, renderer, sampleFluxForPlot });
         state.lastPlottedT = Number.NaN;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = "fixed";
@@ -471,24 +392,34 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
           state.noise.noiseState,
           stepV3,
         );
-        plot.push(fluxForPlot, state.t);
+        pushFinitePlotSample(plot, fluxForPlot, state.t);
+        pushHistorySamples(state, stepV3, state.t, plotMode === "measured" ? fluxForPlot : undefined);
         state.lastPlottedT = state.t;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = plotTrackingMode;
-        state.lastFluxForPlot = fluxForPlot;
+        state.lastFluxForPlot = resolveDisplayFlux(
+          fluxForPlot,
+          displayFluxFromStep(stepV3, state.displayFluxScale),
+          state.lastFluxForPlot,
+        );
       } catch (_noiseErr) {
         // Noise pipeline error — fall back to physical flux (log once to aid debugging).
         if (!noiseErrorLogged) {
           noiseErrorLogged = true;
           console.warn("[frameLoop] noise pipeline error, falling back to physical flux:", _noiseErr);
         }
-        fluxForPlot = displayFluxFromStep(stepV3);
-        plot.push(fluxForPlot, state.t);
+        fluxForPlot = displayFluxFromStep(stepV3, state.displayFluxScale);
+        pushFinitePlotSample(plot, fluxForPlot, state.t);
+        pushHistorySamples(state, stepV3, state.t, undefined);
         state.lastPlottedT = state.t;
         state.lastPlotMode = plotMode;
         state.lastPlotTrackingMode = plotTrackingMode;
         state.lastFluxForPlot = fluxForPlot;
       }
+    }
+
+    if (plotTrackingMode !== "fixed") {
+      applyDynamicVisualizationState({ simulation, params, step: stepV3, plotMode, state, plot, renderer });
     }
 
     if (!isBinaryModeActive() || getBinaryLabState().skyVisible) {
@@ -502,7 +433,12 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     plot.setOptions({ title: state.displayFluxTitle });
     plot.draw();
     setText(refs.tVal, state.t.toFixed(1));
-    setText(refs.fluxVal, fluxForPlot.toFixed(6));
+    const fluxForDisplay = resolveDisplayFlux(
+      fluxForPlot,
+      displayFluxFromStep(stepV3, state.displayFluxScale),
+      state.lastFluxForPlot,
+    );
+    setText(refs.fluxVal, fluxForDisplay.toFixed(6));
     if (refs.plotModeVal) refs.plotModeVal.textContent = plotMode;
     if (refs.nOccultersVal) refs.nOccultersVal.textContent = String(stepV3.debug?.nOcculters ?? "");
     if (refs.vPlanetVal) {

@@ -12,6 +12,7 @@ import {
   atmosphereOpacityForOcculter,
   circleOverlapArea,
   gaussianPhaseWeight,
+  resolveWeightedPhotometryBands,
   starVisibilityFromOpaqueOcculters,
 } from "./nativePhotometry";
 import {
@@ -67,6 +68,7 @@ export type FluxBundle = {
   additiveLunar: number;
   forwardScattering: number;
   ringScattering: number;
+  refraction: number;
   stellarVariability: number;
   total: number;
   nOcculters: number;
@@ -403,6 +405,7 @@ export function computeFluxBundle(
 
   let forwardScattering = 0;
   let ringScattering = 0;
+  let refraction = 0;
   const firstPlanet = snap.planets[0];
   if (firstPlanet) {
     const parentStar =
@@ -437,7 +440,65 @@ export function computeFluxBundle(
     }
   }
 
-  const total = stellarPreTransit + additivePlanetary + additiveLunar + forwardScattering + ringScattering;
+  const rt = phot?.atmosphereRT;
+  if (rt?.enabled && rt.refraction?.enabled) {
+    const bands = resolveWeightedPhotometryBands(config);
+    const lambdaRef = Number.isFinite(rt.lambdaRefNm) ? Math.max(1, rt.lambdaRefNm as number) : 550;
+    const chromaticSlope = Number.isFinite(rt.refraction.chromaticSlope)
+      ? (rt.refraction.chromaticSlope as number)
+      : 0;
+    const amp = Number.isFinite(rt.refraction.amp) ? Math.max(0, rt.refraction.amp as number) : 0;
+    const refractionForBody = (
+      body: NativeBodyState | undefined,
+      target: "planet" | "moon",
+      parentStar: NativeBodyState | undefined,
+    ): number => {
+      if (
+        !body ||
+        !parentStar ||
+        !(body.sky.z > parentStar.sky.z) ||
+        (rt.target ?? "planet") !== target ||
+        amp <= 0
+      ) {
+        return 0;
+      }
+      const contactRadius = parentStar.r + body.r;
+      const impact = Math.hypot(body.sky.x - parentStar.sky.x, body.sky.y - parentStar.sky.y);
+      const sigma =
+        Number.isFinite(rt.refraction?.width) && (rt.refraction?.width as number) > 0
+          ? (rt.refraction?.width as number)
+          : Math.max(body.r * 0.8, parentStar.r * 0.04);
+      const distance = impact - contactRadius;
+      const weight = Math.exp(-(distance * distance) / (2 * sigma * sigma));
+      let bandWeighted = 0;
+      for (const band of bands) {
+        const wlScale = Math.pow(Math.max(1, band.lambdaNm) / lambdaRef, -chromaticSlope);
+        bandWeighted += band.weight * wlScale;
+      }
+      return amp * weight * bandWeighted;
+    };
+    const planetParentStar =
+      firstPlanet?.parentId && snap.byId.get(firstPlanet.parentId)?.kind === "star"
+        ? (snap.byId.get(firstPlanet.parentId) as NativeBodyState)
+        : primaryStar;
+    refraction += refractionForBody(firstPlanet, "planet", planetParentStar);
+
+    const firstMoon = snap.moons[0];
+    if (firstMoon) {
+      const moonParent =
+        firstMoon.parentId && snap.byId.get(firstMoon.parentId)?.kind === "planet"
+          ? snap.byId.get(firstMoon.parentId)
+          : undefined;
+      const moonParentStar =
+        moonParent?.parentId && snap.byId.get(moonParent.parentId)?.kind === "star"
+          ? (snap.byId.get(moonParent.parentId) as NativeBodyState)
+          : primaryStar;
+      refraction += refractionForBody(firstMoon, "moon", moonParentStar);
+    }
+  }
+
+  const total =
+    stellarPreTransit + additivePlanetary + additiveLunar + forwardScattering + ringScattering + refraction;
   // Compute transitFactor from planet/moon transits only (not binary eclipse),
   // so it reflects the planet transit depth independent of binary stellar eclipses.
   const primaryLum = snap.stars[0]?.luminosity ?? 0;
@@ -481,6 +542,7 @@ export function computeFluxBundle(
     additiveLunar,
     forwardScattering,
     ringScattering,
+    refraction,
     stellarVariability,
     total,
     nOcculters,

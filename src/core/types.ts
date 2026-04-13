@@ -113,6 +113,7 @@ export type {
   StepResult,
   StepObservables,
   StepTimingDiagnostics,
+  StepAdvancedTimingDiagnostics,
   StepTimingSolveDiagnostics,
   StepTimingSolveBundle,
   StepEventTimingSolveDiagnostics,

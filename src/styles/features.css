@@ -1,0 +1,336 @@
+@media (max-width: 760px) {
+  .app-header > div.help {
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .app-header > div.help > label.inline {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    white-space: normal;
+  }
+
+  .app-header > div.help > label.inline > select {
+    width: 100%;
+  }
+}
+
+/* ---------------------------------
+   Reduced motion preference
+   --------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------
+   Selection styling
+   --------------------------------- */
+::selection {
+  background: rgba(46, 195, 177, 0.3);
+  color: var(--text);
+}
+
+/* ---------------------------------
+   Pre / code blocks (comparison output)
+   --------------------------------- */
+pre.help {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 8px 10px;
+  background: rgba(6, 10, 16, 0.5);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 8px;
+}
+
+/* ---------------------------------
+   Parameters panel specifics
+   --------------------------------- */
+.panel.params {
+  padding-bottom: 20px;
+}
+
+.panel.params > h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.quickControlsGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.quickControl {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(8, 14, 22, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quickControl--focus {
+  border-color: rgba(46, 195, 177, 0.45);
+  box-shadow: 0 0 0 1px rgba(46, 195, 177, 0.2);
+}
+
+.quickControl--dimmed {
+  opacity: 0.55;
+}
+
+.quickControlHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.quickControlLabel {
+  font-weight: 700;
+}
+
+.quickControlValue {
+  color: var(--text-secondary);
+}
+
+.quickControlCheckbox {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.quickControlCheckbox .quickControlHeader {
+  justify-content: flex-start;
+}
+
+.quickControlCheckbox .help {
+  margin: 0;
+}
+
+.quickControl input[type="range"] {
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.quickControl input[type="checkbox"] {
+  justify-self: end;
+}
+
+/* ---------------------------------
+   Sidebar button spacing
+   --------------------------------- */
+.sidebar > .row:first-of-type {
+  margin-top: 4px;
+}
+
+/* Readout label styling inside badges */
+.row.readouts .mono > span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* ---------------------------------
+   Noscript fallback
+   --------------------------------- */
+noscript .help {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 15px;
+  color: var(--accent-2);
+}
+
+/* ---------------------------------
+   Hidden helper (blackbox hint)
+   --------------------------------- */
+[hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------
+   Tooltip / help-text for parameter labels
+   --------------------------------- */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--panel2);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--stroke2);
+  box-shadow: var(--shadow-sm);
+  white-space: normal;
+  max-width: 280px;
+  min-width: 160px;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-within::after {
+  opacity: 1;
+}
+
+/* ---------------------------------
+   Scientific unit labels in forms
+   --------------------------------- */
+.unit-label {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  opacity: 0.85;
+}
+
+/* ---------------------------------
+   Didactics guided lab panel polish
+   --------------------------------- */
+#didLessonStatus {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 16, 0.4);
+  border: 1px solid var(--stroke2);
+  min-height: 2em;
+}
+
+#didInterpretation,
+#didLessonSummary,
+#didLessonMeta,
+#didPhaseTitle,
+#didPhasePrompt,
+#didWorkedExample,
+#didObservationList,
+#didResponseComposer,
+#didHintList,
+#didMisconceptionList,
+#didFocusList {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 16, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+#didResponseComposer textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+}
+
+#didCheckList {
+  padding: var(--space-sm) 0;
+}
+
+#didCheckList .check-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+}
+
+#didCheckList .check-pass {
+  color: var(--success);
+}
+
+#didCheckList .check-fail {
+  color: var(--danger);
+}
+
+#didFormulaList {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 10, 16, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ---------------------------------
+   Tablet layout (768px - 1099px)
+   --------------------------------- */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  .sidebar > h2 {
+    grid-column: 1 / -1;
+  }
+
+  .sidebar > .row {
+    grid-column: 1 / -1;
+  }
+
+  .sidebar > .row.readouts {
+    grid-column: 1 / -1;
+  }
+
+  .paramCols {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #skyCanvas {
+    height: clamp(360px, 50vh, 600px);
+  }
+
+  #lcCanvas {
+    height: clamp(180px, 22vh, 300px);
+  }
+}
+
+/* ---------------------------------
+   Fieldset legend styling refinement
+   --------------------------------- */
+fieldset > .help:first-of-type {
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+  font-style: italic;
+}
+
+/* ---------------------------------
+   Parameter label subscript/superscript
+   --------------------------------- */
+#paramForm label sub,
+#paramForm label sup {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+/* ---------------------------------
+   Action buttons row alignment
+   --------------------------------- */
+.paramActions .row {
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+}

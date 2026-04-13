@@ -34,7 +34,7 @@ Behavior in this codebase:
   educational-runtime concern, not an open blocker on the bounded `S3`
   scientific-browser contract.
 - Shared solver metadata:
-  `solveLightTimeCorrectedResult(...)` now emits convergence/status metadata
+  `solveLightTimeCorrectedResult(...)` emits convergence/status metadata
   (`converged`, `iterations`, `maxIters`, `tolSec`, Shapiro usage mode, and
   the final Roemer/Shapiro/delay terms, plus a closure `residualSec`) alongside the retarded time.
   The shared Kepler path preserves that metadata into step diagnostics.
@@ -81,8 +81,18 @@ Behavior in this codebase:
   and static LTTE+Shapiro reference cases, so all three primary relativity surfaces
   have a repo-native benchmark presence instead of living only in unit tests.
 
+Learner-visible timing surface:
+
+- The active interactive shell exposes relativity/timing consequences through timing markers, O-C history, epoch ghosts, and compare overlays rather than by showing the shared solver internals directly.
+- That distinction matters:
+  - the shared solver metadata is the authoritative place for convergence/status labeling
+  - the native V4 browser path may still show timing-oriented visuals while reporting solver convergence as `unavailable`
+- For the rendering/data contract that turns timing diagnostics into curve and canvas overlays, see `docs/rendering/physics-visualization-contract.md`.
+
 Related code:
 
 - `src/physics/relativity.ts`
 - `src/sim/kinematics.ts`
 - `src/sim/dynamics.ts`
+- `src/sim/v4/nativeEngine.ts`
+- `src/app/frameLoopVisualization.ts`

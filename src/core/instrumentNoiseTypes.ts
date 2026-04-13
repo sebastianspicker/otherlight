@@ -149,6 +149,125 @@ export type InstrumentNoiseSystematicsParams = {
     ctiTrailCoeff?: number;
   };
 
+  /**
+   * Observer-side contamination and missing-data controls.
+   * These operate on the measured flux after the astrophysical scene is formed,
+   * but before any optional detrending/post-processing.
+   */
+  observer?: {
+    enabled?: boolean;
+
+    dataGaps?: {
+      enabled?: boolean;
+      /** Explicit missing-data windows on the measurement timeline [s]. */
+      windowsSec?: Array<{
+        startSec?: number;
+        endSec?: number;
+      }>;
+      /** Periodic duty-cycle gap contract for repeated missing observations. */
+      periodic?: {
+        enabled?: boolean;
+        periodSec?: number;
+        gapDurationSec?: number;
+        phaseSec?: number;
+      };
+    };
+
+    atmosphere?: {
+      enabled?: boolean;
+
+      airmass?: {
+        enabled?: boolean;
+        /** Base airmass at t=0. */
+        base?: number;
+        /** Linear time drift in airmass per second. */
+        linearPerSec?: number;
+        /** Optional curvature term in airmass per second squared. */
+        curvaturePerSec2?: number;
+        /** Lower clamp for bounded didactic behavior. */
+        min?: number;
+        /** Upper clamp for bounded didactic behavior. */
+        max?: number;
+        /** Scalar extinction coefficient in optical-depth units per airmass. */
+        extinctionCoeff?: number;
+      };
+
+      scintillation?: {
+        enabled?: boolean;
+        /** RMS multiplicative fluctuation in flux units at airmass 1 and 1 s exposure. */
+        sigmaFlux?: number;
+        /** Power-law scaling with airmass. */
+        airmassExponent?: number;
+        /** Power-law scaling with exposure time in the denominator. */
+        exposureExponent?: number;
+      };
+
+      clouds?: {
+        enabled?: boolean;
+        /** Mean cloud optical depth contribution. */
+        meanOpticalDepth?: number;
+        /** OU-driven cloud optical-depth RMS. */
+        sigmaOpticalDepth?: number;
+        /** OU correlation timescale [s]. */
+        tauSec?: number;
+      };
+
+      seeing?: {
+        enabled?: boolean;
+        /** Mean fractional aperture loss. */
+        meanLoss?: number;
+        /** OU-driven loss RMS. */
+        sigmaLoss?: number;
+        /** OU correlation timescale [s]. */
+        tauSec?: number;
+        /** Optional power-law scaling with airmass. */
+        airmassExponent?: number;
+        /** Safety clamp for the fractional loss term. */
+        maxLoss?: number;
+      };
+
+      tellurics?: {
+        enabled?: boolean;
+        /** Mean telluric optical depth contribution. */
+        meanOpticalDepth?: number;
+        /** OU-driven telluric optical-depth RMS. */
+        sigmaOpticalDepth?: number;
+        /** OU correlation timescale [s]. */
+        tauSec?: number;
+        /** Additional scaling applied with (airmass - 1). */
+        airmassCoupling?: number;
+      };
+
+      skyBackground?: {
+        enabled?: boolean;
+        /** Mean sky-background electron rate [e-/s]. */
+        electronsPerSec?: number;
+        /**
+         * Fraction of the mean background left after subtraction.
+         * 0 = perfect mean subtraction, >0 leaves a positive residual bias.
+         */
+        subtractionResidualFraction?: number;
+      };
+    };
+  };
+
+  /**
+   * Optional post-processing applied to the measured time series.
+   * This is intentionally bounded and didactic rather than a full pipeline model.
+   */
+  postprocess?: {
+    enabled?: boolean;
+    detrend?: {
+      enabled?: boolean;
+      mode?: "running-mean" | "linear";
+      windowSec?: number;
+      minSamples?: number;
+      maxHistorySamples?: number;
+      /** If true, re-center the detrended output around unity. */
+      preserveBaseline?: boolean;
+    };
+  };
+
   /** Optional safety clamp of the returned flux value. */
   clampFlux?: { enabled?: boolean; min?: number; max?: number };
 };
