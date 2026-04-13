@@ -32,6 +32,11 @@ Rotation to inertial coordinates:
 
 - Apply $\Omega$, inc, $\omega$ rotations (see `src/physics/frames.ts`).
 
+Runtime note:
+
+- These Kepler elements drive both the default interactive browser runtime and the stricter `scientific-browser` validation/runtime path.
+- The difference is not the orbital parametrization itself but the surrounding runtime contract, diagnostics, and feature gating applied after the orbital state is built.
+
 Related code:
 
 - `src/physics/kepler.ts`
