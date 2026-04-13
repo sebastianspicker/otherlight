@@ -12,6 +12,7 @@ import type {
   SystemDynamicsParams,
 } from "../../core/types";
 import type {
+  StepAdvancedTimingDiagnostics,
   StepConservationDiagnostics,
   StepEventTimingSolveDiagnostics,
   StepFluxDecomposition,
@@ -141,6 +142,7 @@ export type SimulationFluxV3 = {
   moonPhase: number;
   forwardScattering: number;
   ringScattering: number;
+  refraction?: number;
   decomposition?: StepFluxDecomposition;
 };
 
@@ -224,6 +226,7 @@ export type RenderSignalsV3 = {
     moonPhase: number;
     forwardScattering: number;
     ringScattering: number;
+    refraction?: number;
     total: number;
   };
   orbitFrames: {
@@ -255,6 +258,7 @@ export type PhysicsDiagnosticsV3 = {
   energyDrift?: number;
   angularMomentumDrift?: number;
   closeEncounterFlags: string[];
+  advancedTiming?: StepAdvancedTimingDiagnostics;
 };
 
 export type SimulationStepV3 = {

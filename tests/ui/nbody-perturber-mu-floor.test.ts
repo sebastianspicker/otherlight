@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("UI n-body perturber mu floor", () => {
   it("enforces positive perturber mu when enabled", async () => {
-    const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
-    document.documentElement.innerHTML = html;
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { loadParamsIntoUI, readUIIntoParams } = await import("../../src/ui/params");

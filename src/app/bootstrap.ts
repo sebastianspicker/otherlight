@@ -106,7 +106,18 @@ export async function initApp(): Promise<void> {
     lastStepV3: null,
     displayFluxScale: 1,
     displayFluxTitle: "Flux (stellar units)",
+    fixedPlotYRange: undefined,
+    fixedPlotYRangeMode: null,
     transitHistory: createTransitHistoryState(),
+    physicalHistory: [],
+    measuredHistory: [],
+    componentBaselineHistory: [],
+    componentTransitHistory: [],
+    componentScatterHistory: [],
+    comparisonCurveSeries: undefined,
+    comparisonInset: undefined,
+    comparisonGhosts: undefined,
+    comparisonBadges: undefined,
   };
   appState.scenarioDefaults = ensureDidacticsConfig(cloneParams(appState.scenarioDefaults));
   appState.params = ensureDidacticsConfig(cloneParams(appState.scenarioDefaults));
@@ -292,8 +303,11 @@ export async function initApp(): Promise<void> {
   btnReset.addEventListener("click", () => frame.resetSimTimeAndLC({ resetNoise: true }));
   btnClearLC.addEventListener("click", () => {
     plot.clear();
+    plot.setOptions({ manualYRange: undefined });
     appState.lastPlottedT = Number.NaN;
     appState.lastPlotMode = null;
+    appState.fixedPlotYRange = undefined;
+    appState.fixedPlotYRangeMode = null;
   });
 
   btnApplyParams.addEventListener("click", () => {

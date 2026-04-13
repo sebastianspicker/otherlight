@@ -2,6 +2,8 @@ import type { SystemParams } from "../core/types";
 import { compareScenariosAtTime, interpretDidacticComparison } from "../didactics";
 import { revealSky, setHypothesis, type BinaryLabState } from "../didactics/binaryLab";
 import type { UiRefs } from "../ui/refs";
+import type { LightCurveBadge, LightCurveComparisonInset, LightCurveOverlaySeries } from "../render/lightCurvePlotTypes";
+import type { SceneGhostGeometry } from "../render/sceneTypes";
 import { cloneParams } from "./scenario";
 import {
   advanceLessonFlow,
@@ -31,6 +33,10 @@ type DidacticsUiState = {
   didacticsRuntime: DidacticsRuntimeState;
   binaryLabState: BinaryLabState;
   t: number;
+  comparisonCurveSeries?: LightCurveOverlaySeries[];
+  comparisonInset?: LightCurveComparisonInset;
+  comparisonGhosts?: SceneGhostGeometry[];
+  comparisonBadges?: LightCurveBadge[];
 };
 
 export type WireDidacticsUiDeps = {
@@ -211,6 +217,10 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
         });
         renderDidacticComparison(refs, comparisonText);
         state.didacticsRuntime = updateDidacticComparison(state.didacticsRuntime, cmp, comparisonText);
+        state.comparisonCurveSeries = cmp.visual?.curveSeries;
+        state.comparisonInset = cmp.visual?.comparisonInset;
+        state.comparisonGhosts = cmp.visual?.sceneGhosts;
+        state.comparisonBadges = cmp.visual?.badges;
       },
       { statusEl: refs.didCompareOut, errorPrefix: "Compare failed: " },
     );

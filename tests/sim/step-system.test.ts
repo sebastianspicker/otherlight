@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
+import { G_SI } from "../../src/core/units";
 import { stepSystem, prepareSimulation } from "../../src/sim/sim";
 
 function defaults() {
@@ -60,6 +61,78 @@ describe("stepSystem", () => {
     expect(typeof timingConvergence?.converged).toBe("boolean");
     expect((timingConvergence?.iterations ?? 0) > 0).toBe(true);
     expect(timingConvergence?.usedShapiro).toBe(true);
+  });
+
+  it("applies observer clock-frame offsets to reported transit times without changing durations", () => {
+    const base = defaults();
+    const shifted = defaults();
+    shifted.observer = {
+      ...(shifted.observer ?? { dir: { x: 0, y: 0, z: 1 } }),
+      timekeeping: {
+        enabled: true,
+        barycentricOffsetSec: 120,
+      },
+    };
+
+    const baseStep = stepSystem(base, 1234);
+    const shiftedStep = stepSystem(shifted, 1234);
+
+    expect(shiftedStep.meta?.advancedTiming?.barycentricClockOffsetSec).toBe(120);
+    expect(shiftedStep.meta?.timing?.planetTransitCenterSec).toBeCloseTo(
+      (baseStep.meta?.timing?.planetTransitCenterSec ?? 0) + 120,
+      9,
+    );
+    expect(shiftedStep.meta?.timing?.planetTransitDurationSec).toBeCloseTo(
+      baseStep.meta?.timing?.planetTransitDurationSec ?? 0,
+      9,
+    );
+  });
+
+  it("emits advanced timing diagnostics for bounded Einstein-delay and light-bending surrogates", () => {
+    const params = defaults();
+    params.dynamics = {
+      ...(params.dynamics ?? {}),
+      relativity: {
+        enabled: true,
+        einsteinDelay: true,
+        lightBending: true,
+        c: 299_792_458,
+        timingRefSec: 0,
+      },
+    };
+
+    const step = stepSystem(params, 1234);
+
+    expect(step.meta?.advancedTiming?.einsteinPlanetSec).toBeGreaterThan(0);
+    expect(step.meta?.advancedTiming?.lightBendingPlanetRad).toBeGreaterThan(0);
+    expect(step.meta?.advancedTiming?.validityFlags).toContain("surrogate-model");
+    expect(step.meta?.timing?.einsteinPlanetSec).toBe(step.meta?.advancedTiming?.einsteinPlanetSec);
+  });
+
+  it("exposes close-encounter distance when N-body collision warnings are configured", () => {
+    const params = defaults();
+    params.moon = params.moon ?? defaults().moon;
+    params.dynamics = {
+      ...(params.dynamics ?? {}),
+      nbodyPlanetMoon: {
+        enabled: true,
+        muStar: G_SI * (params.star.m ?? 1.98847e30),
+        muPlanet: G_SI * (params.planet.m ?? 1.89813e27),
+        muMoon: G_SI * (params.moon?.m ?? 5.9722e24),
+        dtMax: 60,
+        softening: 0,
+      },
+      collisionPolicy: {
+        enabled: true,
+        minSeparation: 1e11,
+        onCloseEncounter: "warn",
+      },
+    };
+
+    const step = stepSystem(params, 0);
+
+    expect(step.meta?.advancedTiming?.closeEncounterDistance).toBeGreaterThan(0);
+    expect(step.meta?.advancedTiming?.validityFlags).toContain("close-encounter");
   });
 
   it("emits exact event-timing diagnostics on the higher-fidelity transit timing path", () => {

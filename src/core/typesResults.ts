@@ -12,6 +12,9 @@ export type StepTimingDiagnostics = {
   ltteMoonSec?: number;
   shapiroPlanetSec?: number;
   shapiroMoonSec?: number;
+  einsteinPlanetSec?: number;
+  einsteinMoonSec?: number;
+  barycentricClockOffsetSec?: number;
   planetTransitCenterSec?: number;
   planetTransitDurationSec?: number;
   planetIngressSec?: number;
@@ -22,6 +25,16 @@ export type StepTimingDiagnostics = {
   moonIngressSec?: number;
   moonEgressSec?: number;
   moonTtvSec?: number;
+};
+
+export type StepAdvancedTimingDiagnostics = {
+  einsteinPlanetSec?: number;
+  einsteinMoonSec?: number;
+  barycentricClockOffsetSec?: number;
+  lightBendingPlanetRad?: number;
+  lightBendingMoonRad?: number;
+  closeEncounterDistance?: number;
+  validityFlags?: string[];
 };
 
 export type StepTimingSolveDiagnostics = {
@@ -78,6 +91,7 @@ export type StepFluxDecomposition = {
   moonPhase?: number;
   forwardScattering?: number;
   ringScattering?: number;
+  refraction?: number;
   total?: number;
 };
 
@@ -143,6 +157,8 @@ export type StepMeta = {
 
   /** Flattened timing diagnostics (for direct dashboard usage). */
   timing?: StepTimingDiagnostics;
+  /** Additional bounded advanced timing and dynamical-limit diagnostics. */
+  advancedTiming?: StepAdvancedTimingDiagnostics;
   /** LTTE/Shapiro solver convergence metadata when timing correction is solved explicitly. */
   timingConvergence?: StepTimingSolveBundle;
   /** Transit-event/contact solver diagnostics for planet and moon timing products. */
@@ -202,6 +218,9 @@ export type StepResult = {
 
   /** Additive ring-scattering component (stellar units). */
   fluxRingScattering?: number;
+
+  /** Additive atmospheric-refraction shoulder component (stellar units). */
+  fluxRefraction?: number;
 
   /** Optional convenience diagnostic values. */
   meta?: StepMeta;

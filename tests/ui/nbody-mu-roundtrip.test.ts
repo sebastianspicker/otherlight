@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 
 import { G_SI } from "../../src/core/units";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("UI n-body mu roundtrip", () => {
   it("converts fallback masses to mu when loading n-body controls", async () => {
-    const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
-    document.documentElement.innerHTML = html;
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { loadParamsIntoUI, readUIIntoParams } = await import("../../src/ui/params");

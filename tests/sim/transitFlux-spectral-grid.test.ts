@@ -91,4 +91,72 @@ describe("computeTransitFlux spectral grid alignment", () => {
       8,
     );
   });
+
+  it("reweights molecular-feature depths when spectral contamination is present", () => {
+    const base: SystemParams = {
+      star: {
+        r: 1,
+        photometry: {
+          gridRes: 96,
+          spectralBandpass: {
+            enabled: true,
+            lambdaNm: [500, 589, 760],
+            weights: [1, 1, 1],
+          },
+          atmosphereRT: {
+            enabled: true,
+            target: "planet",
+            lambdaRefNm: 589,
+            layers: [{ r0: 0.16, H: 0.03, tau0: 0.9 }],
+            molecularFeatures: {
+              enabled: true,
+              centerNm: [589],
+              widthNm: [10],
+              strength: [1.8],
+            },
+          },
+        },
+      },
+      planet: {
+        r: 0.16,
+        orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
+      },
+      dynamics: {
+        fidelityProfile: "accurate",
+        physicsFeatures: { atmosphereRT: true },
+      },
+    };
+
+    const contaminated: SystemParams = {
+      ...base,
+      star: {
+        ...base.star,
+        photometry: {
+          ...base.star.photometry,
+          atmosphereRT: {
+            ...base.star.photometry!.atmosphereRT!,
+            spectralContamination: {
+              enabled: true,
+              centerNm: [589],
+              widthNm: [8],
+              strength: [2.2],
+            },
+          },
+        },
+      },
+    };
+
+    const kin = {
+      planetOrbit: base.planet.orbit as any,
+      rBary: { x: 0, y: 0, z: 0 },
+      rPlanetAbs: { x: 0, y: 0, z: 0 },
+      planetSky: { x: 0.88, y: 0, z: 1 },
+    };
+
+    const cleanFlux = computeTransitFlux(base, [], kin as any);
+    const contaminatedFlux = computeTransitFlux(contaminated, [], kin as any);
+
+    expect(cleanFlux).toBeLessThan(1);
+    expect(contaminatedFlux).toBeGreaterThan(cleanFlux);
+  });
 });

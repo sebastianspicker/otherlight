@@ -18,25 +18,59 @@ import {
   parseQuadraticBands,
 } from "./common";
 
+type DefaultPatchInputs = {
+  p1x: number;
+  p1y: number;
+  p1r: number;
+  p1f: number;
+  p2x: number;
+  p2y: number;
+  p2rx: number;
+  p2ry: number;
+  p2angle: number;
+  p2f: number;
+};
+
+function roundPatchLength(v: number): number {
+  return Math.round(v / 1e6) * 1e6;
+}
+
+function defaultPatchInputs(starRadius: number): DefaultPatchInputs {
+  const rStar = Math.max(1, starRadius);
+  return {
+    p1x: roundPatchLength(-0.28 * rStar),
+    p1y: roundPatchLength(0.22 * rStar),
+    p1r: roundPatchLength(0.16 * rStar),
+    p1f: 0.75,
+    p2x: roundPatchLength(0.33 * rStar),
+    p2y: roundPatchLength(-0.17 * rStar),
+    p2rx: roundPatchLength(0.21 * rStar),
+    p2ry: roundPatchLength(0.09 * rStar),
+    p2angle: 0.6,
+    p2f: 1.12,
+  };
+}
+
 function buildPatchesFromUI(r: UiRefs): BrightnessPatch[] {
+  const defaults = defaultPatchInputs(sanitizePositive(readNumberInput(r.starR, 6.957e8), 1, 1e12));
   const patches: BrightnessPatch[] = [];
 
   patches.push({
     shape: "circle",
-    x: sanitizeFinite(readNumberInput(r.p1x, -10), -10),
-    y: sanitizeFinite(readNumberInput(r.p1y, 8), 8),
-    r: sanitizePositive(readNumberInput(r.p1r, 7), 0, 1e6),
-    factor: sanitizePositive(readNumberInput(r.p1f, 1), 0, 1e6),
+    x: sanitizeFinite(readNumberInput(r.p1x, defaults.p1x), defaults.p1x),
+    y: sanitizeFinite(readNumberInput(r.p1y, defaults.p1y), defaults.p1y),
+    r: sanitizePositive(readNumberInput(r.p1r, defaults.p1r), 0, 1e12),
+    factor: sanitizePositive(readNumberInput(r.p1f, defaults.p1f), 0, 1e6),
   });
 
   patches.push({
     shape: "ellipse",
-    x: sanitizeFinite(readNumberInput(r.p2x, 12), 12),
-    y: sanitizeFinite(readNumberInput(r.p2y, -6), -6),
-    rx: sanitizePositive(readNumberInput(r.p2rx, 10), 0, 1e6),
-    ry: sanitizePositive(readNumberInput(r.p2ry, 4), 0, 1e6),
-    angle: sanitizeFinite(readNumberInput(r.p2angle, 0.6), 0.6),
-    factor: sanitizePositive(readNumberInput(r.p2f, 1), 0, 1e6),
+    x: sanitizeFinite(readNumberInput(r.p2x, defaults.p2x), defaults.p2x),
+    y: sanitizeFinite(readNumberInput(r.p2y, defaults.p2y), defaults.p2y),
+    rx: sanitizePositive(readNumberInput(r.p2rx, defaults.p2rx), 0, 1e12),
+    ry: sanitizePositive(readNumberInput(r.p2ry, defaults.p2ry), 0, 1e12),
+    angle: sanitizeFinite(readNumberInput(r.p2angle, defaults.p2angle), defaults.p2angle),
+    factor: sanitizePositive(readNumberInput(r.p2f, defaults.p2f), 0, 1e6),
   });
 
   return patches;
@@ -59,21 +93,22 @@ export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
 
   const hasPatches = Boolean(ph?.brightnessPatches && ph.brightnessPatches.length > 0);
   r.patchesEnabled.checked = hasPatches;
+  const patchDefaults = defaultPatchInputs(sanitizePositive(p.star.r, 1, 1e12));
 
   const pa1 = ph?.brightnessPatches?.[0] as BrightnessPatch | undefined;
   const pa2 = ph?.brightnessPatches?.[1] as BrightnessPatch | undefined;
 
-  writeNumberInput(r.p1x, pa1?.x ?? -10);
-  writeNumberInput(r.p1y, pa1?.y ?? 8);
-  writeNumberInput(r.p1r, pa1?.r ?? 7);
-  writeNumberInput(r.p1f, pa1?.factor ?? 0.75);
+  writeNumberInput(r.p1x, pa1?.x ?? patchDefaults.p1x);
+  writeNumberInput(r.p1y, pa1?.y ?? patchDefaults.p1y);
+  writeNumberInput(r.p1r, pa1?.r ?? patchDefaults.p1r);
+  writeNumberInput(r.p1f, pa1?.factor ?? patchDefaults.p1f);
 
-  writeNumberInput(r.p2x, pa2?.x ?? 12);
-  writeNumberInput(r.p2y, pa2?.y ?? -6);
-  writeNumberInput(r.p2rx, pa2?.rx ?? 10);
-  writeNumberInput(r.p2ry, pa2?.ry ?? 4);
-  writeNumberInput(r.p2angle, pa2?.angle ?? 0.6);
-  writeNumberInput(r.p2f, pa2?.factor ?? 1.12);
+  writeNumberInput(r.p2x, pa2?.x ?? patchDefaults.p2x);
+  writeNumberInput(r.p2y, pa2?.y ?? patchDefaults.p2y);
+  writeNumberInput(r.p2rx, pa2?.rx ?? patchDefaults.p2rx);
+  writeNumberInput(r.p2ry, pa2?.ry ?? patchDefaults.p2ry);
+  writeNumberInput(r.p2angle, pa2?.angle ?? patchDefaults.p2angle);
+  writeNumberInput(r.p2f, pa2?.factor ?? patchDefaults.p2f);
 
   const spot = ph?.spotEvolution;
   r.spotEvolutionEnabled.checked = Boolean(spot?.enabled);

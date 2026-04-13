@@ -253,4 +253,53 @@ describe("additive flux composition contract", () => {
     expect(accurate.fluxRingScatteringOnly).toBe(0);
     expect(accurate.fluxRingScatteringOnly).toBeCloseTo(accurateNoRingScatter.fluxRingScatteringOnly, 12);
   });
+
+  it("adds a bounded atmospheric refraction shoulder near limb contact", () => {
+    const system: SystemParams = {
+      ...makeSystem(),
+      dynamics: {
+        fidelityProfile: "accurate",
+        physicsFeatures: { atmosphereRT: true },
+      },
+      star: {
+        ...makeSystem().star,
+        photometry: {
+          ...makeSystem().star.photometry,
+          atmosphereRT: {
+            enabled: true,
+            target: "planet",
+            lambdaRefNm: 550,
+            refraction: {
+              enabled: true,
+              amp: 0.0015,
+              width: 0.03,
+              chromaticSlope: 0.6,
+            },
+          },
+          spectralBandpass: {
+            enabled: true,
+            lambdaNm: [450, 550, 750],
+            weights: [0.25, 0.5, 0.25],
+          },
+        },
+      },
+    };
+
+    const nearContact = computeAdditiveFluxComponents(system, 0, { x: 0, y: 0, z: 1 }, {
+      planetOrbit: system.planet.orbit as any,
+      rBary: { x: 0, y: 0, z: 0 },
+      rPlanetAbs: { x: 0, y: 0, z: 1 },
+      planetSky: { x: 1.1, y: 0, z: 1 },
+    } as any);
+    const farAway = computeAdditiveFluxComponents(system, 0, { x: 0, y: 0, z: 1 }, {
+      planetOrbit: system.planet.orbit as any,
+      rBary: { x: 0, y: 0, z: 0 },
+      rPlanetAbs: { x: 0, y: 0, z: 1 },
+      planetSky: { x: 1.45, y: 0, z: 1 },
+    } as any);
+
+    expect(nearContact.fluxRefractionOnly).toBeGreaterThan(0);
+    expect(nearContact.fluxRefractionOnly).toBeGreaterThan(farAway.fluxRefractionOnly);
+    expect(farAway.fluxRefractionOnly).toBeGreaterThanOrEqual(0);
+  });
 });

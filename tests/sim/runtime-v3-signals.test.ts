@@ -49,4 +49,35 @@ describe("runtime v3 signals", () => {
     );
     expect(step.physicsDiagnostics.ltteConvergence.validityFlags).not.toContain("weak-ltte-iteration-budget");
   });
+
+  it("surfaces advanced timing diagnostics and clock-mismatch warnings on the V3 runtime path", () => {
+    const config = createDefaultSimulationConfigV3();
+    config.bodies.observer = {
+      ...(config.bodies.observer ?? { dir: { x: 0, y: 0, z: 1 } }),
+      timekeeping: {
+        enabled: true,
+        barycentricOffsetSec: 42,
+      },
+    };
+    config.timingRelativity = {
+      enabled: true,
+      ltte: false,
+      shapiro: false,
+      grPrecession: false,
+      einsteinDelay: true,
+      lightBending: true,
+      c: 299_792_458,
+      timingRefSec: 0,
+    };
+
+    const runtime = createSimulation(config);
+    const step = runtime.step(1234);
+
+    expect(step.physicsDiagnostics.advancedTiming?.barycentricClockOffsetSec).toBe(42);
+    expect(step.physicsDiagnostics.advancedTiming?.einsteinPlanetSec).toBeGreaterThan(0);
+    expect(step.physicsDiagnostics.advancedTiming?.lightBendingPlanetRad).toBeGreaterThan(0);
+    expect(step.physicsDiagnostics.closeEncounterFlags).toContain("clock-frame-mismatch");
+    expect(step.physicsDiagnostics.closeEncounterFlags).toContain("surrogate-model");
+    expect(step.renderSignals.uncertaintyFlags).toContain("clock-frame-mismatch");
+  });
 });

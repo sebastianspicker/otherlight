@@ -31,6 +31,23 @@ export type Observer = {
    * This is a UI/controller flag; core physics may ignore it.
    */
   deriveDirFromPos?: boolean;
+
+  /**
+   * Optional observer timekeeping model for didactic timing demos.
+   * This is intentionally separate from system dynamics: it shifts the reported
+   * observation timestamps without changing the physical orbit solution.
+   */
+  timekeeping?: {
+    enabled?: boolean;
+    /** Constant barycentric/clock offset applied to reported event times [s]. */
+    barycentricOffsetSec?: number;
+    /** Optional periodic timing error amplitude [s]. */
+    periodicErrorAmpSec?: number;
+    /** Period of the periodic timing error [s]. */
+    periodSec?: number;
+    /** Phase origin of the periodic timing error [s]. */
+    phaseSec?: number;
+  };
 };
 
 export type SkyPoint = { x: number; y: number; z: number };

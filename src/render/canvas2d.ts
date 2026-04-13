@@ -11,6 +11,7 @@ import { StarDiskCache } from "./starDisk";
 import { OrbitPathCache, type OrbitPathPoint2D } from "./orbitPathCache";
 import { compareDrawables, ProjectedOrbitPathCache, type Drawable } from "./canvas2dOrbitProjector";
 import {
+  drawDidacticOverlay,
   drawEventMarkers,
   drawOcculterGeometry,
   drawStarGeometry,
@@ -24,6 +25,7 @@ import {
   type DebugOverlayDataV3,
   type DebugOverlayToggles,
 } from "./overlays";
+import type { SceneDidacticOverlayState } from "./sceneTypes";
 
 // Re-export the other renderers so existing callers can continue to import from canvas2d.ts.
 export { LightCurvePlot } from "./lightCurvePlot";
@@ -109,6 +111,7 @@ export class Canvas2DRenderer {
   private drawList: Drawable[] = [];
   private autoFitScene = false;
   private hasSceneScale = false;
+  private didacticOverlay?: SceneDidacticOverlayState;
   constructor(
     private canvas: HTMLCanvasElement,
     opts: Canvas2DRendererOptions = {},
@@ -153,6 +156,10 @@ export class Canvas2DRenderer {
 
   public resetZoom(): void {
     this.setZoomMultiplier(1);
+  }
+
+  public setDidacticOverlay(overlay?: SceneDidacticOverlayState): void {
+    this.didacticOverlay = overlay;
   }
 
   private updateViewportCenter(): void {
@@ -285,10 +292,15 @@ export class Canvas2DRenderer {
       ctx: this.ctx,
       cssH: this.size?.cssH ?? 0,
       markers: step.renderSignals.eventMarkers,
+      timingMarkers: step.renderSignals.timingMarkers,
     });
   }
 
-  private drawOcculterGeometry(geometry: RenderOcculterGeometryV3, rStar: number): void {
+  private drawOcculterGeometry(
+    params: SystemParams,
+    geometry: RenderOcculterGeometryV3,
+    rStar: number,
+  ): void {
     drawOcculterGeometry({
       ctx: this.ctx,
       toPxInto: this.toPxInto.bind(this),
@@ -296,6 +308,7 @@ export class Canvas2DRenderer {
       pixelsPerUnit: this.pixelsPerUnit,
       starDiskCache: this.starDiskCache,
       secondaryStarParamsScratch: this.secondaryStarParamsScratch,
+      params,
       geometry,
       rStar,
       resolveSecondaryStarParams: this.resolveSecondaryStarParams.bind(this),
@@ -381,10 +394,18 @@ export class Canvas2DRenderer {
         this.drawStar(params);
         continue;
       }
-      if (item.geometry) this.drawOcculterGeometry(item.geometry, params.star.r);
+      if (item.geometry) this.drawOcculterGeometry(params, item.geometry, params.star.r);
     }
 
     this.drawEventMarkers(step);
+    drawDidacticOverlay({
+      ctx,
+      toPxInto: this.toPxInto.bind(this),
+      scratchPoint: this.scratchPoint0,
+      pixelsPerUnit: this.pixelsPerUnit,
+      cssW,
+      overlay: this.didacticOverlay,
+    });
 
     const overlayData = this.toOverlayData(step);
     drawDebugOverlayV3(ctx, this.size, overlayData, observerDir, this.debug, {

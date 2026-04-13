@@ -32,10 +32,17 @@ import {
   createMulberry32,
   normal as normalSample,
   ouStep,
-  poisson as poissonSample,
   randomWalkStep,
   type PRNG as PRNGPublic,
 } from "./random";
+import {
+  applyDetrend,
+  computeDt,
+  currentAirmass,
+  ensureOneOverFBank,
+  isGapSample,
+  sampleElectrons,
+} from "./instrumentNoiseHelpers";
 
 // NOTE: Type lives in core to avoid core -> photometry dependency cycles.
 // Keep re-export for backwards compatibility with existing imports.
@@ -59,6 +66,14 @@ export type InstrumentNoiseState = {
   /** Track last correlated-enabled and temperature-enabled for reset-on-disable behavior. */
   _wasCorrelatedEnabled?: boolean;
   _wasTempEnabled?: boolean;
+  /** Observer-atmosphere OU state for cloud optical-depth fluctuations. */
+  observerCloudTau?: number;
+  /** Observer-atmosphere OU state for seeing-loss fluctuations. */
+  observerSeeingLoss?: number;
+  /** Observer-atmosphere OU state for telluric optical-depth fluctuations. */
+  observerTelluricTau?: number;
+  /** Measured-flux history for bounded detrending. */
+  detrendHistory?: Array<{ tSec: number; flux: number }>;
 };
 
 export function createInstrumentNoiseState(seed = 1): InstrumentNoiseState {
@@ -73,6 +88,10 @@ export function createInstrumentNoiseState(seed = 1): InstrumentNoiseState {
     oneOverFSignature: undefined,
     _wasCorrelatedEnabled: undefined,
     _wasTempEnabled: undefined,
+    observerCloudTau: 0,
+    observerSeeingLoss: 0,
+    observerTelluricTau: 0,
+    detrendHistory: [],
   };
 }
 
@@ -98,47 +117,10 @@ export function resetInstrumentNoiseState(
   state.tempRW = 0;
   state._wasCorrelatedEnabled = undefined;
   state._wasTempEnabled = undefined;
-}
-
-type OneOverFCfg = NonNullable<NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"]>;
-
-function makeOneOverFSignature(cfg: OneOverFCfg): string {
-  const n = Math.max(1, Math.floor(toFiniteNumber(cfg.nComponents, 6)));
-  const tauMin = toFiniteNumber(cfg.tauMinSec, 10);
-  const tauMax = toFiniteNumber(cfg.tauMaxSec, 10_000);
-  const sigma = toFiniteNumber(cfg.sigmaFlux, 0);
-  return `${n}|${tauMin}|${tauMax}|${sigma}`;
-}
-
-function ensureOneOverFBank(state: InstrumentNoiseState, oneF: OneOverFCfg): void {
-  const sig = makeOneOverFSignature(oneF);
-  if (state.ar1Bank && state.oneOverFSignature === sig) return;
-
-  const n = Math.max(1, Math.floor(toFiniteNumber(oneF.nComponents, 6)));
-  const tauMin = Math.max(1e-6, toFiniteNumber(oneF.tauMinSec, 10));
-  const tauMax = Math.max(tauMin, toFiniteNumber(oneF.tauMaxSec, 10_000));
-  const sigmaTotal = Math.max(0, toFiniteNumber(oneF.sigmaFlux, 0));
-
-  // Choose weights so that total RMS ≈ sigmaTotal for independent unit-RMS components.
-  const w = sigmaTotal / Math.sqrt(n);
-  const logMin = Math.log(tauMin);
-  const logMax = Math.log(tauMax);
-
-  const bank: Array<{ x: number; tau: number; weight: number }> = [];
-  for (let i = 0; i < n; i++) {
-    const f = n === 1 ? 0 : i / (n - 1);
-    const tau = Math.exp(logMin + f * (logMax - logMin));
-    bank.push({ x: 0, tau, weight: w });
-  }
-
-  state.ar1Bank = bank;
-  state.oneOverFSignature = sig;
-}
-
-function computeDt(tSec: number, dtSec: unknown, lastT: number | undefined): number {
-  if (typeof dtSec === "number" && Number.isFinite(dtSec) && dtSec > 0) return dtSec;
-  if (typeof lastT === "number" && Number.isFinite(lastT)) return Math.max(0, tSec - lastT);
-  return 0;
+  state.observerCloudTau = 0;
+  state.observerSeeingLoss = 0;
+  state.observerTelluricTau = 0;
+  state.detrendHistory = [];
 }
 
 /**
@@ -331,7 +313,7 @@ export function applyInstrumentNoiseAndSystematics(args: {
     corrFluxAdd = 0;
   }
 
-  // Combine physical flux with additive systematics + correlated components before electron conversion.
+  // Combine physical flux with additive systematics + correlated components before observer-side contamination.
   let fluxPreNoise = fluxIn + sysFluxAdd + corrFluxAdd;
 
   // Optional detector realism hooks in flux domain.
@@ -358,6 +340,77 @@ export function applyInstrumentNoiseAndSystematics(args: {
     }
   }
 
+  // ---------- Observer-side atmosphere contamination (bounded, didactic) ----------
+  const observer = cfg.observer;
+  const atmosphere = observer?.atmosphere;
+  const airmass = currentAirmass(atmosphere, t);
+  let observerTransmission = 1;
+
+  if (observer?.enabled && atmosphere?.enabled) {
+    const extinctionCoeff = Math.max(0, toFiniteNumber(atmosphere.airmass?.extinctionCoeff, 0));
+    if (extinctionCoeff > 0) {
+      observerTransmission *= Math.exp(-extinctionCoeff * airmass);
+    }
+
+    const clouds = atmosphere.clouds;
+    if (clouds?.enabled) {
+      const meanTau = Math.max(0, toFiniteNumber(clouds.meanOpticalDepth, 0));
+      const sigmaTau = Math.max(0, toFiniteNumber(clouds.sigmaOpticalDepth, 0));
+      const tauSec = Math.max(1e-6, toFiniteNumber(clouds.tauSec, 900));
+      if (sigmaTau > 0 && dt > 0) {
+        state.observerCloudTau = ouStep(state.rng, state.observerCloudTau ?? 0, dt, tauSec, sigmaTau);
+      }
+      const tau = Math.max(0, meanTau + (state.observerCloudTau ?? 0));
+      observerTransmission *= Math.exp(-tau * airmass);
+    }
+
+    const tellurics = atmosphere.tellurics;
+    if (tellurics?.enabled) {
+      const meanTau = Math.max(0, toFiniteNumber(tellurics.meanOpticalDepth, 0));
+      const sigmaTau = Math.max(0, toFiniteNumber(tellurics.sigmaOpticalDepth, 0));
+      const tauSec = Math.max(1e-6, toFiniteNumber(tellurics.tauSec, 1200));
+      if (sigmaTau > 0 && dt > 0) {
+        state.observerTelluricTau = ouStep(state.rng, state.observerTelluricTau ?? 0, dt, tauSec, sigmaTau);
+      }
+      const airmassCoupling = Math.max(0, toFiniteNumber(tellurics.airmassCoupling, 0));
+      const tau = Math.max(
+        0,
+        meanTau + (state.observerTelluricTau ?? 0) + airmassCoupling * Math.max(0, airmass - 1),
+      );
+      observerTransmission *= Math.exp(-tau);
+    }
+
+    const seeing = atmosphere.seeing;
+    if (seeing?.enabled) {
+      const meanLoss = Math.max(0, toFiniteNumber(seeing.meanLoss, 0));
+      const sigmaLoss = Math.max(0, toFiniteNumber(seeing.sigmaLoss, 0));
+      const tauSec = Math.max(1e-6, toFiniteNumber(seeing.tauSec, 600));
+      if (sigmaLoss > 0 && dt > 0) {
+        state.observerSeeingLoss = ouStep(state.rng, state.observerSeeingLoss ?? 0, dt, tauSec, sigmaLoss);
+      }
+      const airmassExponent = Math.max(0, toFiniteNumber(seeing.airmassExponent, 0));
+      const maxLoss = clamp(toFiniteNumber(seeing.maxLoss, 0.9), 0, 0.99);
+      const lossRaw = (meanLoss + (state.observerSeeingLoss ?? 0)) * Math.max(1, airmass ** airmassExponent);
+      const loss = clamp(lossRaw, 0, maxLoss);
+      observerTransmission *= Math.max(0, 1 - loss);
+    }
+
+    const scintillation = atmosphere.scintillation;
+    if (scintillation?.enabled) {
+      const sigmaFlux = Math.max(0, toFiniteNumber(scintillation.sigmaFlux, 0));
+      const airmassExponent = Math.max(0, toFiniteNumber(scintillation.airmassExponent, 1.5));
+      const exposureExponent = Math.max(0, toFiniteNumber(scintillation.exposureExponent, 0.5));
+      const exposureScale = Math.max(1e-6, toFiniteNonNeg(cfg.exposureSec, 1));
+      const sigma =
+        (sigmaFlux * Math.max(1, airmass ** airmassExponent)) /
+        Math.max(1, exposureScale ** exposureExponent);
+      const factor = 1 + normalSample(state.rng, 0, sigma);
+      observerTransmission *= Math.max(0, factor);
+    }
+  }
+
+  fluxPreNoise *= observerTransmission;
+
   // ---------- Photon + read noise in electrons ----------
   const throughput = toFiniteNonNeg(cfg.throughput, 1);
   const ePerFluxPerSec = Math.max(0, toFiniteNumber(cfg.electronsPerUnitFlux, 1e6));
@@ -373,20 +426,20 @@ export function applyInstrumentNoiseAndSystematics(args: {
     // PROTECT against negative flux: Poisson undefined for lambda < 0.
     const meanElectronsRaw = Math.max(0, fluxPreNoise) * throughput * ePerFluxPerSec * exposureSec;
     const meanElectrons = Math.max(0, meanElectronsRaw);
+    const skyCfg = observer?.enabled && atmosphere?.enabled ? atmosphere.skyBackground : undefined;
+    const meanSkyElectrons =
+      skyCfg?.enabled && exposureSec > 0
+        ? Math.max(0, toFiniteNumber(skyCfg.electronsPerSec, 0)) * exposureSec
+        : 0;
+    const skyResidualFraction = clamp(toFiniteNumber(skyCfg?.subtractionResidualFraction, 0), 0, 1);
 
     // Photon noise
     let electrons = meanElectrons;
-    if (cfg.photonNoise?.enabled) {
-      const gaussThresh = Math.max(0, toFiniteNumber(cfg.photonNoise.gaussianApproxMinElectrons, 50));
-
-      // PERFORMANCE OPTIMIZATION:
-      // Use Gaussian approximation for high counts to avoid O(lambda) cost of Knuth Poisson.
-      if (meanElectrons >= gaussThresh) {
-        // N(mean, sqrt(mean))
-        electrons = normalSample(state.rng, meanElectrons, Math.sqrt(meanElectrons));
-      } else {
-        electrons = poissonSample(state.rng, meanElectrons);
-      }
+    if (cfg.photonNoise?.enabled || meanSkyElectrons > 0) {
+      const sourceElectrons = sampleElectrons(meanElectrons, cfg.photonNoise, state);
+      const skyElectrons = sampleElectrons(meanSkyElectrons, cfg.photonNoise, state);
+      electrons =
+        sourceElectrons + (skyElectrons - meanSkyElectrons) + meanSkyElectrons * skyResidualFraction;
     }
 
     // Read noise (Gaussian, e- RMS)
@@ -420,6 +473,10 @@ export function applyInstrumentNoiseAndSystematics(args: {
     fluxOut = denom > 0 ? electrons / denom : fluxPreNoise;
   }
 
+  if (isGapSample(observer, t)) return Number.NaN;
+
+  fluxOut = applyDetrend(fluxOut, t, cfg.postprocess, state);
+
   // Optional clamp for numerical safety / UI preferences.
   const clampCfg = cfg.clampFlux;
   if (clampCfg?.enabled) {
@@ -434,80 +491,4 @@ export function applyInstrumentNoiseAndSystematics(args: {
   return fluxOut;
 }
 
-// ---------------------------
-// Minimal built-in tests
-// ---------------------------
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`instrumentNoise self-test failed: ${msg}`);
-}
-
-/**
- * Self-tests:
- * - exposureSec=0 disables electron-noise layers (no NaN/div0).
- * - Determinism: same seed + same call sequence => identical output.
- */
-export function runInstrumentNoiseSelfTests(): void {
-  const cfg: InstrumentNoiseSystematicsParams = {
-    enabled: true,
-    seed: 123,
-    electronsPerUnitFlux: 1e6,
-    exposureSec: 2,
-    throughput: 1,
-    photonNoise: { enabled: true, gaussianApproxMinElectrons: 50 },
-    readNoise: { enabled: true, sigmaElectrons: 10 },
-    correlatedNoise: { enabled: true, sigmaFlux: 1e-3, tauSec: 50 },
-    trends: { enabled: false },
-  };
-
-  const s1 = createInstrumentNoiseState(cfg.seed);
-  const s2 = createInstrumentNoiseState(cfg.seed);
-
-  let t = 0;
-  let f1 = 1.0;
-  let f2 = 1.0;
-
-  for (let i = 0; i < 20; i++) {
-    t += 1;
-    f1 = applyInstrumentNoiseAndSystematics({
-      flux: f1,
-      tSec: t,
-      dtSec: 1,
-      cfg,
-      state: s1,
-    });
-    f2 = applyInstrumentNoiseAndSystematics({
-      flux: f2,
-      tSec: t,
-      dtSec: 1,
-      cfg,
-      state: s2,
-    });
-  }
-  assert(Object.is(f1, f2), "Determinism: same seed and sequence must match.");
-  assert(Number.isFinite(f1), "Output must be finite.");
-
-  // exposureSec=0 => electron noise disabled => only flux-domain terms apply (here none).
-  const cfgNoExp: InstrumentNoiseSystematicsParams = {
-    enabled: true,
-    seed: 1,
-    electronsPerUnitFlux: 1e6,
-    exposureSec: 0,
-    throughput: 1,
-    photonNoise: { enabled: true },
-    readNoise: { enabled: true, sigmaElectrons: 10 },
-    correlatedNoise: { enabled: false },
-    trends: { enabled: false },
-  };
-
-  const s3 = createInstrumentNoiseState(cfgNoExp.seed);
-  const out = applyInstrumentNoiseAndSystematics({
-    flux: 1.234,
-    tSec: 10,
-    dtSec: 1,
-    cfg: cfgNoExp,
-    state: s3,
-  });
-
-  assert(Number.isFinite(out) && out === 1.234, "exposureSec=0 must not inject electron noise by default.");
-}
+export { runInstrumentNoiseSelfTests } from "./instrumentNoiseSelfTest";

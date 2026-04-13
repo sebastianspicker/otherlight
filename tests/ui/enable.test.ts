@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("enable handler wiring", () => {
   it("re-syncs dependent moon controls when the checkbox changes", async () => {
-    const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
-    document.documentElement.innerHTML = html;
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { wireEnableHandlers } = await import("../../src/ui/enable");
@@ -24,8 +23,7 @@ describe("enable handler wiring", () => {
   });
 
   it("enables forward-scattering controls only when the feature is checked", async () => {
-    const html = readFileSync(`${process.cwd()}/index.html`, "utf8");
-    document.documentElement.innerHTML = html;
+    installAppShellDocument();
 
     const { uiRefs } = await import("../../src/ui/refs");
     const { wireEnableHandlers, syncAllEnableStates } = await import("../../src/ui/enable");

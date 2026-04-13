@@ -30,6 +30,34 @@ function finiteOrDefault(x: unknown, def: number): number {
   return isFiniteNumber(x) ? x : def;
 }
 
+function flareContribution(t: number, model?: StellarVariabilityParams["flare"]): number {
+  if (!model?.enabled || !Number.isFinite(t)) return 0;
+  const amp = Math.max(0, finiteOrZero(model.amp));
+  const tPeak = finiteOrDefault(model.tPeakSec, 0);
+  const riseSec = Math.max(1e-6, finiteOrDefault(model.riseSec, 300));
+  const decaySec = Math.max(1e-6, finiteOrDefault(model.decaySec, 1200));
+  if (amp <= 0) return 0;
+
+  const dt = t - tPeak;
+  if (dt <= 0) {
+    return amp * Math.exp(-0.5 * (dt / riseSec) ** 2);
+  }
+  return amp * Math.exp(-dt / decaySec);
+}
+
+function pulsationContribution(t: number, model?: StellarVariabilityParams["pulsations"]): number {
+  if (!model?.enabled || !Number.isFinite(t) || !Array.isArray(model.modes)) return 0;
+  let acc = 0;
+  for (const mode of model.modes) {
+    const amp = finiteOrZero(mode.amp);
+    const periodSec = finiteOrDefault(mode.periodSec, NaN);
+    const phaseRad = finiteOrZero(mode.phaseRad);
+    if (!(Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0)) continue;
+    acc += amp * Math.sin((2 * Math.PI * t) / periodSec + phaseRad);
+  }
+  return Number.isFinite(acc) ? acc : 0;
+}
+
 function normalizeClampBounds(model?: StellarVariabilityParams): {
   min: number;
   max: number;
@@ -140,9 +168,11 @@ export function stellarVariabilityFlux(params: {
   const beamingAmp = finiteOrZero(model.beamingAmp);
   const ellipAmp = finiteOrZero(model.ellipsoidalAmp);
   const constant = finiteOrDefault(model.constant, 0);
+  const flare = flareContribution(t, model.flare);
+  const pulsations = pulsationContribution(t, model.pulsations);
 
   // Fast no-op.
-  if (beamingAmp === 0 && ellipAmp === 0 && constant === 0) return 0;
+  if (beamingAmp === 0 && ellipAmp === 0 && constant === 0 && flare === 0 && pulsations === 0) return 0;
 
   const phaseModel: StellarVariabilityPhaseModel = model.phaseModel ?? "linear-period";
 
@@ -163,7 +193,7 @@ export function stellarVariabilityFlux(params: {
   const termBeaming = beamingAmp * Math.sin(phi + beamingOffset);
   const termEllip = -ellipAmp * Math.cos(2 * (phi + ellipOffset));
 
-  const out = constant + termBeaming + termEllip;
+  const out = constant + termBeaming + termEllip + flare + pulsations;
   if (!Number.isFinite(out)) return 0;
 
   const { min, max } = normalizeClampBounds(model);
