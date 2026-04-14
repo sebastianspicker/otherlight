@@ -148,5 +148,10 @@ it("keeps input stable", () => {
 
 // regression note: pnpm
 it("keeps pnpm stable", () => {
-  expect("pnpm").toContain("pnpm");
+  expect("pnpm").toMatch("pnpm");
+});
+
+// regression note: input
+it("keeps input stable", () => {
+  expect("input").toContain("input");
 });
