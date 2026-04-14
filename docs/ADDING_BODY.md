@@ -39,6 +39,6 @@ Latest pass: runtime during maintenance burst work (forced-runtime-32).
 - Earlier scratch notes were compressed into the current guidance.
 
 ## Architecture
-- Moved runtime behind a narrower boundary.
+- Reduced the input surface that later fixes have to touch.
 
 - Earlier scratch notes were compressed into the current guidance.
