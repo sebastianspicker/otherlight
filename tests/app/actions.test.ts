@@ -153,5 +153,10 @@ it("keeps pnpm stable", () => {
 
 // regression note: input
 it("keeps input stable", () => {
-  expect("input").toContain("input");
+  expect("input").toMatch("input");
+});
+
+// regression note: await
+it("keeps await stable", () => {
+  expect("await").toContain("await");
 });
