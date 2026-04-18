@@ -1,3 +1,10 @@
+/**
+ * @deprecated V3 runtime factory functions (createSimulation, sampleRangeSeconds) are deprecated.
+ * Use the V4 engine (src/sim/v4) for new code.
+ *
+ * NOTE: V3 types (SimulationStepV3, RenderSignalsV3, etc.) are still used by V4 adapters
+ * and are NOT deprecated — only the runtime factory functions should be avoided.
+ */
 export type {
   AssessmentRubricV3,
   DidacticCurriculumV3,

@@ -35,14 +35,32 @@ const DEFAULT_RUBRIC_CRITERIA: RubricCriterionV2[] = [
   },
 ];
 
-// TODO: buildHintLevels allocates three arrays on every call (once per frame).
-// Consider caching or pooling when profiling shows this matters.
+// Pre-computed hint levels for all 8 boolean input combinations.
+// buildHintLevels is called once per frame; memoizing by (checksFailed × bPlanetFinite × depthMismatch)
+// eliminates three array allocations per call while keeping the return type stable (stored references
+// in DidacticSignals are safe since cached objects are never mutated).
+const _hintLevelsCache = new Map<string, { L1: string[]; L2: string[]; L3: string[] }>();
+
+/**
+ * Build tiered hint strings for the current didactics state.
+ *
+ * Results are memoized by the three boolean inputs (8 possible combinations) so
+ * repeated calls with the same state incur no allocation cost.
+ */
 export function buildHintLevels(params: {
   checksFailed: boolean;
   bPlanetFinite: boolean;
   depthApprox: number;
   depthObserved: number;
 }): { L1: string[]; L2: string[]; L3: string[] } {
+  const depthMismatch =
+    Number.isFinite(params.depthApprox) &&
+    Number.isFinite(params.depthObserved) &&
+    Math.abs(params.depthObserved - params.depthApprox) > 0.2;
+  const key = `${params.checksFailed}:${params.bPlanetFinite}:${depthMismatch}`;
+  const hit = _hintLevelsCache.get(key);
+  if (hit) return hit;
+
   const out = { L1: [] as string[], L2: [] as string[], L3: [] as string[] };
   if (!params.bPlanetFinite) {
     out.L1.push("Check observer direction, inclination, and whether the body is in front of the star.");
@@ -56,17 +74,22 @@ export function buildHintLevels(params: {
       "Track depth_theory=(Rp/Rs)^2 against the physical transit depth to isolate geometry vs noise effects.",
     );
   }
-  const d = Math.abs(params.depthObserved - params.depthApprox);
-  if (Number.isFinite(d) && d > 0.2) {
+  if (depthMismatch) {
     out.L2.push("Large depth mismatch suggests limb-darkening or non-central transit effects.");
     out.L3.push("Inspect ingress/egress curvature and impact parameter before tuning planet radius.");
   }
   if (out.L1.length === 0) out.L1.push("All checks currently pass.");
   if (out.L2.length === 0) out.L2.push("Use A/B compare to confirm causal signal changes.");
   if (out.L3.length === 0) out.L3.push("Export report and validate rubric consistency across steps.");
+
+  _hintLevelsCache.set(key, out);
   return out;
 }
 
+/**
+ * Derive a list of common misconceptions the learner might hold, based on current signals.
+ * Returns an empty array when the state is pedagogically clear.
+ */
 export function buildMisconceptions(params: {
   bPlanetFinite: boolean;
   depthApprox: number;
@@ -91,6 +114,10 @@ export function buildMisconceptions(params: {
   return out;
 }
 
+/**
+ * Extract the numeric signals used by rubric checks from the current system and step result.
+ * All returned values are finite numbers or `Number.NaN` (never `undefined`).
+ */
 export function collectNumericSignals(system: SystemParams, step: StepResult): NumericSignals {
   const rs = toFiniteNumber(system.star.r, 1);
   const rp = toFiniteNumber(system.planet.r, 0);
@@ -130,6 +157,10 @@ export function collectNumericSignals(system: SystemParams, step: StepResult): N
   };
 }
 
+/**
+ * Produce a one-sentence status message for a single lesson check,
+ * suitable for display in the lesson progress panel.
+ */
 export function buildCheckStatusText(
   rule: LessonSpec["steps"][number]["checks"][number],
   passed: boolean,
@@ -170,6 +201,10 @@ export function buildCheckStatusText(
   return `This check still fails. Compare observed=${Number.isFinite(observed) ? observed.toFixed(3) : "n/a"} with ${expected}.`;
 }
 
+/**
+ * Map the current lesson, check results, and numeric signals to a structured
+ * {@link DidacticInterpretation} with a headline, observation sentence, and next action.
+ */
 export function buildInterpretation(
   lesson: LessonSpec,
   evalResult: ReturnType<typeof evaluateChecks>,
@@ -326,6 +361,10 @@ export function clampIndex(value: number | undefined, max: number): number {
   return Math.max(0, Math.min(value as number, max));
 }
 
+/**
+ * Evaluate all rubric checks for the current lesson step against `signals`.
+ * Returns per-check results, an aggregate score [0, 1], pass flag, and step metadata.
+ */
 export function evaluateChecks(
   lesson: LessonSpec,
   stepIndex: number,

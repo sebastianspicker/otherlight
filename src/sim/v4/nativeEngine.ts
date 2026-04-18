@@ -28,6 +28,9 @@ import {
 } from "./binaryBaseline";
 import { computeTimingAndObservables } from "./nativeEngineTiming";
 
+/** Flux threshold below 1 that marks an active transit or mutual event (planet or moon occults star). */
+const TRANSIT_FLUX_THRESHOLD = 0.999999;
+
 function computeConservation(
   snapshot: NativeSnapshot,
   baseline?: ConservationBaseline,
@@ -174,8 +177,8 @@ function renderSignalsFromSnapshot(
       radius: visualMoon.r,
     });
   }
-  const transitActive = flux.transitFactor < 0.999999;
-  const mutual = (flux.planetVisibleFraction ?? 1) < 0.999999 || (flux.moonVisibleFraction ?? 1) < 0.999999;
+  const transitActive = flux.transitFactor < TRANSIT_FLUX_THRESHOLD;
+  const mutual = (flux.planetVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD || (flux.moonVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD;
 
   const timingMarkers: RenderSignalsV3["timingMarkers"] = [];
   if (timing) {

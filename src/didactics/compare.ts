@@ -41,6 +41,10 @@ type ComparisonGhostGeometry = {
   geometry: SimulationStepV3["renderSignals"]["occulterGeometry"];
 };
 
+/**
+ * A/B scenario comparison result computed at a single simulation time `tSec`.
+ * Captures scalar flux and RV deltas, plus optional visual overlays for the lesson UI.
+ */
 export type DidacticComparison = {
   tSec: number;
   fluxTotalDelta: number;
@@ -104,6 +108,10 @@ function buildComparisonInset(
   };
 }
 
+/**
+ * Run both scenarios at `tSec`, sample a comparison window centred on any transits,
+ * and return a {@link DidacticComparison} with scalar deltas, curve series, and scene ghosts.
+ */
 export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: number): DidacticComparison {
   const configA = migrateSystemParamsToV4(a);
   const configB = migrateSystemParamsToV4(b);
@@ -177,8 +185,10 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
   };
 }
 
-// TODO: toExponential is called on every delta value each invocation.
-// Not a significant cost in practice, but could be cached if this becomes a hot path.
+/**
+ * Convert a {@link DidacticComparison} into a human-readable multi-line diagnostic string,
+ * with optional lesson-specific interpretation if `context.lessonId` is set.
+ */
 export function interpretDidacticComparison(
   cmp: DidacticComparison,
   context?: { lessonId?: string; comparisonPrompt?: string },

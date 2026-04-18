@@ -8,6 +8,9 @@ import { resolveAndValidateLimbDarkeningForStar } from "../../photometry/limbDar
 import { fluxLimbDarkenedDiskDetailed } from "../../photometry/transitLimbDarkened";
 import type { SimulationConfigV4, StarBodyV4 } from "./types";
 
+/** Buffer factor for the outer shell boundary in atmosphere ray-tracing; ensures numerical separation from the body surface. */
+const SHELL_OUTER_BUFFER_FACTOR = 1.000001;
+
 export type WeightedPhotometryBand = {
   lambdaNm: number;
   weight: number;
@@ -134,7 +137,7 @@ function effectiveLegacyTransmissionOpacity(args: {
   const H = isFinitePositive(transmission.H) ? transmission.H : 0;
   const radialSamples = 24;
   const inner = Math.max(args.bodyRadius, r0);
-  const outer = Math.max(inner * 1.000001, inner + Math.max(args.bodyRadius * 0.25, H * 6));
+  const outer = Math.max(inner * SHELL_OUTER_BUFFER_FACTOR, inner + Math.max(args.bodyRadius * 0.25, H * 6));
 
   let weightedTransmission = 0;
   let weightSum = 0;
@@ -162,7 +165,7 @@ function effectiveLegacyTransmissionOpacity(args: {
     return clamp01(
       1 -
         legacyTransmissionAtRadius({
-          rho: inner * 1.000001,
+          rho: inner * SHELL_OUTER_BUFFER_FACTOR,
           bodyRadius: args.bodyRadius,
           r0,
           H: transmission.H ?? 0,
@@ -250,6 +253,23 @@ export function starVisibilityFromOpaqueOcculters(
   },
   occulters: Array<{ r: number; sky: { x: number; y: number; z: number } }>,
 ): number {
+  return starVisibilityFromOcculters(
+    config,
+    star,
+    occulters.map((oc) => ({ ...oc, opacity: 1 })),
+  );
+}
+
+export function starVisibilityFromOcculters(
+  config: SimulationConfigV4,
+  star: {
+    kind: "star" | "planet" | "moon";
+    r: number;
+    sky: { x: number; y: number; z: number };
+    source: StarBodyV4 | unknown;
+  },
+  occulters: Array<{ r: number; sky: { x: number; y: number; z: number }; opacity?: number }>,
+): number {
   if (!(star.r > 0) || occulters.length === 0) return 1;
 
   const circles: CircleOcculter[] = occulters.map((oc) => ({
@@ -257,6 +277,8 @@ export function starVisibilityFromOpaqueOcculters(
     dy: oc.sky.y - star.sky.y,
     r: oc.r,
   }));
+  const opacities = occulters.map((oc) => clamp01(Number.isFinite(oc.opacity) ? (oc.opacity as number) : 1));
+  const allOpaque = opacities.every((opacity) => opacity >= 1 - 1e-12);
 
   const ldModel = config.photometry?.limbDarkeningModel;
   const stellarSource = star.kind === "star" ? (star.source as StarBodyV4) : undefined;
@@ -274,7 +296,7 @@ export function starVisibilityFromOpaqueOcculters(
       })
     : undefined;
 
-  if (ldLaw) {
+  if (ldLaw && allOpaque) {
     return fluxLimbDarkenedDiskDetailed({
       rStar: star.r,
       rOcculters: circles,
@@ -283,12 +305,28 @@ export function starVisibilityFromOpaqueOcculters(
     }).flux;
   }
 
-  const areaStar = Math.PI * star.r * star.r;
-  let blocked = 0;
-  for (const oc of occulters) {
-    const d = Math.hypot(oc.sky.x - star.sky.x, oc.sky.y - star.sky.y);
-    if (!(d < star.r + oc.r)) continue;
-    blocked += circleOverlapArea(star.r, oc.r, d);
+  const gridRes = Math.max(40, Math.min(240, Math.floor(config.photometry?.gridRes ?? 220)));
+  let transmissionSum = 0;
+  let sampleCount = 0;
+  for (let iy = 0; iy < gridRes; iy++) {
+    const y = star.sky.y + (((iy + 0.5) / gridRes) * 2 - 1) * star.r;
+    const dy = y - star.sky.y;
+    for (let ix = 0; ix < gridRes; ix++) {
+      const x = star.sky.x + (((ix + 0.5) / gridRes) * 2 - 1) * star.r;
+      const dx = x - star.sky.x;
+      if (dx * dx + dy * dy > star.r * star.r) continue;
+      let transmission = 1;
+      for (let index = 0; index < occulters.length; index++) {
+        const oc = occulters[index];
+        const odx = x - oc.sky.x;
+        const ody = y - oc.sky.y;
+        if (odx * odx + ody * ody > oc.r * oc.r) continue;
+        transmission *= 1 - opacities[index];
+        if (transmission <= 0) break;
+      }
+      transmissionSum += transmission;
+      sampleCount += 1;
+    }
   }
-  return clamp01(1 - Math.min(1, blocked / areaStar));
+  return sampleCount > 0 ? clamp01(transmissionSum / sampleCount) : 1;
 }

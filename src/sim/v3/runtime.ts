@@ -18,6 +18,12 @@ import type {
 } from "./types";
 import { assertValidSimulationConfigV3, assertValidTimeRange } from "./validation";
 
+/** Flux threshold below 1 that marks an active transit event. */
+const TRANSIT_FLUX_THRESHOLD = 0.999999;
+
+/**
+ * @deprecated Use V4 engine. V3 runtime is a type-compatibility shim.
+ */
 export function sampleRangeSeconds(startSec: number, endSec: number, stepSec: number): TimeRange {
   return { startSec, endSec, stepSec };
 }
@@ -83,10 +89,10 @@ function buildRenderSignals(system: SystemParams, step: ReturnType<typeof stepSy
     }
   }
 
-  const transitActive = toFiniteNumber(step.fluxTransitFactor, 1) < 0.999999;
+  const transitActive = toFiniteNumber(step.fluxTransitFactor, 1) < TRANSIT_FLUX_THRESHOLD;
   const mutualActive =
-    toFiniteNumber(step.meta?.planetVisibleFraction, 1) < 0.999999 ||
-    toFiniteNumber(step.meta?.moonVisibleFraction, 1) < 0.999999;
+    toFiniteNumber(step.meta?.planetVisibleFraction, 1) < TRANSIT_FLUX_THRESHOLD ||
+    toFiniteNumber(step.meta?.moonVisibleFraction, 1) < TRANSIT_FLUX_THRESHOLD;
   const conjunctionActive =
     Boolean(step.moonSky) &&
     Math.hypot(step.planetSky.x - (step.moonSky?.x ?? 0), step.planetSky.y - (step.moonSky?.y ?? 0)) <
@@ -302,6 +308,10 @@ function mapStepToV3(
   };
 }
 
+/**
+ * @deprecated Use createSimulationV4 from ../../sim/v4 instead.
+ * V3 runtime is a type-compatibility shim; no production code should call this.
+ */
 export function createSimulation(config: SimulationConfigV3): SimulationRuntime {
   const cfg = deepClone(config);
   assertValidSimulationConfigV3(cfg);

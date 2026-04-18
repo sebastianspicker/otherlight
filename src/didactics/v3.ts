@@ -1,3 +1,8 @@
+/**
+ * @deprecated Legacy V3 curriculum and progress evaluation system.
+ * Superseded by the lesson system in src/didactics/lessons.ts.
+ * Kept for backward compatibility only; do not add new callers.
+ */
 import type {
   AssessmentRubricV3,
   DidacticCurriculumV3,

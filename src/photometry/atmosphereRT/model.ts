@@ -1,5 +1,8 @@
 import type { AtmosphereRTLayer, AtmosphereRTParams } from "../../core/types";
 
+/** Buffer factor for the outer shell boundary; ensures the sampling grid outer edge is outside the body. */
+const SHELL_OUTER_BUFFER_FACTOR = 1.000001;
+
 function finiteOr(v: unknown, fb: number): number {
   return typeof v === "number" && Number.isFinite(v) ? v : fb;
 }
@@ -128,7 +131,7 @@ export function effectiveCircleAtmosphereOpacity(params: {
   const radialSamples = Math.min(128, Math.max(4, radialSamplesRaw));
   const shellWidthFactor = Math.min(1, Math.max(1e-3, finiteOr(params.shellWidthFactor, 0.25)));
   const inner = Math.max(bodyRadius, Math.min(...layers.map((layer) => layer.r0)));
-  const outer = Math.max(inner * 1.000001, inner + bodyRadius * shellWidthFactor);
+  const outer = Math.max(inner * SHELL_OUTER_BUFFER_FACTOR, inner + bodyRadius * shellWidthFactor);
 
   let weightedTransmission = 0;
   let weightSum = 0;
@@ -153,7 +156,7 @@ export function effectiveCircleAtmosphereOpacity(params: {
 
   if (!(weightSum > 0)) {
     const edgeTransmission = totalAtmosphereTransmission({
-      rho: inner * 1.000001,
+      rho: inner * SHELL_OUTER_BUFFER_FACTOR,
       config: {
         ...params.config,
         layers,

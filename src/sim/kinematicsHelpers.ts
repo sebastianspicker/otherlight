@@ -16,6 +16,9 @@ import {
 import { muFromPeriodAndA } from "../physics/kepler";
 import { posFromResolvedElements, resolveOrbitElements } from "./orbits";
 
+/** Eccentricity cap just below parabolic for tidal secular evolution; e ≥ 1 is unphysical. */
+const MAX_ECC_NEAR_PARABOLIC = 0.999999;
+
 export type BodyKinematics = {
   planetOrbit: OrbitElements;
   rBary: Vec3;
@@ -125,7 +128,7 @@ function applyTidalSecularEvolution(
   if (daDt === 0 && deDt === 0) return el;
 
   let a = Math.max(1e-6, el.a + daDt * dtSec);
-  let e = Math.min(0.999999, Math.max(0, el.e + deDt * dtSec));
+  let e = Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e + deDt * dtSec));
 
   // Clamp: if the relative change exceeds 50%, the Euler step has grown
   // unboundedly and the result is physically meaningless.  Clamp to +/-50%
@@ -144,7 +147,7 @@ function applyTidalSecularEvolution(
   }
   if (relDeRaw > MAX_REL_CHANGE && el.e > 1e-12) {
     const sign = e >= el.e ? 1 : -1;
-    e = Math.min(0.999999, Math.max(0, el.e * (1 + sign * MAX_REL_CHANGE)));
+    e = Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e * (1 + sign * MAX_REL_CHANGE)));
     console.warn(
       `applyTidalSecularEvolution: clamped de/e from ${relDeRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
         `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
@@ -347,6 +350,3 @@ export function getMoonStateAt(
 
   return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
 }
-
-// TODO: The LTTE + Shapiro time-correction logic is duplicated between the N-body
-// branch and the Kepler branch below.  Extract a shared helper (e.g.
