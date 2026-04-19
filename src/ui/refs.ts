@@ -279,4 +279,4 @@ export type UiRefs = {
   relPlanetPrec: HTMLInputElement;
   relMoonPrec: HTMLInputElement;
 };
-export { uiRefs } from "./refsObject";
+export { createUiRefs, uiRefs } from "./refsObject";

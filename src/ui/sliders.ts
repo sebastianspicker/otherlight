@@ -5,13 +5,20 @@
 import { clamp, toFiniteNumber } from "../core/units";
 import type { UiRefs } from "./refs";
 
-export function wireParamSliders(r: UiRefs): void {
+type WireParamSlidersOptions = {
+  signal?: AbortSignal;
+};
+
+export function wireParamSliders(r: UiRefs, options: WireParamSlidersOptions = {}): void {
   if (!r.sliderRootEl) return;
+
+  const listenerOptions = options.signal ? { signal: options.signal } : undefined;
 
   const isOverrideOn = () => Boolean(r.overrideModeEl?.checked);
 
   // Keep slider root visible; override changes only clamp policy.
   r.sliderRootEl.style.display = "";
+  r.sliderRootEl.replaceChildren();
 
   const nums = Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
 
@@ -47,51 +54,63 @@ export function wireParamSliders(r: UiRefs): void {
     range.value = String(clamp(toFiniteNumber(num.value, min), min, max));
 
     // Slider -> Number
-    range.addEventListener("input", () => {
-      num.value = range.value;
-      num.dispatchEvent(new Event("input", { bubbles: true }));
-      num.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    range.addEventListener(
+      "input",
+      () => {
+        num.value = range.value;
+        num.dispatchEvent(new Event("input", { bubbles: true }));
+        num.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+      listenerOptions,
+    );
 
     // Number -> Slider (and clamp when override OFF)
-    num.addEventListener("input", () => {
-      const v = toFiniteNumber(num.value, NaN);
-      if (!Number.isFinite(v)) return;
+    num.addEventListener(
+      "input",
+      () => {
+        const v = toFiniteNumber(num.value, NaN);
+        if (!Number.isFinite(v)) return;
 
-      // Even in override mode, enforce physical minimum constraints:
-      // - Radii and masses must be non-negative (min >= 0 attributes).
-      // - Periods must be positive.
-      // This prevents unphysical values like negative radii while still
-      // allowing the user to exceed the soft slider range.
-      const physicalMin = min >= 0 ? 0 : -Infinity;
-      const vc = isOverrideOn() ? Math.max(physicalMin, v) : clamp(v, min, max);
-      if (!Object.is(vc, v)) num.value = String(vc);
+        // Even in override mode, enforce physical minimum constraints:
+        // - Radii and masses must be non-negative (min >= 0 attributes).
+        // - Periods must be positive.
+        // This prevents unphysical values like negative radii while still
+        // allowing the user to exceed the soft slider range.
+        const physicalMin = min >= 0 ? 0 : -Infinity;
+        const vc = isOverrideOn() ? Math.max(physicalMin, v) : clamp(v, min, max);
+        if (!Object.is(vc, v)) num.value = String(vc);
 
-      range.value = String(clamp(vc, min, max));
-    });
+        range.value = String(clamp(vc, min, max));
+      },
+      listenerOptions,
+    );
 
     row.appendChild(name);
     row.appendChild(range);
     r.sliderRootEl.appendChild(row);
   }
 
-  r.overrideModeEl?.addEventListener("change", () => {
-    // When override is turned OFF: immediately clamp inputs into their ranges so slider/number stay consistent.
-    if (!isOverrideOn()) {
-      for (const num of nums) {
-        const minAttr = num.getAttribute("min");
-        const maxAttr = num.getAttribute("max");
-        if (minAttr === null || maxAttr === null) continue;
+  r.overrideModeEl?.addEventListener(
+    "change",
+    () => {
+      // When override is turned OFF: immediately clamp inputs into their ranges so slider/number stay consistent.
+      if (!isOverrideOn()) {
+        for (const num of nums) {
+          const minAttr = num.getAttribute("min");
+          const maxAttr = num.getAttribute("max");
+          if (minAttr === null || maxAttr === null) continue;
 
-        const min = Number(minAttr);
-        const max = Number(maxAttr);
+          const min = Number(minAttr);
+          const max = Number(maxAttr);
 
-        const v = toFiniteNumber(num.value, NaN);
-        if (Number.isFinite(min) && Number.isFinite(max) && Number.isFinite(v)) {
-          num.value = String(clamp(v, min, max));
-          num.dispatchEvent(new Event("input", { bubbles: true }));
+          const v = toFiniteNumber(num.value, NaN);
+          if (Number.isFinite(min) && Number.isFinite(max) && Number.isFinite(v)) {
+            num.value = String(clamp(v, min, max));
+            num.dispatchEvent(new Event("input", { bubbles: true }));
+          }
         }
       }
-    }
-  });
+    },
+    listenerOptions,
+  );
 }

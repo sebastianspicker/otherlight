@@ -14,10 +14,6 @@ pnpm dlx madge --extensions ts src --orphans > "$MADGE_OUT"
 
 ALLOWED_ORPHANS=(
   "main.ts"
-  "photometry/transitQuadraticLD.ts"
-  # Dedicated worker entrypoint loaded by bundler worker pipeline (?worker import).
-  # Madge treats this as orphan although it is emitted and used at runtime.
-  "sim/v4/referenceWorker.ts"
 )
 
 actual_orphans=$(

@@ -158,6 +158,9 @@ export function assertPhotometryInputs(params: SystemParams): void {
     if (weights.length > 0 && weights.some((x) => !Number.isFinite(x) || x < 0)) {
       throw new Error("star.photometry.spectralBandpass.weights entries must be finite and >= 0.");
     }
+    if (weights.length > 0 && weights.length !== lambda.length) {
+      throw new Error("star.photometry.spectralBandpass.weights must match lambdaNm length when provided.");
+    }
   }
 
   const rt = phot?.atmosphereRT;

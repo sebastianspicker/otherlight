@@ -13,7 +13,6 @@ import {
   advanceLessonFlow,
   ensureDidacticsConfig,
   exportDidacticReport,
-  initDidacticsRuntime,
   nextHintLevel,
   onDidacticSignals,
   populateDidacticsControls,
@@ -22,6 +21,7 @@ import {
   renderDidacticSignals,
   resolveSelectedDidacticEventTime,
   retreatLessonFlow,
+  switchDidacticsLesson,
   syncDidacticsControlsFromParams,
   updateDidacticComparison,
   updateDidacticResponse,
@@ -52,6 +52,7 @@ export type WireDidacticsUiDeps = {
   syncBinaryUi: () => void;
   warnEl: HTMLElement | null;
   getSuccessMessage: () => string;
+  signal?: AbortSignal;
 };
 
 export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
@@ -64,7 +65,9 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     syncBinaryUi,
     warnEl,
     getSuccessMessage,
+    signal,
   } = deps;
+  const listenerOptions = signal ? { signal } : undefined;
 
   populateDidacticsControls(refs, currentLessonSimMode());
   syncDidacticsControlsFromParams(state.params, refs, currentLessonSimMode());
@@ -80,171 +83,241 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     refs.didComparePreset.value = "nbody-with-perturber";
   }
 
-  refs.didLessonSelect?.addEventListener("change", () => {
-    state.params = ensureDidacticsConfig(state.params);
-    state.params = {
-      ...state.params,
-      didactics: { ...state.params.didactics!, activeLessonId: refs.didLessonSelect!.value },
-    };
-    state.didacticsRuntime = initDidacticsRuntime(state.params, state.t);
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
+  refs.didLessonSelect?.addEventListener(
+    "change",
+    () => {
+      state.params = ensureDidacticsConfig(state.params);
+      state.didacticsRuntime = switchDidacticsLesson(
+        state.params,
+        state.didacticsRuntime,
+        refs.didLessonSelect!.value,
+        state.t,
+        currentLessonSimMode(),
+      );
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
 
-  refs.didPrimaryResponseInput?.addEventListener("input", () => {
-    state.didacticsRuntime = updateDidacticResponse(
-      state.didacticsRuntime,
-      { primary: refs.didPrimaryResponseInput!.value },
-      state.t,
-    );
-  });
+  refs.didPrimaryResponseInput?.addEventListener(
+    "input",
+    () => {
+      state.didacticsRuntime = updateDidacticResponse(
+        state.didacticsRuntime,
+        { primary: refs.didPrimaryResponseInput!.value },
+        state.t,
+      );
+    },
+    listenerOptions,
+  );
 
-  refs.didSecondaryResponseInput?.addEventListener("input", () => {
-    state.didacticsRuntime = updateDidacticResponse(
-      state.didacticsRuntime,
-      { secondary: refs.didSecondaryResponseInput!.value },
-      state.t,
-    );
-  });
+  refs.didSecondaryResponseInput?.addEventListener(
+    "input",
+    () => {
+      state.didacticsRuntime = updateDidacticResponse(
+        state.didacticsRuntime,
+        { secondary: refs.didSecondaryResponseInput!.value },
+        state.t,
+      );
+    },
+    listenerOptions,
+  );
 
-  refs.didHintLevelSelect?.addEventListener("change", () => {
-    const nextLevel =
-      refs.didHintLevelSelect!.value === "L3" ? "L3" : refs.didHintLevelSelect!.value === "L2" ? "L2" : "L1";
-    state.params = ensureDidacticsConfig(state.params);
-    state.params = {
-      ...state.params,
-      didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-    };
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
+  refs.didHintLevelSelect?.addEventListener(
+    "change",
+    () => {
+      const nextLevel =
+        refs.didHintLevelSelect!.value === "L3"
+          ? "L3"
+          : refs.didHintLevelSelect!.value === "L2"
+            ? "L2"
+            : "L1";
+      state.params = ensureDidacticsConfig(state.params);
+      state.params = {
+        ...state.params,
+        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
+      };
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
 
-  refs.didHintLessBtn?.addEventListener("click", () => {
-    const currentLevel =
-      state.params.didactics?.hintLevel === "L3"
-        ? "L3"
-        : state.params.didactics?.hintLevel === "L2"
-          ? "L2"
-          : "L1";
-    const nextLevel = previousHintLevel(currentLevel);
-    state.params = ensureDidacticsConfig(state.params);
-    state.params = {
-      ...state.params,
-      didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-    };
-    if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
+  refs.didHintLessBtn?.addEventListener(
+    "click",
+    () => {
+      const currentLevel =
+        state.params.didactics?.hintLevel === "L3"
+          ? "L3"
+          : state.params.didactics?.hintLevel === "L2"
+            ? "L2"
+            : "L1";
+      const nextLevel = previousHintLevel(currentLevel);
+      state.params = ensureDidacticsConfig(state.params);
+      state.params = {
+        ...state.params,
+        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
+      };
+      if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
 
-  refs.didHintMoreBtn?.addEventListener("click", () => {
-    const currentLevel =
-      state.params.didactics?.hintLevel === "L3"
-        ? "L3"
-        : state.params.didactics?.hintLevel === "L2"
-          ? "L2"
-          : "L1";
-    const nextLevel = nextHintLevel(currentLevel);
-    state.params = ensureDidacticsConfig(state.params);
-    state.params = {
-      ...state.params,
-      didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-    };
-    if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
+  refs.didHintMoreBtn?.addEventListener(
+    "click",
+    () => {
+      const currentLevel =
+        state.params.didactics?.hintLevel === "L3"
+          ? "L3"
+          : state.params.didactics?.hintLevel === "L2"
+            ? "L2"
+            : "L1";
+      const nextLevel = nextHintLevel(currentLevel);
+      state.params = ensureDidacticsConfig(state.params);
+      state.params = {
+        ...state.params,
+        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
+      };
+      if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
 
-  refs.didAutoAssess?.addEventListener("input", () => {
-    state.params = ensureDidacticsConfig(state.params);
-    state.params = {
-      ...state.params,
-      didactics: { ...state.params.didactics!, autoAssess: refs.didAutoAssess!.checked },
-    };
-  });
+  refs.didAutoAssess?.addEventListener(
+    "input",
+    () => {
+      state.params = ensureDidacticsConfig(state.params);
+      state.params = {
+        ...state.params,
+        didactics: { ...state.params.didactics!, autoAssess: refs.didAutoAssess!.checked },
+      };
+    },
+    listenerOptions,
+  );
 
-  refs.didCheckBtn?.addEventListener("click", () => {
-    runWithErrorHandling(
-      () => {
-        const step = getSimulation().step(state.t);
-        state.didacticsRuntime = onDidacticSignals(
-          state.params,
+  refs.didCheckBtn?.addEventListener(
+    "click",
+    () => {
+      runWithErrorHandling(
+        () => {
+          const step = getSimulation().step(state.t);
+          state.didacticsRuntime = onDidacticSignals(
+            state.params,
+            state.didacticsRuntime,
+            step.didactics?.signals,
+            step.timing,
+            state.t,
+          );
+          renderDidacticSignals(refs, state.didacticsRuntime);
+        },
+        { statusEl: warnEl, getSuccessMessage },
+      );
+    },
+    listenerOptions,
+  );
+
+  refs.didPrevBtn?.addEventListener(
+    "click",
+    () => {
+      state.didacticsRuntime = retreatLessonFlow(state.params, state.didacticsRuntime, state.t);
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
+
+  refs.didNextBtn?.addEventListener(
+    "click",
+    () => {
+      state.didacticsRuntime = advanceLessonFlow(state.params, state.didacticsRuntime, state.t);
+      renderDidacticSignals(refs, state.didacticsRuntime);
+    },
+    listenerOptions,
+  );
+
+  refs.didExportBtn?.addEventListener(
+    "click",
+    () => {
+      runWithErrorHandling(() => exportDidacticReport(state.params, state.didacticsRuntime), {
+        statusEl: warnEl,
+        getSuccessMessage,
+        errorPrefix: "Export failed: ",
+      });
+    },
+    listenerOptions,
+  );
+
+  refs.didJumpEventBtn?.addEventListener(
+    "click",
+    () => {
+      runWithErrorHandling(
+        () => {
+          const targetTime = resolveSelectedDidacticEventTime(state.didacticsRuntime, refs);
+          if (!Number.isFinite(targetTime)) throw new Error("No timed lesson event is available yet.");
+          seekToTime(Number(targetTime), { resetNoise: false });
+        },
+        { statusEl: warnEl, getSuccessMessage },
+      );
+    },
+    listenerOptions,
+  );
+
+  refs.didCompareBtn?.addEventListener(
+    "click",
+    () => {
+      runWithErrorHandling(
+        () => {
+          const presetB = getPresetById(refs.didComparePreset?.value ?? "default");
+          const tCmp = Number(refs.didCompareTime?.value ?? "0");
+          const cmp = compareScenariosAtTime(
+            state.params,
+            cloneParams(presetB.params),
+            Number.isFinite(tCmp) ? tCmp : 0,
+          );
+          const comparisonText = interpretDidacticComparison(cmp, {
+            lessonId: state.didacticsRuntime.learning.lessonId,
+            comparisonPrompt: state.didacticsRuntime.latestSignals?.comparisonPrompt,
+          });
+          renderDidacticComparison(refs, comparisonText);
+          state.didacticsRuntime = updateDidacticComparison(state.didacticsRuntime, cmp, comparisonText);
+          state.comparisonCurveSeries = cmp.visual?.curveSeries;
+          state.comparisonInset = cmp.visual?.comparisonInset;
+          state.comparisonGhosts = cmp.visual?.sceneGhosts;
+          state.comparisonBadges = cmp.visual?.badges;
+        },
+        { statusEl: refs.didCompareOut, errorPrefix: "Compare failed: " },
+      );
+    },
+    listenerOptions,
+  );
+
+  refs.didHypothesisSelect?.addEventListener(
+    "change",
+    () => {
+      const selected = refs.didHypothesisSelect!.value;
+      if (isBinaryHypothesis(selected)) {
+        state.binaryLabState = setHypothesis(state.binaryLabState, selected);
+        state.didacticsRuntime = updateDidacticResponse(
           state.didacticsRuntime,
-          step.didactics?.signals,
-          step.timing,
+          { primary: selected },
           state.t,
         );
-        renderDidacticSignals(refs, state.didacticsRuntime);
-      },
-      { statusEl: warnEl, getSuccessMessage },
-    );
-  });
+        if (warnEl) warnEl.textContent = "";
+      } else {
+        state.binaryLabState = { ...state.binaryLabState, hypothesis: undefined };
+        state.didacticsRuntime = updateDidacticResponse(state.didacticsRuntime, { primary: "" }, state.t);
+      }
+      syncBinaryUi();
+    },
+    listenerOptions,
+  );
 
-  refs.didPrevBtn?.addEventListener("click", () => {
-    state.didacticsRuntime = retreatLessonFlow(state.params, state.didacticsRuntime, state.t);
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
-
-  refs.didNextBtn?.addEventListener("click", () => {
-    state.didacticsRuntime = advanceLessonFlow(state.params, state.didacticsRuntime, state.t);
-    renderDidacticSignals(refs, state.didacticsRuntime);
-  });
-
-  refs.didExportBtn?.addEventListener("click", () => {
-    runWithErrorHandling(() => exportDidacticReport(state.params, state.didacticsRuntime), {
-      statusEl: warnEl,
-      getSuccessMessage,
-      errorPrefix: "Export failed: ",
-    });
-  });
-
-  refs.didJumpEventBtn?.addEventListener("click", () => {
-    runWithErrorHandling(
-      () => {
-        const targetTime = resolveSelectedDidacticEventTime(state.didacticsRuntime, refs);
-        if (!Number.isFinite(targetTime)) throw new Error("No timed lesson event is available yet.");
-        seekToTime(Number(targetTime), { resetNoise: false });
-      },
-      { statusEl: warnEl, getSuccessMessage },
-    );
-  });
-
-  refs.didCompareBtn?.addEventListener("click", () => {
-    runWithErrorHandling(
-      () => {
-        const presetB = getPresetById(refs.didComparePreset?.value ?? "default");
-        const tCmp = Number(refs.didCompareTime?.value ?? "0");
-        const cmp = compareScenariosAtTime(
-          state.params,
-          cloneParams(presetB.params),
-          Number.isFinite(tCmp) ? tCmp : 0,
-        );
-        const comparisonText = interpretDidacticComparison(cmp, {
-          lessonId: state.didacticsRuntime.learning.lessonId,
-          comparisonPrompt: state.didacticsRuntime.latestSignals?.comparisonPrompt,
-        });
-        renderDidacticComparison(refs, comparisonText);
-        state.didacticsRuntime = updateDidacticComparison(state.didacticsRuntime, cmp, comparisonText);
-        state.comparisonCurveSeries = cmp.visual?.curveSeries;
-        state.comparisonInset = cmp.visual?.comparisonInset;
-        state.comparisonGhosts = cmp.visual?.sceneGhosts;
-        state.comparisonBadges = cmp.visual?.badges;
-      },
-      { statusEl: refs.didCompareOut, errorPrefix: "Compare failed: " },
-    );
-  });
-
-  refs.didHypothesisSelect?.addEventListener("change", () => {
-    const selected = refs.didHypothesisSelect!.value;
-    if (isBinaryHypothesis(selected)) {
-      state.binaryLabState = setHypothesis(state.binaryLabState, selected);
-      state.didacticsRuntime = updateDidacticResponse(state.didacticsRuntime, { primary: selected }, state.t);
-      if (warnEl) warnEl.textContent = "";
-    } else {
-      state.binaryLabState = { ...state.binaryLabState, hypothesis: undefined };
-      state.didacticsRuntime = updateDidacticResponse(state.didacticsRuntime, { primary: "" }, state.t);
-    }
-    syncBinaryUi();
-  });
-
-  refs.didRevealSkyBtn?.addEventListener("click", () => {
-    state.binaryLabState = revealSky(state.binaryLabState);
-    syncBinaryUi();
-  });
+  refs.didRevealSkyBtn?.addEventListener(
+    "click",
+    () => {
+      state.binaryLabState = revealSky(state.binaryLabState);
+      syncBinaryUi();
+    },
+    listenerOptions,
+  );
 }

@@ -26,7 +26,6 @@ import { walkTsFiles } from "../helpers/walkTsFiles";
  *   sim/ → didactics/:
  *     - src/sim/sim.ts — uses getDidacticsHook() instead of direct import
  *     - src/sim/v4/nativeEngine.ts — uses getDidacticsHook() instead of direct import
- *     - src/sim/v3/runtime.ts — uses getDidacticsV3Hook() instead of direct import
  */
 
 /** Collect non-type-only import violations for a layer importing from forbidden modules. */

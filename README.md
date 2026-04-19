@@ -111,9 +111,10 @@ flowchart TD
   subgraph load [Load]
     HTML[index.html]
     Main[main.ts]
-    Scenario[scenario.default.json]
-    Refs[uiRefs]
-    Sim0[createRuntimeFromParams]
+    Shell[renderAppShell]
+    Bootstrap[initApp]
+    Refs[createUiRefs]
+    Sim0[createSimulationRuntimeV4FromParams]
   end
   subgraph init [Init]
     Wire[Wire presets, real systems, handlers]
@@ -128,7 +129,8 @@ flowchart TD
     Readouts[Update readouts, didactics]
   end
   HTML --> Main
-  Main --> Scenario
+  Main --> Shell
+  Main --> Bootstrap
   Main --> Refs
   Main --> Sim0
   Main --> init
@@ -250,7 +252,7 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 ```text
 src/
   app/         scenario selection, runtime builders, didactics wiring
-  config/      defaults and real-systems snapshot
+  src/config/  defaults and real-systems snapshot
   core/        shared types and units
   didactics/   lesson engine, rubric, reports
   photometry/  transit and additive flux components

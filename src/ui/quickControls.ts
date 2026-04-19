@@ -5,6 +5,7 @@ import type { UiRefs } from "./refs";
 
 export type QuickControlsOptions = {
   onQuickControlChange?: () => void;
+  signal?: AbortSignal;
 };
 
 function copyRangeMeta(quick: HTMLInputElement, source: HTMLInputElement): void {
@@ -109,6 +110,7 @@ export function syncQuickControlsFromInputs(r: UiRefs): void {
 export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOptions = {}): void {
   if (!r.quickControlsRootEl) return;
   const notifyChange = () => options.onQuickControlChange?.();
+  const listenerOptions = options.signal ? { signal: options.signal } : undefined;
 
   copyRangeMeta(r.quickPlanetR, r.planetR);
   copyRangeMeta(r.quickPlanetInc, r.planetInc);
@@ -117,70 +119,108 @@ export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOpt
   copyRangeMeta(r.quickMoonA, r.moonA);
   copyRangeMeta(r.quickMoonInc, r.moonInc);
 
-  r.quickPlanetR.addEventListener("input", () => {
-    setNumberInputValue(r.planetR, toFiniteNumber(r.quickPlanetR.value, toFiniteNumber(r.planetR.value, 0)));
-    notifyChange();
-  });
+  r.quickPlanetR.addEventListener(
+    "input",
+    () => {
+      setNumberInputValue(
+        r.planetR,
+        toFiniteNumber(r.quickPlanetR.value, toFiniteNumber(r.planetR.value, 0)),
+      );
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickPlanetInc.addEventListener("input", () => {
-    setNumberInputValue(
-      r.planetInc,
-      toFiniteNumber(r.quickPlanetInc.value, toFiniteNumber(r.planetInc.value, 0)),
-    );
-    notifyChange();
-  });
+  r.quickPlanetInc.addEventListener(
+    "input",
+    () => {
+      setNumberInputValue(
+        r.planetInc,
+        toFiniteNumber(r.quickPlanetInc.value, toFiniteNumber(r.planetInc.value, 0)),
+      );
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickPlanetA.addEventListener("input", () => {
-    const nextA = toFiniteNumber(r.quickPlanetA.value, toFiniteNumber(r.planetA.value, 0));
-    const nextPeriod = deriveConsistentPeriod(r.planetA, r.planetPeriod, nextA);
-    r.planetA.value = String(nextA);
-    dispatchInputAndChange(r.planetA);
-    if (nextPeriod !== undefined) {
-      r.planetPeriod.value = String(nextPeriod);
-      dispatchInputAndChange(r.planetPeriod);
-    }
-    notifyChange();
-  });
+  r.quickPlanetA.addEventListener(
+    "input",
+    () => {
+      const nextA = toFiniteNumber(r.quickPlanetA.value, toFiniteNumber(r.planetA.value, 0));
+      const nextPeriod = deriveConsistentPeriod(r.planetA, r.planetPeriod, nextA);
+      r.planetA.value = String(nextA);
+      dispatchInputAndChange(r.planetA);
+      if (nextPeriod !== undefined) {
+        r.planetPeriod.value = String(nextPeriod);
+        dispatchInputAndChange(r.planetPeriod);
+      }
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickMoonEnabled.addEventListener("change", () => {
-    r.moonEnabled.checked = r.quickMoonEnabled.checked;
-    dispatchInputAndChange(r.moonEnabled);
-    syncMoonQuickState(r);
-    notifyChange();
-  });
+  r.quickMoonEnabled.addEventListener(
+    "change",
+    () => {
+      r.moonEnabled.checked = r.quickMoonEnabled.checked;
+      dispatchInputAndChange(r.moonEnabled);
+      syncMoonQuickState(r);
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickMoonR.addEventListener("input", () => {
-    setNumberInputValue(r.moonR, toFiniteNumber(r.quickMoonR.value, toFiniteNumber(r.moonR.value, 0)));
-    notifyChange();
-  });
+  r.quickMoonR.addEventListener(
+    "input",
+    () => {
+      setNumberInputValue(r.moonR, toFiniteNumber(r.quickMoonR.value, toFiniteNumber(r.moonR.value, 0)));
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickMoonA.addEventListener("input", () => {
-    const nextA = toFiniteNumber(r.quickMoonA.value, toFiniteNumber(r.moonA.value, 0));
-    const nextPeriod = deriveConsistentPeriod(r.moonA, r.moonPeriod, nextA);
-    r.moonA.value = String(nextA);
-    dispatchInputAndChange(r.moonA);
-    if (nextPeriod !== undefined) {
-      r.moonPeriod.value = String(nextPeriod);
-      dispatchInputAndChange(r.moonPeriod);
-    }
-    notifyChange();
-  });
+  r.quickMoonA.addEventListener(
+    "input",
+    () => {
+      const nextA = toFiniteNumber(r.quickMoonA.value, toFiniteNumber(r.moonA.value, 0));
+      const nextPeriod = deriveConsistentPeriod(r.moonA, r.moonPeriod, nextA);
+      r.moonA.value = String(nextA);
+      dispatchInputAndChange(r.moonA);
+      if (nextPeriod !== undefined) {
+        r.moonPeriod.value = String(nextPeriod);
+        dispatchInputAndChange(r.moonPeriod);
+      }
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickMoonInc.addEventListener("input", () => {
-    setNumberInputValue(r.moonInc, toFiniteNumber(r.quickMoonInc.value, toFiniteNumber(r.moonInc.value, 0)));
-    notifyChange();
-  });
+  r.quickMoonInc.addEventListener(
+    "input",
+    () => {
+      setNumberInputValue(
+        r.moonInc,
+        toFiniteNumber(r.quickMoonInc.value, toFiniteNumber(r.moonInc.value, 0)),
+      );
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
-  r.quickReflectedLight.addEventListener("change", () => {
-    const enabled = r.quickReflectedLight.checked;
-    r.planetPhaseEnabled.checked = enabled;
-    dispatchInputAndChange(r.planetPhaseEnabled);
-    r.moonPhaseEnabled.checked = enabled;
-    dispatchInputAndChange(r.moonPhaseEnabled);
-    r.dnEnabled.checked = enabled;
-    dispatchInputAndChange(r.dnEnabled);
-    notifyChange();
-  });
+  r.quickReflectedLight.addEventListener(
+    "change",
+    () => {
+      const enabled = r.quickReflectedLight.checked;
+      r.planetPhaseEnabled.checked = enabled;
+      dispatchInputAndChange(r.planetPhaseEnabled);
+      r.moonPhaseEnabled.checked = enabled;
+      dispatchInputAndChange(r.moonPhaseEnabled);
+      r.dnEnabled.checked = enabled;
+      dispatchInputAndChange(r.dnEnabled);
+      notifyChange();
+    },
+    listenerOptions,
+  );
 
   const syncFromRaw = () => syncQuickControlsFromInputs(r);
   const rawControls: HTMLInputElement[] = [
@@ -198,8 +238,8 @@ export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOpt
     r.dnEnabled,
   ];
   for (const control of rawControls) {
-    control.addEventListener("input", syncFromRaw);
-    control.addEventListener("change", syncFromRaw);
+    control.addEventListener("input", syncFromRaw, listenerOptions);
+    control.addEventListener("change", syncFromRaw, listenerOptions);
   }
 
   syncQuickControlsFromInputs(r);

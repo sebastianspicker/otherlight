@@ -1,9 +1,11 @@
 /**
- * @deprecated V3 runtime factory functions (createSimulation, sampleRangeSeconds) are deprecated.
- * Use the V4 engine (src/sim/v4) for new code.
+ * V3 type and migration surface.
  *
- * NOTE: V3 types (SimulationStepV3, RenderSignalsV3, etc.) are still used by V4 adapters
- * and are NOT deprecated — only the runtime factory functions should be avoided.
+ * The V3 runtime factory functions (createSimulation, sampleRangeSeconds) have been retired.
+ * Use the V4 engine (src/sim/v4) for all new code.
+ *
+ * NOTE: V3 types (SimulationStepV3, RenderSignalsV3, etc.) are the active render/step
+ * protocol types used throughout the application and are NOT deprecated.
  */
 export type {
   AssessmentRubricV3,
@@ -25,5 +27,4 @@ export type {
 } from "./types";
 
 export { createDefaultSimulationConfigV3, toSimulationConfigV3, toSystemParamsV2 } from "./adapter";
-export { createSimulation, sampleRangeSeconds } from "./runtime";
 export { assertValidSimulationConfigV3, validateSimulationConfigV3 } from "./validation";

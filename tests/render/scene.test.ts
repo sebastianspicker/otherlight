@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDefaultSimulationConfigV3, createSimulation, toSystemParamsV2 } from "../../src/sim/v3";
 import { renderScene } from "../../src/render/scene";
 import type { SimulationStepV3 } from "../../src/sim/v3";
 
@@ -70,10 +69,11 @@ describe("render scene v3 adapter", () => {
   });
 
   it("throws when drawFrameV3 is unavailable", () => {
-    const config = createDefaultSimulationConfigV3();
-    const runtime = createSimulation(config);
-    const step = runtime.step(0);
-    const params = toSystemParamsV2(runtime.getConfig());
+    const step = minimalStepV3();
+    const params = {
+      star: { r: 1 },
+      planet: { r: 1, orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 } },
+    } as any;
 
     const drawFrame = vi.fn();
     const fakeRenderer = { drawFrame } as any;

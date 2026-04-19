@@ -7,6 +7,7 @@ const mockState = vi.hoisted(() => ({
   renderers: [] as Array<{ debug: Record<string, boolean> }>,
   frameResetCalls: 0,
   seekCalls: [] as number[],
+  runningToggleCalls: 0,
 }));
 
 vi.mock("../../src/render/canvas2d", () => {
@@ -62,16 +63,27 @@ vi.mock("../../src/app/displayFlux", () => ({
 }));
 
 vi.mock("../../src/app/frameLoop", () => ({
-  createFrameLoopController: () => ({
-    setRunning: () => {},
-    resetSimTimeAndLC: () => {
-      mockState.frameResetCalls += 1;
-    },
-    seekToTime: (targetSec: number) => {
-      mockState.seekCalls.push(targetSec);
-    },
-    frame: () => {},
-  }),
+  createFrameLoopController: () => {
+    let rafId: number | null = null;
+
+    return {
+      start: () => {
+        rafId = requestAnimationFrame(() => {});
+      },
+      dispose: () => {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      },
+      setRunning: () => {
+        mockState.runningToggleCalls += 1;
+      },
+      resetSimTimeAndLC: () => {
+        mockState.frameResetCalls += 1;
+      },
+      seekToTime: (targetSec: number) => {
+        mockState.seekCalls.push(targetSec);
+      },
+    };
+  },
 }));
 
 vi.mock("../../src/app/v4Runtime", () => ({
@@ -161,10 +173,15 @@ describe("bootstrap runtime contracts", () => {
     mockState.renderers.length = 0;
     mockState.frameResetCalls = 0;
     mockState.seekCalls.length = 0;
+    mockState.runningToggleCalls = 0;
     vi.stubGlobal(
       "requestAnimationFrame",
-      vi.fn(() => 1),
+      vi.fn((cb: FrameRequestCallback) => {
+        void cb;
+        return Math.floor(Math.random() * 10000) + 1;
+      }),
     );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
   });
 
   it("keeps renderer debug disabled at startup in normal mode", async () => {
@@ -278,6 +295,47 @@ describe("bootstrap runtime contracts", () => {
 
     expect(Number(planetR.value)).toBeCloseTo(Number(quickPlanetR.value), 6);
     expect(mockState.frameResetCalls).toBeGreaterThan(resetsBefore);
+  });
+
+  it("rebinds to the live shell after the app shell is remounted", async () => {
+    await initTestApp();
+
+    const { initApp } = await import("../../src/app/bootstrap");
+    installDom();
+    await initApp();
+    await flushAsync();
+
+    const btnStart = document.getElementById("btnStart") as HTMLButtonElement;
+    const runningTogglesBefore = mockState.runningToggleCalls;
+
+    btnStart.click();
+    await flushAsync();
+
+    expect(mockState.runningToggleCalls - runningTogglesBefore).toBe(1);
+  });
+
+  it("cleans up bootstrap side effects before re-initializing on the same DOM", async () => {
+    const { initApp } = await import("../../src/app/bootstrap");
+
+    installDom();
+    await initApp();
+    await flushAsync();
+
+    const sliderRoot = document.getElementById("sliderRoot") as HTMLElement;
+    const btnReset = document.getElementById("btnReset") as HTMLButtonElement;
+    const rafCallsAfterFirstInit = vi.mocked(requestAnimationFrame).mock.calls.length;
+
+    await initApp();
+    await flushAsync();
+
+    const resetsBeforeClick = mockState.frameResetCalls;
+    btnReset.click();
+    await flushAsync();
+
+    expect(sliderRoot.isConnected).toBe(true);
+    expect(mockState.frameResetCalls - resetsBeforeClick).toBe(1);
+    expect(vi.mocked(cancelAnimationFrame)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(requestAnimationFrame).mock.calls.length).toBe(rafCallsAfterFirstInit + 1);
   });
 
   it("lets the learner adjust guidance level without changing lessons", async () => {

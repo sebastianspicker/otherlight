@@ -189,7 +189,7 @@ export function readNBodyFromUI(next: SystemParams, r: UiRefs): void {
       softening: sanitizePositive(readNumberInput(r.nbodySoftening, prev?.softening ?? 0), 0, 1e12),
       perturbers: [pert1, pert2].filter((p): p is NonNullable<typeof p> => p != null),
     };
-  } else if (!readCheckbox(r.nbodyEnabled) && next.dynamics?.nbodyPlanetMoon) {
+  } else if (next.dynamics?.nbodyPlanetMoon) {
     delete next.dynamics.nbodyPlanetMoon;
   }
 }

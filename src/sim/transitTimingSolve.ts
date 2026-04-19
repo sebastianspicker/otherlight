@@ -34,11 +34,59 @@ export function usesExactTransitTiming(params: SystemParams): boolean {
   return fidelity === "accurate" || fidelity === "reference";
 }
 
-function computeTtvSec(centerSec: number, periodSec?: number, t0Sec?: number): number | undefined {
-  if (!(Number.isFinite(periodSec) && (periodSec as number) > 0 && Number.isFinite(t0Sec))) return undefined;
-  const k = Math.floor((centerSec - (t0Sec as number)) / (periodSec as number) + 0.5);
-  const centerEphem = (t0Sec as number) + k * (periodSec as number);
+function computeTtvSec(
+  centerSec: number,
+  periodSec?: number,
+  referenceEpochSec?: number,
+): number | undefined {
+  if (!(Number.isFinite(periodSec) && (periodSec as number) > 0 && Number.isFinite(referenceEpochSec))) {
+    return undefined;
+  }
+  const k = Math.floor((centerSec - (referenceEpochSec as number)) / (periodSec as number) + 0.5);
+  const centerEphem = (referenceEpochSec as number) + k * (periodSec as number);
   return Number.isFinite(centerEphem) ? centerSec - centerEphem : undefined;
+}
+
+export function computeTransitReferenceEpochSec(args: {
+  rStar: number;
+  rBody: number;
+  periodSec?: number;
+  t0Sec?: number;
+  sampleAt?: (tSec: number) => TransitEventSample | undefined;
+}): number | undefined {
+  const { rStar, rBody, periodSec, t0Sec, sampleAt } = args;
+  if (!(Number.isFinite(periodSec) && (periodSec as number) > 0 && Number.isFinite(t0Sec) && sampleAt)) {
+    return undefined;
+  }
+
+  const scanCount = 24;
+  const halfWindowSec = (periodSec as number) / 2;
+  let bestCenterSec: number | undefined;
+  let bestDistanceSec = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index <= scanCount; index++) {
+    const alpha = index / scanCount - 0.5;
+    const trialSec = (t0Sec as number) + alpha * (periodSec as number);
+    const sample = sampleAt(trialSec);
+    if (!sample) continue;
+    const event = estimateTransitEvent({
+      tObsSec: trialSec,
+      rStar,
+      rBody,
+      sky: sample.sky,
+      vSky: sample.vSky,
+      periodSec,
+      sampleAt,
+    });
+    const centerSec = event?.centerSec;
+    if (!Number.isFinite(centerSec)) continue;
+    const distanceSec = Math.abs((centerSec as number) - (t0Sec as number));
+    if (distanceSec > halfWindowSec + 1e-6 || distanceSec >= bestDistanceSec) continue;
+    bestDistanceSec = distanceSec;
+    bestCenterSec = centerSec;
+  }
+
+  return bestCenterSec;
 }
 
 function estimateTransitEventLinearized(args: {
@@ -48,9 +96,9 @@ function estimateTransitEventLinearized(args: {
   sky: SkyPoint;
   vSky: SkyPoint;
   periodSec?: number;
-  t0Sec?: number;
+  transitReferenceEpochSec?: number;
 }): TransitEventEstimate | undefined {
-  const { tObsSec, rStar, rBody, sky, vSky, periodSec, t0Sec } = args;
+  const { tObsSec, rStar, rBody, sky, vSky, periodSec, transitReferenceEpochSec } = args;
   if (!(Number.isFinite(rStar) && rStar > 0)) return undefined;
   if (!(Number.isFinite(rBody) && rBody > 0)) return undefined;
   if (!Number.isFinite(sky.x) || !Number.isFinite(sky.y) || !Number.isFinite(sky.z)) return undefined;
@@ -77,7 +125,7 @@ function estimateTransitEventLinearized(args: {
   const centerSec = tObsSec + dtCenter;
   const ingressSec = centerSec - durationSec / 2;
   const egressSec = centerSec + durationSec / 2;
-  const ttvSec = computeTtvSec(centerSec, periodSec, t0Sec);
+  const ttvSec = computeTtvSec(centerSec, periodSec, transitReferenceEpochSec);
 
   return { centerSec, durationSec, ingressSec, egressSec, ttvSec };
 }
@@ -171,9 +219,9 @@ function solveTransitEventExact(args: {
   rBody: number;
   sampleAt: (tSec: number) => TransitEventSample | undefined;
   periodSec?: number;
-  t0Sec?: number;
+  transitReferenceEpochSec?: number;
 }): TransitEventSolveResult {
-  const { linear, tObsSec, rStar, rBody, sampleAt, periodSec, t0Sec } = args;
+  const { linear, tObsSec, rStar, rBody, sampleAt, periodSec, transitReferenceEpochSec } = args;
   const rSum = rStar + rBody;
   const maxSpanSec =
     Number.isFinite(periodSec) && (periodSec as number) > 0
@@ -314,7 +362,7 @@ function solveTransitEventExact(args: {
       durationSec: egressSec - ingressSec,
       ingressSec,
       egressSec,
-      ttvSec: computeTtvSec(exactCenterSec, periodSec, t0Sec),
+      ttvSec: computeTtvSec(exactCenterSec, periodSec, transitReferenceEpochSec),
     },
     diagnostics: {
       status: "exact",
@@ -336,6 +384,7 @@ export function estimateTransitEventWithDiagnostics(args: {
   vSky: SkyPoint;
   periodSec?: number;
   t0Sec?: number;
+  transitReferenceEpochSec?: number;
   sampleAt?: (tSec: number) => TransitEventSample | undefined;
 }): TransitEventSolveResult {
   const linear = estimateTransitEventLinearized(args);
@@ -375,7 +424,7 @@ export function estimateTransitEventWithDiagnostics(args: {
       rBody: args.rBody,
       sampleAt: args.sampleAt,
       periodSec: args.periodSec,
-      t0Sec: args.t0Sec,
+      transitReferenceEpochSec: args.transitReferenceEpochSec,
     }) ?? {
       event: linear,
       diagnostics: {
@@ -399,6 +448,7 @@ export function estimateTransitEvent(args: {
   vSky: SkyPoint;
   periodSec?: number;
   t0Sec?: number;
+  transitReferenceEpochSec?: number;
   sampleAt?: (tSec: number) => TransitEventSample | undefined;
 }): TransitEventEstimate | undefined {
   return estimateTransitEventWithDiagnostics(args).event;

@@ -24,10 +24,10 @@ import {
   onDidacticSignals,
   renderDidacticSignals,
 } from "./didactics";
-import { computeDidacticSignals, evaluateDidacticsV3 } from "../didactics";
+import { computeDidacticSignals } from "../didactics";
 import { createBinaryLabState } from "../didactics/binaryLab";
-import { setDidacticsHook, setDidacticsV3Hook } from "../sim/didacticsHook";
-import { uiRefs } from "../ui/refs";
+import { setDidacticsHook } from "../sim/didacticsHook";
+import { createUiRefs } from "../ui/refs";
 import { readUIIntoParams } from "../ui/params";
 import { wireEnableHandlers } from "../ui/enable";
 import { applyObserverModeContract, readUiMode, syncUiModeVisibility } from "../ui/mode";
@@ -55,15 +55,57 @@ import { replaceRuntime, takeRuntimeStatus } from "./runtimeLifecycle";
 import { wireBootstrapViewControls } from "./bootstrapViewControls";
 import { createBootstrapOcPanelController } from "./bootstrapOcPanel";
 
-// TODO: AppState merges all state into a single intersection type (god object).
-// Consider separating concerns: simulation state, UI state, and scenario flow state
-// could each be managed independently with explicit coordination points.
+// AppState merges scenario-flow and frame-loop state shapes.
 type AppState = ScenarioFlowState & FrameLoopState;
 
+let activeAppDispose: (() => void) | null = null;
+
+// ── DOM population helpers ────────────────────────────────────────────────────
+
+function populatePresetSelect(presetSelect: HTMLSelectElement, presetDesc: HTMLElement): void {
+  presetSelect.replaceChildren();
+  for (const preset of PRESETS) {
+    const opt = document.createElement("option");
+    opt.value = preset.id;
+    opt.textContent = preset.label;
+    presetSelect.appendChild(opt);
+  }
+  presetSelect.value = "default";
+  presetDesc.textContent = getPresetById(presetSelect.value).description;
+}
+
+function populateRealSystemSelect(
+  realSystemSelect: HTMLSelectElement,
+  realSystemMeta: HTMLElement | null,
+): void {
+  realSystemSelect.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— choose real system —";
+  realSystemSelect.appendChild(placeholder);
+  for (const sys of REAL_SYSTEMS_OPTIONS) {
+    const opt = document.createElement("option");
+    opt.value = sys.id;
+    opt.textContent = sys.label;
+    realSystemSelect.appendChild(opt);
+  }
+  realSystemSelect.value = "";
+  realSystemSelect.disabled = REAL_SYSTEMS_OPTIONS.length === 0;
+  if (realSystemMeta) realSystemMeta.textContent = "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function initApp(): Promise<void> {
-  // Wire didactics hooks so sim/ can call them without importing didactics/ directly.
+  activeAppDispose?.();
+  activeAppDispose = null;
+
+  const refs = createUiRefs();
+  const teardownController = new AbortController();
+  const listenerOptions = { signal: teardownController.signal };
+
+  // Wire didactics hook so sim/ can call it without importing didactics/ directly.
   setDidacticsHook(computeDidacticSignals);
-  setDidacticsV3Hook(evaluateDidacticsV3);
 
   const {
     skyCanvas,
@@ -83,7 +125,7 @@ export async function initApp(): Promise<void> {
     timingHistoryVal,
     btnApplyParams,
     btnResetParams,
-  } = uiRefs;
+  } = refs;
 
   const defaultPreset = getPresetById("default");
   const defaultScenario = stripUnsupportedPhotometryForV4Runtime(defaultPreset.params);
@@ -131,19 +173,21 @@ export async function initApp(): Promise<void> {
   }
 
   function currentLessonSimMode(): "preset-lab" | "binary-lab" {
-    return isBinaryModeActive(uiRefs) ? "binary-lab" : "preset-lab";
+    return isBinaryModeActive(refs) ? "binary-lab" : "preset-lab";
   }
 
   function runtimeArgsFromCurrentParams() {
     return {
       system: appState.params,
-      binaryMode: isBinaryModeActive(uiRefs),
+      binaryMode: isBinaryModeActive(refs),
       runtimeMode: readRuntimeModeFromUi(),
       binaryLabDefaults: DEFAULT_BINARY_LAB_CONFIG_V4.binaryLab,
     };
   }
 
   let simulation: AppSimulationRuntime = createSimulationRuntimeV4FromParams(runtimeArgsFromCurrentParams());
+  let disposed = false;
+  let quickApplyTimer: ReturnType<typeof setTimeout> | null = null;
 
   function syncDisplayFluxState(): void {
     const cfg = simulation.getConfig();
@@ -154,25 +198,19 @@ export async function initApp(): Promise<void> {
   syncDisplayFluxState();
 
   const { renderOcPanel, wireOcControls } = createBootstrapOcPanelController({
-    refs: uiRefs,
+    refs,
     state: appState,
     warnEl: warnVal,
     getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+    signal: teardownController.signal,
   });
 
-  async function rebuildSimulationFromParams(): Promise<void> {
-    simulation = await replaceRuntime(simulation, runtimeArgsFromCurrentParams());
-    syncDisplayFluxState();
-    const status = takeRuntimeStatus(simulation);
-    if (status && warnVal) warnVal.textContent = status;
-  }
-
   function renderDidacticsSurface(): void {
-    if (isLabProductModeActive(uiRefs)) {
-      renderDidacticSignals(uiRefs, appState.didacticsRuntime);
+    if (isLabProductModeActive(refs)) {
+      renderDidacticSignals(refs, appState.didacticsRuntime);
       return;
     }
-    renderDidacticSignals(uiRefs, {
+    renderDidacticSignals(refs, {
       ...appState.didacticsRuntime,
       latestSignals: undefined,
       latestTiming: undefined,
@@ -180,17 +218,17 @@ export async function initApp(): Promise<void> {
   }
 
   const frame = createFrameLoopController({
-    refs: uiRefs,
+    refs,
     renderer,
     plot,
     state: appState,
     getSimulation: () => simulation,
     getParams: () => appState.params,
     getBinaryLabState: () => appState.binaryLabState,
-    isBinaryModeActive: () => isBinaryModeActive(uiRefs),
+    isBinaryModeActive: () => isBinaryModeActive(refs),
     uiWarningText,
     onSampleStep: (step, tSec) => {
-      if (isLabProductModeActive(uiRefs)) {
+      if (isLabProductModeActive(refs)) {
         appState.didacticsRuntime = onDidacticSignals(
           appState.params,
           appState.didacticsRuntime,
@@ -214,44 +252,75 @@ export async function initApp(): Promise<void> {
     renderOcPanel,
   });
 
+  const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
+    if (quickApplyTimer !== null) {
+      clearTimeout(quickApplyTimer);
+      quickApplyTimer = null;
+    }
+    teardownController.abort();
+    frame.dispose();
+    simulation.dispose();
+    if (activeAppDispose === dispose) activeAppDispose = null;
+  };
+
+  activeAppDispose = dispose;
+
+  async function rebuildSimulationFromParams(): Promise<void> {
+    if (disposed) return;
+    const nextSimulation = await replaceRuntime(simulation, runtimeArgsFromCurrentParams());
+    if (disposed) {
+      nextSimulation.dispose();
+      return;
+    }
+    simulation = nextSimulation;
+    syncDisplayFluxState();
+    const status = takeRuntimeStatus(simulation);
+    if (status && warnVal) warnVal.textContent = status;
+  }
+
   const scenarioDeps: ScenarioFlowDeps = {
-    refs: uiRefs,
+    refs,
     state: appState,
     getTimeSec: () => appState.t,
     rebuildSimulationFromParams,
     resetSimTimeAndLC: frame.resetSimTimeAndLC,
   };
   const applyGuard: ScenarioApplyGuard = { applying: false };
-  let quickApplyTimer: ReturnType<typeof setTimeout> | null = null;
 
   function syncBinaryUi(): void {
-    syncBinaryLabUiState(uiRefs, appState.binaryLabState);
+    syncBinaryLabUiState(refs, appState.binaryLabState);
   }
 
   async function applyActive(): Promise<void> {
-    await withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
+    if (disposed) return;
+    await withScenarioApplyGuard(applyGuard, refs, warnVal, async () => {
       await applyActiveScenarioForMode(scenarioDeps);
       syncBinaryUi();
     });
   }
 
   async function applyCurrentUiParams(resetNoise = true): Promise<void> {
-    if (isBinaryModeActive(uiRefs) && !appState.binaryLabState.hypothesis) {
+    if (disposed) return;
+    if (isBinaryModeActive(refs) && !appState.binaryLabState.hypothesis) {
       if (warnVal) warnVal.textContent = "Set a hypothesis first to unlock parameter editing.";
       return;
     }
-    await withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-      const nextParams = readUIIntoParams(appState.params, uiRefs, appState.scenarioDefaults);
+    await withScenarioApplyGuard(applyGuard, refs, warnVal, async () => {
+      const nextParams = readUIIntoParams(appState.params, refs, appState.scenarioDefaults);
       await applyScenarioParams(scenarioDeps, nextParams, { syncUi: false, resetNoise });
       syncBinaryUi();
     });
   }
 
   function scheduleNormalModeQuickApply(): void {
+    if (disposed) return;
     if (readUiMode(uiModeSelect.value) !== "normal") return;
     if (quickApplyTimer !== null) clearTimeout(quickApplyTimer);
     quickApplyTimer = setTimeout(() => {
       quickApplyTimer = null;
+      if (disposed) return;
       runWithErrorHandling(() => applyCurrentUiParams(true), {
         statusEl: warnVal,
         getSuccessMessage: () => uiWarningText(appState.params) ?? "",
@@ -259,164 +328,179 @@ export async function initApp(): Promise<void> {
     }, 120);
   }
 
-  wireBootstrapViewControls({ refs: uiRefs, renderer, plot });
+  wireBootstrapViewControls({ refs, renderer, plot, signal: teardownController.signal });
   let syncDebugDom = (): void => {};
   productModeSelect.value = SIMULATION_PRODUCT_MODE_VALUE;
   syncProductModeVisibility(readProductMode(productModeSelect.value));
   uiModeSelect.value = "normal";
   syncUiModeVisibility(readUiMode(uiModeSelect.value));
-  uiModeSelect.addEventListener("change", () => {
-    const nextMode = readUiMode(uiModeSelect.value);
-    syncUiModeVisibility(nextMode);
-    syncDebugDom();
-
-    if (nextMode !== "normal") return;
-
-    if (runtimeModeSelect) runtimeModeSelect.value = "realtime";
-    runWithErrorHandling(
-      () =>
-        withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-          applyObserverModeContract(appState.params, nextMode);
-          await applyScenarioParams(scenarioDeps, appState.params, { syncUi: true, resetNoise: false });
-          syncBinaryUi();
-        }),
-      { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
-    );
-  });
-  productModeSelect.addEventListener("change", () => {
-    const nextProductMode = readProductMode(productModeSelect.value);
-    syncProductModeVisibility(nextProductMode);
-    if (nextProductMode === LAB_PRODUCT_MODE_VALUE) {
-      uiModeSelect.value = "normal";
-      syncUiModeVisibility("normal");
+  uiModeSelect.addEventListener(
+    "change",
+    () => {
+      const nextMode = readUiMode(uiModeSelect.value);
+      syncUiModeVisibility(nextMode);
       syncDebugDom();
+
+      if (nextMode !== "normal") return;
+
       if (runtimeModeSelect) runtimeModeSelect.value = "realtime";
-      if (simModeSelect && !simModeSelect.value) simModeSelect.value = PRESET_MODE_VALUE;
-    }
-    renderDidacticsSurface();
-    runWithErrorHandling(() => applyActive(), {
-      statusEl: warnVal,
-      getSuccessMessage: () => uiWarningText(appState.params) ?? "",
-    });
-  });
-  btnStart.addEventListener("click", () => frame.setRunning(!appState.running));
-  btnReset.addEventListener("click", () => frame.resetSimTimeAndLC({ resetNoise: true }));
-  btnClearLC.addEventListener("click", () => {
-    plot.clear();
-    plot.setOptions({ manualYRange: undefined });
-    appState.lastPlottedT = Number.NaN;
-    appState.lastPlotMode = null;
-    appState.fixedPlotYRange = undefined;
-    appState.fixedPlotYRangeMode = null;
-  });
+      runWithErrorHandling(
+        () =>
+          withScenarioApplyGuard(applyGuard, refs, warnVal, async () => {
+            applyObserverModeContract(appState.params, nextMode);
+            await applyScenarioParams(scenarioDeps, appState.params, { syncUi: true, resetNoise: false });
+            syncBinaryUi();
+          }),
+        { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
+      );
+    },
+    listenerOptions,
+  );
+  productModeSelect.addEventListener(
+    "change",
+    () => {
+      const nextProductMode = readProductMode(productModeSelect.value);
+      syncProductModeVisibility(nextProductMode);
+      if (nextProductMode === LAB_PRODUCT_MODE_VALUE) {
+        uiModeSelect.value = "normal";
+        syncUiModeVisibility("normal");
+        syncDebugDom();
+        if (runtimeModeSelect) runtimeModeSelect.value = "realtime";
+        if (simModeSelect && !simModeSelect.value) simModeSelect.value = PRESET_MODE_VALUE;
+      }
+      renderDidacticsSurface();
+      runWithErrorHandling(() => applyActive(), {
+        statusEl: warnVal,
+        getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+      });
+    },
+    listenerOptions,
+  );
+  btnStart.addEventListener("click", () => frame.setRunning(!appState.running), listenerOptions);
+  btnReset.addEventListener("click", () => frame.resetSimTimeAndLC({ resetNoise: true }), listenerOptions);
+  btnClearLC.addEventListener(
+    "click",
+    () => {
+      plot.clear();
+      plot.setOptions({ manualYRange: undefined });
+      appState.lastPlottedT = Number.NaN;
+      appState.lastPlotMode = null;
+      appState.fixedPlotYRange = undefined;
+      appState.fixedPlotYRangeMode = null;
+    },
+    listenerOptions,
+  );
 
-  btnApplyParams.addEventListener("click", () => {
-    runWithErrorHandling(() => applyCurrentUiParams(true), {
-      statusEl: warnVal,
-      getSuccessMessage: () => uiWarningText(appState.params) ?? "",
-    });
-  });
+  btnApplyParams.addEventListener(
+    "click",
+    () => {
+      runWithErrorHandling(() => applyCurrentUiParams(true), {
+        statusEl: warnVal,
+        getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+      });
+    },
+    listenerOptions,
+  );
 
-  btnResetParams.addEventListener("click", () => {
-    if (isBinaryModeActive(uiRefs) && !appState.binaryLabState.hypothesis) {
-      if (warnVal) warnVal.textContent = "Set a hypothesis first to unlock parameter editing.";
-      return;
-    }
-    runWithErrorHandling(
-      () =>
-        withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-          await applyScenarioParams(scenarioDeps, appState.scenarioDefaults, {
-            syncUi: true,
-            resetNoise: true,
-          });
-          syncBinaryUi();
-        }),
-      { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
-    );
-  });
+  btnResetParams.addEventListener(
+    "click",
+    () => {
+      if (isBinaryModeActive(refs) && !appState.binaryLabState.hypothesis) {
+        if (warnVal) warnVal.textContent = "Set a hypothesis first to unlock parameter editing.";
+        return;
+      }
+      runWithErrorHandling(
+        () =>
+          withScenarioApplyGuard(applyGuard, refs, warnVal, async () => {
+            await applyScenarioParams(scenarioDeps, appState.scenarioDefaults, {
+              syncUi: true,
+              resetNoise: true,
+            });
+            syncBinaryUi();
+          }),
+        { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
+      );
+    },
+    listenerOptions,
+  );
 
-  presetSelect.replaceChildren();
-  for (const preset of PRESETS) {
-    const opt = document.createElement("option");
-    opt.value = preset.id;
-    opt.textContent = preset.label;
-    presetSelect.appendChild(opt);
-  }
-  presetSelect.value = "default";
-  presetDesc.textContent = getPresetById(presetSelect.value).description;
-  presetSelect.addEventListener("change", () => {
-    if (productModeSelect.value !== SIMULATION_PRODUCT_MODE_VALUE) {
-      productModeSelect.value = SIMULATION_PRODUCT_MODE_VALUE;
-      syncProductModeVisibility("simulation");
-    }
-    if (realSystemSelect) realSystemSelect.value = "";
-    if (realSystemMeta) realSystemMeta.textContent = "";
-    runWithErrorHandling(() => applyActive(), {
-      statusEl: warnVal,
-      getSuccessMessage: () => uiWarningText(appState.params) ?? "",
-    });
-  });
-
-  if (realSystemSelect) {
-    realSystemSelect.replaceChildren();
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "— choose real system —";
-    realSystemSelect.appendChild(placeholder);
-    for (const sys of REAL_SYSTEMS_OPTIONS) {
-      const opt = document.createElement("option");
-      opt.value = sys.id;
-      opt.textContent = sys.label;
-      realSystemSelect.appendChild(opt);
-    }
-    realSystemSelect.value = "";
-    realSystemSelect.disabled = REAL_SYSTEMS_OPTIONS.length === 0;
-    if (realSystemMeta) realSystemMeta.textContent = "";
-    realSystemSelect.addEventListener("change", () => {
+  populatePresetSelect(presetSelect, presetDesc);
+  presetSelect.addEventListener(
+    "change",
+    () => {
       if (productModeSelect.value !== SIMULATION_PRODUCT_MODE_VALUE) {
         productModeSelect.value = SIMULATION_PRODUCT_MODE_VALUE;
         syncProductModeVisibility("simulation");
       }
-      if (!realSystemSelect.value && realSystemMeta) realSystemMeta.textContent = "";
+      if (realSystemSelect) realSystemSelect.value = "";
+      if (realSystemMeta) realSystemMeta.textContent = "";
       runWithErrorHandling(() => applyActive(), {
         statusEl: warnVal,
         getSuccessMessage: () => uiWarningText(appState.params) ?? "",
       });
-    });
+    },
+    listenerOptions,
+  );
+
+  if (realSystemSelect) {
+    populateRealSystemSelect(realSystemSelect, realSystemMeta ?? null);
+    realSystemSelect.addEventListener(
+      "change",
+      () => {
+        if (productModeSelect.value !== SIMULATION_PRODUCT_MODE_VALUE) {
+          productModeSelect.value = SIMULATION_PRODUCT_MODE_VALUE;
+          syncProductModeVisibility("simulation");
+        }
+        if (!realSystemSelect.value && realSystemMeta) realSystemMeta.textContent = "";
+        runWithErrorHandling(() => applyActive(), {
+          statusEl: warnVal,
+          getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+        });
+      },
+      listenerOptions,
+    );
   }
 
   if (simModeSelect) {
     simModeSelect.value = PRESET_MODE_VALUE;
-    simModeSelect.addEventListener("change", () => {
-      if (!isLabProductModeActive(uiRefs)) {
-        productModeSelect.value = LAB_PRODUCT_MODE_VALUE;
-        syncProductModeVisibility("lab");
-        uiModeSelect.value = "normal";
-        syncUiModeVisibility("normal");
-      }
-      runWithErrorHandling(() => applyActive(), {
-        statusEl: warnVal,
-        getSuccessMessage: () => uiWarningText(appState.params) ?? "",
-      });
-    });
+    simModeSelect.addEventListener(
+      "change",
+      () => {
+        if (!isLabProductModeActive(refs)) {
+          productModeSelect.value = LAB_PRODUCT_MODE_VALUE;
+          syncProductModeVisibility("lab");
+          uiModeSelect.value = "normal";
+          syncUiModeVisibility("normal");
+        }
+        runWithErrorHandling(() => applyActive(), {
+          statusEl: warnVal,
+          getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+        });
+      },
+      listenerOptions,
+    );
   }
 
   if (runtimeModeSelect) {
     runtimeModeSelect.value = "realtime";
-    runtimeModeSelect.addEventListener("change", () => {
-      runWithErrorHandling(
-        () =>
-          withScenarioApplyGuard(applyGuard, uiRefs, warnVal, async () => {
-            await rebuildSimulationFromParams();
-            frame.resetSimTimeAndLC({ resetNoise: false });
-          }),
-        { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
-      );
-    });
+    runtimeModeSelect.addEventListener(
+      "change",
+      () => {
+        runWithErrorHandling(
+          () =>
+            withScenarioApplyGuard(applyGuard, refs, warnVal, async () => {
+              await rebuildSimulationFromParams();
+              frame.resetSimTimeAndLC({ resetNoise: false });
+            }),
+          { statusEl: warnVal, getSuccessMessage: () => uiWarningText(appState.params) ?? "" },
+        );
+      },
+      listenerOptions,
+    );
   }
 
   wireDidacticsUi({
-    refs: uiRefs,
+    refs,
     state: appState,
     getSimulation: () => simulation,
     currentLessonSimMode,
@@ -424,14 +508,18 @@ export async function initApp(): Promise<void> {
     syncBinaryUi,
     warnEl: warnVal,
     getSuccessMessage: () => uiWarningText(appState.params) ?? "",
+    signal: teardownController.signal,
   });
 
   wireOcControls();
 
-  wireParamSliders(uiRefs);
-  wireEnableHandlers(uiRefs);
-  wireNormalModeQuickControls(uiRefs, { onQuickControlChange: scheduleNormalModeQuickApply });
-  syncDebugDom = wireDebugDOM(renderer);
+  wireParamSliders(refs, { signal: teardownController.signal });
+  wireEnableHandlers(refs, { signal: teardownController.signal });
+  wireNormalModeQuickControls(refs, {
+    onQuickControlChange: scheduleNormalModeQuickApply,
+    signal: teardownController.signal,
+  });
+  syncDebugDom = wireDebugDOM(renderer, teardownController.signal);
 
   try {
     await applyActive();
@@ -443,5 +531,5 @@ export async function initApp(): Promise<void> {
   renderDidacticsSurface();
   syncBinaryUi();
   renderOcPanel();
-  requestAnimationFrame(frame.frame);
+  if (!disposed) frame.start();
 }

@@ -5,6 +5,7 @@ import { stepNativeSimulationV4 } from "./nativeEngine";
 import type { RuntimeExecutionModeV4, RuntimeModeV4, SimulationConfigV4 } from "./types";
 import { createScientificBrowserRuntimeError, isScientificBrowserRuntimeError } from "./scientificErrors";
 import { assertScientificBrowserConfig } from "./scientificBrowserConfig";
+import { detachedBinaryBaselineFlux, displayFluxValueForConfig } from "./binaryBaseline";
 
 export type SimulationRuntimeV4 = {
   prepare: () => Promise<void>;
@@ -73,6 +74,94 @@ function stepAtTime(args: {
   }
 }
 
+function averageNumericFields<T extends Record<string, unknown>>(
+  items: Array<T | undefined>,
+): Partial<T> | undefined {
+  const sums = new Map<string, number>();
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (!item) continue;
+    for (const [key, value] of Object.entries(item)) {
+      if (!(typeof value === "number" && Number.isFinite(value))) continue;
+      sums.set(key, (sums.get(key) ?? 0) + value);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  if (sums.size === 0) return undefined;
+
+  const averaged: Record<string, number> = {};
+  for (const [key, sum] of sums) {
+    averaged[key] = sum / (counts.get(key) ?? 1);
+  }
+  return averaged as Partial<T>;
+}
+
+function aggregateReferenceStep(config: SimulationConfigV4, samples: SimulationStepV3[]): SimulationStepV3 {
+  const center = samples[Math.floor(samples.length / 2)]!;
+  const flux = {
+    total: samples.reduce((sum, step) => sum + step.flux.total, 0) / samples.length,
+    transitFactor: samples.reduce((sum, step) => sum + step.flux.transitFactor, 0) / samples.length,
+    stellarPreTransit: samples.reduce((sum, step) => sum + step.flux.stellarPreTransit, 0) / samples.length,
+    stellarVariability: samples.reduce((sum, step) => sum + step.flux.stellarVariability, 0) / samples.length,
+    planetPhase: samples.reduce((sum, step) => sum + step.flux.planetPhase, 0) / samples.length,
+    moonPhase: samples.reduce((sum, step) => sum + step.flux.moonPhase, 0) / samples.length,
+    forwardScattering: samples.reduce((sum, step) => sum + step.flux.forwardScattering, 0) / samples.length,
+    ringScattering: samples.reduce((sum, step) => sum + step.flux.ringScattering, 0) / samples.length,
+    refraction: samples.reduce((sum, step) => sum + (step.flux.refraction ?? 0), 0) / samples.length,
+  };
+  const decomposition = averageNumericFields(samples.map((step) => step.flux.decomposition));
+  const fluxComponents = averageNumericFields(samples.map((step) => step.renderSignals.fluxComponents));
+  const baselineFluxUsed = detachedBinaryBaselineFlux(config) ?? center.debug?.baselineFluxUsed;
+  const displayFluxValue = displayFluxValueForConfig(config, flux.total);
+
+  return {
+    ...center,
+    flux: {
+      ...center.flux,
+      ...flux,
+      decomposition: {
+        ...(center.flux.decomposition ?? {}),
+        ...(decomposition ?? {}),
+        total: flux.total,
+        transitFactor: flux.transitFactor,
+        stellarPreTransit: flux.stellarPreTransit,
+        stellarVariability: flux.stellarVariability,
+        planetPhase: flux.planetPhase,
+        moonPhase: flux.moonPhase,
+        forwardScattering: flux.forwardScattering,
+        ringScattering: flux.ringScattering,
+        refraction: flux.refraction,
+      },
+    },
+    renderSignals: {
+      ...center.renderSignals,
+      fluxComponents: {
+        ...center.renderSignals.fluxComponents,
+        ...(fluxComponents ?? {}),
+        total: flux.total,
+        transitFactor: flux.transitFactor,
+        stellarPreTransit: flux.stellarPreTransit,
+        stellarVariability: flux.stellarVariability,
+        planetPhase: flux.planetPhase,
+        moonPhase: flux.moonPhase,
+        forwardScattering: flux.forwardScattering,
+        ringScattering: flux.ringScattering,
+        refraction: flux.refraction,
+      },
+    },
+    debug: center.debug
+      ? {
+          ...center.debug,
+          baselineFluxUsed,
+          displayFluxValue,
+        }
+      : {
+          baselineFluxUsed,
+          displayFluxValue,
+        },
+  };
+}
+
 export function createSimulationV4(input: SimulationConfigV4 | unknown): SimulationRuntimeV4 {
   const config = normalizeScenarioInputToV4(input);
   assertScientificBrowserConfig(config);
@@ -102,16 +191,7 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
       // This is intentionally conservative and stable for benchmark mode.
       // dt is in seconds; 0.2 s is fine-grained relative to typical orbital periods (hours–days).
       const dt = 0.2;
-      let accTotal = 0;
-      let accTransit = 0;
-      let accPreTransit = 0;
-      let accVariability = 0;
-      let accPlanetPhase = 0;
-      let accMoonPhase = 0;
-      let accForwardScattering = 0;
-      let accRingScattering = 0;
-      let accRefraction = 0;
-      let last!: SimulationStepV3;
+      const samples: SimulationStepV3[] = [];
       for (let i = 0; i < substeps; i++) {
         const alpha = substeps <= 1 ? 0 : i / (substeps - 1);
         const t = tObsSec + (alpha - 0.5) * dt;
@@ -124,32 +204,9 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
           conservationBaseline,
         });
         conservationBaseline = out.conservationBaseline;
-        accTotal += out.step.flux.total;
-        accTransit += out.step.flux.transitFactor;
-        accPreTransit += out.step.flux.stellarPreTransit;
-        accVariability += out.step.flux.stellarVariability;
-        accPlanetPhase += out.step.flux.planetPhase;
-        accMoonPhase += out.step.flux.moonPhase;
-        accForwardScattering += out.step.flux.forwardScattering;
-        accRingScattering += out.step.flux.ringScattering;
-        accRefraction += out.step.flux.refraction ?? 0;
-        last = out.step;
+        samples.push(out.step);
       }
-      return {
-        ...last,
-        flux: {
-          ...last.flux,
-          total: accTotal / substeps,
-          transitFactor: accTransit / substeps,
-          stellarPreTransit: accPreTransit / substeps,
-          stellarVariability: accVariability / substeps,
-          planetPhase: accPlanetPhase / substeps,
-          moonPhase: accMoonPhase / substeps,
-          forwardScattering: accForwardScattering / substeps,
-          ringScattering: accRingScattering / substeps,
-          refraction: accRefraction / substeps,
-        },
-      };
+      return aggregateReferenceStep(config, samples);
     },
     setMode: (next: RuntimeModeV4): void => {
       mode = next;

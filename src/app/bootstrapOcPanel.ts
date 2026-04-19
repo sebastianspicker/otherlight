@@ -24,13 +24,14 @@ type BootstrapOcPanelDeps = {
   state: BootstrapOcPanelState;
   warnEl: HTMLElement | null | undefined;
   getSuccessMessage: () => string;
+  signal?: AbortSignal;
 };
 
 export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
   renderOcPanel: () => void;
   wireOcControls: () => void;
 } {
-  const { refs, state, warnEl, getSuccessMessage } = deps;
+  const { refs, state, warnEl, getSuccessMessage, signal } = deps;
   const {
     ocBodySelect,
     ocCanvas,
@@ -42,6 +43,7 @@ export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
     ocUnitSelect,
     timingHistoryVal,
   } = refs;
+  const listenerOptions = signal ? { signal } : undefined;
 
   let ocBody: OcBody = "planet";
   let ocUnit: OcUnit = "s";
@@ -68,17 +70,25 @@ export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
   const wireOcControls = (): void => {
     if (ocBodySelect) {
       ocBody = ocBodySelect.value === "moon" ? "moon" : "planet";
-      ocBodySelect.addEventListener("change", () => {
-        ocBody = ocBodySelect.value === "moon" ? "moon" : "planet";
-        renderOcPanel();
-      });
+      ocBodySelect.addEventListener(
+        "change",
+        () => {
+          ocBody = ocBodySelect.value === "moon" ? "moon" : "planet";
+          renderOcPanel();
+        },
+        listenerOptions,
+      );
     }
     if (ocUnitSelect) {
       ocUnit = ocUnitSelect.value === "ms" ? "ms" : "s";
-      ocUnitSelect.addEventListener("change", () => {
-        ocUnit = ocUnitSelect.value === "ms" ? "ms" : "s";
-        renderOcPanel();
-      });
+      ocUnitSelect.addEventListener(
+        "change",
+        () => {
+          ocUnit = ocUnitSelect.value === "ms" ? "ms" : "s";
+          renderOcPanel();
+        },
+        listenerOptions,
+      );
     }
     if (ocTrendModeSelect) {
       ocTrendMode =
@@ -87,35 +97,47 @@ export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
           : ocTrendModeSelect.value === "detrended"
             ? "detrended"
             : "raw";
-      ocTrendModeSelect.addEventListener("change", () => {
-        ocTrendMode =
-          ocTrendModeSelect.value === "fit"
-            ? "fit"
-            : ocTrendModeSelect.value === "detrended"
-              ? "detrended"
-              : "raw";
-        renderOcPanel();
-      });
+      ocTrendModeSelect.addEventListener(
+        "change",
+        () => {
+          ocTrendMode =
+            ocTrendModeSelect.value === "fit"
+              ? "fit"
+              : ocTrendModeSelect.value === "detrended"
+                ? "detrended"
+                : "raw";
+          renderOcPanel();
+        },
+        listenerOptions,
+      );
     }
 
-    ocExportBtn?.addEventListener("click", () => {
-      runWithErrorHandling(
-        () => exportOcCsv(state.transitHistory, ocBody, { unit: ocUnit, trendMode: ocTrendMode }),
-        {
-          statusEl: warnEl ?? null,
-          getSuccessMessage,
-          errorPrefix: "Export failed: ",
-        },
-      );
-    });
+    ocExportBtn?.addEventListener(
+      "click",
+      () => {
+        runWithErrorHandling(
+          () => exportOcCsv(state.transitHistory, ocBody, { unit: ocUnit, trendMode: ocTrendMode }),
+          {
+            statusEl: warnEl ?? null,
+            getSuccessMessage,
+            errorPrefix: "Export failed: ",
+          },
+        );
+      },
+      listenerOptions,
+    );
 
-    ocClearBtn?.addEventListener("click", () => {
-      state.transitHistory = resetTransitHistoryState(state.transitHistory);
-      if (timingHistoryVal) {
-        timingHistoryVal.textContent = formatTransitHistorySummary(state.transitHistory);
-      }
-      renderOcPanel();
-    });
+    ocClearBtn?.addEventListener(
+      "click",
+      () => {
+        state.transitHistory = resetTransitHistoryState(state.transitHistory);
+        if (timingHistoryVal) {
+          timingHistoryVal.textContent = formatTransitHistorySummary(state.transitHistory);
+        }
+        renderOcPanel();
+      },
+      listenerOptions,
+    );
   };
 
   return { renderOcPanel, wireOcControls };

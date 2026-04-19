@@ -81,6 +81,14 @@ export function phaseAngleRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number
   return Math.acos(cosAlpha);
 }
 
+export function transitCenteredPhaseRadFromBodyPos(rBody: Vec3, observerDir: Vec3): number {
+  try {
+    return Math.PI - phaseAngleRadFromBodyPos(rBody, observerDir);
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Lambert phase function Phi(alpha), disk-integrated reflected-light law for a Lambertian sphere.
  *

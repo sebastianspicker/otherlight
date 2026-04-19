@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { fluxLimbDarkenedDiskQuadratic } from "../../src/photometry/transitQuadraticLD";
+import { fluxLimbDarkenedDiskDetailed } from "../../src/photometry/transitLimbDarkened";
 
-describe("fluxLimbDarkenedDiskQuadratic", () => {
+describe("fluxLimbDarkenedDiskDetailed", () => {
   it("reduces flux when an occulter overlaps the stellar disk", () => {
-    const f = fluxLimbDarkenedDiskQuadratic({
+    const f = fluxLimbDarkenedDiskDetailed({
       rStar: 1,
       rOcculters: [{ dx: 0, dy: 0, r: 0.1 }],
-      limbDarkening: { kind: "quadratic", u1: 0.35, u2: 0.25 },
+      limbDarkeningLaw: { kind: "quadratic", u1: 0.35, u2: 0.25 },
       gridRes: 400,
-    });
+    }).flux;
     expect(f).toBeLessThan(1);
     expect(f).toBeGreaterThan(0);
   });

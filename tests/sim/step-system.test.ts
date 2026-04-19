@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
+import type { OrbitElements } from "../../src/core/typesOrbit";
 import { G_SI } from "../../src/core/units";
 import { stepSystem, prepareSimulation } from "../../src/sim/sim";
 
@@ -66,6 +67,22 @@ describe("stepSystem", () => {
   it("applies observer clock-frame offsets to reported transit times without changing durations", () => {
     const base = defaults();
     const shifted = defaults();
+    base.star.photometry = {
+      ...(base.star.photometry ?? {}),
+      additiveComposition: "higher-fidelity-coupled",
+    };
+    shifted.star.photometry = {
+      ...(shifted.star.photometry ?? {}),
+      additiveComposition: "higher-fidelity-coupled",
+    };
+    base.dynamics = {
+      ...(base.dynamics ?? {}),
+      fidelityProfile: "accurate",
+    };
+    shifted.dynamics = {
+      ...(shifted.dynamics ?? {}),
+      fidelityProfile: "accurate",
+    };
     shifted.observer = {
       ...(shifted.observer ?? { dir: { x: 0, y: 0, z: 1 } }),
       timekeeping: {
@@ -86,6 +103,31 @@ describe("stepSystem", () => {
       baseStep.meta?.timing?.planetTransitDurationSec ?? 0,
       9,
     );
+    expect(shiftedStep.meta?.timing?.planetTtvSec).toBeCloseTo(baseStep.meta?.timing?.planetTtvSec ?? 0, 9);
+  });
+
+  it("uses a transit ephemeris instead of periapsis passage for eccentric-orbit TTV", () => {
+    const params = defaults();
+    delete params.moon;
+    params.star.photometry = {
+      ...(params.star.photometry ?? {}),
+      additiveComposition: "higher-fidelity-coupled",
+    };
+    params.dynamics = {
+      ...(params.dynamics ?? {}),
+      fidelityProfile: "accurate",
+    };
+    const planetOrbit = params.planet.orbit as OrbitElements;
+    params.planet.orbit = {
+      ...planetOrbit,
+      e: 0.35,
+      omega: 0.7,
+      t0: 0,
+    };
+
+    const step = stepSystem(params, 1234);
+
+    expect(Math.abs(step.meta?.timing?.planetTtvSec ?? Number.NaN)).toBeLessThan(1e-3);
   });
 
   it("emits advanced timing diagnostics for bounded Einstein-delay and light-bending surrogates", () => {

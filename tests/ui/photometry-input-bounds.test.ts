@@ -63,6 +63,30 @@ describe("photometry UI input bounds", () => {
     expect(next.star.photometry?.atmosphereTransmission?.tauScale).toHaveLength(MAX_NUMBER_LIST_ENTRIES);
   });
 
+  it("normalizes malformed atmosphere spectral inputs to aligned arrays", async () => {
+    installAppShellDocument();
+
+    const { uiRefs } = await import("../../src/ui/refs");
+    const { readPhotometryFromUI } = await import("../../src/ui/params/photometry");
+
+    uiRefs.atmEnabled.checked = true;
+    uiRefs.atmLambdaNm.value = "500, -1, 700";
+    uiRefs.atmTauScale.value = "0.2, 0.4, 0.6";
+
+    const next: SystemParams = {
+      star: { r: 1, photometry: {} },
+      planet: {
+        r: 1,
+        orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
+      },
+    };
+
+    readPhotometryFromUI(next, uiRefs);
+
+    expect(next.star.photometry?.atmosphereTransmission?.lambdaNm).toEqual([500, 700]);
+    expect(next.star.photometry?.atmosphereTransmission?.tauScale).toEqual([0.2, 0.6]);
+  });
+
   it("uses star-scaled default patch inputs when no explicit brightness patches exist", async () => {
     installAppShellDocument();
 

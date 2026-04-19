@@ -15,6 +15,7 @@
 // - Optional time axis is supported for correct temporal interpretation if caller provides t.
 
 import type { SizeInfo } from "./canvasUtil";
+import { attachCanvasResizeObserver } from "./canvasUtil";
 import {
   clearLightCurveHistory,
   createLightCurveHistoryState,
@@ -53,6 +54,8 @@ export class LightCurvePlot {
   private windowOverlays: LightCurveWindowOverlay[] = [];
   private badges: LightCurveBadge[] = [];
   private comparisonInset?: LightCurveComparisonInset;
+  private detachResizeObserver: () => void;
+
   private get flux(): number[] {
     return this.state.flux;
   }
@@ -87,6 +90,12 @@ export class LightCurvePlot {
     };
 
     this.state = createLightCurveHistoryState(capacity);
+    this.detachResizeObserver = attachCanvasResizeObserver(canvas);
+  }
+
+  /** Disconnect the ResizeObserver. Call when the plot is permanently discarded. */
+  dispose(): void {
+    this.detachResizeObserver();
   }
 
   setOptions(next: LightCurvePlotOptions): void {

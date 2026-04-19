@@ -13,6 +13,8 @@ All notable changes to this project are documented in this file.
   - removed `pnpm turbo`
   - added `pnpm ci:verify` and granular `pnpm ci:*` scripts
 - Removed unused backwards-compatible aliases (`TWOPI`, `HALFPI`, `VEC3_ZERO`, `lerp`, `vAssertFinite`, etc.) — 508 lines of dead code removed.
+- Removed `src/photometry/transitQuadraticLD.ts` (superseded by V4 native photometry pipeline).
+- Removed `src/sim/v4/referenceWorker.ts` (worker handoff retired; replaced by in-thread deterministic `referenceClient.ts`).
 
 ### Added
 
@@ -25,6 +27,10 @@ All notable changes to this project are documented in this file.
 - Added 10 new test files: unit tests for dom, clone, frames, relativity, forwardScattering, occulterCircle, occulterEllipse, sampling; property-based tests; error recovery tests.
 - Added 34 module boundary layering tests enforcing architectural rules.
 - Added JSDoc to key exported functions (stepSystem, computeTransitFlux, relativity helpers).
+- Added `src/sim/v4/referenceClient.ts`: in-thread deterministic reference runtime replacing the retired worker pipeline.
+- Added visualization split modules: `src/app/visualizationScene.ts`, `src/app/visualizationSignals.ts`.
+- Added render decomposition modules: `src/render/lightCurvePlotAnnotations.ts`, `src/render/lightCurvePlotAxes.ts`.
+- Added `src/app/frameLoopFallback.ts` for fallback frame-loop path.
 
 ### Changed
 
@@ -37,6 +43,8 @@ All notable changes to this project are documented in this file.
 - Created `sim/limbDarkeningBridge.ts` to fix render/ -> photometry/ violation.
 - Improved error handling visibility: catch blocks documented, `initApp()` rejection surfaced.
 - Converted the dynamic import of `photometry/limbDarkening` in `optionalLimbDarkening.ts` to a static import, eliminating the Vite INEFFECTIVE_DYNAMIC_IMPORT build warning (the module was already statically bundled by five other modules).
+- `scripts/audit-dead-code.sh` orphan allowlist updated: removed stale entries for deleted files `transitQuadraticLD.ts` and `referenceWorker.ts`.
+- `docs/refactor-plan.md` stale absolute path prefixes removed.
 
 ### Fixed
 

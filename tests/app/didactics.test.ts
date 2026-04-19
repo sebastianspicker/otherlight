@@ -218,6 +218,42 @@ describe("didactics UI wiring", () => {
     expect(runtime.learning.phaseIndex).toBe(1);
   });
 
+  it("preserves responses and comparison state when switching lessons", async () => {
+    const { initDidacticsRuntime, switchDidacticsLesson, updateDidacticComparison, updateDidacticResponse } =
+      await import("../../src/app/didactics");
+    const { cloneParams, SCENARIO_DEFAULTS } = await import("../../src/app/scenario");
+
+    const system = cloneParams(SCENARIO_DEFAULTS);
+    system.didactics = {
+      enabled: true,
+      activeLessonId: "kepler-geometry",
+      autoAssess: true,
+    };
+
+    let runtime = initDidacticsRuntime(system, 0);
+    runtime = updateDidacticResponse(runtime, { primary: "Central transits are deeper." }, 0);
+    runtime = updateDidacticComparison(
+      runtime,
+      {
+        tSec: 120,
+        fluxTotalDelta: 1e-5,
+        fluxDisplayDelta: 3e-4,
+        fluxTransitDelta: 0,
+        rvStarDelta: 0,
+        rvPlanetDelta: 0,
+      },
+      "Interpretation: The displayed eclipse depth changed.",
+    );
+
+    runtime = switchDidacticsLesson(system, runtime, "binary-eclipse-lab", 30, "binary-lab");
+
+    expect(runtime.learning.lessonId).toBe("binary-eclipse-lab");
+    expect(Object.values(runtime.responses).some((entry) => entry.primary?.includes("deeper"))).toBe(true);
+    expect(runtime.latestComparisonText).toContain("displayed eclipse depth changed");
+    expect(runtime.latestSignals).toBeUndefined();
+    expect(runtime.latestTiming).toBeUndefined();
+  });
+
   it("stores structured comparison data alongside the rendered comparison text", async () => {
     const { initDidacticsRuntime, updateDidacticComparison } = await import("../../src/app/didactics");
     const { cloneParams, SCENARIO_DEFAULTS } = await import("../../src/app/scenario");

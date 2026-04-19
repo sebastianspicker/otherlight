@@ -37,7 +37,7 @@ Mapping implementation:
 - `src/ui/params/load.ts` and `src/ui/params/read.ts`
 - `src/ui/params/common.ts`, `src/ui/params/nbody.ts`, `src/ui/params/photometry.ts`
 - `src/ui/enable.ts`
-- `src/main.ts` (measurement pipeline: smearing + instrument noise)
+- `src/app/frameLoop.ts` plus `src/photometry/instrumentNoise.ts` (measurement pipeline: smearing + instrument noise)
 
 Binary Lab note:
 
@@ -207,7 +207,7 @@ Smearing:
 | `cadenceSec`   | `star.photometry.cadenceSec`             | s    | Exposure/cadence length              |
 | `nSubsamples`  | `star.photometry.nSubsamples`            | 1    | Samples per cadence                  |
 
-Important: `clampSmearedFlux` is a UI-only DOM toggle and is applied in `src/main.ts` during smearing. It is not a `SystemParams` field.
+Important: `clampSmearedFlux` is a UI-only DOM toggle read inside `src/app/frameLoop.ts` when the measured light-curve path calls `smearedFluxAt(...)`. It is not a `SystemParams` field.
 
 Instrument noise:
 

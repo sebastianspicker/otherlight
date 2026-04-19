@@ -147,21 +147,29 @@ export function onDidacticSignals(
   };
 }
 
-export function forceNextLessonStep(
+export function switchDidacticsLesson(
   system: SystemParams,
   runtime: DidacticsRuntimeState,
+  nextLessonId: string,
   tSec: number,
+  simMode: LessonSimMode = "preset-lab",
 ): DidacticsRuntimeState {
-  const lesson = getLessonById(runtime.learning.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
-  const maxStep = Math.max(lesson.steps.length - 1, 0);
-  const next = {
-    ...runtime.learning,
-    stepIndex: Math.min(runtime.learning.stepIndex + 1, maxStep),
-    phaseIndex: 0,
-    updatedAtSec: tSec,
+  system.didactics = {
+    ...(system.didactics ?? {}),
+    activeLessonId: nextLessonId,
   };
-  if (system.didactics) system.didactics.learningState = next;
-  return { ...runtime, learning: next };
+  const normalizedLessonId = normalizeLessonForSimMode(system, simMode);
+  if (system.didactics) system.didactics.activeLessonId = normalizedLessonId;
+  const learning = resolveLearningState(system, tSec);
+  if (system.didactics) system.didactics.learningState = learning;
+  return {
+    learning,
+    responses: runtime.responses,
+    latestSignals: undefined,
+    latestTiming: undefined,
+    latestComparison: runtime.latestComparison,
+    latestComparisonText: runtime.latestComparisonText,
+  };
 }
 
 export function advanceLessonFlow(

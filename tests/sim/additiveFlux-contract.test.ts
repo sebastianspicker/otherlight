@@ -178,6 +178,29 @@ describe("additive flux composition contract", () => {
     expect(accurate.fluxForwardScatteringOnly).toBeCloseTo(accurateNoScatter.fluxForwardScatteringOnly, 12);
   });
 
+  it("anchors forward scattering to transit geometry instead of periapsis phase", () => {
+    const system = makeSystem();
+    const kin = {
+      planetOrbit: system.planet.orbit as any,
+      rBary: { x: 0, y: 0, z: 0 },
+      rPlanetAbs: { x: 0, y: 0, z: 1 },
+      planetSky: { x: 0, y: 0, z: 1 },
+    };
+
+    const nearTransit = computeAdditiveFluxComponents(system, 0, { x: 0, y: 0, z: 1 }, kin as any);
+    const sameGeometryDifferentEpoch = computeAdditiveFluxComponents(
+      system,
+      5,
+      { x: 0, y: 0, z: 1 },
+      kin as any,
+    );
+
+    expect(sameGeometryDifferentEpoch.fluxForwardScatteringOnly).toBeCloseTo(
+      nearTransit.fluxForwardScatteringOnly,
+      12,
+    );
+  });
+
   it("suppresses ring scattering reflective double counting on the accurate path", () => {
     const base = makeSystem();
     const systemWithRings: SystemParams = {
@@ -252,6 +275,46 @@ describe("additive flux composition contract", () => {
     expect(interactive.fluxRingScatteringOnly).toBeGreaterThan(0);
     expect(accurate.fluxRingScatteringOnly).toBe(0);
     expect(accurate.fluxRingScatteringOnly).toBeCloseTo(accurateNoRingScatter.fluxRingScatteringOnly, 12);
+  });
+
+  it("anchors ring scattering to conjunction geometry instead of periapsis phase", () => {
+    const system: SystemParams = {
+      ...makeSystem(),
+      planet: {
+        ...makeSystem().planet,
+        rings: { innerRadius: 0.14, outerRadius: 0.22, inclination: 0.4 },
+      },
+      star: {
+        ...makeSystem().star,
+        photometry: {
+          ...makeSystem().star.photometry,
+          ringScattering: { enabled: true, amp: 0.02, sigmaPhase: 0.2 },
+        },
+      },
+      dynamics: {
+        fidelityProfile: "interactive",
+        physicsFeatures: { nonSphericalFlux: true },
+      },
+    };
+    const kin = {
+      planetOrbit: system.planet.orbit as any,
+      rBary: { x: 0, y: 0, z: 0 },
+      rPlanetAbs: { x: 0, y: 0, z: 1 },
+      planetSky: { x: 0, y: 0, z: 1 },
+    };
+
+    const nearTransit = computeAdditiveFluxComponents(system, 0, { x: 0, y: 0, z: 1 }, kin as any);
+    const sameGeometryDifferentEpoch = computeAdditiveFluxComponents(
+      system,
+      5,
+      { x: 0, y: 0, z: 1 },
+      kin as any,
+    );
+
+    expect(sameGeometryDifferentEpoch.fluxRingScatteringOnly).toBeCloseTo(
+      nearTransit.fluxRingScatteringOnly,
+      12,
+    );
   });
 
   it("adds a bounded atmospheric refraction shoulder near limb contact", () => {

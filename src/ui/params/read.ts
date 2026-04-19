@@ -25,7 +25,6 @@ export function readUIIntoParams(
 
   setObserverDirFromUI(next, r, uiMode);
   next.star.r = sanitizePositive(readNumberInput(r.starR, next.star.r), RADIUS_MIN, RADIUS_MAX);
-  readPhotometryFromUI(next, r);
 
   next.planet.r = sanitizePositive(readNumberInput(r.planetR, next.planet.r), RADIUS_MIN, RADIUS_MAX);
   const pOrbit = next.planet.orbit;
@@ -142,6 +141,8 @@ export function readUIIntoParams(
   } else {
     delete next.moon;
   }
+
+  readPhotometryFromUI(next, r);
 
   readNBodyFromUI(next, r);
 

@@ -33,7 +33,6 @@ import { getLdIntegrators } from "./optionalLimbDarkening";
 import { isPhysicsFeatureEnabled } from "./fidelity";
 
 export const MAX_SPECTRAL_SAMPLES = 256;
-let mixedShapeTransmissionWarningShown = false;
 
 function sameOcculterCenter(
   shape: OcculterShape,
@@ -201,13 +200,25 @@ function normalizeBandpassGrid(phot: SystemParams["star"]["photometry"] | undefi
 } | null {
   const bp = phot?.spectralBandpass;
   if (bp?.enabled && Array.isArray(bp.lambdaNm)) {
-    const lambdaNm = bp.lambdaNm.filter((x) => isFinitePositive(x)).slice(0, MAX_SPECTRAL_SAMPLES);
+    const keepIdx: number[] = [];
+    const lambdaNm: number[] = [];
+    for (let index = 0; index < bp.lambdaNm.length && lambdaNm.length < MAX_SPECTRAL_SAMPLES; index++) {
+      const value = bp.lambdaNm[index];
+      if (!isFinitePositive(value)) continue;
+      keepIdx.push(index);
+      lambdaNm.push(value);
+    }
     if (lambdaNm.length > 0) {
       const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
       const weightsRaw =
-        rawWeights.length === lambdaNm.length
-          ? rawWeights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0))
-          : lambdaNm.map(() => 1);
+        rawWeights.length === bp.lambdaNm.length
+          ? keepIdx.map((index) => {
+              const weight = rawWeights[index];
+              return Number.isFinite(weight) && weight > 0 ? weight : 0;
+            })
+          : rawWeights.length === lambdaNm.length
+            ? rawWeights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0))
+            : lambdaNm.map(() => 1);
       const contaminated = weightsRaw.map(
         (w, i) => w * spectralContaminationWeight({ lambdaNm: lambdaNm[i], config: phot?.atmosphereRT }),
       );
@@ -325,10 +336,8 @@ export function computeTransitFlux(
   if (
     (phot?.atmosphereTransmission?.enabled ||
       (isPhysicsFeatureEnabled(params, "atmosphereRT") && phot?.atmosphereRT?.enabled)) &&
-    !allCircles &&
-    !mixedShapeTransmissionWarningShown
+    !allCircles
   ) {
-    mixedShapeTransmissionWarningShown = true;
     console.warn(
       "[computeTransitFlux] atmosphere transmission currently applies only to circular occulters; falling back to the non-transmissive mixed-shape solver.",
     );

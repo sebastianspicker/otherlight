@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
 import { computeTransitFlux, MAX_SPECTRAL_SAMPLES } from "../../src/sim/transitFlux";
+import { assertStepInputs } from "../../src/sim/validation/assertions";
 
 describe("computeTransitFlux spectral grid alignment", () => {
   it("keeps tauScale aligned with lambda samples after lambda filtering", () => {
@@ -158,5 +159,26 @@ describe("computeTransitFlux spectral grid alignment", () => {
 
     expect(cleanFlux).toBeLessThan(1);
     expect(contaminatedFlux).toBeGreaterThan(cleanFlux);
+  });
+
+  it("rejects mismatched spectral bandpass weights instead of silently falling back", () => {
+    const params: SystemParams = {
+      star: {
+        r: 1,
+        photometry: {
+          spectralBandpass: {
+            enabled: true,
+            lambdaNm: [500, 600, 700],
+            weights: [1, 0.5],
+          },
+        },
+      },
+      planet: {
+        r: 0.1,
+        orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
+      },
+    };
+
+    expect(() => assertStepInputs(params, 0)).toThrow(/weights must match lambdaNm length/i);
   });
 });

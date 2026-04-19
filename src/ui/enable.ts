@@ -6,6 +6,9 @@ import { setDisabled } from "../core/dom";
 import type { UiRefs } from "./refs";
 
 type ToggleControl = HTMLInputElement | HTMLSelectElement | null;
+type WireEnableHandlersOptions = {
+  signal?: AbortSignal;
+};
 
 function syncMoonInputsEnabled(r: UiRefs): void {
   const en = r.moonEnabled.checked;
@@ -224,11 +227,12 @@ export function syncAllEnableStates(r: UiRefs): void {
   syncRelativityEnabled(r);
 }
 
-function addSyncAllListener(control: ToggleControl, onChange: () => void): void {
-  control?.addEventListener("change", onChange);
+function addSyncAllListener(control: ToggleControl, onChange: () => void, signal?: AbortSignal): void {
+  const listenerOptions = signal ? { signal } : undefined;
+  control?.addEventListener("change", onChange, listenerOptions);
 }
 
-export function wireEnableHandlers(r: UiRefs): void {
+export function wireEnableHandlers(r: UiRefs, options: WireEnableHandlersOptions = {}): void {
   const onChange = () => syncAllEnableStates(r);
   const controls: ToggleControl[] = [
     r.moonEnabled,
@@ -254,7 +258,7 @@ export function wireEnableHandlers(r: UiRefs): void {
     r.pert2Enabled,
     r.relEnabled,
   ];
-  for (const control of controls) addSyncAllListener(control, onChange);
+  for (const control of controls) addSyncAllListener(control, onChange, options.signal);
 
   syncAllEnableStates(r);
 }

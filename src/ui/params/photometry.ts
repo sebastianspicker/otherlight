@@ -76,6 +76,49 @@ function buildPatchesFromUI(r: UiRefs): BrightnessPatch[] {
   return patches;
 }
 
+function normalizeAtmosphereSpectralInputs(r: UiRefs): {
+  lambdaNm?: number[];
+  tauScale?: number[];
+} {
+  const lambdaRaw = parseNumberList(r.atmLambdaNm.value);
+  const keepIdx: number[] = [];
+  const lambdaNm: number[] = [];
+  for (let i = 0; i < lambdaRaw.length; i++) {
+    const value = lambdaRaw[i];
+    if (value > 0) {
+      keepIdx.push(i);
+      lambdaNm.push(value);
+    }
+  }
+  if (lambdaNm.length === 0) return { lambdaNm: undefined, tauScale: undefined };
+
+  const tauRaw = parseNumberList(r.atmTauScale.value).map((value) => Math.max(0, value));
+  if (tauRaw.length === 0) return { lambdaNm, tauScale: undefined };
+
+  if (tauRaw.length === 1 && Number.isFinite(tauRaw[0])) {
+    return { lambdaNm, tauScale: lambdaNm.map(() => tauRaw[0]) };
+  }
+
+  if (tauRaw.length === lambdaRaw.length) {
+    return {
+      lambdaNm,
+      tauScale: keepIdx.map((index) => {
+        const value = tauRaw[index];
+        return Number.isFinite(value) ? value : 1;
+      }),
+    };
+  }
+
+  if (tauRaw.length === lambdaNm.length) {
+    return {
+      lambdaNm,
+      tauScale: tauRaw.map((value) => (Number.isFinite(value) ? value : 1)),
+    };
+  }
+
+  return { lambdaNm, tauScale: lambdaNm.map(() => 1) };
+}
+
 export function loadPhotometryIntoUI(p: SystemParams, r: UiRefs): void {
   const ph = p.star.photometry;
 
@@ -307,8 +350,7 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
   }
 
   if (readCheckbox(r.atmEnabled)) {
-    const lambdaNm = parseNumberList(r.atmLambdaNm.value).filter((v) => v > 0);
-    const tauScale = parseNumberList(r.atmTauScale.value).map((v) => Math.max(0, v));
+    const { lambdaNm, tauScale } = normalizeAtmosphereSpectralInputs(r);
     ph.atmosphereTransmission = {
       enabled: true,
       target: "planet",
@@ -316,8 +358,8 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
       r0: sanitizePositive(readNumberInput(r.atmR0, ph.atmosphereTransmission?.r0 ?? 0), 0, 1e9),
       H: sanitizePositive(readNumberInput(r.atmH, ph.atmosphereTransmission?.H ?? 0), 0, 1e9),
       tau0: sanitizePositive(readNumberInput(r.atmTau0, ph.atmosphereTransmission?.tau0 ?? 0), 0, 1e12),
-      lambdaNm: lambdaNm.length > 0 ? lambdaNm : undefined,
-      tauScale: tauScale.length > 0 ? tauScale : undefined,
+      lambdaNm,
+      tauScale,
     };
   } else {
     delete ph.atmosphereTransmission;

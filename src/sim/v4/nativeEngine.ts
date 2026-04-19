@@ -178,7 +178,9 @@ function renderSignalsFromSnapshot(
     });
   }
   const transitActive = flux.transitFactor < TRANSIT_FLUX_THRESHOLD;
-  const mutual = (flux.planetVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD || (flux.moonVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD;
+  const mutual =
+    (flux.planetVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD ||
+    (flux.moonVisibleFraction ?? 1) < TRANSIT_FLUX_THRESHOLD;
 
   const timingMarkers: RenderSignalsV3["timingMarkers"] = [];
   if (timing) {

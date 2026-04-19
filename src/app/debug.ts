@@ -11,7 +11,7 @@ function getOptionalCheckbox(id: string): HTMLInputElement | null {
   return el;
 }
 
-export function wireDebugDOM(renderer: Canvas2DRenderer): () => void {
+export function wireDebugDOM(renderer: Canvas2DRenderer, signal?: AbortSignal): () => void {
   // These IDs should exist in index.html to control Canvas2DRenderer.debug.
   // If they don't exist, renderer defaults remain in effect.
   const dbgEnabled = getOptionalCheckbox("dbgEnabled");
@@ -44,9 +44,10 @@ export function wireDebugDOM(renderer: Canvas2DRenderer): () => void {
     dbgShowTDV,
     dbgShowFluxDecomposition,
   ];
+  const listenerOptions = signal ? { signal } : undefined;
   for (const el of all) {
     if (!el) continue;
-    el.addEventListener("change", () => syncRendererDebugFromDOM());
+    el.addEventListener("change", () => syncRendererDebugFromDOM(), listenerOptions);
   }
   syncRendererDebugFromDOM();
 

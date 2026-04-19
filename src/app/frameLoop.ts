@@ -85,6 +85,8 @@ export type FrameLoopDeps = {
 
 export function createFrameLoopController(deps: FrameLoopDeps): {
   frame: (now: number) => void;
+  start: () => void;
+  dispose: () => void;
   setRunning: (next: boolean) => void;
   resetSimTimeAndLC: (opts?: { resetNoise?: boolean }) => void;
   seekToTime: (targetSec: number, opts?: { resetNoise?: boolean }) => void;
@@ -102,8 +104,25 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
     onSampleStep,
     renderOcPanel,
   } = deps;
+  let disposed = false;
+  let rafId: number | null = null;
 
   initializeVisualizationState(state);
+
+  function queueNextFrame(): void {
+    if (disposed) return;
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function dispose(): void {
+    disposed = true;
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  function start(): void {
+    queueNextFrame();
+  }
 
   function setRunning(next: boolean): void {
     const uiState = setRunningState(next, refs.btnStart);
@@ -331,6 +350,7 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
   }
 
   function frame(now: number): void {
+    if (disposed) return;
     const simulation = getSimulation();
     const params = getParams();
     const dtReal = computeFrameDt(now, state.last);
@@ -450,8 +470,8 @@ export function createFrameLoopController(deps: FrameLoopDeps): {
       refs.vMoonVal.textContent = typeof vm === "number" && Number.isFinite(vm) ? vm.toFixed(3) : "";
     }
     if (shouldSample) onSampleStep(stepV3, state.t);
-    requestAnimationFrame(frame);
+    queueNextFrame();
   }
 
-  return { frame, setRunning, resetSimTimeAndLC, seekToTime };
+  return { frame, start, dispose, setRunning, resetSimTimeAndLC, seekToTime };
 }

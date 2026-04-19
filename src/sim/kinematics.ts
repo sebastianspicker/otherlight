@@ -180,38 +180,37 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
       return moonState?.rMoonAbs ?? rB;
     };
 
+    // Build the enhanced multi-body Shapiro config once and reuse for both planet and moon LTTE.
+    // Both solves use the same mass positions (star at origin, planet and moon at their Kepler
+    // positions at the trial time), so there is no benefit in rebuilding the config per-solve.
+    const keplerEnhancedShapiro =
+      rel.enabled && rel.shapiro && params.dynamics?.relativityLevel === "enhanced"
+        ? {
+            enabled: true,
+            minImpact: rel.shapiroMinImpact,
+            massesAtTime: (ti: number): Array<{ mu: number; r: Vec3 }> => {
+              const masses: Array<{ mu: number; r: Vec3 }> = [];
+              if (isFinitePositive(muStarRel)) {
+                masses.push({ mu: muStarRel, r: { x: 0, y: 0, z: 0 } });
+              }
+              if (isFinitePositive(params.planet.m)) {
+                masses.push({ mu: G_SI * params.planet.m, r: planetAbsAt(ti) });
+              }
+              if (params.moon && isFinitePositive(params.moon.m)) {
+                masses.push({ mu: G_SI * params.moon.m, r: moonAbsAt(ti) });
+              }
+              return masses;
+            },
+          }
+        : shapiroParams;
+
     const tPlanetSolve = ltteOn
       ? solveLightTimeCorrectedResult({
           tObs: t,
           rAtTime: planetAbsAt,
           observerDir,
           c: rel.c,
-          shapiro:
-            rel.enabled && rel.shapiro && params.dynamics?.relativityLevel === "enhanced"
-              ? {
-                  enabled: true,
-                  minImpact: rel.shapiroMinImpact,
-                  massesAtTime: (ti: number) => {
-                    const masses: Array<{ mu: number; r: Vec3 }> = [];
-                    if (isFinitePositive(muStarRel)) {
-                      masses.push({ mu: muStarRel, r: { x: 0, y: 0, z: 0 } });
-                    }
-                    if (isFinitePositive(params.planet.m)) {
-                      masses.push({
-                        mu: G_SI * params.planet.m,
-                        r: planetAbsAt(ti),
-                      });
-                    }
-                    if (params.moon && isFinitePositive(params.moon.m)) {
-                      masses.push({
-                        mu: G_SI * params.moon.m,
-                        r: moonAbsAt(ti),
-                      });
-                    }
-                    return masses;
-                  },
-                }
-              : shapiroParams,
+          shapiro: keplerEnhancedShapiro,
           maxIters: rel.ltteIters,
           tolSec: rel.ltteTolSec,
         })
@@ -224,32 +223,7 @@ export function computeBodyKinematics(params: SystemParams, t: number, observerD
             rAtTime: moonAbsAt,
             observerDir,
             c: rel.c,
-            shapiro:
-              rel.enabled && rel.shapiro && params.dynamics?.relativityLevel === "enhanced"
-                ? {
-                    enabled: true,
-                    minImpact: rel.shapiroMinImpact,
-                    massesAtTime: (ti: number) => {
-                      const masses: Array<{ mu: number; r: Vec3 }> = [];
-                      if (isFinitePositive(muStarRel)) {
-                        masses.push({ mu: muStarRel, r: { x: 0, y: 0, z: 0 } });
-                      }
-                      if (isFinitePositive(params.planet.m)) {
-                        masses.push({
-                          mu: G_SI * params.planet.m,
-                          r: planetAbsAt(ti),
-                        });
-                      }
-                      if (params.moon && isFinitePositive(params.moon.m)) {
-                        masses.push({
-                          mu: G_SI * params.moon.m,
-                          r: moonAbsAt(ti),
-                        });
-                      }
-                      return masses;
-                    },
-                  }
-                : shapiroParams,
+            shapiro: keplerEnhancedShapiro,
             maxIters: rel.ltteIters,
             tolSec: rel.ltteTolSec,
           })

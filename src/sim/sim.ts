@@ -127,11 +127,11 @@ function applyClockOffsetToTiming(
     planetTransitCenterSec: shift(timing.planetTransitCenterSec),
     planetIngressSec: shift(timing.planetIngressSec),
     planetEgressSec: shift(timing.planetEgressSec),
-    planetTtvSec: shift(timing.planetTtvSec),
+    planetTtvSec: timing.planetTtvSec,
     moonTransitCenterSec: shift(timing.moonTransitCenterSec),
     moonIngressSec: shift(timing.moonIngressSec),
     moonEgressSec: shift(timing.moonEgressSec),
-    moonTtvSec: shift(timing.moonTtvSec),
+    moonTtvSec: timing.moonTtvSec,
   };
 }
 

@@ -59,6 +59,7 @@ export function collectScientificBrowserAdditiveExecutionIssues(config: Simulati
       );
     }
   }
+
   return issues;
 }
 

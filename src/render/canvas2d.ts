@@ -6,7 +6,7 @@ import { toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import type { RenderOcculterGeometryV3, SimulationStepV3 } from "../sim/v3/types";
 
-import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
+import { attachCanvasResizeObserver, ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
 import { StarDiskCache } from "./starDisk";
 import { OrbitPathCache, type OrbitPathPoint2D } from "./orbitPathCache";
 import { compareDrawables, ProjectedOrbitPathCache, type Drawable } from "./canvas2dOrbitProjector";
@@ -112,6 +112,8 @@ export class Canvas2DRenderer {
   private autoFitScene = false;
   private hasSceneScale = false;
   private didacticOverlay?: SceneDidacticOverlayState;
+  private detachResizeObserver: () => void = () => {};
+
   constructor(
     private canvas: HTMLCanvasElement,
     opts: Canvas2DRendererOptions = {},
@@ -130,8 +132,14 @@ export class Canvas2DRenderer {
     this.autoFitScene = opts.autoFitScene ?? false;
 
     this.orbitCache = new OrbitPathCache(this.opts.orbitPathCache);
+    this.detachResizeObserver = attachCanvasResizeObserver(this.canvas);
     this.size = ensureHiDPICanvas(this.canvas, this.ctx, this.size);
     this.updateViewportCenter();
+  }
+
+  /** Disconnect the ResizeObserver. Call when the renderer is permanently discarded. */
+  public dispose(): void {
+    this.detachResizeObserver();
   }
 
   public setAutoFitScene(enabled: boolean): void {

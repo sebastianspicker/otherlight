@@ -6,10 +6,11 @@ type BootstrapViewControlDeps = {
   refs: UiRefs;
   renderer: Canvas2DRenderer;
   plot: LightCurvePlot;
+  signal?: AbortSignal;
 };
 
 export function wireBootstrapViewControls(deps: BootstrapViewControlDeps): void {
-  const { refs, renderer, plot } = deps;
+  const { refs, renderer, plot, signal } = deps;
   const {
     btnZoomIn,
     btnZoomOut,
@@ -22,6 +23,7 @@ export function wireBootstrapViewControls(deps: BootstrapViewControlDeps): void 
     viewZoomEnabled,
     zoomVal,
   } = refs;
+  const listenerOptions = signal ? { signal } : undefined;
 
   const setZoomControlsEnabled = (enabled: boolean): void => {
     if (btnZoomOut) btnZoomOut.disabled = !enabled;
@@ -40,22 +42,26 @@ export function wireBootstrapViewControls(deps: BootstrapViewControlDeps): void 
   };
 
   const syncTimeSpeed = () => void readTimeSpeed(timeSpeed, timeSpeedVal, timeSpeedMultiplier);
-  timeSpeed.addEventListener("input", syncTimeSpeed);
+  timeSpeed.addEventListener("input", syncTimeSpeed, listenerOptions);
   timeSpeedMultiplier.value = "1";
-  timeSpeedMultiplier.addEventListener("change", syncTimeSpeed);
+  timeSpeedMultiplier.addEventListener("change", syncTimeSpeed, listenerOptions);
   syncTimeSpeed();
 
   if (plotTrackingMode) {
     plotTrackingMode.value = "dynamic";
-    plotTrackingMode.addEventListener("change", () => {
-      const nextMode =
-        plotTrackingMode.value === "live"
-          ? "live"
-          : plotTrackingMode.value === "dynamic"
-            ? "dynamic"
-            : "fixed";
-      plot.setOptions({ trackingMode: nextMode });
-    });
+    plotTrackingMode.addEventListener(
+      "change",
+      () => {
+        const nextMode =
+          plotTrackingMode.value === "live"
+            ? "live"
+            : plotTrackingMode.value === "dynamic"
+              ? "dynamic"
+              : "fixed";
+        plot.setOptions({ trackingMode: nextMode });
+      },
+      listenerOptions,
+    );
   }
 
   if (viewZoomEnabled) {
@@ -63,38 +69,58 @@ export function wireBootstrapViewControls(deps: BootstrapViewControlDeps): void 
     setZoomControlsEnabled(false);
     renderer.resetZoom();
     syncZoomReadout();
-    viewZoomEnabled.addEventListener("change", () => {
-      const enabled = viewZoomEnabled.checked;
-      setZoomControlsEnabled(enabled);
-      if (!enabled) {
-        renderer.resetZoom();
-        renderer.invalidateSceneScale();
-        syncZoomReadout();
-      }
-    });
+    viewZoomEnabled.addEventListener(
+      "change",
+      () => {
+        const enabled = viewZoomEnabled.checked;
+        setZoomControlsEnabled(enabled);
+        if (!enabled) {
+          renderer.resetZoom();
+          renderer.invalidateSceneScale();
+          syncZoomReadout();
+        }
+      },
+      listenerOptions,
+    );
   } else {
     syncZoomReadout();
   }
 
-  btnZoomOut?.addEventListener("click", () => {
-    if (!viewZoomEnabled?.checked) return;
-    applyZoomMultiplier(renderer.getZoomMultiplier() / 1.5);
-  });
-  btnZoomIn?.addEventListener("click", () => {
-    if (!viewZoomEnabled?.checked) return;
-    applyZoomMultiplier(renderer.getZoomMultiplier() * 1.5);
-  });
-  btnZoomReset?.addEventListener("click", () => {
-    if (!viewZoomEnabled?.checked) return;
-    applyZoomMultiplier(1);
-  });
+  btnZoomOut?.addEventListener(
+    "click",
+    () => {
+      if (!viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(renderer.getZoomMultiplier() / 1.5);
+    },
+    listenerOptions,
+  );
+  btnZoomIn?.addEventListener(
+    "click",
+    () => {
+      if (!viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(renderer.getZoomMultiplier() * 1.5);
+    },
+    listenerOptions,
+  );
+  btnZoomReset?.addEventListener(
+    "click",
+    () => {
+      if (!viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(1);
+    },
+    listenerOptions,
+  );
 
   if (viewAutoFit) {
     viewAutoFit.checked = false;
     renderer.setAutoFitScene(false);
-    viewAutoFit.addEventListener("change", () => {
-      renderer.setAutoFitScene(viewAutoFit.checked);
-      renderer.invalidateSceneScale();
-    });
+    viewAutoFit.addEventListener(
+      "change",
+      () => {
+        renderer.setAutoFitScene(viewAutoFit.checked);
+        renderer.invalidateSceneScale();
+      },
+      listenerOptions,
+    );
   }
 }

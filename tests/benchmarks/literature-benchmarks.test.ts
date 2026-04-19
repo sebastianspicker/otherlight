@@ -18,7 +18,7 @@ import { createSimulationV4 } from "../../src/sim/v4/runtime";
 import type { AtmosphereRTParams } from "../../src/core/types";
 import { buildNativeSnapshot } from "../../src/sim/v4/nativeModel";
 import { gaussianPhaseWeight } from "../../src/sim/v4/nativePhotometry";
-import { orbitalPhaseFromPeriod } from "../../src/photometry/stellarVariability";
+import { transitCenteredPhaseRadFromBodyPos } from "../../src/photometry/dayNightVisibility";
 import { vSub } from "../../src/physics/vec3";
 import {
   ACTIVE_SCIENTIFIC_CALIBRATION_SURFACES,
@@ -205,11 +205,7 @@ function directScientificBrowserAdditiveReference(config: SimulationConfigV4, tS
     thermalModelAdvanced: phot.thermalModelAdvanced,
   });
 
-  const phase = orbitalPhaseFromPeriod({
-    t: tSec,
-    period: planetCfg.orbit.period,
-    t0: planetCfg.orbit.t0,
-  });
+  const phase = transitCenteredPhaseRadFromBodyPos(planetRel, snap.observerDir);
   const forwardScattering = computeForwardScatteringFlux({
     rBody: planetRel,
     observerDir: snap.observerDir,

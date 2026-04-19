@@ -9,10 +9,13 @@ import type {
 import { clamp, toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { bodyPhaseFlux } from "../photometry/phaseCurve";
-import { orbitalPhaseFromPeriod, stellarVariabilityFlux } from "../photometry/stellarVariability";
+import { stellarVariabilityFlux } from "../photometry/stellarVariability";
 import { computeForwardScatteringFlux } from "../photometry/forwardScattering";
 import { visibleFractionWhenOcculted } from "../photometry/mutualEvents";
-import { phaseAngleRadFromBodyPos } from "../photometry/dayNightVisibility";
+import {
+  phaseAngleRadFromBodyPos,
+  transitCenteredPhaseRadFromBodyPos,
+} from "../photometry/dayNightVisibility";
 import { fluxUniformDisk } from "../photometry/transitUniform";
 import type { CircleOcculter } from "../photometry/occulterCircle";
 import type { BodyKinematics } from "./kinematics";
@@ -98,10 +101,22 @@ function normalizedBandWeights(
   if (!bp?.enabled || !Array.isArray(bp.lambdaNm) || bp.lambdaNm.length === 0) {
     return [{ lambdaNm: 550, w: 1 }];
   }
-  const lambda = bp.lambdaNm.filter((x) => Number.isFinite(x) && x > 0);
+  const keepIdx: number[] = [];
+  const lambda: number[] = [];
+  for (let index = 0; index < bp.lambdaNm.length; index++) {
+    const value = bp.lambdaNm[index];
+    if (!(Number.isFinite(value) && value > 0)) continue;
+    keepIdx.push(index);
+    lambda.push(value);
+  }
   if (lambda.length === 0) return [{ lambdaNm: 550, w: 1 }];
+  const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
   const raw =
-    Array.isArray(bp.weights) && bp.weights.length === lambda.length ? bp.weights : lambda.map(() => 1);
+    rawWeights.length === bp.lambdaNm.length
+      ? keepIdx.map((index) => rawWeights[index])
+      : rawWeights.length === lambda.length
+        ? rawWeights
+        : lambda.map(() => 1);
   const clipped = raw.map((x) => (Number.isFinite(x) && x > 0 ? x : 0));
   const sum = clipped.reduce((a, b) => a + b, 0);
   const norm = sum > 0 ? clipped.map((x) => x / sum) : lambda.map(() => 1 / lambda.length);
@@ -325,11 +340,7 @@ export function computeAdditiveFluxComponents(
   });
 
   // Forward scattering (additive). Modeled only for the planet in this UI schema.
-  const phase = orbitalPhaseFromPeriod({
-    t,
-    period: orbit.period,
-    t0: orbit.t0,
-  });
+  const phase = transitCenteredPhaseRadFromBodyPos(kin.rPlanetAbs, observerDir);
   const fluxForwardScatteringOnly = computeForwardScatteringFlux({
     rBody: kin.rPlanetAbs,
     observerDir,

@@ -1,4 +1,7 @@
+// @vitest-environment jsdom
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { installAppShellDocument } from "../helpers/appShell";
 
 describe("main entrypoint", () => {
   afterEach(() => {
@@ -9,6 +12,7 @@ describe("main entrypoint", () => {
   it("boots the app entrypoint", async () => {
     const initApp = vi.fn(async () => {});
     vi.doMock("../../src/app/bootstrap", () => ({ initApp }));
+    installAppShellDocument();
 
     await import("../../src/main");
     await Promise.resolve();
@@ -23,6 +27,7 @@ describe("main entrypoint", () => {
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.doMock("../../src/app/bootstrap", () => ({ initApp }));
+    installAppShellDocument();
 
     await import("../../src/main");
     await Promise.resolve();
