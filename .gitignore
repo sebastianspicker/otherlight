@@ -74,6 +74,7 @@ docs/github-refresh-progress.md
 docs/physics/alignment-audit.md
 docs/didactics/visualization-progress.md
 docs/didactics/edge-case-milestones.md
+docs/deprecated/
 
 # Env files & secrets
 .env

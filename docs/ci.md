@@ -24,8 +24,12 @@ flowchart LR
 
 - `CI` (`.github/workflows/ci.yml`)
   - Triggers: `pull_request` against `dev`, `push` on `dev`
-  - Job: `verify` (Node 22)
-  - Main command: `pnpm ci:verify`
+  - Jobs (run in dependency order):
+    1. `lint` — `pnpm ci:lint` (Node 22)
+    2. `typecheck` — `pnpm ci:typecheck` (Node 22)
+    3. `test` — `pnpm ci:test` (Node 20 and 22, matrix)
+    4. `build` — `pnpm ci:build` (Node 22, needs lint + typecheck)
+    5. `quality-gates` — literature benchmarks, didactics acceptance, perf smoke, physics regression, migration regression (Node 22, needs test)
   - Cache: pnpm store via `actions/cache` (`~/.pnpm-store`)
 
 - `Security` (`.github/workflows/security.yml`)
