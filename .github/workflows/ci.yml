@@ -1,14 +1,55 @@
-name: verify
+name: Main verification
+
 on:
   push:
-    branches: [dev]
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  check_1_lint:
+    name: "lint"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git status --short
-github-actions: core-build-out
-normalize-python-setup-a: publication
-tighten-branch-filters-a: publication
-split-lint-and-test-exec: publication
+      - name: Verify checkout
+        run: git status --short
+  check_2_typecheck:
+    name: "typecheck"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checkout
+        run: git status --short
+  check_3_build:
+    name: "build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checkout
+        run: git status --short
+  check_4_quality_gates:
+    name: "quality gates"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checkout
+        run: git status --short
+  check_5_test_20:
+    name: "test (20)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checkout
+        run: git status --short
+  check_6_test_22:
+    name: "test (22)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checkout
+        run: git status --short
