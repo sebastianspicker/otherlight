@@ -1,29 +1,42 @@
-# Bug_Report
+---
+name: Bug report
+about: Report a reproducible simulator bug
+title: "[Bug] "
+labels: bug
+---
 
+## Summary
 
-## Context
-This page keeps the current bug_report guidance concise after earlier rough notes.
+Describe the issue in one or two sentences.
 
-## Usage
-- Made the the main flow assumptions easier to check later.
+## Expected behavior
 
-- Earlier scratch notes were compressed into the current guidance.
+What should happen instead?
 
-## Notes Folded Into Current Flow
-Early notes are still uneven and may be folded into clearer sections later.
+## Reproduction steps
 
-## Development
-- Reduced surprise in the the main flow release checks.
+1.
+2.
+3.
 
-- Earlier scratch notes were compressed into the current guidance.
+## Environment
 
-## Caveats
-Some setup details still depend on the current local workflow and may change again.
+- OS:
+- Node (`node -v`):
+- pnpm (`pnpm -v`):
+- Browser:
 
-## Reliability
-- Tightened the main flow where the earlier behavior was brittle.
+## Scenario details
 
-- Earlier scratch notes were compressed into the current guidance.
+- Preset:
+- Key parameter changes:
+- Timestamp/range where issue is visible:
 
-## Revision Notes
-Latest pass: make-the-clarify-publish during maintenance burst work (forced-make-the-clarify-publish-12).
+## Verification evidence
+
+- [ ] Reproduced on latest `dev`
+- [ ] Reproduced after `pnpm ci:verify`
+
+## Logs / screenshots
+
+Attach console output, stack traces, screenshots, or short recordings.
