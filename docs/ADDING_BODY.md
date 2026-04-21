@@ -1,44 +1,57 @@
-# Adding_Body
+# Adding a Planet or Moon
 
+This simulator uses **SI units** internally (meters, kilograms, seconds). The UI exposes some angles in degrees, but the model always stores radians.
 
-## Context
-This page keeps the current adding_body guidance concise after earlier rough notes.
+## Add or update a planet
 
-## Usage
-- Made the vitest assumptions easier to check later.
+Edit the default scenario (or create a new preset based on it):
 
-- Earlier scratch notes were compressed into the current guidance.
+1. **Update the planet body:**
+   - `planet.r` (meters)
+   - `planet.m` (kg, optional but needed for Hill/Roche and N-body)
+2. **Update the planet orbit (Kepler mode):**
+   - `planet.orbit.a` (meters)
+   - `planet.orbit.e` (0..1)
+   - `planet.orbit.inc` (radians)
+   - `planet.orbit.Omega`, `planet.orbit.omega` (radians)
+   - `planet.orbit.period` (seconds)
+   - `planet.orbit.t0` (seconds)
 
-## Notes Folded Into Current Flow
-Early notes are still uneven and may be folded into clearer sections later.
+Files to edit:
 
-## Features
-- Shaped didactics into a usable first pass during core-build-out work.
+- `src/config/scenario.default.json` (defaults and UI ranges)
+- `src/app/presets.ts` (optional: add a didactic preset)
 
-- Earlier scratch notes were compressed into the current guidance.
+If you adjust UI ranges, keep clamps in `src/ui/params/common.ts`, `src/ui/params/read.ts`, and `src/ui/params/nbody.ts` consistent with the new scale.
 
-## Caveats
-Some setup details still depend on the current local workflow and may change again.
+## Add or update a moon
 
-## Reliability
-- Tightened runtime where the earlier behavior was brittle.
+1. **Enable and size the moon:**
+   - `moon.r` (meters)
+   - `moon.m` (kg, optional but needed for Hill/Roche and N-body)
+2. **Set the moon’s orbit around the planet:**
+   - `moon.orbitAroundPlanet.a` (meters)
+   - `moon.orbitAroundPlanet.e` (0..1)
+   - `moon.orbitAroundPlanet.inc` (radians)
+   - `moon.orbitAroundPlanet.Omega`, `moon.orbitAroundPlanet.omega` (radians)
+   - `moon.orbitAroundPlanet.period` (seconds)
+   - `moon.orbitAroundPlanet.t0` (seconds)
 
-- Earlier scratch notes were compressed into the current guidance.
+Files to edit:
 
-## Development
-- Reduced surprise in the the main flow release checks.
+- `src/config/scenario.default.json` (defaults and UI ranges)
+- `src/app/presets.ts` (optional: add a didactic preset)
 
-- Earlier scratch notes were compressed into the current guidance.
+Notes:
 
-## Revision Notes
-Latest pass: runtime during maintenance burst work (forced-runtime-32).
+- Hill/Roche warnings require both masses.
+- For N-body, ensure `dynamics.nbodyPlanetMoon.enabled = true` and `muStar/muPlanet/muMoon` or the masses are set.
 
-## Performance
-- Reduced overhead in runtime.
+## Verification (recommended)
 
-- Earlier scratch notes were compressed into the current guidance.
+After edits:
 
-## Architecture
-- Reduced the input surface that later fixes have to touch.
-
-- Earlier scratch notes were compressed into the current guidance.
+```bash
+pnpm lint
+pnpm test
+```

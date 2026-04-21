@@ -1,0 +1,7 @@
+# Default owner for all files
+* @sebastianspicker
+
+# CI and security-critical paths require explicit review
+.github/ @sebastianspicker
+.npmrc @sebastianspicker
+SECURITY.md @sebastianspicker

@@ -1,19 +1,29 @@
-# Readme
+# Documentation Index
 
+This folder contains architecture, physics, runtime, and operations documentation for the simulation.
 
-## Context
-This page keeps the current readme guidance concise after earlier rough notes.
+## Reading paths
 
-## Usage
-- Merged scattered input guidance into the docs.
+- New contributor: start with `../README.md`, then `RUNBOOK.md`, then `params.md`
+- Physics deep dive: `physics/overview.md` -> `physics/full-derivation.md`
+- CI and release checks: `ci.md`, `validation.md`
+- Didactics flow: `didactics/curriculum-v3.md`
+- GitHub screenshot capture command: `pnpm capture:github-screenshots`
 
-- Earlier scratch notes were compressed into the current guidance.
+## Map
 
-## Notes Folded Into Current Flow
-Early notes are still uneven and may be folded into clearer sections later.
+```mermaid
+flowchart LR
+  Root["README.md"] --> Params["params.md"]
+  Root --> Runbook["RUNBOOK.md"]
+  Root --> Validation["validation.md"]
+  Root --> CI["ci.md"]
+  Root --> Physics["physics/overview.md"]
+  Physics --> Derivation["physics/full-derivation.md"]
+  Physics --> NBody["physics/nbody.md"]
+  Physics --> Relativity["physics/relativity.md"]
+  Physics --> Photometry["physics/photometry.md"]
+  Root --> Didactics["didactics/curriculum-v3.md"]
+```
 
-## Caveats
-Some setup details still depend on the current local workflow and may change again.
-
-## Revision Notes
-Latest pass: typescript during steady build work (forced-typescript-8).
+Ephemeral local inspection notes should stay outside the maintained docs set (see `.gitignore` patterns).

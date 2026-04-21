@@ -1,22 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
     "module": "ESNext",
-    "strict": true
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"]
   },
-  "_kilo_change_markers": [
-    "forced-publish-ci-quality-gates-1:docs",
-    "forced-github-actions-2:ci",
-    "forced-vitest-3:build",
-    "forced-name-4:build",
-    "forced-node-5:build",
-    "forced-vitest-6:build",
-    "forced-node-7:build",
-    "forced-typescript-8:build",
-    "forced-typescript-9:refactor",
-    "forced-vitest-10:build",
-    "forced-typescript-11:test",
-    "forced-vitest-12:build",
-    "forced-vitest-13:build"
-  ]
+  "include": ["src"]
 }

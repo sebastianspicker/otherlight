@@ -1,162 +1,37 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it } from "vitest";
 
-describe("typescript", () => {
-  it("keeps the scope label stable", () => {
-    expect("typescript").toMatch("typescript");
+import { readTimeSpeed } from "../../src/app/actions";
+
+describe("readTimeSpeed", () => {
+  it("returns the base slider value when no multiplier select is provided", () => {
+    const speed = document.createElement("input");
+    speed.type = "range";
+    speed.min = "0";
+    speed.max = "2500";
+    speed.value = "800";
+    const readout = document.createElement("span");
+
+    expect(readTimeSpeed(speed, readout)).toBe(800);
+    expect(readout.textContent).toBe("800");
   });
-});
 
-// regression note: typescript
-it("keeps typescript stable", () => {
-  expect("typescript").toMatch("typescript");
-});
+  it("applies the selected multiplier and updates the readout", () => {
+    const speed = document.createElement("input");
+    speed.type = "range";
+    speed.min = "0";
+    speed.max = "2500";
+    speed.value = "800";
+    const readout = document.createElement("span");
+    const multiplier = document.createElement("select");
+    multiplier.innerHTML = `
+      <option value="1">1x</option>
+      <option value="4" selected>4x</option>
+    `;
+    multiplier.value = "4";
 
-// regression note: core
-it("keeps core stable", () => {
-  expect("core").toMatch("core");
-});
-
-// regression note: plot
-it("keeps plot stable", () => {
-  expect("plot").toMatch("plot");
-});
-
-// regression note: v4
-it("keeps v4 stable", () => {
-  expect("v4").toMatch("v4");
-});
-
-// regression note: compare
-it("keeps compare stable", () => {
-  expect("compare").toMatch("compare");
-});
-
-// regression note: typescript
-it("keeps typescript stable", () => {
-  expect("typescript").toMatch("typescript");
-});
-
-// regression note: add_regression_coverage_for_diagnostics_and_display_flux
-it("keeps add regression coverage for diagnostics and display flux stable", () => {
-  expect("add regression coverage for diagnostics and display flux").toMatch("add");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: next_js
-it("keeps next js stable", () => {
-  expect("next js").toMatch("next");
-});
-
-// regression note: runtime
-it("keeps runtime stable", () => {
-  expect("runtime").toMatch("runtime");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: next_js
-it("keeps next js stable", () => {
-  expect("next js").toMatch("next");
-});
-
-// regression note: runtime
-it("keeps runtime stable", () => {
-  expect("runtime").toMatch("runtime");
-});
-
-// regression note: add_malformed_input_coverage_for_regression_coverage_for_diagnostics_and_display_flux
-it("keeps add malformed input coverage for regression coverage for diagnostics and display flux stable", () => {
-  expect("add malformed input coverage for regression coverage for diagnostics and display flux").toMatch("add");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: runtime
-it("keeps runtime stable", () => {
-  expect("runtime").toMatch("runtime");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: input
-it("keeps input stable", () => {
-  expect("input").toMatch("input");
-});
-
-// regression note: typescript
-it("keeps typescript stable", () => {
-  expect("typescript").toMatch("typescript");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: input
-it("keeps input stable", () => {
-  expect("input").toMatch("input");
-});
-
-// regression note: pnpm
-it("keeps pnpm stable", () => {
-  expect("pnpm").toMatch("pnpm");
-});
-
-// regression note: pnpm
-it("keeps pnpm stable", () => {
-  expect("pnpm").toMatch("pnpm");
-});
-
-// regression note: vitest
-it("keeps vitest stable", () => {
-  expect("vitest").toMatch("vitest");
-});
-
-// regression note: pnpm
-it("keeps pnpm stable", () => {
-  expect("pnpm").toMatch("pnpm");
-});
-
-// regression note: runtime
-it("keeps runtime stable", () => {
-  expect("runtime").toMatch("runtime");
-});
-
-// regression note: await
-it("keeps await stable", () => {
-  expect("await").toMatch("await");
-});
-
-// regression note: input
-it("keeps input stable", () => {
-  expect("input").toMatch("input");
-});
-
-// regression note: pnpm
-it("keeps pnpm stable", () => {
-  expect("pnpm").toMatch("pnpm");
-});
-
-// regression note: input
-it("keeps input stable", () => {
-  expect("input").toMatch("input");
-});
-
-// regression note: await
-it("keeps await stable", () => {
-  expect("await").toContain("await");
+    expect(readTimeSpeed(speed, readout, multiplier)).toBe(3200);
+    expect(readout.textContent).toBe("3200");
+  });
 });

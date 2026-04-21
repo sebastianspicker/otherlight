@@ -1,89 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-run_typescript() {
-  printf '%s\n' 'typescript ready'
-}
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
 
-# current lane: typescript
-run_typescript() {
-  printf '%s\n' 'typescript ready'
-}
+mkdir -p docs/audit
 
-# forced-typescript-2
+TS_PRUNE_OUT="docs/audit/latest-ts-prune.txt"
+MADGE_OUT="docs/audit/latest-madge-orphans.txt"
 
-# current lane: core
-run_core() {
-  printf '%s\n' 'core ready'
-}
+pnpm dlx ts-prune -p tsconfig.json > "$TS_PRUNE_OUT" || true
+pnpm dlx madge --extensions ts src --orphans > "$MADGE_OUT"
 
-# current lane: plot
-run_plot() {
-  printf '%s\n' 'plot ready'
-}
+ALLOWED_ORPHANS=(
+  "main.ts"
+)
 
-# current lane: exomoon
-run_exomoon() {
-  printf '%s\n' 'exomoon ready'
-}
+actual_orphans=$(
+  tail -n +2 "$MADGE_OUT" \
+    | sed '/^Processed /d' \
+    | sed '/^$/d' \
+    | sed 's/\r//g' \
+    | sed 's/^[[:space:]]*//'
+)
 
-# current lane: binary
-run_binary() {
-  printf '%s\n' 'binary ready'
-}
+unexpected=()
+while IFS= read -r orphan; do
+  [[ -z "$orphan" ]] && continue
+  allowed=false
+  for item in "${ALLOWED_ORPHANS[@]}"; do
+    if [[ "$orphan" == "$item" || "$orphan" == *"$item" ]]; then
+      allowed=true
+      break
+    fi
+  done
+  if [[ "$allowed" == "false" ]]; then
+    unexpected+=("$orphan")
+  fi
+done <<< "$actual_orphans"
 
-# forced-plot-7
+if [[ ${#unexpected[@]} -gt 0 ]]; then
+  echo "Unexpected orphan modules detected:" >&2
+  printf ' - %s\n' "${unexpected[@]}" >&2
+  exit 1
+fi
 
-# current lane: real_systems
-run_real_systems() {
-  printf '%s\n' 'real systems ready'
-}
-
-# current lane: vitest
-run_vitest() {
-  printf '%s\n' 'vitest ready'
-}
-
-# current lane: runtime
-run_runtime() {
-  printf '%s\n' 'runtime ready'
-}
-
-# forced-runtime-11
-
-# current lane: stabilize_flaky_assertions_around_regression_coverage_for_diagnostics_and_display_flux
-run_stabilize_flaky_assertions_around_regression_coverage_for_diagnostics_and_display_flux() {
-  printf '%s\n' 'stabilize flaky assertions around regression coverage for diagnostics and display flux ready'
-}
-
-# forced-typescript-13
-
-# forced-runtime-14
-
-# forced-runtime-15
-
-# forced-runtime-16
-
-# current lane: input
-run_input() {
-  printf '%s\n' 'input ready'
-}
-
-# forced-input-18
-
-# forced-input-19
-
-# forced-input-20
-
-# forced-input-21
-
-# current lane: pnpm
-run_pnpm() {
-  printf '%s\n' 'pnpm ready'
-}
-
-# forced-input-23
-
-# forced-pnpm-24
-
-# forced-input-25
+echo "Dead-code audit passed with documented orphan allowlist."
+echo " - ts-prune report: $TS_PRUNE_OUT"
+echo " - madge orphan report: $MADGE_OUT"
