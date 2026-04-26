@@ -1,3 +1,5 @@
+import { createMock2dContext } from "./canvasContextStub";
+
 export function makeMockCanvas(w = 200, h = 100): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -15,47 +17,10 @@ export function makeMockCanvas(w = 200, h = 100): HTMLCanvasElement {
     toJSON() {},
   });
 
-  (canvas as any).getContext = () =>
-    ({
-      clearRect: () => {},
-      fillRect: () => {},
-      beginPath: () => {},
-      moveTo: () => {},
-      lineTo: () => {},
-      quadraticCurveTo: () => {},
-      stroke: () => {},
-      fill: () => {},
-      arc: () => {},
-      ellipse: () => {},
-      rect: () => {},
-      strokeRect: () => {},
-      clip: () => {},
-      save: () => {},
-      restore: () => {},
-      scale: () => {},
-      translate: () => {},
-      rotate: () => {},
-      setTransform: () => {},
-      setLineDash: () => {},
-      fillText: () => {},
-      strokeText: () => {},
-      measureText: () => ({ width: 10 }),
-      createLinearGradient: () => ({ addColorStop: () => {} }),
-      createRadialGradient: () => ({ addColorStop: () => {} }),
-      createPattern: () => null,
-      drawImage: () => {},
-      getImageData: () => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 }),
-      putImageData: () => {},
-      canvas,
-      lineWidth: 1,
-      strokeStyle: "#000",
-      fillStyle: "#000",
-      globalAlpha: 1,
-      font: "10px sans-serif",
-      lineJoin: "miter" as CanvasLineJoin,
-      textAlign: "start" as CanvasTextAlign,
-      textBaseline: "alphabetic" as CanvasTextBaseline,
-    }) as unknown as CanvasRenderingContext2D;
+  (canvas as any).getContext = (contextId: string) => {
+    if (contextId !== "2d") return null;
+    return createMock2dContext(canvas);
+  };
 
   return canvas;
 }
