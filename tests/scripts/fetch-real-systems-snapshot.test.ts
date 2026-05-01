@@ -9,15 +9,55 @@ const {
   selectTopSystems,
   buildSnapshotFromRows,
   scoreSnapshotEntry,
+  fetchNasaTransitRows,
 }: {
-  normalizeNasaRow: (row: Record<string, unknown>) => any;
-  selectTopSystems: (rows: any[], limit?: number) => any[];
+  normalizeNasaRow: (row: Record<string, unknown>) => SnapshotEntry | null;
+  selectTopSystems: (rows: Record<string, unknown>[], limit?: number) => SnapshotEntry[];
   buildSnapshotFromRows: (
     rows: Record<string, unknown>[],
     opts?: { fetchedAt?: string; limit?: number },
-  ) => any;
-  scoreSnapshotEntry: (entry: any) => number;
-} = scriptMod as any;
+  ) => Snapshot;
+  scoreSnapshotEntry: (entry: SnapshotEntry | null) => number;
+  fetchNasaTransitRows: (fetchImpl?: FetchLike, opts?: FetchOptions) => Promise<unknown[]>;
+} = scriptMod as unknown as ScriptExports;
+
+type SnapshotEntry = {
+  id: string;
+  label: string;
+  semiMajorAxisAu?: number;
+};
+
+type Snapshot = {
+  meta: {
+    fetchedAt: string;
+    rowCount: number;
+  };
+  systems: SnapshotEntry[];
+};
+
+type FetchOptions = {
+  timeoutMs?: number;
+  maxBytes?: number;
+};
+
+type FetchLike = (
+  url: string,
+  init: {
+    signal?: AbortSignal;
+    headers?: Record<string, string>;
+  },
+) => Promise<Response>;
+
+type ScriptExports = {
+  normalizeNasaRow: (row: Record<string, unknown>) => SnapshotEntry | null;
+  selectTopSystems: (rows: Record<string, unknown>[], limit?: number) => SnapshotEntry[];
+  buildSnapshotFromRows: (
+    rows: Record<string, unknown>[],
+    opts?: { fetchedAt?: string; limit?: number },
+  ) => Snapshot;
+  scoreSnapshotEntry: (entry: SnapshotEntry | null) => number;
+  fetchNasaTransitRows: (fetchImpl?: FetchLike, opts?: FetchOptions) => Promise<unknown[]>;
+};
 
 describe("fetch-real-systems-snapshot script", () => {
   it("normalizes a NASA row and computes a finite score", () => {
@@ -38,6 +78,7 @@ describe("fetch-real-systems-snapshot script", () => {
 
     const norm = normalizeNasaRow(row);
     expect(norm).toBeTruthy();
+    if (!norm) throw new Error("expected NASA row to normalize");
     expect(norm.id).toBe("test-10-b");
     expect(norm.label).toBe("Test-10 b");
     expect(norm.semiMajorAxisAu).toBe(0.05);
@@ -79,7 +120,7 @@ describe("fetch-real-systems-snapshot script", () => {
       },
     ];
 
-    const out = selectTopSystems(rows as any[], 2);
+    const out = selectTopSystems(rows, 2);
 
     expect(out).toHaveLength(2);
     expect(out[0].id).toBe("b-1-b");
@@ -108,7 +149,7 @@ describe("fetch-real-systems-snapshot script", () => {
       },
     ];
 
-    const snapshot = buildSnapshotFromRows(rows as any[], {
+    const snapshot = buildSnapshotFromRows(rows, {
       fetchedAt: "2026-02-19T10:00:00.000Z",
       limit: 20,
     });
@@ -117,5 +158,47 @@ describe("fetch-real-systems-snapshot script", () => {
     expect(snapshot.meta.rowCount).toBe(1);
     expect(snapshot.systems).toHaveLength(1);
     expect(snapshot.systems[0].id).toBe("keep-1-b");
+  });
+
+  it("fetches NASA rows with bounded response parsing", async () => {
+    const rows = [
+      {
+        pl_name: "Keep-1 b",
+        hostname: "Keep-1",
+        st_rad: 1,
+        pl_radj: 1,
+        pl_orbsmax: 0.1,
+        pl_orbper: 3,
+        tran_flag: 1,
+      },
+    ];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      return new Response(JSON.stringify(rows), {
+        headers: { "content-type": "application/json" },
+      });
+    };
+
+    await expect(fetchNasaTransitRows(fetchImpl, { timeoutMs: 1000, maxBytes: 4096 })).resolves.toEqual(rows);
+  });
+
+  it("rejects NASA responses with oversized content-length before parsing", async () => {
+    const fetchImpl: FetchLike = async () =>
+      new Response("[]", {
+        headers: { "content-length": "4096" },
+      });
+
+    await expect(fetchNasaTransitRows(fetchImpl, { timeoutMs: 1000, maxBytes: 128 })).rejects.toThrow(
+      "NASA TAP response exceeds 128 bytes",
+    );
+  });
+
+  it("rejects streamed NASA responses that exceed the parser limit", async () => {
+    const fetchImpl: FetchLike = async () =>
+      new Response(JSON.stringify([{ pl_name: "Too Large b", hostname: "Too Large" }]));
+
+    await expect(fetchNasaTransitRows(fetchImpl, { timeoutMs: 1000, maxBytes: 8 })).rejects.toThrow(
+      "NASA TAP response exceeds 8 bytes",
+    );
   });
 });

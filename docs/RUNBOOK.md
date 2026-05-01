@@ -90,12 +90,13 @@ pnpm preview
 
 ## Security (Current Tooling)
 
-CI runs baseline security checks (secret scan, SAST, SCA). Local equivalents are optional.
+Hosted workflows run secret scanning and CodeQL on PR/push. Dependency audit runs weekly or by
+manual dispatch. Local dependency security scanning is optional.
 
 Dependency scan (SCA):
 
 ```bash
-pnpm audit --audit-level=high --prod
+pnpm audit --audit-level=moderate
 ```
 
 Notes:
