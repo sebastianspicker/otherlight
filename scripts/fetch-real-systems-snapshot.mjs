@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-/* global fetch, process */
+/* global AbortController, TextDecoder, TextEncoder, clearTimeout, fetch, process, setTimeout */
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const DEFAULT_LIMIT = 20;
+const DEFAULT_FETCH_TIMEOUT_MS = 15_000;
+const MAX_NASA_RESPONSE_BYTES = 10 * 1024 * 1024;
 
 export const NASA_TAP_QUERY = [
   "select",
@@ -16,6 +18,25 @@ export const NASA_TAP_QUERY = [
 ].join(" ");
 
 export const NASA_TAP_URL = `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=${encodeURIComponent(NASA_TAP_QUERY)}&format=json`;
+
+function createTimeoutSignal(timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return {
+      signal: undefined,
+      timedOut: () => false,
+      cancel: () => undefined,
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  return {
+    signal: controller.signal,
+    timedOut: () => controller.signal.aborted,
+    cancel: () => clearTimeout(timeout),
+  };
+}
 
 function toFinite(v) {
   const n = typeof v === "number" ? v : Number(v);
@@ -145,19 +166,72 @@ export function buildSnapshotFromRows(rows, opts = {}) {
   };
 }
 
-export async function fetchNasaTransitRows(fetchImpl = fetch) {
-  const response = await fetchImpl(NASA_TAP_URL, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "exoplanet-exomoon-simulation/real-systems-refresh",
-    },
-  });
+async function readResponseTextWithinLimit(response, maxBytes) {
+  const limit = Number.isFinite(maxBytes) && maxBytes > 0 ? Math.floor(maxBytes) : MAX_NASA_RESPONSE_BYTES;
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength) {
+    const advertisedBytes = Number(contentLength);
+    if (Number.isFinite(advertisedBytes) && advertisedBytes > limit) {
+      throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
+    }
+  }
+
+  if (!response.body?.getReader) {
+    const text = await response.text();
+    const bytes = new TextEncoder().encode(text).byteLength;
+    if (bytes > limit) throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > limit) {
+      await reader.cancel().catch(() => undefined);
+      throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+
+  text += decoder.decode();
+  return text;
+}
+
+export async function fetchNasaTransitRows(fetchImpl = fetch, opts = {}) {
+  const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : DEFAULT_FETCH_TIMEOUT_MS;
+  const maxBytes = Number.isFinite(opts.maxBytes) ? opts.maxBytes : MAX_NASA_RESPONSE_BYTES;
+  const timeout = createTimeoutSignal(timeoutMs);
+  let response;
+
+  try {
+    response = await fetchImpl(NASA_TAP_URL, {
+      signal: timeout.signal,
+      headers: {
+        accept: "application/json",
+        "user-agent": "exoplanet-exomoon-simulation/real-systems-refresh",
+      },
+    });
+  } catch (err) {
+    if (timeout.timedOut()) {
+      throw new Error(`NASA TAP request timed out after ${timeoutMs} ms.`, { cause: err });
+    }
+    throw err;
+  } finally {
+    timeout.cancel();
+  }
 
   if (!response.ok) {
     throw new Error(`NASA TAP request failed (${response.status} ${response.statusText})`);
   }
 
-  const json = await response.json();
+  const text = await readResponseTextWithinLimit(response, maxBytes);
+  const json = JSON.parse(text);
   if (!Array.isArray(json)) {
     throw new Error("NASA TAP response is not an array.");
   }
