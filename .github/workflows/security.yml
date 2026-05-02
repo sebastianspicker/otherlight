@@ -2,9 +2,9 @@ name: Security
 
 on:
   pull_request:
-    branches: ["dev"]
+    branches: ["main", "dev"]
   push:
-    branches: ["dev"]
+    branches: ["main", "dev"]
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}

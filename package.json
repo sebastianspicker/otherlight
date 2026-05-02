@@ -25,7 +25,7 @@
     "ci:test": "pnpm test",
     "ci:build": "pnpm build",
     "ci:verify": "pnpm ci:lint && pnpm ci:typecheck && pnpm ci:test && pnpm ci:build",
-    "audit:security": "pnpm audit --audit-level=high --prod",
+    "audit:security": "pnpm audit --audit-level=moderate",
     "audit:deps": "pnpm dlx depcheck --ignores=@vitest/coverage-v8",
     "audit:deadcode": "bash ./scripts/audit-dead-code.sh",
     "audit:full": "pnpm audit:security && pnpm audit:deps && pnpm audit:deadcode",
@@ -43,7 +43,8 @@
   "pnpm": {
     "overrides": {
       "rollup": ">=4.59.0",
-      "flatted": ">=3.4.2"
+      "flatted": ">=3.4.2",
+      "brace-expansion": "5.0.5"
     }
   },
   "devDependencies": {
