@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "NASA Exoplanet Archive (pscomppars via TAP)",
-    "fetchedAt": "2026-02-19T08:40:30.033Z",
+    "fetchedAt": "2026-07-10T21:54:56.995Z",
     "rowCount": 20,
     "selectionPolicy": "transit-only, required-fields, score-ranked top 20"
   },
@@ -235,16 +235,16 @@
       "label": "XO-3 b",
       "hostname": "XO-3",
       "discYear": 2007,
-      "starRadiusSolar": 1.54,
-      "starMassSolar": 0.58,
-      "planetRadiusJupiter": 1.41,
-      "planetRadiusEarth": 15.80469,
-      "planetMassJupiter": 7.29,
-      "planetMassEarth": 2316.9807,
-      "semiMajorAxisAu": 0.0476,
-      "periodDays": 3.19154,
-      "eccentricity": 0.29,
-      "inclinationDeg": 79.32
+      "starRadiusSolar": 1.523,
+      "starMassSolar": 1.449,
+      "planetRadiusJupiter": 1.32,
+      "planetRadiusEarth": 14.79585452,
+      "planetMassJupiter": 13.27,
+      "planetMassEarth": 4217.58296089,
+      "semiMajorAxisAu": 0.04815,
+      "periodDays": 3.19152309,
+      "eccentricity": 0.2791,
+      "inclinationDeg": 83.66
     },
     {
       "id": "xo-4-b",
