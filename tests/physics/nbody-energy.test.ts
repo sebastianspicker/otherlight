@@ -14,24 +14,37 @@ function circularPeriod(a: number, muCentral: number): number {
   return 2 * Math.PI * Math.sqrt((a * a * a) / muCentral);
 }
 
-function totalEnergyAssumingG1(params: { state: NBodyState; mus: number[] }): number {
-  const { state, mus } = params;
-  const positions = [state.rS, state.rP, state.rM, ...(state.perturbers ?? []).map((p) => p.r)];
-  const velocities = [state.vS, state.vP, state.vM, ...(state.perturbers ?? []).map((p) => p.v)];
-
+function assertEnergyBodyCount(positions: unknown[], velocities: unknown[], mus: number[]): void {
   if (positions.length !== mus.length || velocities.length !== mus.length) {
     throw new Error("energy test helper: body count mismatch");
   }
+}
 
-  // Assumption (documented in the test): choose units with G=1, m_i := mu_i.
-  // Then:
-  //  - T = Σ 1/2 m_i |v_i|^2
-  //  - U = - Σ_{i<j} m_i m_j / r_ij
+function stateVectors(state: NBodyState): {
+  positions: Array<{ x: number; y: number; z: number }>;
+  velocities: Array<{ x: number; y: number; z: number }>;
+} {
+  return {
+    positions: [state.rS, state.rP, state.rM, ...(state.perturbers ?? []).map((p) => p.r)],
+    velocities: [state.vS, state.vP, state.vM, ...(state.perturbers ?? []).map((p) => p.v)],
+  };
+}
+
+function kineticEnergyAssumingG1(
+  velocities: Array<{ x: number; y: number; z: number }>,
+  mus: number[],
+): number {
   let T = 0;
   for (let i = 0; i < mus.length; i++) {
     T += 0.5 * mus[i] * vLenSq(velocities[i]);
   }
+  return T;
+}
 
+function potentialEnergyAssumingG1(
+  positions: Array<{ x: number; y: number; z: number }>,
+  mus: number[],
+): number {
   let U = 0;
   for (let i = 0; i < mus.length; i++) {
     for (let j = i + 1; j < mus.length; j++) {
@@ -41,8 +54,16 @@ function totalEnergyAssumingG1(params: { state: NBodyState; mus: number[] }): nu
       U += -(mus[i] * mus[j]) / r;
     }
   }
+  return U;
+}
 
-  return T + U;
+function totalEnergyAssumingG1(params: { state: NBodyState; mus: number[] }): number {
+  const { mus } = params;
+  const { positions, velocities } = stateVectors(params.state);
+  assertEnergyBodyCount(positions, velocities, mus);
+
+  // Assumption (documented in the test): choose units with G=1, m_i := mu_i.
+  return kineticEnergyAssumingG1(velocities, mus) + potentialEnergyAssumingG1(positions, mus);
 }
 
 describe("N-body (energy drift sanity)", () => {

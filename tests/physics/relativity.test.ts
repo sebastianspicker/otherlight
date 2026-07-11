@@ -201,7 +201,7 @@ describe("grPrecessionPerOrbit", () => {
   });
 });
 
-describe("solveLightTimeCorrectedResult", () => {
+describe("solveLightTimeCorrectedResult convergence", () => {
   it("reports convergence metadata for a constant-position LTTE solve", () => {
     const out = solveLightTimeCorrectedResult({
       tObs: 100,
@@ -286,7 +286,9 @@ describe("solveLightTimeCorrectedResult", () => {
     expect(out.diagnostics.residualSec).toBeLessThanOrEqual(1e-12);
     expect(out.tEmit).toBeCloseTo(expected, 10);
   });
+});
 
+describe("solveLightTimeCorrectedResult diagnostics", () => {
   it("emits explicit validity flags for the weak-field relative Shapiro models", () => {
     const out = solveLightTimeCorrectedResult({
       tObs: 10_000,

@@ -81,9 +81,10 @@ describe("setText", () => {
 
   it("escapes HTML (safe against injection)", () => {
     const el = document.createElement("span");
-    setText(el, "<script>alert(1)</script>");
-    expect(el.innerHTML).not.toContain("<script>");
-    expect(el.textContent).toBe("<script>alert(1)</script>");
+    const htmlTextPayload = `<img src="x" onerror="alert(1)">`;
+    setText(el, htmlTextPayload);
+    expect(el.innerHTML).not.toContain("<img");
+    expect(el.textContent).toBe(htmlTextPayload);
   });
 });
 

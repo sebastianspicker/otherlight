@@ -23,6 +23,11 @@ import { createScientificBrowserRuntimeError } from "./scientificErrors";
 
 type NativeBodyKind = "star" | "planet" | "moon";
 
+type OrbitState = {
+  r: Vec3;
+  v: Vec3;
+};
+
 export type NativeBodyState = {
   id: string;
   kind: NativeBodyKind;
@@ -51,14 +56,30 @@ export type ConservationBaseline = {
   angularMomentum?: number;
 };
 
+type SnapshotBuildContext = {
+  config: SimulationConfigV4;
+  tObsSec: number;
+  observerDir: Vec3;
+  keplerOpts?: SolveKeplerEOptions;
+  byId: Map<string, NativeBodyState>;
+  stars: NativeBodyState[];
+  planets: NativeBodyState[];
+  moons: NativeBodyState[];
+  hmap: Map<string, string>;
+};
+
+type BinaryMassWeights = {
+  starA: number;
+  starB: number;
+};
+
+type OrbitingBodySource = PlanetBodyV4 | MoonBodyV4;
+
 export function orbitStateAt(
   el: { a: number; e: number; inc: number; Omega: number; omega: number; period: number; t0: number },
   t: number,
   keplerOpts?: SolveKeplerEOptions,
-): {
-  r: Vec3;
-  v: Vec3;
-} {
+): OrbitState {
   const mu = muFromPeriodAndA(el.period, el.a);
   if (Number.isFinite(mu) && mu > 0) {
     return stateFromResolvedElements(el, t, mu, "v4.orbit", keplerOpts);
@@ -71,184 +92,240 @@ export function orbitStateAt(
   return { r, v: vScale(vSub(rp, rm), 1 / (2 * dt)) };
 }
 
-export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number): NativeSnapshot {
-  assertScientificBrowserSnapshotInputs(config);
-  const observerDir = normalizeObserverDir(config);
-  const keplerOpts = keplerOptionsForExecutionMode(config.runtime?.executionMode);
-  const byId = new Map<string, NativeBodyState>();
-  const stars: NativeBodyState[] = [];
-  const planets: NativeBodyState[] = [];
-  const moons: NativeBodyState[] = [];
-  const hmap = hierarchyParentMap(config);
+function isScientificBrowser(config: SimulationConfigV4): boolean {
+  return config.runtime?.executionMode === "scientific-browser";
+}
 
-  const [starA, starB] = config.bodies.stars;
-  const binary = orbitStateAt(config.orbits.binary, tObsSec, keplerOpts);
+function isDetachedBinaryLab(config: SimulationConfigV4): boolean {
+  return config.mode === "detached-binary-lab";
+}
+
+function zeroVec(): Vec3 {
+  return { x: 0, y: 0, z: 0 };
+}
+
+function scientificBrowserContext(config: SimulationConfigV4): {
+  executionMode: string;
+  runtimeMode: string;
+} {
+  return {
+    executionMode: config.runtime?.executionMode ?? "interactive",
+    runtimeMode: config.runtime?.mode ?? "realtime",
+  };
+}
+
+function createSnapshotContext(config: SimulationConfigV4, tObsSec: number): SnapshotBuildContext {
+  assertScientificBrowserSnapshotInputs(config);
+  return {
+    config,
+    tObsSec,
+    observerDir: normalizeObserverDir(config),
+    keplerOpts: keplerOptionsForExecutionMode(config.runtime?.executionMode),
+    byId: new Map<string, NativeBodyState>(),
+    stars: [],
+    planets: [],
+    moons: [],
+    hmap: hierarchyParentMap(config),
+  };
+}
+
+function binaryMassWeights(starA: StarBodyV4, starB: StarBodyV4): BinaryMassWeights {
   const mA = finiteOrDefault(starA.m, 0);
   const mB = finiteOrDefault(starB.m, 0);
   const mTot = mA > 0 && mB > 0 ? mA + mB : 0;
-  const wA = mTot > 0 ? -mB / mTot : 0;
-  const wB = mTot > 0 ? mA / mTot : 1;
+  return {
+    starA: mTot > 0 ? -mB / mTot : 0,
+    starB: mTot > 0 ? mA / mTot : 1,
+  };
+}
 
-  const fallbackPassband =
-    config.runtime?.executionMode === "scientific-browser"
-      ? undefined
-      : config.photometry?.limbDarkeningModel?.bandpass;
-  const detachedBinaryLuminosities = resolveDetachedBinaryLuminosities({
+function detachedBinaryFallbackPassband(config: SimulationConfigV4): string | undefined {
+  return isScientificBrowser(config) ? undefined : config.photometry?.limbDarkeningModel?.bandpass;
+}
+
+function secondaryFallbackLuminosityScale(config: SimulationConfigV4): number {
+  if (isScientificBrowser(config)) return 0;
+  return isDetachedBinaryLab(config) ? 0.3 : 0;
+}
+
+function detachedBinaryLuminosities(config: SimulationConfigV4, starA: StarBodyV4, starB: StarBodyV4) {
+  return resolveDetachedBinaryLuminosities({
     primary: starA,
     secondary: starB,
-    fallbackPassband,
-    secondaryFallbackLuminosityScale:
-      config.runtime?.executionMode === "scientific-browser"
-        ? 0
-        : config.mode === "detached-binary-lab"
-          ? 0.3
-          : 0,
+    fallbackPassband: detachedBinaryFallbackPassband(config),
+    secondaryFallbackLuminosityScale: secondaryFallbackLuminosityScale(config),
   });
-  if (
-    config.runtime?.executionMode === "scientific-browser" &&
-    config.mode === "detached-binary-lab" &&
-    detachedBinaryLuminosities.source !== "physical-bandpass"
-  ) {
+}
+
+function assertDetachedBinaryPhysicalLuminosities(config: SimulationConfigV4, source: string): void {
+  if (!isScientificBrowser(config) || !isDetachedBinaryLab(config) || source === "physical-bandpass") return;
+  throw createScientificBrowserRuntimeError({
+    stage: "native-inputs",
+    code: "SCB_BINARY_PHOTOMETRY_FALLBACK",
+    summary: "native detached-binary scientific-browser snapshot requires physical bandpass weighting",
+    details: [
+      "detached-binary scientific-browser native snapshot rejects compatibility luminosity scaling",
+      "provide explicit per-star physical photometry inputs (radius, teffK, passband)",
+    ],
+    context: scientificBrowserContext(config),
+  });
+}
+
+function starStateFromBinary(
+  star: StarBodyV4,
+  binary: OrbitState,
+  weight: number,
+  luminosity: number,
+  active: boolean,
+  observerDir: Vec3,
+): NativeBodyState {
+  const rAbs = vScale(binary.r, weight);
+  const vAbs = vScale(binary.v, weight);
+  return {
+    id: star.id,
+    kind: "star",
+    r: active ? safeBodyRadius(star) : 0,
+    m: Math.max(0, finiteOrDefault(star.m, 0)),
+    luminosity,
+    active,
+    rAbs,
+    vAbs,
+    sky: projectToSky(rAbs, observerDir),
+    source: star,
+  };
+}
+
+function addState(
+  collection: NativeBodyState[],
+  byId: Map<string, NativeBodyState>,
+  state: NativeBodyState,
+): void {
+  byId.set(state.id, state);
+  collection.push(state);
+}
+
+function addBinaryStarStates(ctx: SnapshotBuildContext): void {
+  const [starA, starB] = ctx.config.bodies.stars;
+  const binary = orbitStateAt(ctx.config.orbits.binary, ctx.tObsSec, ctx.keplerOpts);
+  const weights = binaryMassWeights(starA, starB);
+  const luminosities = detachedBinaryLuminosities(ctx.config, starA, starB);
+  assertDetachedBinaryPhysicalLuminosities(ctx.config, luminosities.source);
+
+  const starAState = starStateFromBinary(
+    starA,
+    binary,
+    weights.starA,
+    luminosities.primary,
+    true,
+    ctx.observerDir,
+  );
+  const starBActive = isDetachedBinaryLab(ctx.config) || luminosities.secondary > 0;
+  const starBState = starStateFromBinary(
+    starB,
+    binary,
+    weights.starB,
+    starBActive ? luminosities.secondary : 0,
+    starBActive,
+    ctx.observerDir,
+  );
+
+  addState(ctx.stars, ctx.byId, starAState);
+  addState(ctx.stars, ctx.byId, starBState);
+}
+
+function throwMissingMoonParent(config: SimulationConfigV4, bodyId: string): never {
+  if (isScientificBrowser(config)) {
     throw createScientificBrowserRuntimeError({
       stage: "native-inputs",
-      code: "SCB_BINARY_PHOTOMETRY_FALLBACK",
-      summary: "native detached-binary scientific-browser snapshot requires physical bandpass weighting",
-      details: [
-        "detached-binary scientific-browser native snapshot rejects compatibility luminosity scaling",
-        "provide explicit per-star physical photometry inputs (radius, teffK, passband)",
-      ],
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
+      code: "SCB_INVALID_NATIVE_INPUTS",
+      summary: "native snapshot inputs are invalid for scientific-browser execution",
+      details: [`moon "${bodyId}" is missing a parent planet reference`],
+      context: scientificBrowserContext(config),
     });
   }
-  const lumA = detachedBinaryLuminosities.primary;
-  const lumBraw = detachedBinaryLuminosities.secondary;
-  const starBActive = config.mode === "detached-binary-lab" || lumBraw > 0;
+  throw new Error(`buildNativeSnapshot: moon "${bodyId}" is missing a parent planet reference.`);
+}
 
-  const starAState: NativeBodyState = {
-    id: starA.id,
-    kind: "star",
-    r: safeBodyRadius(starA),
-    m: Math.max(0, mA),
-    luminosity: lumA,
+function throwUnknownParent(
+  config: SimulationConfigV4,
+  bodyKind: "planet" | "moon",
+  bodyId: string,
+  parentId: string,
+): never {
+  if (isScientificBrowser(config)) {
+    throw createScientificBrowserRuntimeError({
+      stage: "native-inputs",
+      code: "SCB_INVALID_NATIVE_INPUTS",
+      summary: "native snapshot inputs are invalid for scientific-browser execution",
+      details: [`unknown parent "${parentId}" for ${bodyKind} "${bodyId}"`],
+      context: scientificBrowserContext(config),
+    });
+  }
+  throw new Error(`buildNativeSnapshot: unknown parent "${parentId}" for ${bodyKind} "${bodyId}".`);
+}
+
+function requireKnownParent(
+  config: SimulationConfigV4,
+  byId: Map<string, NativeBodyState>,
+  bodyKind: "planet" | "moon",
+  bodyId: string,
+  parentId?: string,
+): NativeBodyState | undefined {
+  if (!parentId) {
+    return bodyKind === "moon" ? throwMissingMoonParent(config, bodyId) : undefined;
+  }
+  const parent = byId.get(parentId);
+  return parent ?? throwUnknownParent(config, bodyKind, bodyId, parentId);
+}
+
+function bodyBase(parent: NativeBodyState | undefined): { r: Vec3; v: Vec3 } {
+  return parent ? { r: parent.rAbs, v: parent.vAbs } : { r: zeroVec(), v: zeroVec() };
+}
+
+function orbitingBodyState(
+  ctx: SnapshotBuildContext,
+  body: OrbitingBodySource,
+  bodyKind: "planet" | "moon",
+  parentId?: string,
+): NativeBodyState {
+  const rel = orbitStateAt(body.orbit, ctx.tObsSec, ctx.keplerOpts);
+  const parent = requireKnownParent(ctx.config, ctx.byId, bodyKind, body.id, parentId);
+  const base = bodyBase(parent);
+  const rAbs = vAdd(base.r, rel.r);
+  const vAbs = vAdd(base.v, rel.v);
+  return {
+    id: body.id,
+    kind: bodyKind,
+    r: safeBodyRadius(body),
+    m: Math.max(0, finiteOrDefault(body.m, 0)),
+    luminosity: 0,
     active: true,
-    rAbs: vScale(binary.r, wA),
-    vAbs: vScale(binary.v, wA),
-    sky: projectToSky(vScale(binary.r, wA), observerDir),
-    source: starA,
+    parentId,
+    rAbs,
+    vAbs,
+    sky: projectToSky(rAbs, ctx.observerDir),
+    source: body,
   };
-  const starBState: NativeBodyState = {
-    id: starB.id,
-    kind: "star",
-    r: starBActive ? safeBodyRadius(starB) : 0,
-    m: Math.max(0, mB),
-    luminosity: starBActive ? lumBraw : 0,
-    active: starBActive,
-    rAbs: vScale(binary.r, wB),
-    vAbs: vScale(binary.v, wB),
-    sky: projectToSky(vScale(binary.r, wB), observerDir),
-    source: starB,
-  };
-  byId.set(starAState.id, starAState);
-  byId.set(starBState.id, starBState);
-  stars.push(starAState, starBState);
+}
 
-  const requireKnownParent = (
-    bodyKind: "planet" | "moon",
-    bodyId: string,
-    parentId?: string,
-  ): NativeBodyState | undefined => {
-    if (!parentId) {
-      if (bodyKind === "moon") {
-        if (config.runtime?.executionMode === "scientific-browser") {
-          throw createScientificBrowserRuntimeError({
-            stage: "native-inputs",
-            code: "SCB_INVALID_NATIVE_INPUTS",
-            summary: "native snapshot inputs are invalid for scientific-browser execution",
-            details: [`moon "${bodyId}" is missing a parent planet reference`],
-            context: {
-              executionMode: config.runtime?.executionMode ?? "interactive",
-              runtimeMode: config.runtime?.mode ?? "realtime",
-            },
-          });
-        }
-        throw new Error(`buildNativeSnapshot: moon "${bodyId}" is missing a parent planet reference.`);
-      }
-      return undefined;
-    }
-    const parent = byId.get(parentId);
-    if (!parent) {
-      if (config.runtime?.executionMode === "scientific-browser") {
-        throw createScientificBrowserRuntimeError({
-          stage: "native-inputs",
-          code: "SCB_INVALID_NATIVE_INPUTS",
-          summary: "native snapshot inputs are invalid for scientific-browser execution",
-          details: [`unknown parent "${parentId}" for ${bodyKind} "${bodyId}"`],
-          context: {
-            executionMode: config.runtime?.executionMode ?? "interactive",
-            runtimeMode: config.runtime?.mode ?? "realtime",
-          },
-        });
-      }
-      throw new Error(`buildNativeSnapshot: unknown parent "${parentId}" for ${bodyKind} "${bodyId}".`);
-    }
-    return parent;
-  };
+function planetParentId(ctx: SnapshotBuildContext, p: PlanetBodyV4): string | undefined {
+  const parentFromHierarchy = ctx.hmap.get(p.id);
+  return p.parentSystem === "circumbinary"
+    ? undefined
+    : (p.parentStarId ?? parentFromHierarchy ?? ctx.config.bodies.stars[0].id);
+}
 
-  for (const p of config.bodies.planets) {
-    const rel = orbitStateAt(p.orbit, tObsSec, keplerOpts);
-    const parentFromHierarchy = hmap.get(p.id);
-    const parentId =
-      p.parentSystem === "circumbinary" ? undefined : (p.parentStarId ?? parentFromHierarchy ?? starA.id);
-    const parent = requireKnownParent("planet", p.id, parentId);
-    const rBase = parent ? parent.rAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
-    const vBase = parent ? parent.vAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
-    const rAbs = vAdd(rBase, rel.r);
-    const vAbs = vAdd(vBase, rel.v);
-    const st: NativeBodyState = {
-      id: p.id,
-      kind: "planet",
-      r: safeBodyRadius(p),
-      m: Math.max(0, finiteOrDefault(p.m, 0)),
-      luminosity: 0,
-      active: true,
-      parentId,
-      rAbs,
-      vAbs,
-      sky: projectToSky(rAbs, observerDir),
-      source: p,
-    };
-    byId.set(st.id, st);
-    planets.push(st);
-  }
+function addPlanetState(ctx: SnapshotBuildContext, p: PlanetBodyV4): void {
+  addState(ctx.planets, ctx.byId, orbitingBodyState(ctx, p, "planet", planetParentId(ctx, p)));
+}
 
-  for (const m of config.bodies.moons) {
-    const rel = orbitStateAt(m.orbit, tObsSec, keplerOpts);
-    const parentFromHierarchy = hmap.get(m.id);
-    const parentId = m.parentPlanetId ?? parentFromHierarchy;
-    const parent = requireKnownParent("moon", m.id, parentId);
-    const rBase = parent ? parent.rAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
-    const vBase = parent ? parent.vAbs : ({ x: 0, y: 0, z: 0 } as Vec3);
-    const rAbs = vAdd(rBase, rel.r);
-    const vAbs = vAdd(vBase, rel.v);
-    const st: NativeBodyState = {
-      id: m.id,
-      kind: "moon",
-      r: safeBodyRadius(m),
-      m: Math.max(0, finiteOrDefault(m.m, 0)),
-      luminosity: 0,
-      active: true,
-      parentId,
-      rAbs,
-      vAbs,
-      sky: projectToSky(rAbs, observerDir),
-      source: m,
-    };
-    byId.set(st.id, st);
-    moons.push(st);
-  }
+function addMoonState(ctx: SnapshotBuildContext, m: MoonBodyV4): void {
+  const parentId = m.parentPlanetId ?? ctx.hmap.get(m.id);
+  addState(ctx.moons, ctx.byId, orbitingBodyState(ctx, m, "moon", parentId));
+}
+
+function buildSnapshotResult(ctx: SnapshotBuildContext): NativeSnapshot {
+  const { observerDir, stars, planets, moons, byId } = ctx;
 
   return {
     observerDir,
@@ -258,4 +335,12 @@ export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number)
     moons,
     byId,
   };
+}
+
+export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number): NativeSnapshot {
+  const ctx = createSnapshotContext(config, tObsSec);
+  addBinaryStarStates(ctx);
+  ctx.config.bodies.planets.forEach((planet) => addPlanetState(ctx, planet));
+  ctx.config.bodies.moons.forEach((moon) => addMoonState(ctx, moon));
+  return buildSnapshotResult(ctx);
 }

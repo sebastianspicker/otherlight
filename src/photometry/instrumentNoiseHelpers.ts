@@ -9,14 +9,24 @@ import {
 import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoise";
 
 type OneOverFCfg = NonNullable<NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"]>;
+type OneOverFConfig = NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"];
+type ObserverConfig = NonNullable<InstrumentNoiseSystematicsParams["observer"]>;
+type DataGapsConfig = NonNullable<ObserverConfig["dataGaps"]>;
+type TrendConfig = NonNullable<InstrumentNoiseSystematicsParams["trends"]>;
+type AtmosphereConfig = NonNullable<NonNullable<InstrumentNoiseSystematicsParams["observer"]>["atmosphere"]>;
+type ElectronScale = {
+  throughput: number;
+  ePerFluxPerSec: number;
+  exposureSec: number;
+};
 
-function makeOneOverFSignature(cfg: OneOverFCfg): string {
+const makeOneOverFSignature = (cfg: OneOverFCfg): string => {
   const n = Math.max(1, Math.floor(toFiniteNumber(cfg.nComponents, 6)));
   const tauMin = toFiniteNumber(cfg.tauMinSec, 10);
   const tauMax = toFiniteNumber(cfg.tauMaxSec, 10_000);
   const sigma = toFiniteNumber(cfg.sigmaFlux, 0);
   return `${n}|${tauMin}|${tauMax}|${sigma}`;
-}
+};
 
 export function ensureOneOverFBank(state: InstrumentNoiseState, oneF: OneOverFCfg): void {
   const sig = makeOneOverFSignature(oneF);
@@ -79,15 +89,20 @@ export function isGapSample(cfg: InstrumentNoiseSystematicsParams["observer"], t
   const gaps = cfg.dataGaps;
   if (!gaps?.enabled) return false;
 
-  if (Array.isArray(gaps.windowsSec)) {
-    for (const window of gaps.windowsSec) {
-      const start = toFiniteNumber(window.startSec, Number.NaN);
-      const end = toFiniteNumber(window.endSec, Number.NaN);
-      if (Number.isFinite(start) && Number.isFinite(end) && tSec >= start && tSec <= end) return true;
-    }
-  }
+  if (isInConfiguredGapWindow(gaps.windowsSec, tSec)) return true;
+  return isInPeriodicGap(gaps.periodic, tSec);
+}
 
-  const periodic = gaps.periodic;
+const isInConfiguredGapWindow = (windowsSec: DataGapsConfig["windowsSec"], tSec: number): boolean => {
+  if (!Array.isArray(windowsSec)) return false;
+  return windowsSec.some((window) => {
+    const start = toFiniteNumber(window.startSec, Number.NaN);
+    const end = toFiniteNumber(window.endSec, Number.NaN);
+    return Number.isFinite(start) && Number.isFinite(end) && tSec >= start && tSec <= end;
+  });
+};
+
+const isInPeriodicGap = (periodic: DataGapsConfig["periodic"], tSec: number): boolean => {
   if (!periodic?.enabled) return false;
   const periodSec = toFiniteNumber(periodic.periodSec, Number.NaN);
   const gapDurationSec = Math.max(0, toFiniteNumber(periodic.gapDurationSec, 0));
@@ -95,7 +110,7 @@ export function isGapSample(cfg: InstrumentNoiseSystematicsParams["observer"], t
   const phaseSec = toFiniteNumber(periodic.phaseSec, 0);
   const phase = (((tSec - phaseSec) % periodSec) + periodSec) % periodSec;
   return phase <= gapDurationSec;
-}
+};
 
 export function applyDetrend(
   flux: number,
@@ -111,23 +126,37 @@ export function applyDetrend(
   const maxHistorySamples = Math.max(minSamples, Math.floor(toFiniteNumber(detrend.maxHistorySamples, 256)));
   const preserveBaseline = detrend.preserveBaseline !== false;
 
-  const history = [...(state.detrendHistory ?? [])].filter(
-    (sample) =>
-      Number.isFinite(sample.tSec) && Number.isFinite(sample.flux) && tSec - sample.tSec <= windowSec,
-  );
-  history.push({ tSec, flux });
-  while (history.length > maxHistorySamples) history.shift();
-  state.detrendHistory = history;
+  const history = updateDetrendHistory(state, { tSec, flux, windowSec, maxHistorySamples });
 
   if (history.length < minSamples) return flux;
+  const baseline =
+    detrend.mode === "running-mean" ? runningMeanFlux(history) : linearDetrendBaseline(history, tSec);
+  return preserveBaseline ? flux - baseline + 1 : flux - baseline;
+}
 
-  if (detrend.mode === "running-mean") {
-    const baseline = history.reduce((sum, sample) => sum + sample.flux, 0) / history.length;
-    return preserveBaseline ? flux - baseline + 1 : flux - baseline;
-  }
+const updateDetrendHistory = (
+  state: InstrumentNoiseState,
+  args: { tSec: number; flux: number; windowSec: number; maxHistorySamples: number },
+): Array<{ tSec: number; flux: number }> => {
+  const history = [...(state.detrendHistory ?? [])].filter(
+    (sample) =>
+      Number.isFinite(sample.tSec) &&
+      Number.isFinite(sample.flux) &&
+      args.tSec - sample.tSec <= args.windowSec,
+  );
+  history.push({ tSec: args.tSec, flux: args.flux });
+  while (history.length > args.maxHistorySamples) history.shift();
+  state.detrendHistory = history;
+  return history;
+};
 
+const runningMeanFlux = (history: Array<{ tSec: number; flux: number }>): number => {
+  return history.reduce((sum, sample) => sum + sample.flux, 0) / history.length;
+};
+
+const linearDetrendBaseline = (history: Array<{ tSec: number; flux: number }>, tSec: number): number => {
   const meanT = history.reduce((sum, sample) => sum + sample.tSec, 0) / history.length;
-  const meanF = history.reduce((sum, sample) => sum + sample.flux, 0) / history.length;
+  const meanF = runningMeanFlux(history);
   let cov = 0;
   let varT = 0;
   for (const sample of history) {
@@ -136,9 +165,8 @@ export function applyDetrend(
     varT += dt * dt;
   }
   const slope = varT > 0 ? cov / varT : 0;
-  const baseline = meanF + slope * (tSec - meanT);
-  return preserveBaseline ? flux - baseline + 1 : flux - baseline;
-}
+  return meanF + slope * (tSec - meanT);
+};
 
 /**
  * Computes the additive deterministic systematics term (roll, temperature, intra-pixel,
@@ -152,34 +180,68 @@ export function applyDeterministicSystematics(
   dt: number,
 ): number {
   if (!trends?.enabled) return 0;
-  let sysFluxAdd = 0;
 
-  const roll = trends.roll;
+  return (
+    rollTrendFlux(trends.roll, t) +
+    temperatureTrendFlux(state, trends.temperature, t, dt) +
+    intraPixelTrendFlux(trends.intraPixel, t) +
+    driftFamilyTrendFlux(trends.driftFamilies, t)
+  );
+}
+
+const rollTrendFlux = (roll: TrendConfig["roll"], t: number): number => {
   if (roll?.enabled) {
     const amp = toFiniteNumber(roll.ampFlux, 0);
     const P = toFiniteNumber(roll.periodSec, NaN);
     const phi0 = toFiniteNumber(roll.phase0, 0);
     if (Number.isFinite(P) && P > 0 && Number.isFinite(amp) && amp !== 0) {
       const phi = (2 * Math.PI * t) / P + phi0;
-      sysFluxAdd += amp * Math.sin(phi);
+      return amp * Math.sin(phi);
     }
   }
+  return 0;
+};
 
-  const temp = trends.temperature;
-  if (temp?.enabled) {
-    const slope = toFiniteNumber(temp.linearSlopeFluxPerSec, 0);
-    if (Number.isFinite(slope) && slope !== 0) sysFluxAdd += slope * t;
-    const rwSigma = Math.max(0, toFiniteNumber(temp.randomWalkSigmaFluxPerSqrtSec, 0));
-    if (rwSigma > 0 && dt > 0) {
-      const next = randomWalkStep(state.rng, state.tempRW ?? 0, dt, rwSigma);
-      state.tempRW = Number.isFinite(next) ? next : (state.tempRW ?? 0);
-    } else if (rwSigma > 0 && dt === 0 && state.tempRW === undefined) {
-      state.tempRW = 0;
-    }
-    sysFluxAdd += state.tempRW ?? 0;
+const temperatureTrendFlux = (
+  state: InstrumentNoiseState,
+  temp: TrendConfig["temperature"],
+  t: number,
+  dt: number,
+): number => {
+  if (!temp?.enabled) return 0;
+  advanceTemperatureRandomWalk(state, temp, dt);
+  return linearTemperatureTrendFlux(temp, t) + (state.tempRW ?? 0);
+};
+
+const linearTemperatureTrendFlux = (temp: TrendConfig["temperature"], t: number): number => {
+  const slope = toFiniteNumber(temp?.linearSlopeFluxPerSec, 0);
+  return Number.isFinite(slope) && slope !== 0 ? slope * t : 0;
+};
+
+const advanceTemperatureRandomWalk = (
+  state: InstrumentNoiseState,
+  temp: TrendConfig["temperature"],
+  dt: number,
+): void => {
+  const rwSigma = Math.max(0, toFiniteNumber(temp?.randomWalkSigmaFluxPerSqrtSec, 0));
+  if (rwSigma <= 0) return;
+  if (dt > 0) {
+    stepTemperatureRandomWalk(state, dt, rwSigma);
+    return;
   }
+  initializeTemperatureRandomWalkIfNeeded(state, dt);
+};
 
-  const ip = trends.intraPixel;
+const stepTemperatureRandomWalk = (state: InstrumentNoiseState, dt: number, rwSigma: number): void => {
+  const next = randomWalkStep(state.rng, state.tempRW ?? 0, dt, rwSigma);
+  state.tempRW = Number.isFinite(next) ? next : (state.tempRW ?? 0);
+};
+
+const initializeTemperatureRandomWalkIfNeeded = (state: InstrumentNoiseState, dt: number): void => {
+  if (dt === 0 && state.tempRW === undefined) state.tempRW = 0;
+};
+
+const intraPixelTrendFlux = (ip: TrendConfig["intraPixel"], t: number): number => {
   if (ip?.enabled) {
     const amp = toFiniteNumber(ip.ampFlux, 0);
     const ax = toFiniteNumber(ip.ax, 0);
@@ -190,27 +252,36 @@ export function applyDeterministicSystematics(
     if (Number.isFinite(amp) && amp !== 0 && Number.isFinite(Px) && Px > 0 && Number.isFinite(Py) && Py > 0) {
       const x = ax * Math.sin((2 * Math.PI * t) / Px);
       const y = ay * Math.sin((2 * Math.PI * t) / Py + phaseY);
-      sysFluxAdd += amp * 0.5 * Math.cos(2 * Math.PI * x) * Math.cos(2 * Math.PI * y);
+      return amp * 0.5 * Math.cos(2 * Math.PI * x) * Math.cos(2 * Math.PI * y);
     }
   }
+  return 0;
+};
 
-  const drift = trends.driftFamilies;
-  if (drift?.enabled) {
-    const amps = Array.isArray(drift.amplitudesFlux) ? drift.amplitudesFlux : [];
-    const periods = Array.isArray(drift.periodsSec) ? drift.periodsSec : [];
-    const phases = Array.isArray(drift.phasesRad) ? drift.phasesRad : [];
-    const n = Math.min(amps.length, periods.length);
-    for (let i = 0; i < n; i++) {
-      const a = toFiniteNumber(amps[i], 0);
-      const p = toFiniteNumber(periods[i], NaN);
-      const ph = toFiniteNumber(phases[i], 0);
-      if (!(Number.isFinite(a) && a !== 0 && Number.isFinite(p) && p > 0)) continue;
-      sysFluxAdd += a * Math.sin((2 * Math.PI * t) / p + ph);
-    }
-  }
+const driftFamilyTrendFlux = (drift: TrendConfig["driftFamilies"], t: number): number => {
+  if (!drift?.enabled) return 0;
+  const amps = Array.isArray(drift.amplitudesFlux) ? drift.amplitudesFlux : [];
+  const periods = Array.isArray(drift.periodsSec) ? drift.periodsSec : [];
+  const phases = Array.isArray(drift.phasesRad) ? drift.phasesRad : [];
+  const n = Math.min(amps.length, periods.length);
+  let fluxAdd = 0;
+  for (let i = 0; i < n; i++) fluxAdd += driftFamilyTermFlux(amps[i], periods[i], phases[i], t);
+  return fluxAdd;
+};
 
-  return sysFluxAdd;
-}
+const driftFamilyTermFlux = (
+  amplitude: unknown,
+  periodSec: unknown,
+  phaseRad: unknown,
+  t: number,
+): number => {
+  const a = toFiniteNumber(amplitude, 0);
+  const p = toFiniteNumber(periodSec, NaN);
+  const ph = toFiniteNumber(phaseRad, 0);
+  return Number.isFinite(a) && a !== 0 && Number.isFinite(p) && p > 0
+    ? a * Math.sin((2 * Math.PI * t) / p + ph)
+    : 0;
+};
 
 /**
  * Advances correlated-noise state (AR1 + 1/f bank) by `dt` seconds and returns the
@@ -224,34 +295,45 @@ export function applyCorrelatedNoise(
 ): number {
   const sigma = Math.max(0, toFiniteNumber(correlatedNoise?.sigmaFlux, 0));
   const tau = Math.max(1e-6, toFiniteNumber(correlatedNoise?.tauSec, 100));
-  let corrFluxAdd = 0;
+  const ar1Flux = stepAr1Noise(state, sigma, tau, dt);
+  return ar1Flux + oneOverFNoise(state, correlatedNoise?.oneOverF, dt);
+}
 
+const stepAr1Noise = (state: InstrumentNoiseState, sigma: number, tau: number, dt: number): number => {
   state.ar1 = state.ar1 ?? { x: 0 };
   if (sigma > 0 && dt > 0) {
     const xNew = ouStep(state.rng, state.ar1.x, dt, tau, sigma);
     state.ar1.x = Number.isFinite(xNew) ? xNew : state.ar1.x;
   }
-  if (sigma > 0) corrFluxAdd += state.ar1.x;
+  return sigma > 0 ? state.ar1.x : 0;
+};
 
-  const oneF = correlatedNoise?.oneOverF;
+const oneOverFNoise = (state: InstrumentNoiseState, oneF: OneOverFConfig, dt: number): number => {
   if (oneF?.enabled) {
     ensureOneOverFBank(state, oneF);
-    if (state.ar1Bank && dt > 0) {
-      for (const comp of state.ar1Bank) {
-        const cx = ouStep(state.rng, comp.x, dt, comp.tau, comp.weight);
-        comp.x = Number.isFinite(cx) ? cx : comp.x;
-        corrFluxAdd += comp.x;
-      }
-    } else if (state.ar1Bank) {
-      for (const comp of state.ar1Bank) corrFluxAdd += comp.x;
-    }
+    return sumOneOverFNoise(state, dt);
   } else {
     state.ar1Bank = undefined;
     state.oneOverFSignature = undefined;
   }
 
-  return corrFluxAdd;
-}
+  return 0;
+};
+
+const sumOneOverFNoise = (state: InstrumentNoiseState, dt: number): number => {
+  let fluxAdd = 0;
+  if (!state.ar1Bank) return fluxAdd;
+
+  for (const comp of state.ar1Bank) {
+    if (dt > 0) {
+      const cx = ouStep(state.rng, comp.x, dt, comp.tau, comp.weight);
+      comp.x = Number.isFinite(cx) ? cx : comp.x;
+    }
+    fluxAdd += comp.x;
+  }
+
+  return fluxAdd;
+};
 
 /**
  * Applies detector flux-domain effects (PRNU, jitter) and observer-atmosphere transmission
@@ -265,84 +347,129 @@ export function applyFluxDomainEffects(
   t: number,
   dt: number,
 ): number {
-  let flux = fluxPreNoise;
-  const det = cfg.detector;
-  if (det?.enabled) {
-    const prnuDraw = normalSample(state.rng, 0, 1);
-    const jitterDrawX = normalSample(state.rng, 0, 1);
-    const jitterDrawY = normalSample(state.rng, 0, 1);
-    const prnuSigma = Math.max(0, toFiniteNumber(det.prnuSigma, 0));
-    if (prnuSigma > 0) flux *= Math.max(0, 1 + prnuDraw * prnuSigma);
-    const jitterSigmaPx = Math.max(0, toFiniteNumber(det.jitterSigmaPx, 0));
-    if (jitterSigmaPx > 0) {
-      const jx = jitterDrawX * jitterSigmaPx;
-      const jy = jitterDrawY * jitterSigmaPx;
-      flux *= Math.max(0, 1 - 0.02 * (jx * jx + jy * jy));
-    }
-  }
+  const flux = applyDetectorFluxEffects(state, cfg.detector, fluxPreNoise);
 
   const observer = cfg.observer;
   const atmosphere = observer?.atmosphere;
   const airmass = currentAirmass(atmosphere, t);
-  let transmission = 1;
-
-  if (observer?.enabled && atmosphere?.enabled) {
-    const extinctionCoeff = Math.max(0, toFiniteNumber(atmosphere.airmass?.extinctionCoeff, 0));
-    if (extinctionCoeff > 0) transmission *= Math.exp(-extinctionCoeff * airmass);
-
-    const clouds = atmosphere.clouds;
-    if (clouds?.enabled) {
-      const meanTau = Math.max(0, toFiniteNumber(clouds.meanOpticalDepth, 0));
-      const sigmaTau = Math.max(0, toFiniteNumber(clouds.sigmaOpticalDepth, 0));
-      const tauSec = Math.max(1e-6, toFiniteNumber(clouds.tauSec, 900));
-      if (sigmaTau > 0 && dt > 0)
-        state.observerCloudTau = ouStep(state.rng, state.observerCloudTau ?? 0, dt, tauSec, sigmaTau);
-      transmission *= Math.exp(-Math.max(0, meanTau + (state.observerCloudTau ?? 0)) * airmass);
-    }
-
-    const tellurics = atmosphere.tellurics;
-    if (tellurics?.enabled) {
-      const meanTau = Math.max(0, toFiniteNumber(tellurics.meanOpticalDepth, 0));
-      const sigmaTau = Math.max(0, toFiniteNumber(tellurics.sigmaOpticalDepth, 0));
-      const tauSec = Math.max(1e-6, toFiniteNumber(tellurics.tauSec, 1200));
-      if (sigmaTau > 0 && dt > 0)
-        state.observerTelluricTau = ouStep(state.rng, state.observerTelluricTau ?? 0, dt, tauSec, sigmaTau);
-      const airmassCoupling = Math.max(0, toFiniteNumber(tellurics.airmassCoupling, 0));
-      const tau = Math.max(
-        0,
-        meanTau + (state.observerTelluricTau ?? 0) + airmassCoupling * Math.max(0, airmass - 1),
-      );
-      transmission *= Math.exp(-tau);
-    }
-
-    const seeing = atmosphere.seeing;
-    if (seeing?.enabled) {
-      const meanLoss = Math.max(0, toFiniteNumber(seeing.meanLoss, 0));
-      const sigmaLoss = Math.max(0, toFiniteNumber(seeing.sigmaLoss, 0));
-      const tauSec = Math.max(1e-6, toFiniteNumber(seeing.tauSec, 600));
-      if (sigmaLoss > 0 && dt > 0)
-        state.observerSeeingLoss = ouStep(state.rng, state.observerSeeingLoss ?? 0, dt, tauSec, sigmaLoss);
-      const airmassExponent = Math.max(0, toFiniteNumber(seeing.airmassExponent, 0));
-      const maxLoss = clamp(toFiniteNumber(seeing.maxLoss, 0.9), 0, 0.99);
-      const lossRaw = (meanLoss + (state.observerSeeingLoss ?? 0)) * Math.max(1, airmass ** airmassExponent);
-      transmission *= Math.max(0, 1 - clamp(lossRaw, 0, maxLoss));
-    }
-
-    const scintillation = atmosphere.scintillation;
-    if (scintillation?.enabled) {
-      const sigmaFlux = Math.max(0, toFiniteNumber(scintillation.sigmaFlux, 0));
-      const airmassExponent = Math.max(0, toFiniteNumber(scintillation.airmassExponent, 1.5));
-      const exposureExponent = Math.max(0, toFiniteNumber(scintillation.exposureExponent, 0.5));
-      const exposureScale = Math.max(1e-6, toFiniteNonNeg(cfg.exposureSec, 1));
-      const sigma =
-        (sigmaFlux * Math.max(1, airmass ** airmassExponent)) /
-        Math.max(1, exposureScale ** exposureExponent);
-      transmission *= Math.max(0, 1 + normalSample(state.rng, 0, sigma));
-    }
-  }
+  const transmission =
+    observer?.enabled && atmosphere?.enabled
+      ? observerAtmosphereTransmission(state, cfg, atmosphere, airmass, dt)
+      : 1;
 
   return flux * transmission;
 }
+
+const applyDetectorFluxEffects = (
+  state: InstrumentNoiseState,
+  det: InstrumentNoiseSystematicsParams["detector"],
+  fluxPreNoise: number,
+): number => {
+  if (!det?.enabled) return fluxPreNoise;
+
+  let flux = fluxPreNoise;
+  const prnuDraw = normalSample(state.rng, 0, 1);
+  const jitterDrawX = normalSample(state.rng, 0, 1);
+  const jitterDrawY = normalSample(state.rng, 0, 1);
+  const prnuSigma = Math.max(0, toFiniteNumber(det.prnuSigma, 0));
+  if (prnuSigma > 0) flux *= Math.max(0, 1 + prnuDraw * prnuSigma);
+  const jitterSigmaPx = Math.max(0, toFiniteNumber(det.jitterSigmaPx, 0));
+  if (jitterSigmaPx > 0) {
+    const jx = jitterDrawX * jitterSigmaPx;
+    const jy = jitterDrawY * jitterSigmaPx;
+    flux *= Math.max(0, 1 - 0.02 * (jx * jx + jy * jy));
+  }
+  return flux;
+};
+
+const observerAtmosphereTransmission = (
+  state: InstrumentNoiseState,
+  cfg: InstrumentNoiseSystematicsParams,
+  atmosphere: AtmosphereConfig,
+  airmass: number,
+  dt: number,
+): number => {
+  let transmission = extinctionTransmission(atmosphere, airmass);
+  transmission *= cloudTransmission(state, atmosphere.clouds, airmass, dt);
+  transmission *= telluricTransmission(state, atmosphere.tellurics, airmass, dt);
+  transmission *= seeingTransmission(state, atmosphere.seeing, airmass, dt);
+  transmission *= scintillationTransmission(state, atmosphere.scintillation, cfg.exposureSec, airmass);
+  return transmission;
+};
+
+const extinctionTransmission = (atmosphere: AtmosphereConfig, airmass: number): number => {
+  const extinctionCoeff = Math.max(0, toFiniteNumber(atmosphere.airmass?.extinctionCoeff, 0));
+  return extinctionCoeff > 0 ? Math.exp(-extinctionCoeff * airmass) : 1;
+};
+
+const cloudTransmission = (
+  state: InstrumentNoiseState,
+  clouds: AtmosphereConfig["clouds"],
+  airmass: number,
+  dt: number,
+): number => {
+  if (!clouds?.enabled) return 1;
+  const meanTau = Math.max(0, toFiniteNumber(clouds.meanOpticalDepth, 0));
+  const sigmaTau = Math.max(0, toFiniteNumber(clouds.sigmaOpticalDepth, 0));
+  const tauSec = Math.max(1e-6, toFiniteNumber(clouds.tauSec, 900));
+  if (sigmaTau > 0 && dt > 0)
+    state.observerCloudTau = ouStep(state.rng, state.observerCloudTau ?? 0, dt, tauSec, sigmaTau);
+  return Math.exp(-Math.max(0, meanTau + (state.observerCloudTau ?? 0)) * airmass);
+};
+
+const telluricTransmission = (
+  state: InstrumentNoiseState,
+  tellurics: AtmosphereConfig["tellurics"],
+  airmass: number,
+  dt: number,
+): number => {
+  if (!tellurics?.enabled) return 1;
+  const meanTau = Math.max(0, toFiniteNumber(tellurics.meanOpticalDepth, 0));
+  const sigmaTau = Math.max(0, toFiniteNumber(tellurics.sigmaOpticalDepth, 0));
+  const tauSec = Math.max(1e-6, toFiniteNumber(tellurics.tauSec, 1200));
+  if (sigmaTau > 0 && dt > 0)
+    state.observerTelluricTau = ouStep(state.rng, state.observerTelluricTau ?? 0, dt, tauSec, sigmaTau);
+  const airmassCoupling = Math.max(0, toFiniteNumber(tellurics.airmassCoupling, 0));
+  const tau = Math.max(
+    0,
+    meanTau + (state.observerTelluricTau ?? 0) + airmassCoupling * Math.max(0, airmass - 1),
+  );
+  return Math.exp(-tau);
+};
+
+const seeingTransmission = (
+  state: InstrumentNoiseState,
+  seeing: AtmosphereConfig["seeing"],
+  airmass: number,
+  dt: number,
+): number => {
+  if (!seeing?.enabled) return 1;
+  const meanLoss = Math.max(0, toFiniteNumber(seeing.meanLoss, 0));
+  const sigmaLoss = Math.max(0, toFiniteNumber(seeing.sigmaLoss, 0));
+  const tauSec = Math.max(1e-6, toFiniteNumber(seeing.tauSec, 600));
+  if (sigmaLoss > 0 && dt > 0)
+    state.observerSeeingLoss = ouStep(state.rng, state.observerSeeingLoss ?? 0, dt, tauSec, sigmaLoss);
+  const airmassExponent = Math.max(0, toFiniteNumber(seeing.airmassExponent, 0));
+  const maxLoss = clamp(toFiniteNumber(seeing.maxLoss, 0.9), 0, 0.99);
+  const lossRaw = (meanLoss + (state.observerSeeingLoss ?? 0)) * Math.max(1, airmass ** airmassExponent);
+  return Math.max(0, 1 - clamp(lossRaw, 0, maxLoss));
+};
+
+const scintillationTransmission = (
+  state: InstrumentNoiseState,
+  scintillation: AtmosphereConfig["scintillation"],
+  exposureSec: number | undefined,
+  airmass: number,
+): number => {
+  if (!scintillation?.enabled) return 1;
+  const sigmaFlux = Math.max(0, toFiniteNumber(scintillation.sigmaFlux, 0));
+  const airmassExponent = Math.max(0, toFiniteNumber(scintillation.airmassExponent, 1.5));
+  const exposureExponent = Math.max(0, toFiniteNumber(scintillation.exposureExponent, 0.5));
+  const exposureScale = Math.max(1e-6, toFiniteNonNeg(exposureSec, 1));
+  const sigma =
+    (sigmaFlux * Math.max(1, airmass ** airmassExponent)) / Math.max(1, exposureScale ** exposureExponent);
+  return Math.max(0, 1 + normalSample(state.rng, 0, sigma));
+};
 
 /**
  * Converts `fluxPreNoise` to electrons, applies photon noise, read noise, and post-electron
@@ -354,43 +481,76 @@ export function applyElectronNoise(
   cfg: InstrumentNoiseSystematicsParams,
   fluxPreNoise: number,
 ): number {
-  const throughput = toFiniteNonNeg(cfg.throughput, 1);
-  const ePerFluxPerSec = Math.max(0, toFiniteNumber(cfg.electronsPerUnitFlux, 1e6));
-  const exposureSec = toFiniteNonNeg(cfg.exposureSec, 0);
-  if (!(exposureSec > 0 && ePerFluxPerSec > 0 && throughput > 0)) return fluxPreNoise;
+  const scale = resolveElectronScale(cfg);
+  if (!scale) return fluxPreNoise;
 
   const observer = cfg.observer;
   const atmosphere = observer?.enabled ? observer.atmosphere : undefined;
   const skyCfg = atmosphere?.enabled ? atmosphere.skyBackground : undefined;
-  const meanElectrons = Math.max(0, fluxPreNoise) * throughput * ePerFluxPerSec * exposureSec;
-  const meanSkyElectrons =
-    skyCfg?.enabled && exposureSec > 0
-      ? Math.max(0, toFiniteNumber(skyCfg.electronsPerSec, 0)) * exposureSec
-      : 0;
+  const meanElectrons =
+    Math.max(0, fluxPreNoise) * scale.throughput * scale.ePerFluxPerSec * scale.exposureSec;
+  const meanSkyElectrons = meanSkyBackgroundElectrons(skyCfg, scale.exposureSec);
   const skyResidualFraction = clamp(toFiniteNumber(skyCfg?.subtractionResidualFraction, 0), 0, 1);
 
-  let electrons = meanElectrons;
-  if (cfg.photonNoise?.enabled || meanSkyElectrons > 0) {
-    const sourceElectrons = sampleElectrons(meanElectrons, cfg.photonNoise, state);
-    const skyElectrons = sampleElectrons(meanSkyElectrons, cfg.photonNoise, state);
-    electrons = sourceElectrons + (skyElectrons - meanSkyElectrons) + meanSkyElectrons * skyResidualFraction;
-  }
+  let electrons = applyPhotonAndSkyNoise(state, cfg, meanElectrons, meanSkyElectrons, skyResidualFraction);
+  electrons = applyReadNoise(state, cfg.readNoise, electrons);
+  electrons = applyDetectorElectronEffects(cfg.detector, electrons);
 
-  if (cfg.readNoise?.enabled) {
-    const s = toFiniteNonNeg(cfg.readNoise.sigmaElectrons, 0);
-    if (s > 0) electrons += normalSample(state.rng, 0, s);
-  }
-
-  const det = cfg.detector;
-  if (det?.enabled) {
-    const nonlin = Math.max(0, toFiniteNumber(det.nonlinearityCoeff, 0));
-    if (nonlin > 0) electrons = Math.max(0, electrons * (1 - nonlin * Math.max(0, electrons)));
-    const cti = Math.max(0, toFiniteNumber(det.ctiTrailCoeff, 0));
-    if (cti > 0) electrons = Math.max(0, electrons - cti * Math.sqrt(Math.max(0, electrons)));
-    const sat = toFiniteNumber(det.saturationElectrons, Number.NaN);
-    if (Number.isFinite(sat) && sat > 0) electrons = Math.min(electrons, sat);
-  }
-
-  const denom = throughput * ePerFluxPerSec * exposureSec;
+  const denom = scale.throughput * scale.ePerFluxPerSec * scale.exposureSec;
   return denom > 0 ? electrons / denom : fluxPreNoise;
 }
+
+const resolveElectronScale = (cfg: InstrumentNoiseSystematicsParams): ElectronScale | undefined => {
+  const throughput = toFiniteNonNeg(cfg.throughput, 1);
+  const ePerFluxPerSec = Math.max(0, toFiniteNumber(cfg.electronsPerUnitFlux, 1e6));
+  const exposureSec = toFiniteNonNeg(cfg.exposureSec, 0);
+  if (!(exposureSec > 0 && ePerFluxPerSec > 0 && throughput > 0)) return undefined;
+  return { throughput, ePerFluxPerSec, exposureSec };
+};
+
+const meanSkyBackgroundElectrons = (
+  skyCfg: AtmosphereConfig["skyBackground"] | undefined,
+  exposureSec: number,
+): number => {
+  return skyCfg?.enabled && exposureSec > 0
+    ? Math.max(0, toFiniteNumber(skyCfg.electronsPerSec, 0)) * exposureSec
+    : 0;
+};
+
+const applyPhotonAndSkyNoise = (
+  state: InstrumentNoiseState,
+  cfg: InstrumentNoiseSystematicsParams,
+  meanElectrons: number,
+  meanSkyElectrons: number,
+  skyResidualFraction: number,
+): number => {
+  if (!(cfg.photonNoise?.enabled || meanSkyElectrons > 0)) return meanElectrons;
+  const sourceElectrons = sampleElectrons(meanElectrons, cfg.photonNoise, state);
+  const skyElectrons = sampleElectrons(meanSkyElectrons, cfg.photonNoise, state);
+  return sourceElectrons + (skyElectrons - meanSkyElectrons) + meanSkyElectrons * skyResidualFraction;
+};
+
+const applyReadNoise = (
+  state: InstrumentNoiseState,
+  readNoise: InstrumentNoiseSystematicsParams["readNoise"],
+  electrons: number,
+): number => {
+  if (!readNoise?.enabled) return electrons;
+  const s = toFiniteNonNeg(readNoise.sigmaElectrons, 0);
+  return s > 0 ? electrons + normalSample(state.rng, 0, s) : electrons;
+};
+
+const applyDetectorElectronEffects = (
+  det: InstrumentNoiseSystematicsParams["detector"],
+  initialElectrons: number,
+): number => {
+  if (!det?.enabled) return initialElectrons;
+
+  let electrons = initialElectrons;
+  const nonlin = Math.max(0, toFiniteNumber(det.nonlinearityCoeff, 0));
+  if (nonlin > 0) electrons = Math.max(0, electrons * (1 - nonlin * Math.max(0, electrons)));
+  const cti = Math.max(0, toFiniteNumber(det.ctiTrailCoeff, 0));
+  if (cti > 0) electrons = Math.max(0, electrons - cti * Math.sqrt(Math.max(0, electrons)));
+  const sat = toFiniteNumber(det.saturationElectrons, Number.NaN);
+  return Number.isFinite(sat) && sat > 0 ? Math.min(electrons, sat) : electrons;
+};

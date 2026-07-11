@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { stellarVariabilityFlux } from "../../src/photometry/stellarVariability";
+import {
+  orbitalPhaseFromPeriod,
+  spotLifecycleWeight,
+  stellarVariabilityFlux,
+} from "../../src/photometry/stellarVariability";
 
 const orbit = {
   a: 1,
@@ -50,5 +54,12 @@ describe("stellarVariabilityFlux", () => {
     const out = stellarVariabilityFlux({ t: 2.5, orbit, model });
 
     expect(out).toBeCloseTo(1e-3 + 5e-4 * Math.SQRT1_2, 12);
+  });
+
+  it("keeps period phase and spot lifecycle helpers bounded", () => {
+    expect(orbitalPhaseFromPeriod({ t: 125, period: 100, t0: 0 })).toBeCloseTo(Math.PI / 2, 12);
+    expect(spotLifecycleWeight({ t: 0, lifetimeSec: 100 })).toBe(0);
+    expect(spotLifecycleWeight({ t: 50, lifetimeSec: 100 })).toBe(1);
+    expect(spotLifecycleWeight({ t: 0, lifetimeSec: 0 })).toBe(1);
   });
 });

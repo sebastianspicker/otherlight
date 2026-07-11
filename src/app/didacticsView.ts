@@ -30,39 +30,47 @@ type DidacticsViewRuntimeState = {
   latestComparisonText?: string;
 };
 
-function activePhase(runtime: DidacticsViewRuntimeState) {
+type HintLevel = "L1" | "L2" | "L3";
+
+type ResponseComposerState = {
+  mode: LessonResponseMode;
+  response: { primary?: string; secondary?: string };
+  showPrimary: boolean;
+  showSecondary: boolean;
+  signals: DidacticSignals | undefined;
+};
+
+type LessonSpecView = ReturnType<typeof getLessonById>;
+
+const activePhase = (runtime: DidacticsViewRuntimeState) => {
   const lesson = getLessonById(runtime.learning.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
   const phases = getLessonStepPhases(lesson, runtime.learning.stepIndex);
   return phases[Math.max(0, Math.min(runtime.learning.phaseIndex ?? 0, Math.max(phases.length - 1, 0)))];
-}
+};
 
-function currentResponseKey(runtime: DidacticsViewRuntimeState): string {
+const currentResponseKey = (runtime: DidacticsViewRuntimeState): string => {
   const lesson = getLessonById(runtime.learning.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
   const step =
     lesson.steps[Math.max(0, Math.min(runtime.learning.stepIndex, Math.max(lesson.steps.length - 1, 0)))];
   const phase = activePhase(runtime);
   return `${lesson.id}:${step.id}:${phase?.id ?? "phase-0"}`;
-}
+};
 
-function selectedHintLevel(refs: UiRefs): "L1" | "L2" | "L3" {
+const selectedHintLevel = (refs: UiRefs): HintLevel => {
   const value = refs.didHintLevelSelect?.value;
   if (value === "L1" || value === "L2" || value === "L3") return value;
   return "L1";
-}
+};
 
-function resolveHintsForLevel(signals: DidacticSignals | undefined, level: "L1" | "L2" | "L3"): string[] {
+const resolveHintsForLevel = (signals: DidacticSignals | undefined, level: HintLevel): string[] => {
   if (!signals?.hintLevels) return signals?.hints ?? [];
-  return level === "L1"
-    ? (signals.hintLevels.L1 ?? [])
-    : level === "L3"
-      ? (signals.hintLevels.L3 ?? [])
-      : (signals.hintLevels.L2 ?? []);
-}
+  return signals.hintLevels[level] ?? [];
+};
 
-function resolveLessonEventSec(
+const resolveLessonEventSec = (
   timing: StepTimingDiagnostics | undefined,
   target: LessonEventTarget | undefined,
-): number | undefined {
+): number | undefined => {
   if (!timing || !target) return undefined;
   const lookup: Record<LessonEventTarget, number | undefined> = {
     planetIngress: timing.planetIngressSec,
@@ -74,9 +82,9 @@ function resolveLessonEventSec(
   };
   const value = lookup[target];
   return Number.isFinite(value) ? value : undefined;
-}
+};
 
-function syncQuickControlFocusUi(refs: UiRefs, focusControls: LessonFocusControl[]): void {
+const syncQuickControlFocusUi = (refs: UiRefs, focusControls: LessonFocusControl[]): void => {
   const root = refs.quickControlsRootEl;
   if (!root) return;
   const focus = new Set(focusControls);
@@ -87,54 +95,90 @@ function syncQuickControlFocusUi(refs: UiRefs, focusControls: LessonFocusControl
     card.classList.toggle("quickControl--focus", focused);
     card.classList.toggle("quickControl--dimmed", focus.size > 0 && !focused);
   }
-}
+};
 
-function responseModeForPhase(signals: DidacticSignals | undefined): LessonResponseMode {
+const responseModeForPhase = (signals: DidacticSignals | undefined): LessonResponseMode => {
   return signals?.responseMode ?? "none";
-}
+};
 
-function renderResponseComposer(
+const renderResponseComposer = (
   refs: UiRefs,
   runtime: DidacticsViewRuntimeState,
   signals: DidacticSignals | undefined,
-): void {
+): void => {
+  const state = responseComposerState(runtime, signals);
+  if (refs.didResponseComposer) {
+    refs.didResponseComposer.hidden = state.mode === "none" || state.mode === "hypothesis-select";
+  }
+  renderResponseLabels(refs, state);
+  renderResponseInputs(refs, state);
+  renderResponseHelp(refs, state.mode);
+};
+
+const responseComposerState = (
+  runtime: DidacticsViewRuntimeState,
+  signals: DidacticSignals | undefined,
+): ResponseComposerState => {
   const mode = responseModeForPhase(signals);
   const response = runtime.responses[currentResponseKey(runtime)] ?? {};
   const showPrimary = mode !== "none" && mode !== "hypothesis-select";
   const showSecondary =
     (mode === "claim-reason" || mode === "explanation-notes") &&
     Boolean(signals?.responseSecondaryLabel || signals?.responseSecondaryPlaceholder);
+  return { mode, response, showPrimary, showSecondary, signals };
+};
+
+const renderResponseLabels = (refs: UiRefs, state: ResponseComposerState): void => {
   if (refs.didPrimaryResponseLabel) {
     refs.didPrimaryResponseLabel.textContent =
-      mode === "hypothesis-select"
+      state.mode === "hypothesis-select"
         ? "Use the hypothesis selector above"
-        : (signals?.responsePrimaryLabel ?? "Response");
+        : (state.signals?.responsePrimaryLabel ?? "Response");
   }
   if (refs.didSecondaryResponseLabel) {
-    refs.didSecondaryResponseLabel.textContent = signals?.responseSecondaryLabel ?? "Reason / evidence";
-    refs.didSecondaryResponseLabel.hidden = !showSecondary;
+    refs.didSecondaryResponseLabel.textContent = state.signals?.responseSecondaryLabel ?? "Reason / evidence";
+    refs.didSecondaryResponseLabel.hidden = !state.showSecondary;
   }
-  if (refs.didPrimaryResponseInput) {
-    refs.didPrimaryResponseInput.hidden = !showPrimary;
-    refs.didPrimaryResponseInput.disabled = !showPrimary;
-    refs.didPrimaryResponseInput.placeholder = signals?.responsePrimaryPlaceholder ?? "";
-    refs.didPrimaryResponseInput.value = response.primary ?? "";
-  }
-  if (refs.didSecondaryResponseInput) {
-    refs.didSecondaryResponseInput.hidden = !showSecondary;
-    refs.didSecondaryResponseInput.disabled = !showSecondary;
-    refs.didSecondaryResponseInput.placeholder = signals?.responseSecondaryPlaceholder ?? "";
-    refs.didSecondaryResponseInput.value = response.secondary ?? "";
-  }
+};
+
+const renderResponseInputs = (refs: UiRefs, state: ResponseComposerState): void => {
+  renderPrimaryResponseInput(refs, state);
+  renderSecondaryResponseInput(refs, state);
+};
+
+const renderPrimaryResponseInput = (refs: UiRefs, state: ResponseComposerState): void => {
+  const input = refs.didPrimaryResponseInput;
+  if (!input) return;
+  input.hidden = !state.showPrimary;
+  input.disabled = !state.showPrimary;
+  input.placeholder = state.signals?.responsePrimaryPlaceholder ?? "";
+  input.value = state.response.primary ?? "";
+};
+
+const renderSecondaryResponseInput = (refs: UiRefs, state: ResponseComposerState): void => {
+  const input = refs.didSecondaryResponseInput;
+  if (!input) return;
+  input.hidden = !state.showSecondary;
+  input.disabled = !state.showSecondary;
+  input.placeholder = state.signals?.responseSecondaryPlaceholder ?? "";
+  input.value = state.response.secondary ?? "";
+};
+
+const renderResponseHelp = (refs: UiRefs, mode: LessonResponseMode): void => {
   if (refs.didResponseHelp) {
-    refs.didResponseHelp.textContent =
-      mode === "hypothesis-select"
-        ? "This phase uses the Binary Lab hypothesis selector instead of a text answer."
-        : mode === "none"
-          ? "This phase is for studying the worked example or reading the current feedback."
-          : "Responses are stored in the lesson runtime and exported with the lesson report.";
+    refs.didResponseHelp.textContent = responseHelpText(mode);
   }
-}
+};
+
+const responseHelpText = (mode: LessonResponseMode): string => {
+  if (mode === "hypothesis-select") {
+    return "This phase uses the Binary Lab hypothesis selector instead of a text answer.";
+  }
+  if (mode === "none") {
+    return "This phase is for studying the worked example or reading the current feedback.";
+  }
+  return "Responses are stored in the lesson runtime and exported with the lesson report.";
+};
 
 export function renderDidacticSignalsView(refs: UiRefs, runtime: DidacticsViewRuntimeState): void {
   const signals = runtime.latestSignals;
@@ -142,225 +186,297 @@ export function renderDidacticSignalsView(refs: UiRefs, runtime: DidacticsViewRu
   const hintLevel = selectedHintLevel(refs);
   const visibleHints = resolveHintsForLevel(signals, hintLevel);
 
-  if (refs.didLessonStatus) {
-    if (!signals) {
-      refs.didLessonStatus.textContent = "Didactics disabled.";
-    } else {
-      const score = (toFiniteNumber(signals.score, 0) * 100).toFixed(0);
-      const rubric = signals.rubricV2 ? ` · rubric ${(signals.rubricV2.score * 100).toFixed(0)}%` : "";
-      const family = signals.lessonFamily ? LESSON_FAMILY_LABELS[signals.lessonFamily] : "Lesson";
-      refs.didLessonStatus.textContent = `${family} · ${signals.lessonTitle ?? "Lesson"} · ${signals.stepTitle ?? ""} · ${signals.phaseTitle ?? ""} · score ${score}%${rubric}`;
-    }
-  }
+  renderLessonHeader(refs, signals);
+  renderPhaseProgress(runtime, signals);
+  renderPhaseText(refs, signals);
+  renderInterpretation(refs, signals);
+  renderWorkedExample(refs, signals);
+  renderObservationList(refs, signals);
+  renderResponseComposer(refs, runtime, signals);
+  renderFocusList(refs, signals);
+  syncQuickControlFocusUi(refs, signals?.focusControls ?? []);
+  renderHintList(refs, visibleHints);
+  renderMisconceptionList(refs, signals);
+  renderCheckList(refs, signals);
+  renderFormulaList(refs, signals);
+  renderEventTargetSelect(refs, runtime, signals, lesson);
+  syncLessonNavigationControls(refs, runtime, lesson);
+}
 
-  if (refs.didLessonSummary) {
-    refs.didLessonSummary.textContent = signals
-      ? `${signals.lessonSummary ?? ""} Goal: ${signals.teachingGoal ?? ""}`
-      : "No active lesson summary.";
-  }
+const renderPhaseProgress = (
+  runtime: DidacticsViewRuntimeState,
+  signals: DidacticSignals | undefined,
+): void => {
+  const progress = typeof document === "undefined" ? null : document.getElementById("didProgress");
+  if (!progress) return;
+  const lesson = getLessonById(runtime.learning.lessonId) ?? getLessonById(DEFAULT_LESSON_ID)!;
+  const phases = getLessonStepPhases(lesson, runtime.learning.stepIndex);
+  const phaseIndex = Math.max(0, Math.min(runtime.learning.phaseIndex ?? 0, Math.max(phases.length - 1, 0)));
+  const stepNumber = Math.max(0, runtime.learning.stepIndex) + 1;
+  progress.textContent = signals
+    ? `Step ${stepNumber} of ${lesson.steps.length} · Phase ${phaseIndex + 1} of ${Math.max(phases.length, 1)}`
+    : "Choose a lesson to begin.";
+};
 
-  if (refs.didLessonMeta) {
-    const focusText =
-      signals?.focusControls && signals.focusControls.length > 0
-        ? signals.focusControls.map((id) => LESSON_FOCUS_CONTROL_LABELS[id] ?? id).join(" · ")
-        : "no focused quick controls";
-    const vocabText =
-      signals?.learnerVocabulary && signals.learnerVocabulary.length > 0
-        ? signals.learnerVocabulary.join(", ")
-        : "n/a";
-    refs.didLessonMeta.textContent = signals
-      ? `family ${signals.lessonFamily ? LESSON_FAMILY_LABELS[signals.lessonFamily] : "Lesson"} · surface ${signals.signalSurface ?? "physical"} · recommended UI ${signals.recommendedUiMode ?? "normal"} · focus ${focusText} · vocabulary ${vocabText}`
-      : "";
-  }
+const renderLessonHeader = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  if (refs.didLessonStatus) refs.didLessonStatus.textContent = lessonStatusText(signals);
+  if (refs.didLessonSummary) refs.didLessonSummary.textContent = lessonSummaryText(signals);
+  if (refs.didLessonMeta) refs.didLessonMeta.textContent = lessonMetaText(signals);
+};
 
+const lessonStatusText = (signals: DidacticSignals | undefined): string => {
+  if (!signals) return "Didactics disabled.";
+  const score = (toFiniteNumber(signals.score, 0) * 100).toFixed(0);
+  const rubric = signals.rubricV2 ? ` · rubric ${(signals.rubricV2.score * 100).toFixed(0)}%` : "";
+  const family = signals.lessonFamily ? LESSON_FAMILY_LABELS[signals.lessonFamily] : "Lesson";
+  return `${family} · ${signals.lessonTitle ?? "Lesson"} · ${signals.stepTitle ?? ""} · ${signals.phaseTitle ?? ""} · score ${score}%${rubric}`;
+};
+
+const lessonSummaryText = (signals: DidacticSignals | undefined): string => {
+  return signals
+    ? `${signals.lessonSummary ?? ""} Goal: ${signals.teachingGoal ?? ""}`
+    : "No active lesson summary.";
+};
+
+const lessonMetaText = (signals: DidacticSignals | undefined): string => {
+  if (!signals) return "";
+  return `family ${lessonFamilyLabel(signals)} · surface ${signals.signalSurface ?? "physical"} · recommended UI ${signals.recommendedUiMode ?? "normal"} · focus ${lessonFocusText(signals)} · vocabulary ${lessonVocabularyText(signals)}`;
+};
+
+const lessonFamilyLabel = (signals: DidacticSignals): string => {
+  return signals.lessonFamily ? LESSON_FAMILY_LABELS[signals.lessonFamily] : "Lesson";
+};
+
+const lessonFocusText = (signals: DidacticSignals): string => {
+  const focusControls = signals.focusControls ?? [];
+  if (focusControls.length === 0) return "no focused quick controls";
+  return focusControls.map((id) => LESSON_FOCUS_CONTROL_LABELS[id] ?? id).join(" · ");
+};
+
+const lessonVocabularyText = (signals: DidacticSignals): string => {
+  return signals.learnerVocabulary && signals.learnerVocabulary.length > 0
+    ? signals.learnerVocabulary.join(", ")
+    : "n/a";
+};
+
+const renderPhaseText = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
   if (refs.didPhaseTitle) {
     refs.didPhaseTitle.textContent = signals?.phaseTitle
       ? `${signals.phaseTitle} [${signals.phaseType ?? "phase"}]`
       : "No active lesson phase.";
   }
-
   if (refs.didPhasePrompt) {
     refs.didPhasePrompt.textContent = signals?.phasePrompt ?? signals?.prompt ?? "No active lesson prompt.";
   }
+};
 
-  if (refs.didInterpretation) {
-    if (!signals?.interpretation) {
-      refs.didInterpretation.textContent = "No didactic interpretation available yet.";
-    } else {
-      refs.didInterpretation.textContent = `What happened: ${signals.interpretation.headline} What it means: ${signals.interpretation.observation} Next action: ${signals.interpretation.nextAction}`;
-    }
+const renderInterpretation = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  if (!refs.didInterpretation) return;
+  if (!signals?.interpretation) {
+    refs.didInterpretation.textContent = "";
+    refs.didInterpretation.hidden = true;
+    return;
   }
+  refs.didInterpretation.hidden = false;
+  refs.didInterpretation.textContent = `What happened: ${signals.interpretation.headline} What it means: ${signals.interpretation.observation} Next action: ${signals.interpretation.nextAction}`;
+};
 
-  if (refs.didWorkedExample) {
-    refs.didWorkedExample.replaceChildren();
-    if (signals?.workedExample) {
-      const title = document.createElement("strong");
-      title.textContent = signals.workedExample.title;
-      const body = document.createElement("div");
-      body.textContent = signals.workedExample.body;
-      const takeaway = document.createElement("div");
-      takeaway.className = "help";
-      takeaway.textContent = `Takeaway: ${signals.workedExample.takeaway}`;
-      refs.didWorkedExample.append(title, body, takeaway);
-      refs.didWorkedExample.hidden = false;
-    } else {
-      refs.didWorkedExample.hidden = true;
-    }
+const renderWorkedExample = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  const container = refs.didWorkedExample;
+  if (!container) return;
+  container.replaceChildren();
+  if (!signals?.workedExample) {
+    container.hidden = true;
+    return;
   }
+  const title = document.createElement("strong");
+  title.textContent = signals.workedExample.title;
+  const body = document.createElement("div");
+  body.textContent = signals.workedExample.body;
+  const takeaway = document.createElement("div");
+  takeaway.className = "help";
+  takeaway.textContent = `Takeaway: ${signals.workedExample.takeaway}`;
+  container.append(title, body, takeaway);
+  container.hidden = false;
+};
 
-  if (refs.didObservationList) {
-    refs.didObservationList.replaceChildren();
-    const checklist = signals?.phaseChecklist ?? [];
-    if (checklist.length === 0) {
-      const row = document.createElement("div");
-      row.textContent = "No observation checklist for this phase.";
-      refs.didObservationList.appendChild(row);
-    } else {
-      for (const item of checklist) {
-        const row = document.createElement("div");
-        row.textContent = `Observe: ${item}`;
-        refs.didObservationList.appendChild(row);
-      }
-    }
+const renderObservationList = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  if (!refs.didObservationList) return;
+  const checklist = signals?.phaseChecklist ?? [];
+  refs.didObservationList.hidden = checklist.length === 0;
+  renderPlainRows(
+    refs.didObservationList,
+    checklist.map((item) => `Observe: ${item}`),
+  );
+};
+
+const renderFocusList = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  if (!refs.didFocusList) return;
+  const focusControls = signals?.focusControls ?? [];
+  refs.didFocusList.hidden = focusControls.length === 0;
+  const rows = focusControls.map(
+    (controlId) => `Focus control: ${LESSON_FOCUS_CONTROL_LABELS[controlId] ?? controlId}`,
+  );
+  renderPlainRows(refs.didFocusList, rows);
+};
+
+const renderHintList = (refs: UiRefs, visibleHints: string[]): void => {
+  if (!refs.didHintList) return;
+  refs.didHintList.hidden = visibleHints.length === 0;
+  renderPlainRows(refs.didHintList, visibleHints);
+};
+
+const renderMisconceptionList = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  if (!refs.didMisconceptionList) return;
+  const misconceptions = signals?.misconceptions ?? [];
+  refs.didMisconceptionList.hidden = misconceptions.length === 0;
+  const rows = misconceptions.map((misconception) => `[${misconception.severity}] ${misconception.message}`);
+  renderPlainRows(refs.didMisconceptionList, rows);
+};
+
+const renderPlainRows = (container: HTMLElement, rows: string[]): void => {
+  container.replaceChildren();
+  for (const text of rows) {
+    const row = document.createElement("div");
+    row.textContent = text;
+    container.appendChild(row);
   }
+};
 
-  renderResponseComposer(refs, runtime, signals);
-
-  if (refs.didFocusList) {
-    refs.didFocusList.replaceChildren();
-    const focusControls = signals?.focusControls ?? [];
-    if (focusControls.length === 0) {
-      const row = document.createElement("div");
-      row.textContent = "Lesson focus: observe the current system and use the lesson prompts.";
-      refs.didFocusList.appendChild(row);
-    } else {
-      for (const controlId of focusControls) {
-        const row = document.createElement("div");
-        row.textContent = `Focus control: ${LESSON_FOCUS_CONTROL_LABELS[controlId] ?? controlId}`;
-        refs.didFocusList.appendChild(row);
-      }
-    }
+const renderCheckList = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  const container = refs.didCheckList;
+  if (!container) return;
+  container.replaceChildren();
+  const checks = signals?.checks ?? [];
+  container.hidden = checks.length === 0;
+  for (const check of checks) {
+    appendCheckRows(container, check);
   }
+};
 
-  syncQuickControlFocusUi(refs, signals?.focusControls ?? []);
+const appendCheckRows = (
+  container: HTMLElement,
+  check: NonNullable<DidacticSignals["checks"]>[number],
+): void => {
+  const row = document.createElement("div");
+  row.className = `check-item ${check.passed ? "check-pass" : "check-fail"}`;
+  row.textContent = `${check.passed ? "On target" : "Still adjusting"} · ${check.statusText ?? check.label}`;
+  container.appendChild(row);
+  const detail = document.createElement("div");
+  detail.className = "help";
+  detail.textContent = `Observed ${check.observed ?? "n/a"} · Expected ${check.expected ?? "n/a"}`;
+  container.appendChild(detail);
+};
 
-  if (refs.didHintList) {
-    refs.didHintList.replaceChildren();
-    for (const hint of visibleHints) {
-      const row = document.createElement("div");
-      row.textContent = hint;
-      refs.didHintList.appendChild(row);
-    }
-    if (visibleHints.length === 0) {
-      const row = document.createElement("div");
-      row.textContent = "No hints for the current lesson state.";
-      refs.didHintList.appendChild(row);
-    }
+const renderFormulaList = (refs: UiRefs, signals: DidacticSignals | undefined): void => {
+  const container = refs.didFormulaList;
+  if (!container) return;
+  container.replaceChildren();
+  const formulas = signals?.formulas ?? [];
+  container.hidden = formulas.length === 0;
+  for (const formula of formulas) {
+    const row = document.createElement("div");
+    row.textContent = formulaRowText(formula);
+    container.appendChild(row);
   }
+};
 
-  if (refs.didMisconceptionList) {
-    refs.didMisconceptionList.replaceChildren();
-    const misconceptions = signals?.misconceptions ?? [];
-    if (misconceptions.length === 0) {
-      const row = document.createElement("div");
-      row.textContent = "No misconception flags.";
-      refs.didMisconceptionList.appendChild(row);
-    } else {
-      for (const misconception of misconceptions) {
-        const row = document.createElement("div");
-        row.textContent = `[${misconception.severity}] ${misconception.message}`;
-        refs.didMisconceptionList.appendChild(row);
-      }
-    }
-  }
+const formulaRowText = (formula: NonNullable<DidacticSignals["formulas"]>[number]): string => {
+  const unitText = formula.unit ? ` ${formula.unit}` : "";
+  return `${formula.title}: ${formula.latex} = ${formula.value}${unitText}`;
+};
 
-  if (refs.didCheckList) {
-    refs.didCheckList.replaceChildren();
-    const checks = signals?.checks ?? [];
-    for (const c of checks) {
-      const row = document.createElement("div");
-      row.className = `check-item ${c.passed ? "check-pass" : "check-fail"}`;
-      row.textContent = `${c.passed ? "On target" : "Still adjusting"} · ${c.statusText ?? c.label}`;
-      refs.didCheckList.appendChild(row);
-      const detail = document.createElement("div");
-      detail.className = "help";
-      detail.textContent = `Observed ${c.observed ?? "n/a"} · Expected ${c.expected ?? "n/a"}`;
-      refs.didCheckList.appendChild(detail);
-    }
-    if (signals?.prompt) {
-      const p = document.createElement("div");
-      p.textContent = `Task: ${signals.prompt}`;
-      refs.didCheckList.appendChild(p);
-    }
-  }
+const renderEventTargetSelect = (
+  refs: UiRefs,
+  runtime: DidacticsViewRuntimeState,
+  signals: DidacticSignals | undefined,
+  lesson: LessonSpecView,
+): void => {
+  const select = refs.didEventTargetSelect;
+  if (!select) return;
+  const previousSelection = select.value;
+  select.replaceChildren();
+  const targets = eventTargetsFor(signals, lesson);
+  if (targets.length === 0) appendNoEventTargetOption(select);
+  for (const target of targets) appendEventTargetOption(select, runtime.latestTiming, target);
+  restoreEventTargetSelection(select, previousSelection);
+};
 
-  if (refs.didFormulaList) {
-    refs.didFormulaList.replaceChildren();
-    for (const f of signals?.formulas ?? []) {
-      const row = document.createElement("div");
-      row.textContent = `${f.title}: ${f.latex} = ${f.value}${f.unit ? ` ${f.unit}` : ""}`;
-      refs.didFormulaList.appendChild(row);
-    }
-  }
+const eventTargetsFor = (
+  signals: DidacticSignals | undefined,
+  lesson: LessonSpecView,
+): LessonEventTarget[] => {
+  const defaultTargets = signals?.eventTargets ?? lesson?.eventTargets ?? [];
+  if (!signals?.phaseEventTarget) return defaultTargets;
+  return [
+    signals.phaseEventTarget,
+    ...defaultTargets.filter((target) => target !== signals.phaseEventTarget),
+  ];
+};
 
-  if (refs.didEventTargetSelect) {
-    const previousSelection = refs.didEventTargetSelect.value;
-    refs.didEventTargetSelect.replaceChildren();
-    const targets = signals?.phaseEventTarget
-      ? [
-          signals.phaseEventTarget,
-          ...(signals?.eventTargets ?? lesson?.eventTargets ?? []).filter(
-            (target) => target !== signals.phaseEventTarget,
-          ),
-        ]
-      : (signals?.eventTargets ?? lesson?.eventTargets ?? []);
-    if (targets.length === 0) {
-      const option = document.createElement("option");
-      option.value = "";
-      option.textContent = "No timed lesson events";
-      option.disabled = true;
-      option.selected = true;
-      refs.didEventTargetSelect.appendChild(option);
-    }
-    for (const target of targets) {
-      const option = document.createElement("option");
-      option.value = target;
-      const seconds = resolveLessonEventSec(runtime.latestTiming, target);
-      option.textContent =
-        seconds === undefined
-          ? `${LESSON_EVENT_TARGET_LABELS[target]} (not available yet)`
-          : `${LESSON_EVENT_TARGET_LABELS[target]} @ ${seconds.toFixed(0)} s`;
-      option.disabled = seconds === undefined;
-      refs.didEventTargetSelect.appendChild(option);
-    }
-    const previousOption = Array.from(refs.didEventTargetSelect.options).find(
-      (option) => option.value === previousSelection && !option.disabled,
-    );
-    if (previousOption) {
-      refs.didEventTargetSelect.value = previousOption.value;
-    } else {
-      const firstEnabled = Array.from(refs.didEventTargetSelect.options).find((option) => !option.disabled);
-      if (firstEnabled) refs.didEventTargetSelect.value = firstEnabled.value;
-    }
-  }
-  if (refs.didJumpEventBtn) {
-    refs.didJumpEventBtn.disabled =
-      !refs.didEventTargetSelect?.value ||
-      resolveLessonEventSec(runtime.latestTiming, refs.didEventTargetSelect?.value as LessonEventTarget) ===
-        undefined;
-  }
+const appendNoEventTargetOption = (select: HTMLSelectElement): void => {
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = "No timed lesson events";
+  option.disabled = true;
+  option.selected = true;
+  select.appendChild(option);
+};
+
+const appendEventTargetOption = (
+  select: HTMLSelectElement,
+  timing: StepTimingDiagnostics | undefined,
+  target: LessonEventTarget,
+): void => {
+  const option = document.createElement("option");
+  const seconds = resolveLessonEventSec(timing, target);
+  option.value = target;
+  option.textContent = eventTargetLabel(target, seconds);
+  option.disabled = seconds === undefined;
+  select.appendChild(option);
+};
+
+const eventTargetLabel = (target: LessonEventTarget, seconds: number | undefined): string => {
+  return seconds === undefined
+    ? `${LESSON_EVENT_TARGET_LABELS[target]} (not available yet)`
+    : `${LESSON_EVENT_TARGET_LABELS[target]} @ ${seconds.toFixed(0)} s`;
+};
+
+const restoreEventTargetSelection = (select: HTMLSelectElement, previousSelection: string): void => {
+  const previousOption = Array.from(select.options).find(
+    (option) => option.value === previousSelection && !option.disabled,
+  );
+  const nextOption = previousOption ?? Array.from(select.options).find((option) => !option.disabled);
+  if (nextOption) select.value = nextOption.value;
+};
+
+const syncLessonNavigationControls = (
+  refs: UiRefs,
+  runtime: DidacticsViewRuntimeState,
+  lesson: LessonSpecView,
+): void => {
+  syncJumpEventButton(refs, runtime);
   if (refs.didPrevBtn) {
     refs.didPrevBtn.disabled = runtime.learning.stepIndex === 0 && (runtime.learning.phaseIndex ?? 0) === 0;
   }
-  if (refs.didNextBtn) {
-    const activeLessonSpec = lesson ?? getLessonById(DEFAULT_LESSON_ID);
-    const stepCount = activeLessonSpec?.steps.length ?? 1;
-    const phases = activeLessonSpec ? getLessonStepPhases(activeLessonSpec, runtime.learning.stepIndex) : [];
-    const atLastPhase = (runtime.learning.phaseIndex ?? 0) >= Math.max(phases.length - 1, 0);
-    const atLastStep = runtime.learning.stepIndex >= stepCount - 1;
-    refs.didNextBtn.textContent = atLastPhase ? (atLastStep ? "Restart lesson" : "Next step") : "Next phase";
-  }
-}
+  if (refs.didNextBtn) refs.didNextBtn.textContent = nextButtonText(runtime, lesson);
+};
+
+const syncJumpEventButton = (refs: UiRefs, runtime: DidacticsViewRuntimeState): void => {
+  if (!refs.didJumpEventBtn) return;
+  const target = refs.didEventTargetSelect?.value as LessonEventTarget | undefined;
+  refs.didJumpEventBtn.disabled =
+    !target || resolveLessonEventSec(runtime.latestTiming, target) === undefined;
+};
+
+const nextButtonText = (runtime: DidacticsViewRuntimeState, lesson: LessonSpecView): string => {
+  const activeLessonSpec = lesson ?? getLessonById(DEFAULT_LESSON_ID);
+  const stepCount = activeLessonSpec?.steps.length ?? 1;
+  const phases = activeLessonSpec ? getLessonStepPhases(activeLessonSpec, runtime.learning.stepIndex) : [];
+  const atLastPhase = (runtime.learning.phaseIndex ?? 0) >= Math.max(phases.length - 1, 0);
+  const atLastStep = runtime.learning.stepIndex >= stepCount - 1;
+  return atLastPhase ? (atLastStep ? "Restart lesson" : "Next step") : "Next phase";
+};
 
 export function exportDidacticReportView(system: SystemParams, runtime: DidacticsViewRuntimeState): void {
   const md = buildLessonReportMarkdown({

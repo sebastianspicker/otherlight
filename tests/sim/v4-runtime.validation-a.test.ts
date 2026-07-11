@@ -5,6 +5,62 @@ import { ScientificBrowserRuntimeError } from "../../src/sim/v4";
 import { createSimulationV4 } from "../../src/sim/v4/runtime";
 
 describe("sim v4 runtime", () => {
+  function validInteractiveConfig(): SimulationConfigV4 {
+    return {
+      version: "4",
+      mode: "general-lab",
+      runtime: { mode: "realtime", executionMode: "interactive" },
+      observer: { dir: { x: 1, y: 0, z: 1 } },
+      bodies: {
+        stars: [
+          { id: "star-a", r: 6.957e8, m: 1.98847e30, luminosityScale: 1 },
+          { id: "star-b", r: 5.0e8, m: 0, luminosityScale: 0 },
+        ],
+        planets: [
+          {
+            id: "planet-1",
+            r: 1.5e8,
+            orbit: { a: 2.4e9, e: 0, inc: 1.56, Omega: 0, omega: 0, period: 63569.0153, t0: 0 },
+          },
+        ],
+        moons: [],
+      },
+      orbits: {
+        binary: { a: 1.4e10, e: 0.1, inc: 1.55, Omega: 0.1, omega: 0.3, period: 8.0e5, t0: 0 },
+        hierarchy: [],
+      },
+      photometry: { baselineFlux: 1 },
+    };
+  }
+
+  it("rejects direct V4 interactive configs with semantically invalid finite orbits", () => {
+    const cfg = validInteractiveConfig();
+    cfg.bodies.planets[0].orbit.e = 1.2;
+    cfg.orbits.binary.period = -8.0e5;
+
+    expect(() => createSimulationV4(cfg)).toThrow(/valid complete orbit/);
+  });
+
+  it("rejects direct V4 interactive configs with invalid spectral wavelengths", () => {
+    const cfg = validInteractiveConfig();
+    cfg.photometry = {
+      baselineFlux: 1,
+      spectralBandpass: { enabled: true, lambdaNm: [550, -10], weights: [1, 1] },
+    };
+
+    expect(() => createSimulationV4(cfg)).toThrow(/spectralBandpass\.lambdaNm/);
+  });
+
+  it("rejects direct V4 interactive configs with mismatched spectral weights", () => {
+    const cfg = validInteractiveConfig();
+    cfg.photometry = {
+      baselineFlux: 1,
+      spectralBandpass: { enabled: true, lambdaNm: [550, 600], weights: [1] },
+    };
+
+    expect(() => createSimulationV4(cfg)).toThrow(/spectralBandpass\.weights.*lambdaNm length/);
+  });
+
   it("rejects direct V4 detached-binary scientific-browser configs without finite stellar temperatures", () => {
     const cfg: SimulationConfigV4 = {
       version: "4",

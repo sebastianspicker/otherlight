@@ -59,11 +59,9 @@ describe("readNumberInput", () => {
     expect(readNumberInput(el, 99)).toBe(99);
   });
 
-  it("returns 0 for an empty string value (Number('') === 0)", () => {
-    // Number("") is 0 in JavaScript, which is finite, so the function
-    // returns 0 rather than the fallback. This tests the actual code path.
+  it("returns the fallback for an empty string value", () => {
     const el = makeNumberInput("");
-    expect(readNumberInput(el, -1)).toBe(0);
+    expect(readNumberInput(el, -1)).toBe(-1);
   });
 
   it("returns the fallback for a truly unparseable value", () => {

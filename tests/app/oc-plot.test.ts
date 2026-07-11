@@ -1,7 +1,44 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
 
-import { buildOcCsv, fitLinearEphemeris, formatOcPanelStats } from "../../src/app/ocPlot";
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  buildOcCsv,
+  fitLinearEphemeris,
+  formatOcPanelStats,
+  renderOcHistoryCanvas,
+} from "../../src/app/ocPlot";
 import { createTransitHistoryState } from "../../src/app/transitHistory";
+
+function mockCanvas2d(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement("canvas");
+  canvas.width = 300;
+  canvas.height = 150;
+  Object.defineProperty(canvas, "clientWidth", { value: 300 });
+  Object.defineProperty(canvas, "clientHeight", { value: 150 });
+  const ctx = {
+    setTransform: vi.fn(),
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    stroke: vi.fn(),
+    fillText: vi.fn(),
+    measureText: vi.fn(() => ({ width: 24 }) as TextMetrics),
+    save: vi.fn(),
+    restore: vi.fn(),
+    setLineDash: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    strokeStyle: "",
+    fillStyle: "",
+    lineWidth: 0,
+    font: "",
+  } as unknown as CanvasRenderingContext2D;
+  vi.spyOn(canvas, "getContext").mockReturnValue(ctx);
+  return { canvas, ctx };
+}
 
 describe("oc plot helpers", () => {
   it("builds csv rows for selected body", () => {
@@ -59,5 +96,23 @@ describe("oc plot helpers", () => {
     const csv = buildOcCsv(state, "planet", { unit: "ms", trendMode: "detrended" });
     expect(csv).toContain(",ms,detrended");
     expect(csv).toContain("oc_residual_sec");
+  });
+
+  it("renders empty and fit O-C canvas states through the 2D context", () => {
+    const empty = mockCanvas2d();
+    renderOcHistoryCanvas(empty.canvas, createTransitHistoryState(), "planet");
+    expect(empty.ctx.fillText).toHaveBeenCalledWith("No planet O-C events", 54, 30);
+
+    const fitCanvas = mockCanvas2d();
+    const state = createTransitHistoryState();
+    state.planet.events.push(
+      { centerSec: 100, ocSec: 0.1, detectedAtSec: 101 },
+      { centerSec: 200, ocSec: 0.2, detectedAtSec: 201 },
+    );
+
+    renderOcHistoryCanvas(fitCanvas.canvas, state, "planet", { trendMode: "fit" });
+
+    expect(fitCanvas.ctx.setLineDash).toHaveBeenCalledWith([5, 4]);
+    expect(fitCanvas.ctx.arc).toHaveBeenCalledTimes(2);
   });
 });

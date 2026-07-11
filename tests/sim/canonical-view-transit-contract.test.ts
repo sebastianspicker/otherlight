@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { getPresetById } from "../../src/app/presets";
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
-import type { SystemParams } from "../../src/core/types";
+import type { OrbitElements, SystemParams } from "../../src/core/types";
 import { stepSystem } from "../../src/sim/sim";
 
 type TransitSample = {
@@ -18,10 +18,16 @@ type PhaseSample = {
 };
 
 function orbitPeriod(system: SystemParams): number {
+  assertStaticPlanetOrbit(system);
+  return system.planet.orbit.period;
+}
+
+function assertStaticPlanetOrbit(system: SystemParams): asserts system is SystemParams & {
+  planet: SystemParams["planet"] & { orbit: OrbitElements };
+} {
   if (typeof system.planet.orbit === "function") {
     throw new Error("canonical-view transit contract requires static orbit elements.");
   }
-  return system.planet.orbit.period;
 }
 
 function strongestTransitSample(system: SystemParams, samples = 720): TransitSample {

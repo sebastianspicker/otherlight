@@ -11,6 +11,9 @@ describe("numeric sanitization helpers", () => {
   it("keeps fallback coercion explicit for shared finite guards", () => {
     expect(toFiniteNumber("3.5", 1)).toBe(3.5);
     expect(toFiniteNumber("bad", 7)).toBe(7);
+    expect(toFiniteNumber("", 7)).toBe(7);
+    expect(toFiniteNumber(null, 7)).toBe(7);
+    expect(toFiniteNumber(false, 7)).toBe(7);
     expect(toFiniteNonNeg(-3, 5)).toBe(0);
     expect(toFinitePositiveOr("bad", 2)).toBe(2);
     expect(toFinitePos(0, 4)).toBeGreaterThan(0);

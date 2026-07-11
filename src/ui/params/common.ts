@@ -55,21 +55,24 @@ function clampFreeformInput(text: string): string {
   return text.slice(0, MAX_FREEFORM_INPUT_CHARS);
 }
 
+function selectedLimbDarkeningLaw(model: LimbDarkeningModel): LimbDarkeningLaw | undefined {
+  const band = model.bandpass;
+  if (!band || !model.bands) return model.default;
+  return model.bands[band] ?? model.default;
+}
+
+function quadraticCoefficients(law: LimbDarkeningLaw | undefined): { u1: number; u2: number } | undefined {
+  if (!law || law.kind !== "quadratic") return undefined;
+  const { u1, u2 } = law;
+  if (!Number.isFinite(u1) || !Number.isFinite(u2)) return undefined;
+  return { u1, u2 };
+}
+
 export function getQuadraticLDFromModel(
   model: LimbDarkeningModel | undefined,
 ): { u1: number; u2: number } | undefined {
   if (!model) return undefined;
-  const band = model.bandpass;
-  const bands = model.bands;
-  const law = band && bands && bands[band] ? bands[band] : model.default;
-
-  if (!law || law.kind !== "quadratic") return undefined;
-
-  const u1 = law.u1;
-  const u2 = law.u2;
-  if (!Number.isFinite(u1) || !Number.isFinite(u2)) return undefined;
-
-  return { u1, u2 };
+  return quadraticCoefficients(selectedLimbDarkeningLaw(model));
 }
 
 export function ensurePhotometry(p: SystemParams): PhotometryParams {
