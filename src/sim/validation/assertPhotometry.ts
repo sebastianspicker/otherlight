@@ -55,10 +55,10 @@ const hasActiveHigherFidelityAdditiveChannels = (params: SystemParams): boolean 
   const phot = params.star.photometry;
   return Boolean(
     phot?.phaseCurve?.enabled ||
-    phot?.moonPhaseCurve?.enabled ||
-    hasActiveForwardScattering(phot) ||
-    hasActiveRingScattering(phot) ||
-    hasActiveRtEmission(phot),
+      phot?.moonPhaseCurve?.enabled ||
+      hasActiveForwardScattering(phot) ||
+      hasActiveRingScattering(phot) ||
+      hasActiveRtEmission(phot),
   );
 };
 

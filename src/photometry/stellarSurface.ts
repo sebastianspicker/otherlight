@@ -62,10 +62,10 @@ function isValidSurfacePatch(
 ): surface is NonNullable<BrightnessPatch["surface"]> {
   return Boolean(
     surface &&
-    Number.isFinite(surface.lat) &&
-    Number.isFinite(surface.lon) &&
-    Number.isFinite(surface.angularRadius) &&
-    surface.angularRadius > 0,
+      Number.isFinite(surface.lat) &&
+      Number.isFinite(surface.lon) &&
+      Number.isFinite(surface.angularRadius) &&
+      surface.angularRadius > 0,
   );
 }
 

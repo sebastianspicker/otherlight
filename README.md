@@ -288,7 +288,7 @@ performance, physics, and migration gates.
 
 `pnpm hygiene:public` evaluates tracked files plus non-ignored additions from the current worktree. It rejects generated outputs, local agent/tool state, secret-bearing filenames, private-key material, and absolute user-home paths. Public configuration remains explicit: `.codacy.yml`, `.github/`, `.impeccable/design.json`, and `playwright.config.ts` are maintained project files; their runtime state stays ignored.
 
-Dependency overrides live in `pnpm-workspace.yaml`, the configuration surface read by the pinned pnpm toolchain. The package is marked `private` and is not an npm publishing artifact.
+Dependency overrides live in `package.json#pnpm`, the configuration surface used by the pinned pnpm 9 toolchain. The package is marked `private` and is not an npm publishing artifact.
 
 Code quality enforcement:
 

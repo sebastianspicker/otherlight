@@ -23,6 +23,7 @@ flowchart LR
 ## Workflows
 
 - `CI` (`.github/workflows/ci.yml`)
+
   - Triggers: `pull_request` against `main`/`dev`, `push` on `main`/`dev`
   - Jobs (run in dependency order):
     1. `lint` — public-surface hygiene plus ESLint/Prettier via `pnpm ci:lint` (Node 22)
@@ -34,10 +35,12 @@ flowchart LR
   - Cache: pnpm store via `actions/cache` (`~/.pnpm-store`)
 
 - `Security` (`.github/workflows/security.yml`)
+
   - Triggers: `pull_request` against `main`/`dev`, `push` on `main`/`dev`
   - Job: `gitleaks`
 
 - `CodeQL` (`.github/workflows/codeql.yml`)
+
   - Triggers: `pull_request` against `main`/`dev`, `push` on `main`/`dev`, weekly schedule
   - Job: `analyze`
 

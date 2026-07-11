@@ -122,8 +122,8 @@ function thermalToV3(photometry: PhotometryParams | undefined): ThermalV3 {
 function hasThermalModule(photometry: PhotometryParams | undefined): boolean {
   return Boolean(
     photometry?.thermalModelAdvanced ||
-    photometry?.phaseCurve?.thermalInertia ||
-    photometry?.moonPhaseCurve?.thermalInertia,
+      photometry?.phaseCurve?.thermalInertia ||
+      photometry?.moonPhaseCurve?.thermalInertia,
   );
 }
 

@@ -194,8 +194,9 @@ it("preserves the selected lesson event across rerenders when it remains valid",
 });
 
 it("advances and retreats lesson phases while preserving keyed learner responses", async () => {
-  const { advanceLessonFlow, initDidacticsRuntime, retreatLessonFlow, updateDidacticResponse } =
-    await import("../../src/app/didactics");
+  const { advanceLessonFlow, initDidacticsRuntime, retreatLessonFlow, updateDidacticResponse } = await import(
+    "../../src/app/didactics"
+  );
   const { cloneParams, SCENARIO_DEFAULTS } = await import("../../src/app/scenario");
 
   const system = cloneParams(SCENARIO_DEFAULTS);

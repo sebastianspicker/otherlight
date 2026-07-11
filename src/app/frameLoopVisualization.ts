@@ -201,10 +201,10 @@ export function pushHistorySamples(
 function shouldShowEpochGhost(params: SystemParams): boolean {
   return Boolean(
     params.dynamics?.exomoonTimingShape?.enabled ||
-    params.dynamics?.nbodyPlanetMoon?.enabled ||
-    params.dynamics?.relativity?.enabled ||
-    params.star.photometry?.spotEvolution?.enabled ||
-    params.star.photometry?.stellarSurface?.enabled,
+      params.dynamics?.nbodyPlanetMoon?.enabled ||
+      params.dynamics?.relativity?.enabled ||
+      params.star.photometry?.spotEvolution?.enabled ||
+      params.star.photometry?.stellarSurface?.enabled,
   );
 }
 

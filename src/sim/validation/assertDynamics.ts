@@ -103,7 +103,8 @@ const assertIntegratorMode = (cfg: IntegratorParams): void => {
 };
 
 const assertIntegratorPositiveField = (cfg: IntegratorParams, field: "errorTolAbs" | "dtMin"): void => {
-  if (cfg[field] !== undefined && (!Number.isFinite(cfg[field]) || cfg[field] <= 0)) {
+  const value = cfg[field];
+  if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
     throw new Error(`dynamics.integrator.${field} must be finite and > 0 if provided.`);
   }
 };
