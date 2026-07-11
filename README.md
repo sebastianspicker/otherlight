@@ -1,10 +1,10 @@
-# Exoplanet Exomoon Simulation
+# Transit Light-Curve Lab
 
 ![CI](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/ci.yml/badge.svg)
 ![Security](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/security.yml/badge.svg)
 ![CodeQL](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/codeql.yml/badge.svg)
 
-Interactive browser simulation for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. The core is deterministic and SI-based, with didactic curve/canvas overlays for contact timing, component decomposition, chromatic observer lanes, A/B comparison, and black-box lesson flows.
+Browser-only scientific learning and exploration workspace for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. Simulation and Guided Labs are peer workflows. The core is deterministic and SI-based, with didactic curve/canvas overlays, structured nonvisual summaries, CSV/report exports, and black-box lesson flows.
 
 ## Screenshots
 
@@ -119,13 +119,13 @@ flowchart TD
   subgraph init [Init]
     Wire[Wire presets, real systems, handlers]
     ApplyInit[applyActiveScenarioForMode]
-    RAF[requestAnimationFrame]
+    Scheduler[Render scheduler]
   end
   subgraph loop [Frame loop]
     Dt[computeFrameDt, readTimeSpeed]
     Step[simulation.step]
     Smear[Optional smear and noise]
-    Render[renderScene, plot.draw]
+    Render[drawFrameV3, plot.draw]
     Readouts[Update readouts, didactics]
   end
   HTML --> Main
@@ -135,12 +135,12 @@ flowchart TD
   Main --> Sim0
   Main --> init
   Wire --> ApplyInit
-  ApplyInit --> RAF
-  RAF --> loop
-  Readouts --> RAF
+  ApplyInit --> Scheduler
+  Scheduler --> loop
+  Readouts --> Scheduler
 ```
 
-User actions (Apply, Reset, Preset, Real system, or mode change) update params and call `rebuildSimulationFromParams()` or `resetSimTimeAndLC()` as in the Architecture flow; the frame loop keeps running and reflects the new state on the next frame.
+User actions such as Apply parameters, Reset time, scenario selection, and mode changes update the product state and invalidate the rendered view. Continuous animation frames run only while the simulation is active; paused and hidden states render on meaningful invalidation instead of maintaining an idle redraw loop.
 
 The learner-facing shell now exposes three complementary views of the same step state:
 
@@ -156,11 +156,11 @@ Main application states and transitions:
 stateDiagram-v2
   [*] --> Loaded
   Loaded --> Initializing: init
-  Initializing --> Running: "applyActiveScenarioForMode + rAF"
-  Running --> Running: Apply params
-  Running --> Running: Reset params
-  Running --> Running: Preset or Real system
-  Running --> Running: frame
+  Initializing --> Paused: apply initial scenario
+  Paused --> Running: Start
+  Running --> Paused: Pause or hidden
+  Paused --> Paused: Apply parameters / Reset time / Scenario
+  Running --> Running: simulation frame
 ```
 
 ## Quick Start
@@ -214,13 +214,16 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 - `pnpm preview`: preview build
 - `pnpm start`: preview the built app (`vite preview`)
 - `pnpm smoke:served`: build + serve + probe the shipped browser surface
+- `pnpm test:e2e`: Playwright browser E2E tests against the built preview app
+- `pnpm hygiene:public`: reject local, generated, sensitive, or machine-specific files from the public candidate tree
+- `pnpm clean`: remove generated build, coverage, and browser-test output
 - `pnpm lint`: lint and formatting checks
 - `pnpm typecheck`: TypeScript checks
-- `pnpm test`: unit and smoke tests
+- `pnpm test`: correctness tests excluding dedicated performance microbenchmarks
 - `pnpm test:coverage`: coverage threshold gate
 - `pnpm ci:verify`: lint + typecheck + test + build
 - `pnpm audit:deps`: dependency hygiene gate
-- `pnpm migrate:v4`: migrate legacy scenario payloads to V4
+- `pnpm migrate:v4`: migrate legacy scenario payloads to V4 via stdin/stdout
 - `pnpm literature-benchmarks`: benchmark gate
 - `pnpm scientific-calibration`: scientific calibration gate
 - `pnpm didactics-acceptance`: didactics flow gate
@@ -233,6 +236,9 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 | Topic                     | Path                                               |
 | ------------------------- | -------------------------------------------------- |
 | Docs index                | `docs/README.md`                                   |
+| Product context           | `PRODUCT.md`                                       |
+| Visual system             | `DESIGN.md`                                        |
+| Frontend conventions      | `docs/frontend.md`                                 |
 | Parameters and UI mapping | `docs/params.md`                                   |
 | Physics overview          | `docs/physics/overview.md`                         |
 | Full derivation           | `docs/physics/full-derivation.md`                  |
@@ -251,8 +257,9 @@ CI also checks that the committed snapshot metadata stays fresh enough for revie
 
 ```text
 src/
+  main.ts      browser entry: renders the static shell, then starts app/bootstrap
   app/         scenario selection, runtime builders, didactics wiring
-  src/config/  defaults and real-systems snapshot
+  config/      defaults and real-systems snapshot
   core/        shared types and units
   didactics/   lesson engine, rubric, reports
   photometry/  transit and additive flux components
@@ -267,18 +274,21 @@ src/
 Primary local verification:
 
 ```bash
-./scripts/ci-local.sh       # install + ci:verify + served smoke + specialty gates
-pnpm ci:verify              # lint + typecheck + all tests + build
-pnpm smoke:served           # served browser shell smoke
-pnpm test:coverage          # coverage thresholds
-pnpm audit:deps             # dependency hygiene
-pnpm literature-benchmarks  # physics correctness vs. published results
-pnpm scientific-calibration # scientific calibration catalog + bounded reference lane
-pnpm didactics-acceptance   # educational flow validation
-pnpm perf-smoke             # interactive performance budget (<50ms/step)
-pnpm physics-regression     # transit timing and dynamics regression
-pnpm migration-regression   # V3 -> V4 backwards compatibility
+./scripts/ci-local.sh          # local release-confidence loop
+CI_AUDIT=1 ./scripts/ci-local.sh # include high-threshold dependency security audit
+pnpm ci:verify                 # hosted CI baseline: lint + typecheck + tests + build
+pnpm hygiene:public            # verify the public/private repository boundary
+pnpm exec playwright install chromium firefox webkit
+pnpm test:e2e                  # browser E2E against production preview
 ```
+
+The local script is the authoritative full loop. It adds the served browser probe, coverage,
+Playwright E2E, dependency hygiene, literature benchmarks, scientific calibration, didactics,
+performance, physics, and migration gates.
+
+`pnpm hygiene:public` evaluates tracked files plus non-ignored additions from the current worktree. It rejects generated outputs, local agent/tool state, secret-bearing filenames, private-key material, and absolute user-home paths. Public configuration remains explicit: `.codacy.yml`, `.github/`, `.impeccable/design.json`, and `playwright.config.ts` are maintained project files; their runtime state stays ignored.
+
+Dependency overrides live in `pnpm-workspace.yaml`, the configuration surface read by the pinned pnpm toolchain. The package is marked `private` and is not an npm publishing artifact.
 
 Code quality enforcement:
 
@@ -288,6 +298,14 @@ Code quality enforcement:
 - Hygiene tests: file size budget (720 lines), `any` budget, no experimental imports
 
 ## Known Limits
+
+- The public-alpha browser matrix is Chromium, Firefox, and WebKit desktop plus tablet landscape and a 390px mobile smoke workflow. Browser binaries must be installed locally before the full Playwright matrix can run.
+- The committed real-system snapshot was fetched on 2026-02-19 and currently exceeds the 120-day
+  freshness gate. Refresh it with `pnpm data:real-systems:refresh` before release validation; that
+  command requires network access.
+- Automated semantic and reflow checks do not replace manual VoiceOver and NVDA walkthroughs. A manual screen-reader pass is still required before teaching-production use.
+- The phone layout keeps core workflows readable and operable; it is not a separate high-density Advanced-controls workflow.
+- The public alpha has no authentication, role model, permissions, backend, or persistent user data. Permission-denial testing is therefore not applicable.
 
 - The repo now has a separate bounded `scientific-browser` runtime contract in the V4 path, but it is not the default shipped UX contract and it is still an incomplete `S1` fail-closed foundation rather than a finished scientific mode.
 - Any existing `scientific` wording in rendering or didactics documents refers to presentation density or lesson/debug detail, not to a validated scientific execution mode.

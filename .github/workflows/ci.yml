@@ -3,8 +3,42 @@ name: CI
 on:
   pull_request:
     branches: ["main", "dev"]
+    paths-ignore:
+      - "AGENTS.md"
+      - "docs/archive/**"
+      - "docs/audit/**"
+      - "docs/architecture-map.md"
+      - "docs/code-index.md"
+      - "docs/deprecation-and-simplification-audit.md"
+      - "docs/logic-and-correctness-audit.md"
+      - "docs/verification-baseline.md"
+      - "docs/deprecated/**"
+      - "deprecated/**"
+      - "node_modules/**"
+      - "vendor/**"
+      - "third_party/**"
+      - "third-party/**"
+      - "3rdparty/**"
+      - "external/**"
   push:
     branches: ["main", "dev"]
+    paths-ignore:
+      - "AGENTS.md"
+      - "docs/archive/**"
+      - "docs/audit/**"
+      - "docs/architecture-map.md"
+      - "docs/code-index.md"
+      - "docs/deprecation-and-simplification-audit.md"
+      - "docs/logic-and-correctness-audit.md"
+      - "docs/verification-baseline.md"
+      - "docs/deprecated/**"
+      - "deprecated/**"
+      - "node_modules/**"
+      - "vendor/**"
+      - "third_party/**"
+      - "third-party/**"
+      - "3rdparty/**"
+      - "external/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -85,7 +119,7 @@ jobs:
         run: pnpm ci:typecheck
 
   test:
-    name: test (${{ matrix.node }})
+    name: test (node ${{ matrix.node }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -158,6 +192,45 @@ jobs:
 
       - name: Build
         run: pnpm ci:build
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+
+      - name: Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.0.0 --activate
+
+      - name: Configure pnpm store path
+        run: pnpm config set store-dir ~/.pnpm-store
+
+      - name: Cache pnpm store
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ runner.os }}-22-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-22-
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser E2E tests
+        run: pnpm ci:e2e
 
   quality-gates:
     name: quality gates

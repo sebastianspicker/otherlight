@@ -1,49 +1,11 @@
 import { clamp } from "../core/units";
 
-function partitionInPlace(values: number[], left: number, right: number, pivotIndex: number): number {
-  const pivotValue = values[pivotIndex];
-  [values[pivotIndex], values[right]] = [values[right], values[pivotIndex]];
-  let storeIndex = left;
-  for (let i = left; i < right; i++) {
-    if (values[i] < pivotValue) {
-      [values[storeIndex], values[i]] = [values[i], values[storeIndex]];
-      storeIndex++;
-    }
-  }
-  [values[right], values[storeIndex]] = [values[storeIndex], values[right]];
-  return storeIndex;
+function sortFiniteScratchPrefix(values: number[], count: number): void {
+  if (values.length > count) values.length = count;
+  values.sort((a, b) => a - b);
 }
 
-function pickPivotIndex(values: number[], left: number, right: number): number {
-  const mid = left + Math.floor((right - left) * 0.5);
-  const a = values[left];
-  const b = values[mid];
-  const c = values[right];
-  if (a < b) {
-    if (b < c) return mid;
-    return a < c ? right : left;
-  }
-  if (a < c) return left;
-  return b < c ? right : mid;
-}
-
-function selectRankInPlace(values: number[], count: number, rank: number): number {
-  let left = 0;
-  let right = count - 1;
-  while (left < right) {
-    const pivotIndex = pickPivotIndex(values, left, right);
-    const nextPivotIndex = partitionInPlace(values, left, right, pivotIndex);
-    if (rank === nextPivotIndex) return values[nextPivotIndex];
-    if (rank < nextPivotIndex) {
-      right = nextPivotIndex - 1;
-      continue;
-    }
-    left = nextPivotIndex + 1;
-  }
-  return values[left];
-}
-
-function quantileFromScratch(values: number[], count: number, q: number): number {
+function quantileFromSorted(values: number[], count: number, q: number): number {
   const qq = clamp(q, 0, 1);
   if (count === 1) return values[0];
 
@@ -51,9 +13,9 @@ function quantileFromScratch(values: number[], count: number, q: number): number
   const i0 = Math.floor(idx);
   const i1 = Math.min(count - 1, i0 + 1);
   const f = idx - i0;
-  const v0 = selectRankInPlace(values, count, i0);
+  const v0 = values[i0];
   if (i1 === i0) return v0;
-  const v1 = selectRankInPlace(values, count, i1);
+  const v1 = values[i1];
   return v0 * (1 - f) + v1 * f;
 }
 
@@ -71,6 +33,8 @@ export type VisibleFluxCollection = {
   stats: VisibleFluxStats;
   robustCount: number;
 };
+
+type MutableVisibleFluxStats = VisibleFluxStats;
 
 export type VisibleTimeDomain = {
   tMin: number;
@@ -90,11 +54,7 @@ export function collectVisibleFlux(
   end: number,
   collectRobustSamples: boolean,
 ): VisibleFluxCollection {
-  let finiteCount = 0;
-  let sum = 0;
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  let constantValue = Number.NaN;
+  const stats = emptyVisibleFluxStats();
   let robustCount = 0;
 
   for (let i = start; i < end; i++) {
@@ -103,17 +63,7 @@ export function collectVisibleFlux(
     if (collectRobustSamples) {
       robustScratch[robustCount++] = value;
     }
-    if (finiteCount === 0) {
-      constantValue = value;
-      min = value;
-      max = value;
-    } else {
-      if (value < min) min = value;
-      if (value > max) max = value;
-      if (value !== constantValue) constantValue = Number.NaN;
-    }
-    finiteCount++;
-    sum += value;
+    recordVisibleFlux(stats, value);
   }
 
   if (collectRobustSamples && robustScratch.length > robustCount) {
@@ -121,9 +71,41 @@ export function collectVisibleFlux(
   }
 
   return {
-    stats: { finiteCount, sum, min, max, constantValue },
+    stats,
     robustCount,
   };
+}
+
+function emptyVisibleFluxStats(): MutableVisibleFluxStats {
+  return {
+    finiteCount: 0,
+    sum: 0,
+    min: Number.POSITIVE_INFINITY,
+    max: Number.NEGATIVE_INFINITY,
+    constantValue: Number.NaN,
+  };
+}
+
+function recordVisibleFlux(stats: MutableVisibleFluxStats, value: number): void {
+  if (stats.finiteCount === 0) {
+    recordFirstVisibleFlux(stats, value);
+  } else {
+    recordAdditionalVisibleFlux(stats, value);
+  }
+  stats.finiteCount++;
+  stats.sum += value;
+}
+
+function recordFirstVisibleFlux(stats: MutableVisibleFluxStats, value: number): void {
+  stats.constantValue = value;
+  stats.min = value;
+  stats.max = value;
+}
+
+function recordAdditionalVisibleFlux(stats: MutableVisibleFluxStats, value: number): void {
+  if (value < stats.min) stats.min = value;
+  if (value > stats.max) stats.max = value;
+  if (value !== stats.constantValue) stats.constantValue = Number.NaN;
 }
 
 export function rangeFromStats(stats: VisibleFluxStats): { lo: number; hi: number } | null {
@@ -140,8 +122,9 @@ export function computeRobustRangeFromScratch(
 ): { lo: number; hi: number } | null {
   if (robustCount < 2) return null;
 
-  const lo = quantileFromScratch(robustScratch, robustCount, qLo);
-  const hi = quantileFromScratch(robustScratch, robustCount, qHi);
+  sortFiniteScratchPrefix(robustScratch, robustCount);
+  const lo = quantileFromSorted(robustScratch, robustCount, qLo);
+  const hi = quantileFromSorted(robustScratch, robustCount, qHi);
 
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
   if (hi <= lo) return null;

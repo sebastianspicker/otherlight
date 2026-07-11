@@ -115,23 +115,26 @@ export function sanitizeCircleOcculters(
   if (!Array.isArray(occulters) || occulters.length === 0) return out;
 
   for (const o of occulters) {
-    if (!o) continue;
-
-    // dx/dy must be finite. r must be finite and strictly positive.
-    if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-
-    const d = Math.hypot(o.dx, o.dy);
-    // Math.hypot guarantees non-negative finite result if inputs are finite.
-    // Check isFinite just to be extremely defensive.
-    if (!Number.isFinite(d)) continue;
-
-    // Tangency (d = rStar + rOcc) is measure-zero -> treat as no overlap (flux not reduced).
-    if (d >= rStar + o.r) continue;
-
-    out.push(o);
+    if (isOverlappingCircleOcculter(rStar, o)) out.push(o);
   }
 
   return out;
+}
+
+function isFiniteCircleOcculter(o: CircleOcculter | undefined): o is CircleOcculter {
+  return Boolean(o && isFiniteNumber(o.dx) && isFiniteNumber(o.dy) && isFinitePositive(o.r));
+}
+
+function circleCenterDistance(o: CircleOcculter): number {
+  return Math.hypot(o.dx, o.dy);
+}
+
+function isOverlappingCircleOcculter(rStar: number, o: CircleOcculter | undefined): o is CircleOcculter {
+  if (!isFiniteCircleOcculter(o)) return false;
+  const d = circleCenterDistance(o);
+  if (!Number.isFinite(d)) return false;
+  // Tangency (d = rStar + rOcc) is measure-zero -> treat as no overlap.
+  return d < rStar + o.r;
 }
 
 /**
@@ -151,19 +154,17 @@ export function anyCircleOcculterFullyCoversStar(
   if (!Array.isArray(occulters) || occulters.length === 0) return false;
 
   for (const o of occulters) {
-    if (!o) continue;
-    if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-
-    // If the occulter is smaller than the star, it cannot fully cover it.
-    if (o.r < rStar) continue;
-
-    const d = Math.hypot(o.dx, o.dy);
-    if (!Number.isFinite(d)) continue;
-
-    // Full coverage includes tangency at the containment boundary (d == rOcc - rStar).
-    // The occulter covers the star if the furthest point of the star (d + rStar) is within rOcc.
-    if (d <= o.r - rStar) return true;
+    if (circleOcculterFullyCoversStar(rStar, o)) return true;
   }
 
   return false;
+}
+
+function circleOcculterFullyCoversStar(rStar: number, o: CircleOcculter | undefined): boolean {
+  if (!isFiniteCircleOcculter(o)) return false;
+  if (o.r < rStar) return false;
+  const d = circleCenterDistance(o);
+  if (!Number.isFinite(d)) return false;
+  // Full coverage includes tangency at the containment boundary.
+  return d <= o.r - rStar;
 }

@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added peer Simulation and Guided Labs navigation, durable URL context, accessible canvas summaries,
+  scientific input validation, reversible history clearing, fatal-error recovery, and an
+  invalidation-driven paused render scheduler.
+- Added `pnpm hygiene:public` to keep generated output, local tool state, secrets, and workstation
+  paths out of the public candidate tree.
+
+### Changed
+
+- Renamed the browser product to Transit Light-Curve Lab and introduced the Classroom Observatory
+  visual system with a light shell, dark scientific plots, responsive controls, and explicit status.
+- Expanded browser journeys for Chromium, Firefox, WebKit, tablet landscape, mobile smoke, URL
+  recovery, validation, history, and focus behavior.
+
+### Removed
+
+- Removed the unsupported V2 migration script/test surface and superseded root screenshot gallery;
+  V4 migration and `docs/screenshots/` are the maintained paths.
+
 ## [0.1.0] - 2026-04-20
 
 ### Breaking
@@ -38,7 +58,7 @@ All notable changes to this project are documented in this file.
 
 - Upgraded core toolchain dependencies (ESLint, typescript-eslint, Vite, Vitest).
 - CI workflow now uses `pnpm ci:verify`.
-- Dependency audit workflow now checks production dependency graph (`--prod`).
+- Dependency audit workflow now checks the full installed dependency graph, including toolchain packages.
 - GitHub-facing CI/docs/templates were normalized and polished in English.
 - Enforced `@typescript-eslint/no-explicit-any` as error for source code (78 `as any` eliminated).
 - Moved `cloneParams` to `core/clone.ts` and `SCENARIO_DEFAULTS` to `config/defaults.ts` to fix layering violations.
@@ -57,4 +77,4 @@ All notable changes to this project are documented in this file.
 
 ### Security
 
-- Security dependency auditing now targets production-impacting packages in CI scheduled runs.
+- Security dependency auditing now targets high-severity issues across the installed dependency graph.

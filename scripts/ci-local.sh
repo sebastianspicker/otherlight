@@ -8,6 +8,8 @@ fi
 
 CI=1 pnpm install --frozen-lockfile
 pnpm ci:verify
+pnpm exec playwright install chromium
+pnpm ci:e2e
 pnpm smoke:served
 pnpm test:coverage
 pnpm audit:deps
@@ -19,5 +21,5 @@ pnpm physics-regression
 pnpm migration-regression
 
 if [[ "${CI_AUDIT:-}" == "1" ]]; then
-  pnpm audit --audit-level=high --prod
+  pnpm audit --audit-level=high
 fi

@@ -43,4 +43,38 @@ describe("UI param consistency", () => {
     expect(next.star.photometry?.moonPhaseCurve).toBeUndefined();
     expect(next.dynamics?.nbodyPlanetMoon).toBeUndefined();
   });
+
+  it("preserves advanced stellar variability fields across UI round trips", async () => {
+    installAppShellDocument();
+
+    const { uiRefs } = await import("../../src/ui/refs");
+    const { loadParamsIntoUI, readUIIntoParams } = await import("../../src/ui/params");
+    const { cloneParams, SCENARIO_DEFAULTS } = await import("../../src/app/scenario");
+
+    const params = cloneParams(SCENARIO_DEFAULTS);
+    params.star.photometry = {
+      ...(params.star.photometry ?? {}),
+      stellarVariability: {
+        enabled: true,
+        beamingAmp: 0,
+        ellipsoidalAmp: 0,
+        constant: 0,
+        flare: { enabled: true, tPeakSec: 120, amp: 0.01, riseSec: 10, decaySec: 30 },
+        pulsations: {
+          enabled: true,
+          modes: [
+            { amp: 1e-3, periodSec: 100, phaseRad: 0 },
+            { amp: 5e-4, periodSec: 250, phaseRad: 1 },
+          ],
+        },
+      },
+    };
+
+    loadParamsIntoUI(params, uiRefs);
+    const next = readUIIntoParams(params, uiRefs, cloneParams(SCENARIO_DEFAULTS));
+
+    expect(next.star.photometry?.stellarVariability?.flare?.enabled).toBe(true);
+    expect(next.star.photometry?.stellarVariability?.flare?.amp).toBe(0.01);
+    expect(next.star.photometry?.stellarVariability?.pulsations?.modes).toHaveLength(2);
+  });
 });

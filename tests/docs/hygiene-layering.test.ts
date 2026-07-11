@@ -1,7 +1,6 @@
-import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { walkTsFiles } from "../helpers/walkTsFiles";
+import { expect, it } from "vitest";
+import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 /**
  * Architectural boundary tests — enforce the module layering:
@@ -17,192 +16,218 @@ import { walkTsFiles } from "../helpers/walkTsFiles";
  *
  * Type-only imports (`import type`) are excluded from violation checks.
  *
- * Known violations (Round 2 status):
- *   - sim/ → app/: FIXED (cloneParams/SCENARIO_DEFAULTS moved to core/ and config/)
- *   - render/ → photometry/: FIXED (bridged via sim/limbDarkeningBridge.ts)
- *   - ui/ → app/: FIXED (cloneParams imported from core/clone)
- *
- * Round 3 — fixed via hook/callback pattern (sim/didacticsHook.ts):
- *   sim/ → didactics/:
- *     - src/sim/sim.ts — uses getDidacticsHook() instead of direct import
- *     - src/sim/v4/nativeEngine.ts — uses getDidacticsHook() instead of direct import
+ * The app layer owns orchestration. Lower layers stay reusable by depending only
+ * on data contracts or hooks, not on browser wiring, renderers, or lesson UI.
  */
 
 /** Collect non-type-only import violations for a layer importing from forbidden modules. */
 function findViolations(layerDir: string, forbiddenModules: string[]): string[] {
   const root = process.cwd();
   const layerRoot = path.join(root, "src", layerDir);
-  const files = walkTsFiles(layerRoot);
-  const offenders: string[] = [];
+  const offenders = walkTsFiles(layerRoot).filter((file) =>
+    fileImportsForbiddenModule(file, forbiddenModules),
+  );
 
-  // Match `import ... from '.../<module>/...'` but NOT `import type ...`
-  // We check each line individually so we can skip type-only imports.
-  for (const file of files) {
-    const text = fs.readFileSync(file, "utf8");
-    const lines = text.split("\n");
-    for (const line of lines) {
-      const trimmed = line.trim();
-      // Skip type-only imports
-      if (/^import\s+type\b/.test(trimmed)) continue;
-      // Check for forbidden module references in import-from statements
-      for (const mod of forbiddenModules) {
-        const rx = new RegExp(`from\\s+["'][^"']*\\/${mod}\\/[^"']*["']`);
-        if (rx.test(trimmed)) {
-          offenders.push(path.relative(root, file));
-          break; // one hit per file is enough
-        }
-      }
-    }
-  }
-
-  return [...new Set(offenders)]; // deduplicate
+  return [...new Set(offenders.map((file) => path.relative(root, file)))];
 }
 
-describe("hygiene layering", () => {
-  // ── core/ imports NOTHING from other src/ modules ──────────────────────
-  it("core/ does not import from physics/", () => {
-    expect(findViolations("core", ["physics"])).toEqual([]);
-  });
+function fileImportsForbiddenModule(file: string, forbiddenModules: string[]): boolean {
+  return readTextFileWithinRepo(file)
+    .split("\n")
+    .some((line) => lineImportsForbiddenModule(file, line, forbiddenModules));
+}
 
-  it("core/ does not import from photometry/", () => {
-    expect(findViolations("core", ["photometry"])).toEqual([]);
-  });
+function lineImportsForbiddenModule(file: string, line: string, forbiddenModules: string[]): boolean {
+  const trimmed = line.trim();
+  return (
+    !isTypeOnlyImport(trimmed) && forbiddenModules.some((mod) => importsForbiddenModule(file, trimmed, mod))
+  );
+}
 
-  it("core/ does not import from sim/", () => {
-    expect(findViolations("core", ["sim"])).toEqual([]);
-  });
+function isTypeOnlyImport(line: string): boolean {
+  return /^import\s+type\b/.test(line);
+}
 
-  it("core/ does not import from didactics/", () => {
-    expect(findViolations("core", ["didactics"])).toEqual([]);
-  });
+function importsForbiddenModule(file: string, line: string, mod: string): boolean {
+  const marker = " from ";
+  const fromIndex = line.indexOf(marker);
+  if (fromIndex < 0) return false;
 
-  it("core/ does not import from render/", () => {
-    expect(findViolations("core", ["render"])).toEqual([]);
-  });
+  const specifier = quotedImportSpecifier(line.slice(fromIndex + marker.length));
+  if (!specifier) return false;
 
-  it("core/ does not import from ui/", () => {
-    expect(findViolations("core", ["ui"])).toEqual([]);
-  });
+  const srcModule = importedSrcModule(file, specifier);
+  return srcModule === mod;
+}
 
-  it("core/ does not import from app/", () => {
-    expect(findViolations("core", ["app"])).toEqual([]);
-  });
+function quotedImportSpecifier(fragment: string): string | undefined {
+  const quote = fragment.trimStart()[0];
+  if (quote !== '"' && quote !== "'") return undefined;
 
-  // ── physics/ imports only from core/ ───────────────────────────────────
-  it("physics/ does not import from photometry/", () => {
-    expect(findViolations("physics", ["photometry"])).toEqual([]);
-  });
+  const rest = fragment.trimStart().slice(1);
+  const end = rest.indexOf(quote);
+  return end >= 0 ? rest.slice(0, end) : undefined;
+}
 
-  it("physics/ does not import from sim/", () => {
-    expect(findViolations("physics", ["sim"])).toEqual([]);
-  });
+function importedSrcModule(file: string, specifier: string): string | undefined {
+  const srcRoot = path.join(process.cwd(), "src");
 
-  it("physics/ does not import from didactics/", () => {
-    expect(findViolations("physics", ["didactics"])).toEqual([]);
-  });
+  if (specifier.startsWith(".")) {
+    const resolvedImport = path.resolve(path.dirname(file), specifier);
+    const relativeToSrc = path.relative(srcRoot, resolvedImport);
+    if (relativeToSrc.startsWith("..") || path.isAbsolute(relativeToSrc)) return undefined;
+    return relativeToSrc.split(path.sep)[0];
+  }
 
-  it("physics/ does not import from render/", () => {
-    expect(findViolations("physics", ["render"])).toEqual([]);
-  });
+  const segments = specifier.split("/");
+  if (segments[0] === "src") return segments[1];
+  if (segments[0] === "@") return segments[1];
+  return segments[0];
+}
 
-  it("physics/ does not import from ui/", () => {
-    expect(findViolations("physics", ["ui"])).toEqual([]);
-  });
+// ── core/ imports NOTHING from other src/ modules ──────────────────────
+it("core/ does not import from physics/", () => {
+  expect(findViolations("core", ["physics"])).toEqual([]);
+});
 
-  it("physics/ does not import from app/", () => {
-    expect(findViolations("physics", ["app"])).toEqual([]);
-  });
+it("core/ does not import from photometry/", () => {
+  expect(findViolations("core", ["photometry"])).toEqual([]);
+});
 
-  // ── photometry/ imports only from core/ and physics/ ───────────────────
-  it("photometry/ does not import from sim/", () => {
-    expect(findViolations("photometry", ["sim"])).toEqual([]);
-  });
+it("core/ does not import from sim/", () => {
+  expect(findViolations("core", ["sim"])).toEqual([]);
+});
 
-  it("photometry/ does not import from didactics/", () => {
-    expect(findViolations("photometry", ["didactics"])).toEqual([]);
-  });
+it("core/ does not import from didactics/", () => {
+  expect(findViolations("core", ["didactics"])).toEqual([]);
+});
 
-  it("photometry/ does not import from render/", () => {
-    expect(findViolations("photometry", ["render"])).toEqual([]);
-  });
+it("core/ does not import from render/", () => {
+  expect(findViolations("core", ["render"])).toEqual([]);
+});
 
-  it("photometry/ does not import from ui/", () => {
-    expect(findViolations("photometry", ["ui"])).toEqual([]);
-  });
+it("core/ does not import from ui/", () => {
+  expect(findViolations("core", ["ui"])).toEqual([]);
+});
 
-  it("photometry/ does not import from app/", () => {
-    expect(findViolations("photometry", ["app"])).toEqual([]);
-  });
+it("core/ does not import from app/", () => {
+  expect(findViolations("core", ["app"])).toEqual([]);
+});
 
-  // ── sim/ imports from core/, physics/, photometry/, config/ ─────────────
-  it("sim/ does not import from didactics/", () => {
-    expect(findViolations("sim", ["didactics"])).toEqual([]);
-  });
+// ── physics/ imports only from core/ ───────────────────────────────────
+it("physics/ does not import from photometry/", () => {
+  expect(findViolations("physics", ["photometry"])).toEqual([]);
+});
 
-  it("sim/ does not import from app/", () => {
-    expect(findViolations("sim", ["app"])).toEqual([]);
-  });
+it("physics/ does not import from sim/", () => {
+  expect(findViolations("physics", ["sim"])).toEqual([]);
+});
 
-  it("sim/ does not import from render/", () => {
-    expect(findViolations("sim", ["render"])).toEqual([]);
-  });
+it("physics/ does not import from didactics/", () => {
+  expect(findViolations("physics", ["didactics"])).toEqual([]);
+});
 
-  it("sim/ does not import from ui/", () => {
-    expect(findViolations("sim", ["ui"])).toEqual([]);
-  });
+it("physics/ does not import from render/", () => {
+  expect(findViolations("physics", ["render"])).toEqual([]);
+});
 
-  // ── didactics/ imports from core/, sim/, physics/ ──────────────────────
-  it("didactics/ does not import from photometry/", () => {
-    expect(findViolations("didactics", ["photometry"])).toEqual([]);
-  });
+it("physics/ does not import from ui/", () => {
+  expect(findViolations("physics", ["ui"])).toEqual([]);
+});
 
-  it("didactics/ does not import from render/", () => {
-    expect(findViolations("didactics", ["render"])).toEqual([]);
-  });
+it("physics/ does not import from app/", () => {
+  expect(findViolations("physics", ["app"])).toEqual([]);
+});
 
-  it("didactics/ does not import from ui/", () => {
-    expect(findViolations("didactics", ["ui"])).toEqual([]);
-  });
+// ── photometry/ imports only from core/ and physics/ ───────────────────
+it("photometry/ does not import from sim/", () => {
+  expect(findViolations("photometry", ["sim"])).toEqual([]);
+});
 
-  it("didactics/ does not import from app/", () => {
-    expect(findViolations("didactics", ["app"])).toEqual([]);
-  });
+it("photometry/ does not import from didactics/", () => {
+  expect(findViolations("photometry", ["didactics"])).toEqual([]);
+});
 
-  // ── render/ imports from core/, physics/, sim/ ─────────────────────────
-  it("render/ does not import from photometry/", () => {
-    expect(findViolations("render", ["photometry"])).toEqual([]);
-  });
+it("photometry/ does not import from render/", () => {
+  expect(findViolations("photometry", ["render"])).toEqual([]);
+});
 
-  it("render/ does not import from didactics/", () => {
-    expect(findViolations("render", ["didactics"])).toEqual([]);
-  });
+it("photometry/ does not import from ui/", () => {
+  expect(findViolations("photometry", ["ui"])).toEqual([]);
+});
 
-  it("render/ does not import from ui/", () => {
-    expect(findViolations("render", ["ui"])).toEqual([]);
-  });
+it("photometry/ does not import from app/", () => {
+  expect(findViolations("photometry", ["app"])).toEqual([]);
+});
 
-  it("render/ does not import from app/", () => {
-    expect(findViolations("render", ["app"])).toEqual([]);
-  });
+// ── sim/ imports from core/, physics/, photometry/, config/ ─────────────
+it("sim/ does not import from didactics/", () => {
+  expect(findViolations("sim", ["didactics"])).toEqual([]);
+});
 
-  // ── ui/ imports from core/, physics/, ui/ ──────────────────────────────
-  it("ui/ does not import from app/", () => {
-    expect(findViolations("ui", ["app"])).toEqual([]);
-  });
+it("sim/ does not import from app/", () => {
+  expect(findViolations("sim", ["app"])).toEqual([]);
+});
 
-  it("ui/ does not import from sim/", () => {
-    expect(findViolations("ui", ["sim"])).toEqual([]);
-  });
+it("sim/ does not import from render/", () => {
+  expect(findViolations("sim", ["render"])).toEqual([]);
+});
 
-  it("ui/ does not import from render/", () => {
-    expect(findViolations("ui", ["render"])).toEqual([]);
-  });
+it("sim/ does not import from ui/", () => {
+  expect(findViolations("sim", ["ui"])).toEqual([]);
+});
 
-  it("ui/ does not import from didactics/", () => {
-    expect(findViolations("ui", ["didactics"])).toEqual([]);
-  });
+// ── didactics/ imports from core/, sim/, physics/ ──────────────────────
+it("didactics/ does not import from photometry/", () => {
+  expect(findViolations("didactics", ["photometry"])).toEqual([]);
+});
 
-  it("ui/ does not import from photometry/", () => {
-    expect(findViolations("ui", ["photometry"])).toEqual([]);
-  });
+it("didactics/ does not import from render/", () => {
+  expect(findViolations("didactics", ["render"])).toEqual([]);
+});
+
+it("didactics/ does not import from ui/", () => {
+  expect(findViolations("didactics", ["ui"])).toEqual([]);
+});
+
+it("didactics/ does not import from app/", () => {
+  expect(findViolations("didactics", ["app"])).toEqual([]);
+});
+
+// ── render/ imports from core/, physics/, sim/ ─────────────────────────
+it("render/ does not import from photometry/", () => {
+  expect(findViolations("render", ["photometry"])).toEqual([]);
+});
+
+it("render/ does not import from didactics/", () => {
+  expect(findViolations("render", ["didactics"])).toEqual([]);
+});
+
+it("render/ does not import from ui/", () => {
+  expect(findViolations("render", ["ui"])).toEqual([]);
+});
+
+it("render/ does not import from app/", () => {
+  expect(findViolations("render", ["app"])).toEqual([]);
+});
+
+// ── ui/ imports from core/, physics/, ui/ ──────────────────────────────
+it("ui/ does not import from app/", () => {
+  expect(findViolations("ui", ["app"])).toEqual([]);
+});
+
+it("ui/ does not import from sim/", () => {
+  expect(findViolations("ui", ["sim"])).toEqual([]);
+});
+
+it("ui/ does not import from render/", () => {
+  expect(findViolations("ui", ["render"])).toEqual([]);
+});
+
+it("ui/ does not import from didactics/", () => {
+  expect(findViolations("ui", ["didactics"])).toEqual([]);
+});
+
+it("ui/ does not import from photometry/", () => {
+  expect(findViolations("ui", ["photometry"])).toEqual([]);
 });

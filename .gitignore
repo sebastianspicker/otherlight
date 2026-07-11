@@ -3,6 +3,8 @@ dist/
 dist-ssr/
 coverage/
 test-results/
+playwright-report/
+blob-report/
 .nyc_output/
 .vitest/
 junit.xml
@@ -13,7 +15,14 @@ junit-*.xml
 .pnpm-store/
 
 .DS_Store
+._*
+Thumbs.db
+Desktop.ini
 *.log
+*.bak
+*.orig
+*.swp
+*.swo
 *.tsbuildinfo
 *.tmp
 
@@ -27,7 +36,16 @@ yarn-error.log*
 .idea/
 .vscode/
 .cursor/
+.continue/
+.windsurf/
+.claude/
+.gemini/
 .codex/
+.codacy/
+.codegraph/
+.kilo/
+.serena/
+.impeccable/live/
 
 # Repo harness and audit workspaces
 .agents/
@@ -45,9 +63,21 @@ AGENT_AUDIT_REPORT.md
 AUDIT.md
 artifacts/
 reports/
+/screenshots/
+*.sarif
+codacy-results*.json
+lizard-report.*
+semgrep-results.*
+deprecated/
+vendor/
+third_party/
+third-party/
+3rdparty/
+external/
 
-# docs (local findings/logs/decisions)
+# docs (local findings/logs/decisions; not maintained user-facing docs)
 docs/audit/
+docs/archive/
 docs/AUDIT_*.md
 docs/DEAD_CODE_POLICY.md
 docs/BASELINE.md
@@ -55,7 +85,16 @@ docs/BUGS_AND_FIXES.md
 docs/REPO_MAP.md
 docs/ci-audit.md
 docs/ci-decision.md
+docs/architecture-map.md
+docs/code-index.md
+docs/deprecation-and-simplification-audit.md
+docs/logic-and-correctness-audit.md
 docs/roadmap.md
+docs/verification-baseline.md
+docs/status*.md
+docs/*-status.md
+docs/*-ledger*.md
+docs/*-baseline.md
 DECISIONS.md
 FINDINGS.md
 LOG.md
@@ -79,10 +118,21 @@ docs/deprecated/
 # Env files & secrets
 .env
 .env.*
+!.env.example
+!.env.sample
+.envrc
+.direnv/
 *.pem
 *.key
+*.crt
+*.csr
 *.p12
 *.pfx
+*.jks
+*.keystore
+*.mobileprovision
 credentials.json
 secrets.json
 .secret*
+*.secret
+*.secrets

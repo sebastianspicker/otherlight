@@ -93,6 +93,84 @@ function eventFromState(
   });
 }
 
+function assertTransitSequenceInputs(args: {
+  system: SystemParams;
+  body: TransitBodyId;
+  aroundSec: number;
+}): void {
+  if (!(Number.isFinite(args.aroundSec) && Number.isFinite(args.system.star.r) && args.system.star.r > 0)) {
+    throw new Error("buildTransitSequenceDiagnostics: invalid inputs.");
+  }
+  if (args.body === "moon" && !args.system.moon) {
+    throw new Error("buildTransitSequenceDiagnostics: moon body requested but moon is missing.");
+  }
+}
+
+function boundedEpochCount(value: number | undefined, fallback: number): number {
+  return Math.max(0, Math.floor(value ?? fallback));
+}
+
+function transitSequenceOrbit(system: SystemParams, body: TransitBodyId, aroundSec: number) {
+  return body === "planet"
+    ? resolveOrbitElements(system.planet.orbit, aroundSec, "planet.orbit")
+    : resolveOrbitElements(system.moon!.orbitAroundPlanet, aroundSec, "moon.orbitAroundPlanet");
+}
+
+function transitSequenceRow(
+  system: SystemParams,
+  body: TransitBodyId,
+  epoch: number,
+  predictedCenterSec: number,
+): TransitSequenceEvent {
+  const event = eventFromState(system, predictedCenterSec, body);
+  if (!event) return { epoch, predictedCenterSec };
+  return {
+    epoch,
+    predictedCenterSec,
+    observedCenterSec: event.centerSec,
+    ocSec: event.centerSec - predictedCenterSec,
+    durationSec: event.durationSec,
+    ingressSec: event.ingressSec,
+    egressSec: event.egressSec,
+  };
+}
+
+function transitSequenceEvents(args: {
+  system: SystemParams;
+  body: TransitBodyId;
+  anchorEpoch: number;
+  epochsBefore: number;
+  epochsAfter: number;
+  anchorCenter: number;
+  periodSec: number;
+}): TransitSequenceEvent[] {
+  const events: TransitSequenceEvent[] = [];
+  for (
+    let epoch = args.anchorEpoch - args.epochsBefore;
+    epoch <= args.anchorEpoch + args.epochsAfter;
+    epoch++
+  ) {
+    const predictedCenterSec = args.anchorCenter + (epoch - args.anchorEpoch) * args.periodSec;
+    events.push(transitSequenceRow(args.system, args.body, epoch, predictedCenterSec));
+  }
+  return events;
+}
+
+function transitSequenceStats(events: TransitSequenceEvent[]): {
+  detectedCount: number;
+  rmsOcSec?: number;
+  maxAbsOcSec?: number;
+} {
+  const ocValues = events.map((e) => e.ocSec).filter((v): v is number => Number.isFinite(v));
+  const detectedCount = ocValues.length;
+  return {
+    detectedCount,
+    rmsOcSec:
+      detectedCount > 0 ? Math.sqrt(ocValues.reduce((sum, v) => sum + v * v, 0) / detectedCount) : undefined,
+    maxAbsOcSec: detectedCount > 0 ? ocValues.reduce((m, v) => Math.max(m, Math.abs(v)), 0) : undefined,
+  };
+}
+
 export function buildTransitSequenceDiagnostics(args: {
   system: SystemParams;
   body?: TransitBodyId;
@@ -102,47 +180,25 @@ export function buildTransitSequenceDiagnostics(args: {
 }): TransitSequenceDiagnostics {
   const body = args.body ?? "planet";
   const aroundSec = args.aroundSec;
-  const epochsBefore = Math.max(0, Math.floor(args.epochsBefore ?? 2));
-  const epochsAfter = Math.max(0, Math.floor(args.epochsAfter ?? 2));
+  const epochsBefore = boundedEpochCount(args.epochsBefore, 2);
+  const epochsAfter = boundedEpochCount(args.epochsAfter, 2);
+  assertTransitSequenceInputs({ system: args.system, body, aroundSec });
 
-  if (!(Number.isFinite(aroundSec) && Number.isFinite(args.system.star.r) && args.system.star.r > 0)) {
-    throw new Error("buildTransitSequenceDiagnostics: invalid inputs.");
-  }
-  if (body === "moon" && !args.system.moon) {
-    throw new Error("buildTransitSequenceDiagnostics: moon body requested but moon is missing.");
-  }
-
-  const orbit =
-    body === "planet"
-      ? resolveOrbitElements(args.system.planet.orbit, aroundSec, "planet.orbit")
-      : resolveOrbitElements(args.system.moon!.orbitAroundPlanet, aroundSec, "moon.orbitAroundPlanet");
-
+  const orbit = transitSequenceOrbit(args.system, body, aroundSec);
   const periodSec = orbit.period;
   const anchor = eventFromState(args.system, aroundSec, body);
   const anchorCenter = anchor?.centerSec ?? aroundSec;
   const anchorEpoch = Math.round((anchorCenter - orbit.t0) / periodSec);
-
-  const events: TransitSequenceEvent[] = [];
-  for (let epoch = anchorEpoch - epochsBefore; epoch <= anchorEpoch + epochsAfter; epoch++) {
-    const predictedCenterSec = anchorCenter + (epoch - anchorEpoch) * periodSec;
-    const event = eventFromState(args.system, predictedCenterSec, body);
-
-    const row: TransitSequenceEvent = { epoch, predictedCenterSec };
-    if (event) {
-      row.observedCenterSec = event.centerSec;
-      row.ocSec = event.centerSec - predictedCenterSec;
-      row.durationSec = event.durationSec;
-      row.ingressSec = event.ingressSec;
-      row.egressSec = event.egressSec;
-    }
-    events.push(row);
-  }
-
-  const ocValues = events.map((e) => e.ocSec).filter((v): v is number => Number.isFinite(v));
-  const detectedCount = ocValues.length;
-  const rmsOcSec =
-    detectedCount > 0 ? Math.sqrt(ocValues.reduce((sum, v) => sum + v * v, 0) / detectedCount) : undefined;
-  const maxAbsOcSec = detectedCount > 0 ? ocValues.reduce((m, v) => Math.max(m, Math.abs(v)), 0) : undefined;
+  const events = transitSequenceEvents({
+    ...args,
+    body,
+    anchorEpoch,
+    epochsBefore,
+    epochsAfter,
+    anchorCenter,
+    periodSec,
+  });
+  const stats = transitSequenceStats(events);
 
   return {
     body,
@@ -150,8 +206,6 @@ export function buildTransitSequenceDiagnostics(args: {
     referenceCenterSec: anchorCenter,
     referenceEpoch: anchorEpoch,
     events,
-    detectedCount,
-    rmsOcSec,
-    maxAbsOcSec,
+    ...stats,
   };
 }

@@ -13,6 +13,21 @@ function isFiniteNonNegative(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x) && x >= 0;
 }
 
+function isFiniteNonZero(x: unknown): x is number {
+  return typeof x === "number" && Number.isFinite(x) && x !== 0;
+}
+
+type StellarSurfaceConfig = NonNullable<PhotometryParams["stellarSurface"]>;
+type AtmosphereRtConfig = NonNullable<PhotometryParams["atmosphereRT"]>;
+type AtmosphereRtLayerConfig = NonNullable<NonNullable<AtmosphereRtConfig["layers"]>[number]>;
+type AtmosphereRtCloudHazeConfig = NonNullable<AtmosphereRtConfig["cloudHaze"]>;
+
+type TransmissionShapeBody = {
+  id: string;
+  shape?: { oblateness?: number };
+  rings?: { outerRadius?: number };
+};
+
 export function collectScientificBrowserActiveAdditiveChannelIssues(
   photometry: PhotometryParams | undefined,
 ): string[] {
@@ -70,42 +85,49 @@ export function collectScientificBrowserStellarSurfaceIssues(
   if (!surf?.enabled) return [];
 
   const issues: string[] = [];
-  const hasFinitePositiveGranulationSigma =
-    Number.isFinite(surf.granulationSigma) && (surf.granulationSigma as number) > 0;
-  const hasFiniteNonZeroActivityAmp =
-    Number.isFinite(surf.activityCycleAmp) && (surf.activityCycleAmp as number) !== 0;
+  collectGranulationIssues(surf, issues);
+  collectActivityCycleIssues(surf, issues);
+  return issues;
+}
 
-  if (surf.granulationSigma !== undefined) {
-    if (!Number.isFinite(surf.granulationSigma) || surf.granulationSigma < 0) {
-      issues.push("photometry.stellarSurface.granulationSigma must be finite and >= 0 when enabled");
-    }
+function collectGranulationIssues(surf: StellarSurfaceConfig, issues: string[]): void {
+  if (surf.granulationSigma !== undefined && !isFiniteNonNegative(surf.granulationSigma)) {
+    issues.push("photometry.stellarSurface.granulationSigma must be finite and >= 0 when enabled");
   }
   if (surf.granulationTimescaleSec !== undefined) {
-    if (!Number.isFinite(surf.granulationTimescaleSec) || surf.granulationTimescaleSec <= 0) {
-      issues.push("photometry.stellarSurface.granulationTimescaleSec must be finite and > 0 when enabled");
-    }
-  } else if (hasFinitePositiveGranulationSigma) {
+    collectExplicitGranulationTimescaleIssue(surf, issues);
+    return;
+  }
+  if (isFinitePositive(surf.granulationSigma)) {
     issues.push(
       "photometry.stellarSurface.granulationTimescaleSec must be explicit and > 0 when granulationSigma > 0",
     );
   }
+}
 
-  if (surf.activityCycleAmp !== undefined) {
-    if (!Number.isFinite(surf.activityCycleAmp)) {
-      issues.push("photometry.stellarSurface.activityCycleAmp must be finite when enabled");
-    }
+function collectExplicitGranulationTimescaleIssue(surf: StellarSurfaceConfig, issues: string[]): void {
+  if (isFinitePositive(surf.granulationTimescaleSec)) return;
+  issues.push("photometry.stellarSurface.granulationTimescaleSec must be finite and > 0 when enabled");
+}
+
+function collectActivityCycleIssues(surf: StellarSurfaceConfig, issues: string[]): void {
+  if (surf.activityCycleAmp !== undefined && !Number.isFinite(surf.activityCycleAmp)) {
+    issues.push("photometry.stellarSurface.activityCycleAmp must be finite when enabled");
   }
   if (surf.activityCyclePeriodSec !== undefined) {
-    if (!Number.isFinite(surf.activityCyclePeriodSec) || surf.activityCyclePeriodSec <= 0) {
-      issues.push("photometry.stellarSurface.activityCyclePeriodSec must be finite and > 0 when enabled");
-    }
-  } else if (hasFiniteNonZeroActivityAmp) {
+    collectExplicitActivityCyclePeriodIssue(surf, issues);
+    return;
+  }
+  if (isFiniteNonZero(surf.activityCycleAmp)) {
     issues.push(
       "photometry.stellarSurface.activityCyclePeriodSec must be explicit and > 0 when activityCycleAmp != 0",
     );
   }
+}
 
-  return issues;
+function collectExplicitActivityCyclePeriodIssue(surf: StellarSurfaceConfig, issues: string[]): void {
+  if (isFinitePositive(surf.activityCyclePeriodSec)) return;
+  issues.push("photometry.stellarSurface.activityCyclePeriodSec must be finite and > 0 when enabled");
 }
 
 export function collectScientificBrowserTransmissionIssues(config: SimulationConfigV4): string[] {
@@ -115,11 +137,25 @@ export function collectScientificBrowserTransmissionIssues(config: SimulationCon
   if (!transmissionEnabled) return [];
 
   const issues: string[] = [];
-  const transmissionTargets = [
-    phot?.atmosphereTransmission?.enabled ? phot.atmosphereTransmission?.target : undefined,
-    phot?.atmosphereRT?.enabled ? phot.atmosphereRT?.target : undefined,
-  ].filter((target): target is "planet" | "moon" => target === "planet" || target === "moon");
+  const transmissionTargets = collectTransmissionTargets(phot);
+  collectMissingTransmissionTargetIssues(config, transmissionTargets, issues);
+  collectMixedTransmissionShapeIssues(config.bodies.planets, "planet", issues);
+  collectMixedTransmissionShapeIssues(config.bodies.moons, "moon", issues);
+  return issues;
+}
 
+function collectTransmissionTargets(photometry: PhotometryParams | undefined): Array<"planet" | "moon"> {
+  return [
+    photometry?.atmosphereTransmission?.enabled ? photometry.atmosphereTransmission?.target : undefined,
+    photometry?.atmosphereRT?.enabled ? photometry.atmosphereRT?.target : undefined,
+  ].filter((target): target is "planet" | "moon" => target === "planet" || target === "moon");
+}
+
+function collectMissingTransmissionTargetIssues(
+  config: SimulationConfigV4,
+  transmissionTargets: Array<"planet" | "moon">,
+  issues: string[],
+): void {
   if (transmissionTargets.includes("planet") && config.bodies.planets.length === 0) {
     issues.push(
       "scientific-browser atmospheric transmission targets the planet but no explicit planet body is present",
@@ -130,29 +166,34 @@ export function collectScientificBrowserTransmissionIssues(config: SimulationCon
       "scientific-browser atmospheric transmission targets the moon but no explicit moon body is present",
     );
   }
+}
 
-  const checkBody = (
-    body: { id: string; shape?: { oblateness?: number }; rings?: { outerRadius?: number } },
-    kind: "planet" | "moon",
-  ): void => {
-    const oblateness = body.shape?.oblateness;
-    if (typeof oblateness === "number" && Number.isFinite(oblateness) && oblateness > 0) {
-      issues.push(
-        `${kind} "${body.id}" has shape.oblateness > 0, which would force mixed-shape atmospheric transmission in scientific-browser mode`,
-      );
-    }
-    const ringOuter = body.rings?.outerRadius;
-    if (typeof ringOuter === "number" && Number.isFinite(ringOuter) && ringOuter > 0) {
-      issues.push(
-        `${kind} "${body.id}" has rings, which would force mixed-shape atmospheric transmission in scientific-browser mode`,
-      );
-    }
-  };
+function collectMixedTransmissionShapeIssues(
+  bodies: TransmissionShapeBody[],
+  kind: "planet" | "moon",
+  issues: string[],
+): void {
+  for (const body of bodies) {
+    collectMixedTransmissionBodyIssues(body, kind, issues);
+  }
+}
 
-  for (const planet of config.bodies.planets) checkBody(planet, "planet");
-  for (const moon of config.bodies.moons) checkBody(moon, "moon");
-
-  return issues;
+function collectMixedTransmissionBodyIssues(
+  body: TransmissionShapeBody,
+  kind: "planet" | "moon",
+  issues: string[],
+): void {
+  const oblateness = body.shape?.oblateness;
+  if (isFinitePositive(oblateness)) {
+    issues.push(
+      `${kind} "${body.id}" has shape.oblateness > 0, which would force mixed-shape atmospheric transmission in scientific-browser mode`,
+    );
+  }
+  const ringOuter = body.rings?.outerRadius;
+  if (!isFinitePositive(ringOuter)) return;
+  issues.push(
+    `${kind} "${body.id}" has rings, which would force mixed-shape atmospheric transmission in scientific-browser mode`,
+  );
 }
 
 export function collectScientificBrowserUnsupportedTransmissionModelIssues(
@@ -172,7 +213,16 @@ export function collectScientificBrowserUnsupportedRtFeatureIssues(config: Simul
   if (!rt?.enabled) return [];
 
   const issues: string[] = [];
+  collectUnsupportedRtTopLevelFeatureIssues(rt, issues);
+  collectUnsupportedRtCloudHazeFeatureIssues(rt.cloudHaze, issues);
+  for (const [index, layer] of (rt.layers ?? []).entries()) {
+    collectUnsupportedRtLayerFeatureIssues(layer, index, issues);
+  }
 
+  return issues;
+}
+
+const collectUnsupportedRtTopLevelFeatureIssues = (rt: AtmosphereRtConfig, issues: string[]): void => {
   if (Array.isArray(rt.temperatureProfileK) && rt.temperatureProfileK.length > 0) {
     issues.push(
       "photometry.atmosphereRT.temperatureProfileK is not yet supported on the scientific-browser native path",
@@ -188,108 +238,133 @@ export function collectScientificBrowserUnsupportedRtFeatureIssues(config: Simul
       "photometry.atmosphereRT.emission is not yet supported on the scientific-browser native path",
     );
   }
-  if (
-    rt.cloudHaze?.enabled &&
-    Number.isFinite(rt.cloudHaze.hazeSlope) &&
-    (rt.cloudHaze.hazeSlope as number) !== 0
-  ) {
+};
+
+const collectUnsupportedRtCloudHazeFeatureIssues = (
+  cloudHaze: AtmosphereRtCloudHazeConfig | undefined,
+  issues: string[],
+): void => {
+  if (cloudHaze?.enabled && isFiniteNonZero(cloudHaze.hazeSlope)) {
     issues.push(
       "photometry.atmosphereRT.cloudHaze.hazeSlope is not yet supported on the scientific-browser native path",
     );
   }
+};
 
-  for (const [index, layer] of (rt.layers ?? []).entries()) {
-    if (layer.temperatureK !== undefined) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].temperatureK is not yet supported on the scientific-browser native path`,
-      );
-    }
-    if (Number.isFinite(layer.alpha) && (layer.alpha as number) !== 0) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].alpha is not yet supported on the scientific-browser native path`,
-      );
-    }
-    if (Number.isFinite(layer.hazeSlope) && (layer.hazeSlope as number) !== 0) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].hazeSlope is not yet supported on the scientific-browser native path`,
-      );
-    }
+const collectUnsupportedRtLayerFeatureIssues = (
+  layer: AtmosphereRtLayerConfig,
+  index: number,
+  issues: string[],
+): void => {
+  if (layer.temperatureK !== undefined) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].temperatureK is not yet supported on the scientific-browser native path`,
+    );
   }
-
-  return issues;
-}
+  if (isFiniteNonZero(layer.alpha)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].alpha is not yet supported on the scientific-browser native path`,
+    );
+  }
+  if (isFiniteNonZero(layer.hazeSlope)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].hazeSlope is not yet supported on the scientific-browser native path`,
+    );
+  }
+};
 
 export function collectScientificBrowserRtInputIssues(config: SimulationConfigV4): string[] {
   const rt = config.photometry?.atmosphereRT;
   if (!rt?.enabled) return [];
 
   const issues: string[] = [];
+  collectRtTargetInputIssues(rt, issues);
+  collectRtReferenceWavelengthIssues(rt, issues);
+  for (const [index, layer] of (rt.layers ?? []).entries()) {
+    collectRtLayerInputIssues(layer, index, issues);
+  }
+  collectRtCloudHazeInputIssues(rt.cloudHaze, issues);
+  return issues;
+}
 
+const collectRtTargetInputIssues = (rt: AtmosphereRtConfig, issues: string[]): void => {
   if (rt.target !== "planet" && rt.target !== "moon") {
     issues.push(
       'photometry.atmosphereRT.target must be explicitly "planet" or "moon" on the scientific-browser native path',
     );
   }
+};
 
+const collectRtReferenceWavelengthIssues = (rt: AtmosphereRtConfig, issues: string[]): void => {
   if (rt.lambdaRefNm !== undefined && !isFinitePositive(rt.lambdaRefNm)) {
     issues.push(
       "photometry.atmosphereRT.lambdaRefNm must be finite and > 0 on the scientific-browser native path",
     );
   }
+};
 
-  for (const [index, layer] of (rt.layers ?? []).entries()) {
-    if (!isFinitePositive(layer.r0)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].r0 must be finite and > 0 on the scientific-browser native path`,
-      );
-    }
-    if (!isFinitePositive(layer.H)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].H must be finite and > 0 on the scientific-browser native path`,
-      );
-    }
-    if (!isFiniteNonNegative(layer.tau0)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].tau0 must be finite and >= 0 on the scientific-browser native path`,
-      );
-    }
-    if (layer.cloudOpacity !== undefined && !isFiniteNonNegative(layer.cloudOpacity)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].cloudOpacity must be finite and >= 0 on the scientific-browser native path`,
-      );
-    }
-    if (layer.alpha !== undefined && !Number.isFinite(layer.alpha)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].alpha must be finite on the scientific-browser native path`,
-      );
-    }
-    if (layer.hazeSlope !== undefined && !Number.isFinite(layer.hazeSlope)) {
-      issues.push(
-        `photometry.atmosphereRT.layers[${index}].hazeSlope must be finite on the scientific-browser native path`,
-      );
-    }
+const collectRtLayerInputIssues = (layer: AtmosphereRtLayerConfig, index: number, issues: string[]): void => {
+  if (!isFinitePositive(layer.r0)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].r0 must be finite and > 0 on the scientific-browser native path`,
+    );
   }
-
-  if (rt.cloudHaze?.enabled) {
-    if (rt.cloudHaze.cloudDeckTau !== undefined && !isFiniteNonNegative(rt.cloudHaze.cloudDeckTau)) {
-      issues.push(
-        "photometry.atmosphereRT.cloudHaze.cloudDeckTau must be finite and >= 0 on the scientific-browser native path",
-      );
-    }
-    if (rt.cloudHaze.hazeTau !== undefined && !isFiniteNonNegative(rt.cloudHaze.hazeTau)) {
-      issues.push(
-        "photometry.atmosphereRT.cloudHaze.hazeTau must be finite and >= 0 on the scientific-browser native path",
-      );
-    }
-    if (rt.cloudHaze.hazeSlope !== undefined && !Number.isFinite(rt.cloudHaze.hazeSlope)) {
-      issues.push(
-        "photometry.atmosphereRT.cloudHaze.hazeSlope must be finite on the scientific-browser native path",
-      );
-    }
+  if (!isFinitePositive(layer.H)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].H must be finite and > 0 on the scientific-browser native path`,
+    );
   }
+  if (!isFiniteNonNegative(layer.tau0)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].tau0 must be finite and >= 0 on the scientific-browser native path`,
+    );
+  }
+  collectOptionalRtLayerInputIssues(layer, index, issues);
+};
 
-  return issues;
-}
+const collectOptionalRtLayerInputIssues = (
+  layer: AtmosphereRtLayerConfig,
+  index: number,
+  issues: string[],
+): void => {
+  if (layer.cloudOpacity !== undefined && !isFiniteNonNegative(layer.cloudOpacity)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].cloudOpacity must be finite and >= 0 on the scientific-browser native path`,
+    );
+  }
+  if (layer.alpha !== undefined && !Number.isFinite(layer.alpha)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].alpha must be finite on the scientific-browser native path`,
+    );
+  }
+  if (layer.hazeSlope !== undefined && !Number.isFinite(layer.hazeSlope)) {
+    issues.push(
+      `photometry.atmosphereRT.layers[${index}].hazeSlope must be finite on the scientific-browser native path`,
+    );
+  }
+};
+
+const collectRtCloudHazeInputIssues = (
+  cloudHaze: AtmosphereRtCloudHazeConfig | undefined,
+  issues: string[],
+): void => {
+  if (!cloudHaze?.enabled) return;
+  if (cloudHaze.cloudDeckTau !== undefined && !isFiniteNonNegative(cloudHaze.cloudDeckTau)) {
+    issues.push(
+      "photometry.atmosphereRT.cloudHaze.cloudDeckTau must be finite and >= 0 on the scientific-browser native path",
+    );
+  }
+  if (cloudHaze.hazeTau !== undefined && !isFiniteNonNegative(cloudHaze.hazeTau)) {
+    issues.push(
+      "photometry.atmosphereRT.cloudHaze.hazeTau must be finite and >= 0 on the scientific-browser native path",
+    );
+  }
+  if (cloudHaze.hazeSlope !== undefined && !Number.isFinite(cloudHaze.hazeSlope)) {
+    issues.push(
+      "photometry.atmosphereRT.cloudHaze.hazeSlope must be finite on the scientific-browser native path",
+    );
+  }
+};
 
 export function collectScientificBrowserRtLayerIssues(config: SimulationConfigV4): string[] {
   const rt = config.photometry?.atmosphereRT;

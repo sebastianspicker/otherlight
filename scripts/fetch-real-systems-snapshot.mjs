@@ -3,11 +3,12 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 const DEFAULT_LIMIT = 20;
 const DEFAULT_FETCH_TIMEOUT_MS = 15_000;
 const MAX_NASA_RESPONSE_BYTES = 10 * 1024 * 1024;
+const SNAPSHOT_OUTPUT_PATH = "src/config/real-systems.snapshot.json";
 
 export const NASA_TAP_QUERY = [
   "select",
@@ -38,6 +39,22 @@ function createTimeoutSignal(timeoutMs) {
   };
 }
 
+function abortError(signal) {
+  if (signal?.reason instanceof Error) return signal.reason;
+  return new Error("NASA TAP request aborted.");
+}
+
+function raceAbort(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(abortError(signal));
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(abortError(signal));
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
 function toFinite(v) {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : undefined;
@@ -57,43 +74,66 @@ function slugifyName(label) {
 }
 
 export function normalizeNasaRow(row) {
-  if (!row || typeof row !== "object") return null;
-
-  const transit = toFinite(row.tran_flag);
-  if (transit !== 1) return null;
-
-  const label = typeof row.pl_name === "string" ? row.pl_name.trim() : "";
-  const hostname = typeof row.hostname === "string" ? row.hostname.trim() : "";
-  if (!label || !hostname) return null;
-
-  const starRadiusSolar = toPositive(row.st_rad);
-  const semiMajorAxisAu = toPositive(row.pl_orbsmax);
-  const periodDays = toPositive(row.pl_orbper);
-  const planetRadiusJupiter = toPositive(row.pl_radj);
-  const planetRadiusEarth = toPositive(row.pl_rade);
-
-  if (!starRadiusSolar || !semiMajorAxisAu || !periodDays) return null;
-  if (!planetRadiusJupiter && !planetRadiusEarth) return null;
-
+  if (!isTransitObject(row)) return null;
+  const identity = rowIdentity(row);
+  const physical = requiredPhysicalFields(row);
+  if (!identity || !physical) return null;
   const entry = {
-    id: slugifyName(label),
-    label,
-    hostname,
+    ...identity,
+    ...physical,
     discYear: toFinite(row.disc_year),
-    starRadiusSolar,
     starMassSolar: toPositive(row.st_mass),
-    planetRadiusJupiter,
-    planetRadiusEarth,
     planetMassJupiter: toPositive(row.pl_bmassj),
     planetMassEarth: toPositive(row.pl_bmasse),
-    semiMajorAxisAu,
-    periodDays,
     eccentricity: toFinite(row.pl_orbeccen),
     inclinationDeg: toFinite(row.pl_orbincl),
   };
-
   if (!entry.id) return null;
   return entry;
+}
+
+function isTransitObject(row) {
+  return Boolean(row && typeof row === "object" && toFinite(row.tran_flag) === 1);
+}
+
+function rowIdentity(row) {
+  const label = trimmedString(row.pl_name);
+  const hostname = trimmedString(row.hostname);
+  if (!label || !hostname) return null;
+  return {
+    id: slugifyName(label),
+    label,
+    hostname,
+  };
+}
+
+function trimmedString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function requiredPhysicalFields(row) {
+  const orbital = requiredOrbitFields(row);
+  const radius = requiredPlanetRadiusFields(row);
+  if (!orbital || !radius) return null;
+  return {
+    ...orbital,
+    ...radius,
+  };
+}
+
+function requiredOrbitFields(row) {
+  const starRadiusSolar = toPositive(row.st_rad);
+  const semiMajorAxisAu = toPositive(row.pl_orbsmax);
+  const periodDays = toPositive(row.pl_orbper);
+  if (!starRadiusSolar || !semiMajorAxisAu || !periodDays) return null;
+  return { starRadiusSolar, semiMajorAxisAu, periodDays };
+}
+
+function requiredPlanetRadiusFields(row) {
+  const planetRadiusJupiter = toPositive(row.pl_radj);
+  const planetRadiusEarth = toPositive(row.pl_rade);
+  if (!planetRadiusJupiter && !planetRadiusEarth) return null;
+  return { planetRadiusJupiter, planetRadiusEarth };
 }
 
 export function scoreSnapshotEntry(entry) {
@@ -116,38 +156,32 @@ export function scoreSnapshotEntry(entry) {
 
 export function selectTopSystems(rows, limit = DEFAULT_LIMIT) {
   const max = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_LIMIT;
-
   const byId = new Map();
-
   for (const row of rows) {
     const norm = normalizeNasaRow(row);
-    if (!norm) continue;
-
-    const prev = byId.get(norm.id);
-    if (!prev) {
-      byId.set(norm.id, norm);
-      continue;
-    }
-
-    const prevScore = scoreSnapshotEntry(prev);
-    const nextScore = scoreSnapshotEntry(norm);
-    if (nextScore > prevScore) {
-      byId.set(norm.id, norm);
-      continue;
-    }
-
-    if (nextScore === prevScore && String(norm.label).localeCompare(String(prev.label)) < 0) {
-      byId.set(norm.id, norm);
-    }
+    if (norm) keepBestEntry(byId, norm);
   }
+  return [...byId.values()].sort(compareSnapshotEntries).slice(0, max);
+}
 
-  return [...byId.values()]
-    .sort((a, b) => {
-      const ds = scoreSnapshotEntry(b) - scoreSnapshotEntry(a);
-      if (ds !== 0) return ds;
-      return String(a.label).localeCompare(String(b.label));
-    })
-    .slice(0, max);
+function keepBestEntry(byId, entry) {
+  const prev = byId.get(entry.id);
+  if (!prev || isPreferredSnapshotEntry(entry, prev)) {
+    byId.set(entry.id, entry);
+  }
+}
+
+function isPreferredSnapshotEntry(next, prev) {
+  const prevScore = scoreSnapshotEntry(prev);
+  const nextScore = scoreSnapshotEntry(next);
+  if (nextScore !== prevScore) return nextScore > prevScore;
+  return String(next.label).localeCompare(String(prev.label)) < 0;
+}
+
+function compareSnapshotEntries(a, b) {
+  const ds = scoreSnapshotEntry(b) - scoreSnapshotEntry(a);
+  if (ds !== 0) return ds;
+  return String(a.label).localeCompare(String(b.label));
 }
 
 export function buildSnapshotFromRows(rows, opts = {}) {
@@ -166,7 +200,7 @@ export function buildSnapshotFromRows(rows, opts = {}) {
   };
 }
 
-async function readResponseTextWithinLimit(response, maxBytes) {
+async function readResponseTextWithinLimit(response, maxBytes, signal) {
   const limit = Number.isFinite(maxBytes) && maxBytes > 0 ? Math.floor(maxBytes) : MAX_NASA_RESPONSE_BYTES;
   const contentLength = response.headers?.get?.("content-length");
   if (contentLength) {
@@ -177,7 +211,7 @@ async function readResponseTextWithinLimit(response, maxBytes) {
   }
 
   if (!response.body?.getReader) {
-    const text = await response.text();
+    const text = await raceAbort(response.text(), signal);
     const bytes = new TextEncoder().encode(text).byteLength;
     if (bytes > limit) throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
     return text;
@@ -188,15 +222,20 @@ async function readResponseTextWithinLimit(response, maxBytes) {
   let bytes = 0;
   let text = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    bytes += value.byteLength;
-    if (bytes > limit) {
-      await reader.cancel().catch(() => undefined);
-      throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
+  try {
+    while (true) {
+      const { done, value } = await raceAbort(reader.read(), signal);
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > limit) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error(`NASA TAP response exceeds ${limit} bytes.`);
+      }
+      text += decoder.decode(value, { stream: true });
     }
-    text += decoder.decode(value, { stream: true });
+  } catch (error) {
+    if (signal?.aborted) await reader.cancel().catch(() => undefined);
+    throw error;
   }
 
   text += decoder.decode();
@@ -217,6 +256,18 @@ export async function fetchNasaTransitRows(fetchImpl = fetch, opts = {}) {
         "user-agent": "exoplanet-exomoon-simulation/real-systems-refresh",
       },
     });
+
+    if (!response.ok) {
+      throw new Error(`NASA TAP request failed (${response.status} ${response.statusText})`);
+    }
+
+    const text = await readResponseTextWithinLimit(response, maxBytes, timeout.signal);
+    const json = JSON.parse(text);
+    if (!Array.isArray(json)) {
+      throw new Error("NASA TAP response is not an array.");
+    }
+
+    return json;
   } catch (err) {
     if (timeout.timedOut()) {
       throw new Error(`NASA TAP request timed out after ${timeoutMs} ms.`, { cause: err });
@@ -225,23 +276,19 @@ export async function fetchNasaTransitRows(fetchImpl = fetch, opts = {}) {
   } finally {
     timeout.cancel();
   }
-
-  if (!response.ok) {
-    throw new Error(`NASA TAP request failed (${response.status} ${response.statusText})`);
-  }
-
-  const text = await readResponseTextWithinLimit(response, maxBytes);
-  const json = JSON.parse(text);
-  if (!Array.isArray(json)) {
-    throw new Error("NASA TAP response is not an array.");
-  }
-
-  return json;
 }
 
-export async function writeSnapshotFile(snapshot, outPath) {
+function defaultSnapshotOutputPath() {
+  return path.resolve(process.cwd(), SNAPSHOT_OUTPUT_PATH);
+}
+
+export function snapshotOutputPath() {
+  return defaultSnapshotOutputPath();
+}
+
+export async function writeSnapshotFile(snapshot) {
   const text = `${JSON.stringify(snapshot, null, 2)}\n`;
-  await fs.writeFile(outPath, text, "utf8");
+  await fs.writeFile("src/config/real-systems.snapshot.json", text, "utf8");
 }
 
 async function main() {
@@ -252,9 +299,8 @@ async function main() {
     throw new Error("No valid transit systems found; refusing to overwrite snapshot with empty data.");
   }
 
-  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  const outPath = path.resolve(scriptDir, "../src/config/real-systems.snapshot.json");
-  await writeSnapshotFile(snapshot, outPath);
+  const outPath = defaultSnapshotOutputPath();
+  await writeSnapshotFile(snapshot);
 
   process.stdout.write(
     `Wrote ${snapshot.systems.length} real systems to ${outPath} (fetchedAt=${snapshot.meta.fetchedAt}).\n`,

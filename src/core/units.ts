@@ -181,11 +181,11 @@ export function radToDeg(rad: number): number {
  * Convert unknown input to a finite number, else fallback.
  *
  * Notes:
- * - Accepts numeric strings (via Number(v)).
+ * - Accepts non-empty numeric strings.
  * - Treats NaN/±Inf as invalid -> fallback.
  */
 export function toFiniteNumber(v: unknown, fallback: number): number {
-  const n = typeof v === "number" ? v : Number(v);
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : Number.NaN;
   return Number.isFinite(n) ? n : fallback;
 }
 

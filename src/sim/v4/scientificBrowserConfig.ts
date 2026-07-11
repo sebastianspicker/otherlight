@@ -3,7 +3,11 @@ import {
   isSupportedStellarPassband,
   resolveDetachedBinaryLuminosities,
 } from "../../photometry/stellarBandFlux";
-import { createScientificBrowserRuntimeError } from "./scientificErrors";
+import {
+  createScientificBrowserRuntimeError,
+  type ScientificBrowserFailureCode,
+  type ScientificBrowserFailureContext,
+} from "./scientificErrors";
 import {
   collectScientificBrowserNBodyIssues,
   collectScientificBrowserOrbitIssues,
@@ -20,7 +24,7 @@ import {
   collectScientificBrowserUnsupportedRtFeatureIssues,
   collectScientificBrowserUnsupportedTransmissionModelIssues,
 } from "./scientificBrowserPhotometryConfig";
-import type { SimulationConfigV4 } from "./types";
+import type { SimulationConfigV4, StarBodyV4 } from "./types";
 
 function isFiniteIntegerInRange(x: unknown, min: number, max: number): boolean {
   return typeof x === "number" && Number.isFinite(x) && Number.isInteger(x) && x >= min && x <= max;
@@ -33,117 +37,69 @@ function hasExplicitPassband(passband: unknown): boolean {
 export function assertScientificBrowserConfig(config: SimulationConfigV4): void {
   if (config.runtime?.executionMode !== "scientific-browser") return;
 
+  assertScientificBrowserAdditiveConfig(config);
+  assertScientificBrowserTransmissionConfig(config);
+  assertScientificBrowserRuntimeConfig(config);
+  assertScientificBrowserDynamicsConfig(config);
+  if (config.mode !== "detached-binary-lab") return;
+  assertDetachedBinaryScientificConfig(config);
+}
+
+function assertScientificBrowserAdditiveConfig(config: SimulationConfigV4): void {
   const additiveChannelIssues = collectScientificBrowserActiveAdditiveChannelIssues(config.photometry);
-  const additiveDeclarationIssues = collectScientificBrowserAdditiveDeclarationIssues(
-    config.photometry,
-    additiveChannelIssues,
+  throwConfigIssues(
+    collectScientificBrowserAdditiveDeclarationIssues(config.photometry, additiveChannelIssues),
+    "SCB_ADDITIVE_FLUX_INVALID_CONFIG",
+    "scientific-browser additive photometry requires an explicit higher-fidelity composition declaration",
+    runtimeContext(config),
   );
-  if (additiveDeclarationIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_ADDITIVE_FLUX_INVALID_CONFIG",
-      summary:
-        "scientific-browser additive photometry requires an explicit higher-fidelity composition declaration",
-      details: additiveDeclarationIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
-  const additiveExecutionIssues = collectScientificBrowserAdditiveExecutionIssues(config);
-  if (additiveExecutionIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_ADDITIVE_FLUX_INVALID_CONFIG",
-      summary:
-        "scientific-browser additive photometry requires executable native geometry for the declared higher-fidelity branch",
-      details: additiveExecutionIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserAdditiveExecutionIssues(config),
+    "SCB_ADDITIVE_FLUX_INVALID_CONFIG",
+    "scientific-browser additive photometry requires executable native geometry for the declared higher-fidelity branch",
+    runtimeContext(config),
+  );
+}
 
-  const unsupportedTransmissionModelIssues =
-    collectScientificBrowserUnsupportedTransmissionModelIssues(config);
-  if (unsupportedTransmissionModelIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_TRANSMISSION_MODEL_UNSUPPORTED",
-      summary:
-        "scientific-browser native transmission currently supports atmosphereRT only; atmosphereTransmission is still unsupported",
-      details: unsupportedTransmissionModelIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+function assertScientificBrowserTransmissionConfig(config: SimulationConfigV4): void {
+  throwConfigIssues(
+    collectScientificBrowserUnsupportedTransmissionModelIssues(config),
+    "SCB_TRANSMISSION_MODEL_UNSUPPORTED",
+    "scientific-browser native transmission currently supports atmosphereRT only; atmosphereTransmission is still unsupported",
+    runtimeContext(config),
+  );
 
-  const unsupportedRtFeatureIssues = collectScientificBrowserUnsupportedRtFeatureIssues(config);
-  if (unsupportedRtFeatureIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_TRANSMISSION_RT_FEATURE_UNSUPPORTED",
-      summary:
-        "scientific-browser native atmosphereRT currently supports only attenuation layers, not emission, scattering, or temperature-profile RT controls",
-      details: unsupportedRtFeatureIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserUnsupportedRtFeatureIssues(config),
+    "SCB_TRANSMISSION_RT_FEATURE_UNSUPPORTED",
+    "scientific-browser native atmosphereRT currently supports only attenuation layers, not emission, scattering, or temperature-profile RT controls",
+    runtimeContext(config),
+  );
 
-  const rtInputIssues = collectScientificBrowserRtInputIssues(config);
-  if (rtInputIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_TRANSMISSION_RT_INVALID_INPUTS",
-      summary: "scientific-browser native atmosphereRT requires explicit finite gray attenuation inputs",
-      details: rtInputIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserRtInputIssues(config),
+    "SCB_TRANSMISSION_RT_INVALID_INPUTS",
+    "scientific-browser native atmosphereRT requires explicit finite gray attenuation inputs",
+    runtimeContext(config),
+  );
 
-  const rtLayerIssues = collectScientificBrowserRtLayerIssues(config);
-  if (rtLayerIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_TRANSMISSION_RT_NO_VALID_LAYERS",
-      summary: "scientific-browser native atmosphereRT requires at least one valid attenuation layer",
-      details: rtLayerIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserRtLayerIssues(config),
+    "SCB_TRANSMISSION_RT_NO_VALID_LAYERS",
+    "scientific-browser native atmosphereRT requires at least one valid attenuation layer",
+    runtimeContext(config),
+  );
 
-  const transmissionIssues = collectScientificBrowserTransmissionIssues(config);
-  if (transmissionIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_TRANSMISSION_MIXED_SHAPE",
-      summary:
-        "scientific-browser atmospheric transmission currently supports only circle-only transmission geometries",
-      details: transmissionIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserTransmissionIssues(config),
+    "SCB_TRANSMISSION_MIXED_SHAPE",
+    "scientific-browser atmospheric transmission currently supports only circle-only transmission geometries",
+    runtimeContext(config),
+  );
+}
 
-  if (
-    config.runtime?.mode === "reference" &&
-    !isFiniteIntegerInRange(config.runtime?.referenceSubsteps, 1, 25)
-  ) {
+function assertScientificBrowserRuntimeConfig(config: SimulationConfigV4): void {
+  if (hasInvalidReferenceSubsteps(config)) {
     throw createScientificBrowserRuntimeError({
       stage: "config",
       code: "SCB_INVALID_REFERENCE_SUBSTEPS",
@@ -156,7 +112,14 @@ export function assertScientificBrowserConfig(config: SimulationConfigV4): void 
       },
     });
   }
+}
 
+function hasInvalidReferenceSubsteps(config: SimulationConfigV4): boolean {
+  if (config.runtime?.mode !== "reference") return false;
+  return !isFiniteIntegerInRange(config.runtime?.referenceSubsteps, 1, 25);
+}
+
+function assertScientificBrowserDynamicsConfig(config: SimulationConfigV4): void {
   const exomoonTimingShape = config.dynamics?.exomoonTimingShape;
   if (exomoonTimingShape?.tRef !== undefined && !Number.isFinite(exomoonTimingShape.tRef)) {
     throw createScientificBrowserRuntimeError({
@@ -172,185 +135,155 @@ export function assertScientificBrowserConfig(config: SimulationConfigV4): void 
     });
   }
 
-  const stellarSurfaceIssues = collectScientificBrowserStellarSurfaceIssues(config.photometry);
-  if (stellarSurfaceIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_INVALID_STELLAR_SURFACE",
-      summary: "scientific-browser mode requires explicit finite stellar-surface variability controls",
-      details: stellarSurfaceIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-        mode: config.mode,
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserStellarSurfaceIssues(config.photometry),
+    "SCB_INVALID_STELLAR_SURFACE",
+    "scientific-browser mode requires explicit finite stellar-surface variability controls",
+    modeContext(config),
+  );
 
-  const relativityIssues = collectScientificBrowserRelativityIssues(config);
-  if (relativityIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_INVALID_RELATIVITY_CONFIG",
-      summary: "scientific-browser relativity requires explicit model and solver controls",
-      details: relativityIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-        mode: config.mode,
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserRelativityIssues(config),
+    "SCB_INVALID_RELATIVITY_CONFIG",
+    "scientific-browser relativity requires explicit model and solver controls",
+    modeContext(config),
+  );
 
-  const nbodyIssues = collectScientificBrowserNBodyIssues(config);
-  if (nbodyIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_INVALID_NBODY_CONFIG",
-      summary: "scientific-browser nbodyPlanetMoon requires explicit physical mass inputs",
-      details: nbodyIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-        mode: config.mode,
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserNBodyIssues(config),
+    "SCB_INVALID_NBODY_CONFIG",
+    "scientific-browser nbodyPlanetMoon requires explicit physical mass inputs",
+    modeContext(config),
+  );
 
-  const orbitIssues = collectScientificBrowserOrbitIssues(config);
-  if (orbitIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_INVALID_ORBIT",
-      summary: "scientific-browser mode requires semantically valid static orbit elements",
-      details: orbitIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-        mode: config.mode,
-      },
-    });
-  }
+  throwConfigIssues(
+    collectScientificBrowserOrbitIssues(config),
+    "SCB_INVALID_ORBIT",
+    "scientific-browser mode requires semantically valid static orbit elements",
+    modeContext(config),
+  );
+}
 
-  if (config.mode !== "detached-binary-lab") return;
-
+function assertDetachedBinaryScientificConfig(config: SimulationConfigV4): void {
   const [primary, secondary] = config.bodies.stars;
-  const passbandIssues: string[] = [];
-  const unsupportedPassbandIssues: string[] = [];
-  const stellarInputIssues: string[] = [];
-  const limbDarkeningIssues: string[] = [];
+  const issues = collectDetachedBinaryIssues(config);
+  throwConfigIssues(
+    issues.stellarInputIssues,
+    "SCB_BINARY_INVALID_STELLAR_INPUTS",
+    "detached-binary scientific-browser mode requires explicit stellar photometry inputs",
+    runtimeContext(config),
+  );
+  throwConfigIssues(
+    issues.passbandIssues,
+    "SCB_BINARY_IMPLICIT_PASSBAND",
+    "detached-binary scientific-browser mode rejects implicit passband fallback",
+    runtimeContext(config),
+  );
+  throwConfigIssues(
+    issues.unsupportedPassbandIssues,
+    "SCB_BINARY_UNSUPPORTED_PASSBAND",
+    "detached-binary scientific-browser mode requires supported explicit passbands",
+    runtimeContext(config),
+  );
+  throwConfigIssues(
+    issues.limbDarkeningIssues,
+    "SCB_BINARY_LIMB_DARKENING_FALLBACK",
+    "detached-binary scientific-browser mode requires star-specific eclipse surface-brightness inputs",
+    runtimeContext(config),
+  );
+  assertDetachedBinaryPhysicalBandpass(config, primary, secondary);
+}
+
+type BinaryScienceIssues = {
+  passbandIssues: string[];
+  unsupportedPassbandIssues: string[];
+  stellarInputIssues: string[];
+  limbDarkeningIssues: string[];
+};
+
+type LimbDarkeningModelConfig = Parameters<typeof hasExplicitLimbDarkeningBandLaw>[0];
+
+function collectDetachedBinaryIssues(config: SimulationConfigV4): BinaryScienceIssues {
+  const issues = emptyBinaryScienceIssues();
   const ldModel = config.photometry?.limbDarkeningModel;
   if (!ldModel) {
-    limbDarkeningIssues.push(
+    issues.limbDarkeningIssues.push(
       "photometry.limbDarkeningModel must be defined in detached-binary scientific-browser mode",
     );
   }
-  if (!(Number.isFinite(primary.r) && (primary.r as number) > 0)) {
-    stellarInputIssues.push(
-      `star "${primary.id}" must define a finite positive radius in detached-binary scientific-browser mode`,
-    );
+  for (const star of config.bodies.stars) {
+    collectDetachedBinaryStarIssues(star, ldModel, issues);
   }
-  if (!(Number.isFinite(primary.teffK) && (primary.teffK as number) > 0)) {
-    stellarInputIssues.push(
-      `star "${primary.id}" must define a finite positive teffK in detached-binary scientific-browser mode`,
-    );
-  }
-  if (!hasExplicitPassband(primary.passband)) {
-    passbandIssues.push(
-      `star "${primary.id}" must define an explicit passband in detached-binary scientific-browser mode`,
-    );
-  } else if (!isSupportedStellarPassband(primary.passband)) {
-    unsupportedPassbandIssues.push(
-      `star "${primary.id}" passband "${String(primary.passband)}" is not supported by the bounded scientific photometry path`,
-    );
-  }
-  if (
-    ldModel &&
-    !hasExplicitLimbDarkeningBandLaw(ldModel, primary.passband) &&
-    !(Number.isFinite(primary.loggCgs) && (primary.loggCgs as number) > 0)
-  ) {
-    limbDarkeningIssues.push(
-      `star "${primary.id}" must define a finite positive loggCgs when photometry.limbDarkeningModel has no explicit law for passband "${String(primary.passband)}" in detached-binary scientific-browser mode`,
-    );
-  }
-  if (!(Number.isFinite(secondary.r) && (secondary.r as number) > 0)) {
-    stellarInputIssues.push(
-      `star "${secondary.id}" must define a finite positive radius in detached-binary scientific-browser mode`,
-    );
-  }
-  if (!(Number.isFinite(secondary.teffK) && (secondary.teffK as number) > 0)) {
-    stellarInputIssues.push(
-      `star "${secondary.id}" must define a finite positive teffK in detached-binary scientific-browser mode`,
-    );
-  }
-  if (!hasExplicitPassband(secondary.passband)) {
-    passbandIssues.push(
-      `star "${secondary.id}" must define an explicit passband in detached-binary scientific-browser mode`,
-    );
-  } else if (!isSupportedStellarPassband(secondary.passband)) {
-    unsupportedPassbandIssues.push(
-      `star "${secondary.id}" passband "${String(secondary.passband)}" is not supported by the bounded scientific photometry path`,
-    );
-  }
-  if (
-    ldModel &&
-    !hasExplicitLimbDarkeningBandLaw(ldModel, secondary.passband) &&
-    !(Number.isFinite(secondary.loggCgs) && (secondary.loggCgs as number) > 0)
-  ) {
-    limbDarkeningIssues.push(
-      `star "${secondary.id}" must define a finite positive loggCgs when photometry.limbDarkeningModel has no explicit law for passband "${String(secondary.passband)}" in detached-binary scientific-browser mode`,
-    );
-  }
-  if (stellarInputIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_BINARY_INVALID_STELLAR_INPUTS",
-      summary: "detached-binary scientific-browser mode requires explicit stellar photometry inputs",
-      details: stellarInputIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
-  if (passbandIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_BINARY_IMPLICIT_PASSBAND",
-      summary: "detached-binary scientific-browser mode rejects implicit passband fallback",
-      details: passbandIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
-  if (unsupportedPassbandIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_BINARY_UNSUPPORTED_PASSBAND",
-      summary: "detached-binary scientific-browser mode requires supported explicit passbands",
-      details: unsupportedPassbandIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
-  if (limbDarkeningIssues.length > 0) {
-    throw createScientificBrowserRuntimeError({
-      stage: "config",
-      code: "SCB_BINARY_LIMB_DARKENING_FALLBACK",
-      summary:
-        "detached-binary scientific-browser mode requires star-specific eclipse surface-brightness inputs",
-      details: limbDarkeningIssues,
-      context: {
-        executionMode: config.runtime?.executionMode ?? "interactive",
-        runtimeMode: config.runtime?.mode ?? "realtime",
-      },
-    });
-  }
+  return issues;
+}
 
+function emptyBinaryScienceIssues(): BinaryScienceIssues {
+  return {
+    passbandIssues: [],
+    unsupportedPassbandIssues: [],
+    stellarInputIssues: [],
+    limbDarkeningIssues: [],
+  };
+}
+
+function collectDetachedBinaryStarIssues(
+  star: StarBodyV4,
+  ldModel: LimbDarkeningModelConfig,
+  issues: BinaryScienceIssues,
+): void {
+  collectDetachedBinaryStarPhysicalIssues(star, issues);
+  collectDetachedBinaryStarPassbandIssues(star, issues);
+  collectDetachedBinaryStarLimbDarkeningIssues(star, ldModel, issues);
+}
+
+function collectDetachedBinaryStarPhysicalIssues(star: StarBodyV4, issues: BinaryScienceIssues): void {
+  if (!isFinitePositive(star.r)) {
+    issues.stellarInputIssues.push(
+      `star "${star.id}" must define a finite positive radius in detached-binary scientific-browser mode`,
+    );
+  }
+  if (!isFinitePositive(star.teffK)) {
+    issues.stellarInputIssues.push(
+      `star "${star.id}" must define a finite positive teffK in detached-binary scientific-browser mode`,
+    );
+  }
+}
+
+function collectDetachedBinaryStarPassbandIssues(star: StarBodyV4, issues: BinaryScienceIssues): void {
+  if (!hasExplicitPassband(star.passband)) {
+    issues.passbandIssues.push(
+      `star "${star.id}" must define an explicit passband in detached-binary scientific-browser mode`,
+    );
+    return;
+  }
+  if (isSupportedStellarPassband(star.passband)) return;
+  issues.unsupportedPassbandIssues.push(
+    `star "${star.id}" passband "${String(star.passband)}" is not supported by the bounded scientific photometry path`,
+  );
+}
+
+function collectDetachedBinaryStarLimbDarkeningIssues(
+  star: StarBodyV4,
+  ldModel: LimbDarkeningModelConfig,
+  issues: BinaryScienceIssues,
+): void {
+  if (!ldModel) return;
+  if (hasExplicitLimbDarkeningBandLaw(ldModel, star.passband)) return;
+  if (isFinitePositive(star.loggCgs)) return;
+  issues.limbDarkeningIssues.push(
+    `star "${star.id}" must define a finite positive loggCgs when photometry.limbDarkeningModel has no explicit law for passband "${String(star.passband)}" in detached-binary scientific-browser mode`,
+  );
+}
+
+function isFinitePositive(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function assertDetachedBinaryPhysicalBandpass(
+  config: SimulationConfigV4,
+  primary: StarBodyV4,
+  secondary: StarBodyV4,
+): void {
   const resolved = resolveDetachedBinaryLuminosities({
     primary,
     secondary,
@@ -373,4 +306,34 @@ export function assertScientificBrowserConfig(config: SimulationConfigV4): void 
       resolvedSource: resolved.source,
     },
   });
+}
+
+function throwConfigIssues(
+  details: string[],
+  code: ScientificBrowserFailureCode,
+  summary: string,
+  context: ScientificBrowserFailureContext,
+): void {
+  if (details.length < 1) return;
+  throw createScientificBrowserRuntimeError({
+    stage: "config",
+    code,
+    summary,
+    details,
+    context,
+  });
+}
+
+function runtimeContext(config: SimulationConfigV4): ScientificBrowserFailureContext {
+  return {
+    executionMode: config.runtime?.executionMode ?? "interactive",
+    runtimeMode: config.runtime?.mode ?? "realtime",
+  };
+}
+
+function modeContext(config: SimulationConfigV4): ScientificBrowserFailureContext {
+  return {
+    ...runtimeContext(config),
+    mode: config.mode,
+  };
 }

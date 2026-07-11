@@ -1,0 +1,28 @@
+---
+exclude_paths:
+  - "AGENTS.md"
+  - "docs/archive/**"
+  - "docs/audit/**"
+  - "docs/deprecation-and-simplification-audit.md"
+  - "deprecated/**"
+  - "node_modules/**"
+  - "vendor/**"
+  - "third_party/**"
+  - "third-party/**"
+  - "3rdparty/**"
+  - "external/**"
+engines:
+  metric:
+    exclude_paths:
+      - "pnpm-lock.yaml"
+      - "AGENTS.md"
+      - "docs/archive/**"
+      - "docs/audit/**"
+      - "docs/deprecation-and-simplification-audit.md"
+      - "deprecated/**"
+      - "node_modules/**"
+      - "vendor/**"
+      - "third_party/**"
+      - "third-party/**"
+      - "3rdparty/**"
+      - "external/**"

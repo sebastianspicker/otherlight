@@ -1,0 +1,613 @@
+/* Public-alpha Classroom Observatory layer. Keep selectors class-led so stable wiring IDs remain intact. */
+:root {
+  --bg-1: #f3f6f7;
+  --bg-2: #f3f6f7;
+  --bg-3: #f3f6f7;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --panel2: #e9eff1;
+  --text: #13242b;
+  --text-secondary: #243b44;
+  --muted: #4b6069;
+  --stroke: #9eafb5;
+  --stroke2: #c4d0d4;
+  --focus: #087f73;
+  --accent: #087f73;
+  --accent-dim: #d7eeeb;
+  --accent-2: #8a5a00;
+  --accent-2-dim: #fff1ce;
+  --danger: #b42318;
+  --success: #147a45;
+  --shadow: none;
+  --shadow-sm: 0 2px 8px rgba(19, 36, 43, 0.16);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 10px;
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: var(--font-body);
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --z-sticky: 20;
+  --z-dialog-backdrop: 40;
+  --z-dialog: 50;
+  color-scheme: light;
+}
+
+body {
+  min-width: 320px;
+  background: var(--bg-1);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body::before,
+body::after {
+  display: none;
+}
+
+#app {
+  max-width: 1600px;
+  padding: 16px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 24px;
+  margin-bottom: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--stroke2);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: none;
+}
+
+.app-header h1,
+.panel h2,
+.panel h3,
+.runtime-toolbar h2 {
+  font-family: var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.015em;
+  text-transform: none;
+  text-wrap: balance;
+}
+
+.app-header h1 {
+  margin: 0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.product-heading {
+  min-width: min(100%, 310px);
+}
+
+.product-heading p,
+.context-description {
+  max-width: 72ch;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mode-nav {
+  display: flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--stroke2);
+  border-radius: 8px;
+  background: var(--panel2);
+}
+
+.mode-nav__item {
+  min-height: 38px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.mode-nav__item:hover {
+  border-color: var(--stroke);
+  background: #ffffff;
+  color: var(--text);
+}
+
+.mode-nav__item[aria-current="page"] {
+  border-color: var(--accent);
+  background: #ffffff;
+  color: #065f57;
+}
+
+.context-toolbar {
+  display: flex;
+  flex: 1 1 640px;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stroke2);
+}
+
+.context-toolbar > .inline {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: normal;
+}
+
+.context-toolbar .context-description {
+  flex-basis: 100%;
+}
+
+.app-status,
+.fatal-error {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid #a9c7c3;
+  border-radius: 8px;
+  background: #e8f4f2;
+  color: #174c47;
+}
+
+.fatal-error {
+  border-color: #e7a7a1;
+  background: #fff0ee;
+  color: #701b14;
+}
+
+.fatal-error h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.runtime-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke2);
+  border-radius: var(--radius-lg);
+  background: #f8fafb;
+  box-shadow: 0 2px 8px rgba(19, 36, 43, 0.1);
+}
+
+.runtime-toolbar h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.runtime-actions,
+.runtime-fields,
+.runtime-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.runtime-readouts {
+  flex: 1 1 100%;
+  padding-top: 8px;
+  border-top: 1px solid var(--stroke2);
+  font-size: 13px;
+}
+
+.runtime-readouts > span {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.readout-label {
+  color: var(--muted);
+}
+
+.runtime-warning {
+  min-height: 1.5em;
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.runtime-view {
+  margin: 0;
+}
+
+.panel {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--stroke2);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.panel.sidebar,
+.panel.sidebar > .panel,
+.quickControl,
+fieldset,
+#didLessonStatus,
+#didInterpretation,
+#didLessonSummary,
+#didLessonMeta,
+#didPhaseTitle,
+#didPhasePrompt,
+#didWorkedExample,
+#didObservationList,
+#didResponseComposer,
+#didHintList,
+#didMisconceptionList,
+#didFocusList,
+#didFormulaList {
+  background: #f7f9fa;
+  border-color: var(--stroke2);
+  box-shadow: none;
+}
+
+#didInterpretation,
+#didLessonSummary,
+#didLessonMeta,
+#didPhaseTitle,
+#didPhasePrompt,
+#didWorkedExample,
+#didObservationList,
+#didResponseComposer,
+#didHintList,
+#didMisconceptionList,
+#didFocusList,
+#didCheckList,
+#didFormulaList {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#didResponseComposer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stroke2);
+}
+
+.panel.sidebar > .panel {
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--stroke2);
+  border-radius: 0;
+}
+
+.mainGrid {
+  gap: 16px;
+}
+
+@media (min-width: 1100px) {
+  .mainGrid {
+    grid-template-columns: minmax(640px, 1fr) minmax(320px, 390px);
+  }
+
+  .sidebar {
+    top: 112px;
+    max-height: calc(100vh - 128px);
+    scrollbar-width: auto;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: auto;
+  }
+
+  .sidebar::-webkit-scrollbar-track,
+  .sidebar::-webkit-scrollbar-thumb,
+  .sidebar::-webkit-scrollbar-thumb:hover {
+    border-radius: initial;
+    background: initial;
+  }
+}
+
+.vizStack {
+  gap: 16px;
+}
+
+.scientific-figure {
+  margin: 0;
+}
+
+.figure-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.figure-heading h2 {
+  margin: 0;
+}
+
+.figure-key {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.scientific-figure figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.lesson-progress {
+  margin: 8px 0 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#didPhaseTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.didactic-intro {
+  margin-bottom: 8px;
+}
+
+canvas {
+  border-color: #2c4553;
+  border-radius: 6px;
+  background: #09151d;
+  box-shadow: none;
+}
+
+#skyCanvas {
+  height: auto;
+  min-height: 300px;
+  aspect-ratio: 16 / 9;
+}
+
+#lcCanvas,
+#ocCanvas {
+  height: auto;
+  min-height: 180px;
+  aspect-ratio: 4 / 1;
+}
+
+.scientific-figure--compact #ocCanvas {
+  min-height: 150px;
+}
+
+fieldset {
+  padding: 12px;
+}
+
+fieldset:hover {
+  border-color: var(--stroke);
+}
+
+legend {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#paramForm label,
+.inline,
+.help,
+details > summary {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+  min-height: 36px;
+  border-color: var(--stroke);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 13px;
+}
+
+input[type="number"]:hover,
+input[type="text"]:hover,
+select:hover,
+textarea:hover {
+  border-color: #71878f;
+}
+
+button {
+  min-height: 36px;
+  border-color: var(--stroke);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+button:hover {
+  border-color: #71878f;
+  background: #f3f6f7;
+}
+
+#btnStart,
+#btnApplyParams {
+  border-color: #087f73;
+  background: #087f73;
+  color: #ffffff;
+}
+
+#btnStart:hover,
+#btnApplyParams:hover {
+  border-color: #065f57;
+  background: #065f57;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+  background: #fff7f6;
+}
+
+.field-error {
+  display: block;
+  margin-top: 4px;
+  color: #8f1d14;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-error-summary {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e7a7a1;
+  border-radius: 6px;
+  background: #fff0ee;
+  color: #701b14;
+}
+
+.param-dirty {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+
+dialog {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: 0 4px 8px rgba(19, 36, 43, 0.2);
+}
+
+dialog::backdrop {
+  background: rgba(9, 21, 29, 0.55);
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#sliderRoot .row {
+  background: #f3f6f7;
+  border-color: var(--stroke2);
+}
+
+#sliderRoot .name {
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: normal;
+}
+
+@media (max-width: 767px) {
+  #app {
+    padding: 8px;
+  }
+
+  .app-header,
+  .runtime-toolbar,
+  .panel {
+    padding: 12px;
+  }
+
+  .mode-nav,
+  .context-toolbar,
+  .context-toolbar > .inline,
+  .runtime-actions,
+  .runtime-fields {
+    width: 100%;
+  }
+
+  .mode-nav__item,
+  .runtime-actions > button {
+    flex: 1 1 auto;
+  }
+
+  .context-toolbar > .inline {
+    min-width: 0;
+  }
+
+  .runtime-toolbar {
+    position: static;
+  }
+
+  .runtime-fields > .inline {
+    width: 100%;
+    white-space: normal;
+  }
+
+  #skyCanvas {
+    min-height: 220px;
+  }
+
+  #lcCanvas,
+  #ocCanvas {
+    min-height: 160px;
+    aspect-ratio: 16 / 7;
+  }
+
+  #sliderRoot .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (pointer: coarse) {
+  button,
+  select,
+  input[type="number"],
+  input[type="text"],
+  textarea,
+  summary {
+    min-height: 44px;
+  }
+
+  input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+}

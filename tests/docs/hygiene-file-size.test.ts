@@ -1,7 +1,6 @@
-import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { walkTsFiles } from "../helpers/walkTsFiles";
+import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 describe("hygiene file size", () => {
   it("keeps source files below warning threshold", () => {
@@ -12,7 +11,7 @@ describe("hygiene file size", () => {
     const threshold = 720;
 
     for (const file of files) {
-      const lines = fs.readFileSync(file, "utf8").split("\n").length;
+      const lines = readTextFileWithinRepo(file).split("\n").length;
       if (lines > threshold) offenders.push(`${path.relative(root, file)} (${lines})`);
     }
 

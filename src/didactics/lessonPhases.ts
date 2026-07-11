@@ -1,5 +1,9 @@
 import type { LessonEventTarget, LessonPhaseSpec, LessonWorkedExample } from "../core/types";
 
+function fallbackText(value: string | undefined, defaultValue: string): string {
+  return value ?? defaultValue;
+}
+
 export function workedExamplePhase(
   id: string,
   prompt: string,
@@ -64,11 +68,16 @@ export function explainPhase(args: {
     ...args,
     type: "explain",
     responseMode: "explanation-notes",
-    primaryLabel: args.primaryLabel ?? "Your explanation",
-    secondaryLabel: args.secondaryLabel ?? "What rule did you learn?",
-    primaryPlaceholder: args.primaryPlaceholder ?? "Explain how the geometry and flux evidence fit together.",
-    secondaryPlaceholder:
-      args.secondaryPlaceholder ?? "State the general rule you would apply to a similar system next time.",
+    primaryLabel: fallbackText(args.primaryLabel, "Your explanation"),
+    secondaryLabel: fallbackText(args.secondaryLabel, "What rule did you learn?"),
+    primaryPlaceholder: fallbackText(
+      args.primaryPlaceholder,
+      "Explain how the geometry and flux evidence fit together.",
+    ),
+    secondaryPlaceholder: fallbackText(
+      args.secondaryPlaceholder,
+      "State the general rule you would apply to a similar system next time.",
+    ),
   };
 }
 

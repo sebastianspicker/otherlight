@@ -16,7 +16,7 @@ export default tseslint.config(
   },
   {
     // Tests and scripts may use `any` for mocking, type coercion, and migration helpers.
-    files: ["tests/**/*.ts", "scripts/**/*.ts"],
+    files: ["tests/**/*.ts", "scripts/**/*.ts", "deprecated/scripts/**/*.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },

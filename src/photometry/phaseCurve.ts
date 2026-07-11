@@ -26,16 +26,16 @@
 
 import type { DayNightVisibilityParams, PhaseCurveParams, ThermalModelAdvancedParams } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
-import { vIsFinite, vLen } from "../physics/vec3";
 import { clamp01, isFiniteNumber } from "../core/units";
 
 import type { ReflectedPhaseModel, ThermalPhaseModel } from "./dayNightVisibility";
 import {
   applyPhaseOffset,
-  phaseAngleRadFromBodyPos,
   reflectedLightGeometricWeight,
   thermalLightGeometricWeight,
 } from "./dayNightVisibility";
+import { bodyPhaseAlpha, clampWeightsFor, reflectedModelFor, thermalModelFor } from "./phaseCurveGeometry";
+import { effectiveThermalInertia, phaseCurvePhysicalScales, thermalAdvancedBoost } from "./phaseCurveScaling";
 
 /**
  * Phase-curve configuration (phenomenological).
@@ -50,11 +50,15 @@ import {
  */
 export type PhaseCurveModel = PhaseCurveParams;
 
-/**
- * Normalized/sanitized PhaseCurveModel used internally.
- * This keeps behavior deterministic and protects against NaNs in user presets.
- */
-function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
+export type NormalizedThermalInertia = {
+  enabled: boolean;
+  albedo: number;
+  emissivity: number;
+  tauSec: number;
+  redistribution: number;
+};
+
+export type NormalizedPhaseCurveModel = {
   enabled: boolean;
   reflAmp: number;
   thermAmp: number;
@@ -66,58 +70,47 @@ function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): {
   thermalModel?: ThermalPhaseModel;
   clamp: boolean;
   physicalScaling: boolean;
-  thermalInertia: {
-    enabled: boolean;
-    albedo: number;
-    emissivity: number;
-    tauSec: number;
-    redistribution: number;
-  };
-} {
-  const enabled = Boolean(model?.enabled);
+  thermalInertia: NormalizedThermalInertia;
+};
 
-  const reflAmp = isFiniteNumber(model?.reflAmp) ? Math.max(0, model!.reflAmp as number) : 0;
-  const thermAmp = isFiniteNumber(model?.thermAmp) ? Math.max(0, model!.thermAmp as number) : 0;
+function finiteOrDefault(value: number | undefined, fallback: number): number {
+  return isFiniteNumber(value) ? value : fallback;
+}
 
-  const reflOffset = isFiniteNumber(model?.reflOffset) ? (model!.reflOffset as number) : 0;
-  const thermOffset = isFiniteNumber(model?.thermOffset) ? (model!.thermOffset as number) : 0;
+function nonNegativeFiniteOrZero(value: number | undefined): number {
+  return isFiniteNumber(value) ? Math.max(0, value) : 0;
+}
 
-  const lambertian = Boolean(model?.lambertian);
-
-  const constant = isFiniteNumber(model?.constant) ? Math.max(0, model!.constant as number) : 0;
-
-  const reflModel = model?.reflModel;
-  const thermalModel = model?.thermalModel;
-
-  const clamp = model?.clamp !== false;
-  const physicalScaling = model?.physicalScaling !== false;
-
-  const inertia = model?.thermalInertia;
-  const thermalInertia = {
-    enabled: Boolean(inertia?.enabled),
-    albedo: clamp01(isFiniteNumber(inertia?.albedo) ? (inertia!.albedo as number) : 0),
-    emissivity: clamp01(isFiniteNumber(inertia?.emissivity) ? (inertia!.emissivity as number) : 1),
-    tauSec: isFiniteNumber(inertia?.thermalTimescaleSec)
-      ? Math.max(0, inertia!.thermalTimescaleSec as number)
-      : 0,
-    redistribution: clamp01(
-      isFiniteNumber(inertia?.redistribution) ? (inertia!.redistribution as number) : 0,
-    ),
-  };
-
+function normalizeThermalInertia(
+  inertia: PhaseCurveModel["thermalInertia"] | undefined,
+): NormalizedThermalInertia {
   return {
-    enabled,
-    reflAmp,
-    thermAmp,
-    reflOffset,
-    thermOffset,
-    lambertian,
-    constant,
-    reflModel,
-    thermalModel,
-    clamp,
-    physicalScaling,
-    thermalInertia,
+    enabled: Boolean(inertia?.enabled),
+    albedo: clamp01(finiteOrDefault(inertia?.albedo, 0)),
+    emissivity: clamp01(finiteOrDefault(inertia?.emissivity, 1)),
+    tauSec: nonNegativeFiniteOrZero(inertia?.thermalTimescaleSec),
+    redistribution: clamp01(finiteOrDefault(inertia?.redistribution, 0)),
+  };
+}
+
+/**
+ * Normalized/sanitized PhaseCurveModel used internally.
+ * This keeps behavior deterministic and protects against NaNs in user presets.
+ */
+function normalizePhaseCurveModel(model: PhaseCurveModel | undefined): NormalizedPhaseCurveModel {
+  return {
+    enabled: Boolean(model?.enabled),
+    reflAmp: nonNegativeFiniteOrZero(model?.reflAmp),
+    thermAmp: nonNegativeFiniteOrZero(model?.thermAmp),
+    reflOffset: finiteOrDefault(model?.reflOffset, 0),
+    thermOffset: finiteOrDefault(model?.thermOffset, 0),
+    lambertian: Boolean(model?.lambertian),
+    constant: nonNegativeFiniteOrZero(model?.constant),
+    reflModel: model?.reflModel,
+    thermalModel: model?.thermalModel,
+    clamp: model?.clamp !== false,
+    physicalScaling: model?.physicalScaling !== false,
+    thermalInertia: normalizeThermalInertia(model?.thermalInertia),
   };
 }
 
@@ -148,78 +141,76 @@ function reflectedFluxTerm(params: {
   return Number.isFinite(ww) ? reflAmp * ww : 0;
 }
 
-/**
- * Thermal emission contribution (stellar units):
- *   f_therm = thermAmp * W(alpha_eff)
- *
- * - For model="constant", W=1.
- * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
- */
-function thermalFluxTerm(params: {
+type ThermalFluxTermParams = {
   alpha: number;
   thermAmp: number;
   model: ThermalPhaseModel;
   thermOffset?: number;
   clamp?: boolean;
-  thermalInertia?: {
-    enabled: boolean;
-    albedo: number;
-    emissivity: number;
-    tauSec: number;
-    redistribution: number;
-  };
+  thermalInertia?: NormalizedThermalInertia;
   orbitPeriodSec?: number;
-}): number {
-  const { alpha, thermAmp, model } = params;
+};
 
-  if (!Number.isFinite(alpha)) return 0;
-  if (!Number.isFinite(thermAmp) || thermAmp <= 0) return 0;
+function positiveFinite(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}
 
-  const off = isFiniteNumber(params.thermOffset) ? params.thermOffset : 0;
+function phaseOffsetOrZero(value: number | undefined): number {
+  return isFiniteNumber(value) ? value : 0;
+}
+
+function thermalAmplitude(params: ThermalFluxTermParams): number {
   const inertia = params.thermalInertia;
-  // Only apply albedo/emissivity scaling when thermal inertia is enabled.
-  // When disabled, the raw thermAmp should be used directly.
   const thermScale = inertia?.enabled ? inertia.emissivity * (1 - inertia.albedo) : 1;
+  return params.thermAmp * thermScale;
+}
 
-  const amp = thermAmp * thermScale;
-  if (!(Number.isFinite(amp) && amp > 0)) return 0;
+function phaseWeightWithClamp(alpha: number, model: ThermalPhaseModel, doClamp: boolean): number {
+  const w = thermalLightGeometricWeight(alpha, model);
+  return doClamp ? clamp01(w) : w;
+}
 
-  if (inertia?.enabled && model !== "constant") {
-    const period = params.orbitPeriodSec ?? Number.NaN;
-    if (Number.isFinite(period) && period > 0) {
-      const omega = (2 * Math.PI) / period;
-      const x = omega * inertia.tauSec;
-      const lag = Math.atan(x);
-      const gain = 1 / Math.sqrt(1 + x * x);
+function inertiaResponse(period: number, inertia: NormalizedThermalInertia): { lag: number; gain: number } {
+  const x = ((2 * Math.PI) / period) * inertia.tauSec;
+  return {
+    lag: Math.atan(x),
+    gain: 1 / Math.sqrt(1 + x * x),
+  };
+}
 
-      const aEff = applyPhaseOffset(alpha, -(off + lag));
-      const wRaw = thermalLightGeometricWeight(aEff, model);
-      const w = params.clamp === false ? wRaw : clamp01(wRaw);
+function shouldUseThermalInertia(
+  model: ThermalPhaseModel,
+  inertia: NormalizedThermalInertia | undefined,
+  period: number | undefined,
+): period is number {
+  return Boolean(
+    inertia?.enabled && model !== "constant" && Number.isFinite(period) && (period as number) > 0,
+  );
+}
 
-      const wVar = Number.isFinite(w) ? w * gain : 0;
-      const r = inertia.redistribution;
-      const wEff = r + (1 - r) * wVar;
-      const ww = params.clamp === false ? wEff : clamp01(wEff);
-
-      return Number.isFinite(ww) ? amp * ww : 0;
-    }
-  }
-
-  const aEff = applyPhaseOffset(alpha, -off);
-
-  const w = thermalLightGeometricWeight(aEff, model);
-  const ww = params.clamp === false ? w : clamp01(w);
-
+function thermalInertiaFluxTerm(
+  params: ThermalFluxTermParams,
+  amp: number,
+  inertia: NormalizedThermalInertia,
+  period: number,
+): number {
+  const { lag, gain } = inertiaResponse(period, inertia);
+  const off = phaseOffsetOrZero(params.thermOffset);
+  const aEff = applyPhaseOffset(params.alpha, -(off + lag));
+  const w = phaseWeightWithClamp(aEff, params.model, params.clamp !== false);
+  const wVar = Number.isFinite(w) ? w * gain : 0;
+  const wEff = inertia.redistribution + (1 - inertia.redistribution) * wVar;
+  const ww = params.clamp === false ? wEff : clamp01(wEff);
   return Number.isFinite(ww) ? amp * ww : 0;
 }
 
-/**
- * Primary API: generic body phase-curve contribution (reflection + thermal + constant),
- * in stellar baseline flux units (dimensionless).
- *
- * Intended for sim.ts for both planet and moon.
- */
-export function bodyPhaseFlux(params: {
+function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number): number {
+  const aEff = applyPhaseOffset(params.alpha, -phaseOffsetOrZero(params.thermOffset));
+  const ww = phaseWeightWithClamp(aEff, params.model, params.clamp !== false);
+  return Number.isFinite(ww) ? amp * ww : 0;
+}
+
+export type BodyPhaseFluxParams = {
   rBody: Vec3;
   rBodyRadius?: number;
   rStarRadius?: number;
@@ -228,156 +219,63 @@ export function bodyPhaseFlux(params: {
   model?: PhaseCurveModel;
   dayNightVisibility?: DayNightVisibilityParams;
   thermalModelAdvanced?: ThermalModelAdvancedParams;
-}): number {
+};
+
+/**
+ * Thermal emission contribution (stellar units):
+ *   f_therm = thermAmp * W(alpha_eff)
+ *
+ * - For model="constant", W=1.
+ * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
+ */
+function thermalFluxTerm(params: ThermalFluxTermParams): number {
+  if (!Number.isFinite(params.alpha)) return 0;
+  if (!positiveFinite(params.thermAmp)) return 0;
+
+  const inertia = params.thermalInertia;
+  const amp = thermalAmplitude(params);
+  if (!positiveFinite(amp)) return 0;
+  if (inertia && shouldUseThermalInertia(params.model, inertia, params.orbitPeriodSec)) {
+    return thermalInertiaFluxTerm(params, amp, inertia, params.orbitPeriodSec);
+  }
+  return directThermalFluxTerm(params, amp);
+}
+
+/**
+ * Primary API: generic body phase-curve contribution (reflection + thermal + constant),
+ * in stellar baseline flux units (dimensionless).
+ *
+ * Intended for sim.ts for both planet and moon.
+ */
+export function bodyPhaseFlux(params: BodyPhaseFluxParams): number {
   const norm = normalizePhaseCurveModel(params.model);
   if (!norm.enabled) return 0;
 
-  // Robustness: return 0 if geometry is invalid or rBody is zero-length
-  // (phaseAngleRadFromBodyPos throws on zero-length vectors).
-  if (!vIsFinite(params.rBody) || !vIsFinite(params.observerDir)) return 0;
-  if (vLen(params.rBody) < 1e-15) return 0;
-
-  // Canonical alpha from dayNightVisibility.ts (single source of truth).
-  const alpha = phaseAngleRadFromBodyPos(params.rBody, params.observerDir);
-  if (!Number.isFinite(alpha)) return 0;
-
+  const alpha = bodyPhaseAlpha(params);
+  if (alpha === undefined) return 0;
   const dn = params.dayNightVisibility;
-  const dnEnabled = Boolean(dn?.enabled);
-
-  // Choose reflected model:
-  // - dayNightVisibility overrides if enabled
-  // - else reflModel overrides legacy lambertian
-  // - else legacy: lambertian ? "lambert" : "cosine"
-  const reflModel: ReflectedPhaseModel = (
-    dnEnabled
-      ? (dn?.reflectedModel ?? "lambert")
-      : (norm.reflModel ?? (norm.lambertian ? "lambert" : "cosine"))
-  ) as ReflectedPhaseModel;
-
-  // Choose thermal model:
-  // - dayNightVisibility overrides if enabled
-  // - else model override or legacy default: cosine
-  const thermalModel: ThermalPhaseModel = (
-    dnEnabled ? (dn?.thermalModel ?? "constant") : (norm.thermalModel ?? "cosine")
-  ) as ThermalPhaseModel;
-
-  // Clamp policy for geometric weights.
-  const clampWeights = dnEnabled ? dn?.clamp !== false : norm.clamp;
-
-  // Optional physical scaling.
-  let reflScale = 1;
-  let thermScale = 1;
-  if (norm.physicalScaling) {
-    const rBodyRadius = params.rBodyRadius ?? Number.NaN;
-    const rStarRadius = params.rStarRadius ?? Number.NaN;
-    const r = vLen(params.rBody);
-
-    if (!(Number.isFinite(rBodyRadius) && rBodyRadius > 0)) {
-      // If radii are missing, fall back to the legacy unscaled behavior.
-      reflScale = 1;
-      thermScale = 1;
-    } else {
-      reflScale = r > 0 ? (rBodyRadius * rBodyRadius) / (r * r) : 0;
-      thermScale =
-        Number.isFinite(rStarRadius) && rStarRadius > 0
-          ? (rBodyRadius * rBodyRadius) / (rStarRadius * rStarRadius)
-          : 1;
-    }
-  }
+  const clampWeights = clampWeightsFor(norm, dn);
+  const scales = phaseCurvePhysicalScales(norm, params);
 
   const refl = reflectedFluxTerm({
     alpha,
-    reflAmp: norm.reflAmp * reflScale,
-    model: reflModel,
+    reflAmp: norm.reflAmp * scales.reflScale,
+    model: reflectedModelFor(norm, dn),
     reflOffset: norm.reflOffset,
     clamp: clampWeights,
   });
 
-  // When thermalModelAdvanced is enabled it supersedes the simpler thermalInertia model
-  // to avoid double thermal scaling (both apply redistribution + response gain independently).
-  const effectiveThermalInertia = params.thermalModelAdvanced?.enabled
-    ? { ...norm.thermalInertia, enabled: false }
-    : norm.thermalInertia;
-
   const therm = thermalFluxTerm({
     alpha,
-    thermAmp: norm.thermAmp * thermScale,
-    model: thermalModel,
+    thermAmp: norm.thermAmp * scales.thermScale,
+    model: thermalModelFor(norm, dn),
     thermOffset: norm.thermOffset,
     clamp: clampWeights,
-    thermalInertia: effectiveThermalInertia,
+    thermalInertia: effectiveThermalInertia(norm, params.thermalModelAdvanced),
     orbitPeriodSec: params.orbitPeriodSec,
   });
 
-  let thermAdvancedBoost = 1;
-  if (params.thermalModelAdvanced?.enabled) {
-    const adv = params.thermalModelAdvanced;
-    const r = vLen(params.rBody);
-    const rs =
-      Number.isFinite(params.rStarRadius) && (params.rStarRadius as number) > 0
-        ? (params.rStarRadius as number)
-        : undefined;
-    const eqScale = Number.isFinite(adv.equilibriumScale) ? Math.max(0, adv.equilibriumScale as number) : 1;
-    const redistribution = clamp01(
-      Number.isFinite(adv.redistribution) ? (adv.redistribution as number) : 0.5,
-    );
-    const tau = Number.isFinite(adv.tauSec) ? Math.max(0, adv.tauSec as number) : 0;
-    const period =
-      Number.isFinite(params.orbitPeriodSec) && (params.orbitPeriodSec as number) > 0
-        ? (params.orbitPeriodSec as number)
-        : undefined;
-    const response = period && tau > 0 ? 1 / Math.sqrt(1 + Math.pow((2 * Math.PI * tau) / period, 2)) : 1;
-    const irr = rs && r > 0 ? (rs * rs) / (r * r) : 1;
-    thermAdvancedBoost = Math.max(0, redistribution + (1 - redistribution) * eqScale * irr * response);
-  }
-
-  // thermScale (= rBody^2 / rStar^2) is applied to the constant floor so that the
-  // baseline thermal emission scales with the body's emitting area relative to the star,
-  // consistent with how the thermal amplitude term is scaled.
-  const constant = norm.physicalScaling ? norm.constant * thermScale : norm.constant;
-  const total = refl + therm * thermAdvancedBoost + constant;
-
-  // Enforce non-negativity (physical for these toy additive terms).
+  const constant = norm.physicalScaling ? norm.constant * scales.thermScale : norm.constant;
+  const total = refl + therm * thermalAdvancedBoost(params) + constant;
   return Number.isFinite(total) ? Math.max(0, total) : 0;
-}
-
-// ---------------------------
-// Minimal built-in tests
-// ---------------------------
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`phaseCurve self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-12): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-/**
- * Self-tests (dependency-free, only run if called):
- * - Ensures alpha convention matches dayNightVisibility.
- * - Ensures bodyPhaseFlux is non-negative and scales with amplitudes.
- */
-export function runPhaseCurveSelfTests(): void {
-  const observerDir = { x: 0, y: 0, z: 1 };
-
-  const alphaFull = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: -10 }, observerDir);
-  const alphaNew = phaseAngleRadFromBodyPos({ x: 0, y: 0, z: 10 }, observerDir);
-
-  assert(approxEq(alphaFull, 0, 1e-12), "alpha(full) should be 0 for rBody=-z with observerDir=+z.");
-  assert(approxEq(alphaNew, Math.PI, 1e-12), "alpha(new) should be pi for rBody=+z with observerDir=+z.");
-
-  const f0 = bodyPhaseFlux({
-    rBody: { x: 0, y: 0, z: -10 },
-    observerDir,
-    model: { enabled: true, reflAmp: 0, thermAmp: 0, constant: 0 },
-  });
-  assert(approxEq(f0, 0), "Zero amps must yield zero flux.");
-
-  const f1 = bodyPhaseFlux({
-    rBody: { x: 0, y: 0, z: -10 }, // full phase => weight ~1
-    observerDir,
-    model: { enabled: true, reflAmp: 1e-3, thermAmp: 0, lambertian: true },
-  });
-  assert(f1 > 0, "Positive reflAmp at full phase should yield positive flux.");
 }

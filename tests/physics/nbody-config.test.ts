@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
 import { G_SI } from "../../src/core/units";
-import { resolveEnabledNBodyPlanetMoonConfig } from "../../src/sim/nbody/config";
+import { resolveEnabledNBodyPlanetMoonConfig, resolveNBodyConfig } from "../../src/sim/nbody/config";
 
 describe("resolveEnabledNBodyPlanetMoonConfig", () => {
   it("computes mu from masses when mu is missing", () => {
@@ -54,5 +55,21 @@ describe("resolveEnabledNBodyPlanetMoonConfig", () => {
     expect(resolved!.muStar).toBeCloseTo(G_SI * 2, 12);
     expect(resolved!.muPlanet).toBeCloseTo(G_SI * 3, 12);
     expect(resolved!.muMoon).toBeCloseTo(G_SI * 4, 12);
+  });
+
+  it("preserves an explicit small maxSubsteps cap", () => {
+    const params = cloneParams(SCENARIO_DEFAULTS);
+    params.dynamics = {
+      nbodyPlanetMoon: {
+        enabled: true,
+        dtMax: 1,
+        muStar: 10,
+        muPlanet: 20,
+        muMoon: 30,
+        integrator: { maxSubsteps: 1 },
+      },
+    };
+
+    expect(resolveNBodyConfig(params)?.cfg.integrator.maxSubsteps).toBe(1);
   });
 });

@@ -4,7 +4,7 @@
 
 Prerequisites:
 
-- Node.js 18+
+- Node.js 20.19+ or 22.12+
 - pnpm 9 (recommended)
 
 Install:
@@ -24,23 +24,24 @@ pnpm dev
 Before opening a pull request, run:
 
 ```bash
+pnpm hygiene:public
 ./scripts/ci-local.sh   # install + ci:verify + served smoke + specialty gates
 ```
 
-Equivalent manual gates:
+Add the high-threshold dependency security audit when needed:
 
 ```bash
-pnpm ci:verify
-pnpm smoke:served
-pnpm test:coverage
-pnpm audit:deps
-pnpm literature-benchmarks   # physics correctness vs. published results
-pnpm didactics-acceptance    # educational flow validation
-pnpm perf-smoke              # interactive performance budget
-pnpm physics-regression      # timing and dynamics regression
-pnpm migration-regression    # V3 -> V4 backwards compatibility
-pnpm audit:security          # dependency vulnerability scan
+CI_AUDIT=1 ./scripts/ci-local.sh
 ```
+
+The script is the authoritative local loop. It includes the hosted CI baseline plus served smoke,
+coverage, dependency hygiene, scientific calibration, didactics, performance, physics, and migration
+gates.
+
+The public-surface check includes non-ignored untracked files. Keep generated reports, local agent
+state, editor metadata, absolute workstation paths, credentials, and private evidence outside the
+public candidate tree. Maintained project configuration and reproducible documentation should be
+tracked rather than hidden through broad ignore rules.
 
 ## Code quality rules
 

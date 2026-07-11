@@ -77,6 +77,75 @@ export type Canvas2DRendererOptions = {
   autoFitScene?: boolean;
 };
 
+type ScreenPoint = { x: number; y: number };
+
+function getCanvas2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas2DRenderer: 2D context unavailable.");
+  return ctx;
+}
+
+function resolveCanvas2DRendererOptions(opts: Canvas2DRendererOptions): Required<Canvas2DRendererOptions> {
+  return {
+    background: rendererOptionDefault(opts.background, "#000"),
+    showAxes: rendererOptionDefault(opts.showAxes, true),
+    showOrbits: rendererOptionDefault(opts.showOrbits, true),
+    orbitPathCache: rendererOptionDefault(opts.orbitPathCache, {}),
+    autoFitScene: rendererOptionDefault(opts.autoFitScene, false),
+  };
+}
+
+function rendererOptionDefault<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+function rendererCssSize(
+  size: SizeInfo | undefined,
+  canvas: HTMLCanvasElement,
+): { cssW: number; cssH: number } {
+  return {
+    cssW: rendererOptionDefault(size?.cssW, rendererOptionDefault(canvas.clientWidth, canvas.width)),
+    cssH: rendererOptionDefault(size?.cssH, rendererOptionDefault(canvas.clientHeight, canvas.height)),
+  };
+}
+
+function sceneMaxExtent(params: SystemParams, step: SimulationStepV3): number {
+  let maxExtent = toFinitePositiveOr(params.star?.r, 1);
+  for (const geometry of resolveOcculterGeometry(params, step)) {
+    maxExtent = Math.max(maxExtent, geometryMaxExtent(geometry));
+  }
+  return Math.max(maxExtent, 1e-6);
+}
+
+function geometryMaxExtent(geometry: RenderOcculterGeometryV3): number {
+  const x = Math.abs(Number.isFinite(geometry.center.x) ? geometry.center.x : 0);
+  const y = Math.abs(Number.isFinite(geometry.center.y) ? geometry.center.y : 0);
+  const radii = geometryExtentRadii(geometry);
+  return Math.max(x + radii.x, y + radii.y);
+}
+
+function geometryExtentRadii(geometry: RenderOcculterGeometryV3): { x: number; y: number } {
+  if (geometry.kind === "circle") {
+    const r = toFinitePositiveOr(geometry.radius, 1e-6);
+    return { x: r, y: r };
+  }
+  if (geometry.kind === "ellipse") {
+    return {
+      x: toFinitePositiveOr(geometry.rx, 1e-6),
+      y: toFinitePositiveOr(geometry.ry, 1e-6),
+    };
+  }
+  const r = toFinitePositiveOr(geometry.outerRadius, 1e-6);
+  return { x: r, y: r };
+}
+
+function sceneScaleForSize(cssW: number, cssH: number, maxExtent: number): number {
+  const padFrac = 0.12;
+  const usableHalfWidth = Math.max(1, cssW * 0.5 * (1 - padFrac));
+  const usableHalfHeight = Math.max(1, cssH * 0.5 * (1 - padFrac));
+  return Math.max(1e-12, Math.min(usableHalfWidth, usableHalfHeight) / maxExtent);
+}
+
 export class Canvas2DRenderer {
   private ctx: CanvasRenderingContext2D;
   private size?: SizeInfo;
@@ -118,18 +187,9 @@ export class Canvas2DRenderer {
     private canvas: HTMLCanvasElement,
     opts: Canvas2DRendererOptions = {},
   ) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas2DRenderer: 2D context unavailable.");
-    this.ctx = ctx;
-
-    this.opts = {
-      background: opts.background ?? "#000",
-      showAxes: opts.showAxes ?? true,
-      showOrbits: opts.showOrbits ?? true,
-      orbitPathCache: opts.orbitPathCache ?? {},
-      autoFitScene: opts.autoFitScene ?? false,
-    };
-    this.autoFitScene = opts.autoFitScene ?? false;
+    this.ctx = getCanvas2DContext(canvas);
+    this.opts = resolveCanvas2DRendererOptions(opts);
+    this.autoFitScene = this.opts.autoFitScene;
 
     this.orbitCache = new OrbitPathCache(this.opts.orbitPathCache);
     this.detachResizeObserver = attachCanvasResizeObserver(this.canvas);
@@ -171,14 +231,13 @@ export class Canvas2DRenderer {
   }
 
   private updateViewportCenter(): void {
-    const cssW = this.size?.cssW ?? this.canvas.clientWidth ?? this.canvas.width;
-    const cssH = this.size?.cssH ?? this.canvas.clientHeight ?? this.canvas.height;
+    const { cssW, cssH } = rendererCssSize(this.size, this.canvas);
     this.viewportCx = cssW * 0.5;
     this.viewportCy = cssH * 0.5;
   }
 
   /** Convert sky-plane world coords (x,y) to CSS pixel coords. */
-  private toPxInto(x: number, y: number, out: { x: number; y: number }): { x: number; y: number } {
+  private toPxInto(x: number, y: number, out: ScreenPoint): ScreenPoint {
     // Convention: world +y is up; canvas +y is down.
     out.x = this.viewportCx + x * this.pixelsPerUnit;
     out.y = this.viewportCy - y * this.pixelsPerUnit;
@@ -186,32 +245,9 @@ export class Canvas2DRenderer {
   }
 
   private fitSceneScale(params: SystemParams, step: SimulationStepV3): void {
-    const cssW = this.size?.cssW ?? this.canvas.clientWidth ?? this.canvas.width;
-    const cssH = this.size?.cssH ?? this.canvas.clientHeight ?? this.canvas.height;
+    const { cssW, cssH } = rendererCssSize(this.size, this.canvas);
     if (!(cssW > 0 && cssH > 0)) return;
-
-    const extents = [toFinitePositiveOr(params.star?.r, 1)];
-    for (const geometry of resolveOcculterGeometry(params, step)) {
-      const x = Math.abs(Number.isFinite(geometry.center.x) ? geometry.center.x : 0);
-      const y = Math.abs(Number.isFinite(geometry.center.y) ? geometry.center.y : 0);
-      if (geometry.kind === "circle") {
-        const r = toFinitePositiveOr(geometry.radius, 1e-6);
-        extents.push(x + r, y + r);
-      } else if (geometry.kind === "ellipse") {
-        const rx = toFinitePositiveOr(geometry.rx, 1e-6);
-        const ry = toFinitePositiveOr(geometry.ry, 1e-6);
-        extents.push(x + rx, y + ry);
-      } else {
-        const r = toFinitePositiveOr(geometry.outerRadius, 1e-6);
-        extents.push(x + r, y + r);
-      }
-    }
-
-    const maxExtent = Math.max(...extents, 1e-6);
-    const padFrac = 0.12;
-    const usableHalfWidth = Math.max(1, cssW * 0.5 * (1 - padFrac));
-    const usableHalfHeight = Math.max(1, cssH * 0.5 * (1 - padFrac));
-    this.basePixelsPerUnit = Math.max(1e-12, Math.min(usableHalfWidth, usableHalfHeight) / maxExtent);
+    this.basePixelsPerUnit = sceneScaleForSize(cssW, cssH, sceneMaxExtent(params, step));
     this.pixelsPerUnit = this.basePixelsPerUnit * this.zoomMultiplier;
   }
 
@@ -323,80 +359,79 @@ export class Canvas2DRenderer {
     });
   }
 
-  /**
-   * Render one frame with Runtime V3 output.
-   */
-  drawFrameV3(params: SystemParams, step: SimulationStepV3, tSec: number): void {
-    // Update HiDPI sizing & ensure CSS-pixel coordinate transform.
+  private prepareFrame(params: SystemParams, step: SimulationStepV3): SizeInfo {
     this.size = ensureHiDPICanvas(this.canvas, this.ctx, this.size);
     this.updateViewportCenter();
-    if (this.autoFitScene || !this.hasSceneScale) {
-      this.fitSceneScale(params, step);
-      this.hasSceneScale = true;
+    this.updateSceneScaleIfNeeded(params, step);
+    return this.size;
+  }
+
+  private updateSceneScaleIfNeeded(params: SystemParams, step: SimulationStepV3): void {
+    if (!(this.autoFitScene || !this.hasSceneScale)) return;
+    this.fitSceneScale(params, step);
+    this.hasSceneScale = true;
+  }
+
+  private drawFrameBackground(cssW: number, cssH: number): void {
+    this.ctx.clearRect(0, 0, cssW, cssH);
+    this.ctx.fillStyle = this.opts.background;
+    this.ctx.fillRect(0, 0, cssW, cssH);
+  }
+
+  private resolveFrameObserverDir(params: SystemParams, step: SimulationStepV3): Vec3 {
+    return normalizeObserverDirSafe(step.renderSignals.orbitFrames.observerDir ?? params.observer?.dir);
+  }
+
+  private drawOrbitGuides(params: SystemParams, tSec: number, observerDir: Vec3): void {
+    if (!this.opts.showOrbits) return;
+
+    this.drawOrbit(this.orbitCache.getPlanetPath(params, tSec, observerDir), "rgba(255,255,255,0.18)");
+    if (params.moon) {
+      this.drawOrbit(this.orbitCache.getMoonPath(params, tSec, observerDir), "rgba(255,255,255,0.12)");
     }
+  }
 
-    const ctx = this.ctx;
-    const cssW = this.size.cssW;
-    const cssH = this.size.cssH;
-
-    // Background
-    ctx.clearRect(0, 0, cssW, cssH);
-    ctx.fillStyle = this.opts.background;
-    ctx.fillRect(0, 0, cssW, cssH);
-
-    this.drawAxes();
-
-    // Observer direction (safe normalization).
-    const observerDir: Vec3 = normalizeObserverDirSafe(
-      step.renderSignals.orbitFrames.observerDir ?? params.observer?.dir,
-    );
-
-    // Orbit paths (visual guide only).
-    if (this.opts.showOrbits) {
-      const planetPts = this.orbitCache.getPlanetPath(params, tSec, observerDir);
-      this.drawOrbit(planetPts, "rgba(255,255,255,0.18)");
-
-      if (params.moon) {
-        const moonPts = this.orbitCache.getMoonPath(params, tSec, observerDir);
-        this.drawOrbit(moonPts, "rgba(255,255,255,0.12)");
-      }
-    }
-
-    // Depth-sorted draw order (Painter's algorithm):
-    // smaller z first (farther), larger z last (closer).
+  private prepareSceneDrawList(params: SystemParams, step: SimulationStepV3): Drawable[] {
     const drawList = this.drawList;
     let drawCount = 0;
-    let drawItem = drawList[drawCount];
-    if (!drawItem) {
-      drawItem = { kind: "star", z: 0 };
-      drawList[drawCount] = drawItem;
-    } else {
-      drawItem.kind = "star";
-      drawItem.z = 0;
-      drawItem.geometry = undefined;
-    }
+    this.setStarDrawItem(drawList, drawCount);
     drawCount++;
     for (const geometry of resolveOcculterGeometry(params, step)) {
-      drawItem = drawList[drawCount];
-      if (!drawItem) {
-        drawItem = { kind: "occulter", z: 0, geometry };
-        drawList[drawCount] = drawItem;
-      }
-      drawItem.kind = "occulter";
-      drawItem.z = Number.isFinite(geometry.center.z) ? geometry.center.z : 0;
-      drawItem.geometry = geometry;
+      this.setOcculterDrawItem(drawList, drawCount, geometry);
       drawCount++;
     }
     drawList.length = drawCount;
+    this.sortSceneDrawList(drawList, drawCount);
+    return drawList;
+  }
 
+  private setStarDrawItem(drawList: Drawable[], index: number): void {
+    const drawItem = drawList[index] ?? { kind: "star", z: 0 };
+    drawItem.kind = "star";
+    drawItem.z = 0;
+    drawItem.geometry = undefined;
+    drawList[index] = drawItem;
+  }
+
+  private setOcculterDrawItem(drawList: Drawable[], index: number, geometry: RenderOcculterGeometryV3): void {
+    const drawItem = drawList[index] ?? { kind: "occulter", z: 0, geometry };
+    drawItem.kind = "occulter";
+    drawItem.z = Number.isFinite(geometry.center.z) ? geometry.center.z : 0;
+    drawItem.geometry = geometry;
+    drawList[index] = drawItem;
+  }
+
+  private sortSceneDrawList(drawList: Drawable[], drawCount: number): void {
     if (drawCount === 2 && compareDrawables(drawList[0], drawList[1]) > 0) {
       const first = drawList[0];
       drawList[0] = drawList[1];
       drawList[1] = first;
-    } else if (drawCount > 2) {
-      drawList.sort(compareDrawables);
+      return;
     }
+    if (drawCount > 2) drawList.sort(compareDrawables);
+  }
 
+  private drawSceneDrawList(drawList: Drawable[], params: SystemParams): void {
     for (const item of drawList) {
       if (item.kind === "star") {
         this.drawStar(params);
@@ -404,20 +439,38 @@ export class Canvas2DRenderer {
       }
       if (item.geometry) this.drawOcculterGeometry(params, item.geometry, params.star.r);
     }
+  }
 
-    this.drawEventMarkers(step);
+  private drawDidacticOverlayForFrame(cssW: number): void {
     drawDidacticOverlay({
-      ctx,
+      ctx: this.ctx,
       toPxInto: this.toPxInto.bind(this),
       scratchPoint: this.scratchPoint0,
       pixelsPerUnit: this.pixelsPerUnit,
       cssW,
       overlay: this.didacticOverlay,
     });
+  }
 
-    const overlayData = this.toOverlayData(step);
-    drawDebugOverlayV3(ctx, this.size, overlayData, observerDir, this.debug, {
+  private drawDebugOverlayForFrame(size: SizeInfo, observerDir: Vec3, step: SimulationStepV3): void {
+    drawDebugOverlayV3(this.ctx, size, this.toOverlayData(step), observerDir, this.debug, {
       observerDirNormalized: true,
     });
+  }
+
+  /**
+   * Render one frame with Runtime V3 output.
+   */
+  drawFrameV3(params: SystemParams, step: SimulationStepV3, tSec: number): void {
+    const size = this.prepareFrame(params, step);
+    this.drawFrameBackground(size.cssW, size.cssH);
+    this.drawAxes();
+
+    const observerDir = this.resolveFrameObserverDir(params, step);
+    this.drawOrbitGuides(params, tSec, observerDir);
+    this.drawSceneDrawList(this.prepareSceneDrawList(params, step), params);
+    this.drawEventMarkers(step);
+    this.drawDidacticOverlayForFrame(size.cssW);
+    this.drawDebugOverlayForFrame(size, observerDir, step);
   }
 }

@@ -56,16 +56,39 @@ type VisualizationSetters = {
   setSceneOverlay: (overlay: ReturnType<typeof buildSceneDidacticOverlay> | undefined) => void;
 };
 
+type DynamicBandOverlayResult = {
+  series: LightCurveOverlaySeries[];
+  hasChromaticLane: boolean;
+};
+
+const HISTORY_SAMPLE_CAP = 900;
+
+function historyArray<T>(history: T[] | undefined): T[] {
+  return history ?? [];
+}
+
+function optionalComparisonValue<T>(value: T | null | undefined): T | undefined {
+  return value ?? undefined;
+}
+
+function initializeHistoryState(state: FrameLoopVisualizationState): void {
+  state.physicalHistory = historyArray(state.physicalHistory);
+  state.measuredHistory = historyArray(state.measuredHistory);
+  state.componentBaselineHistory = historyArray(state.componentBaselineHistory);
+  state.componentTransitHistory = historyArray(state.componentTransitHistory);
+  state.componentScatterHistory = historyArray(state.componentScatterHistory);
+}
+
+function initializeComparisonState(state: FrameLoopVisualizationState): void {
+  state.comparisonCurveSeries = optionalComparisonValue(state.comparisonCurveSeries);
+  state.comparisonInset = optionalComparisonValue(state.comparisonInset);
+  state.comparisonGhosts = optionalComparisonValue(state.comparisonGhosts);
+  state.comparisonBadges = optionalComparisonValue(state.comparisonBadges);
+}
+
 export function initializeVisualizationState(state: FrameLoopVisualizationState): void {
-  state.physicalHistory ??= [];
-  state.measuredHistory ??= [];
-  state.componentBaselineHistory ??= [];
-  state.componentTransitHistory ??= [];
-  state.componentScatterHistory ??= [];
-  state.comparisonCurveSeries ??= undefined;
-  state.comparisonInset ??= undefined;
-  state.comparisonGhosts ??= undefined;
-  state.comparisonBadges ??= undefined;
+  initializeHistoryState(state);
+  initializeComparisonState(state);
 }
 
 export function setPlotOverlaySeries(plot: LightCurvePlot, series: LightCurveOverlaySeries[]): void {
@@ -119,6 +142,49 @@ export function displayFluxFromStep(step: SimulationStepV3, displayFluxScale: nu
     : scaleFluxForDisplay(step.flux.total, displayFluxScale);
 }
 
+function pushHistoryPoint(
+  history: LightCurveOverlayPoint[] | undefined,
+  sample: LightCurveOverlayPoint,
+): void {
+  pushCappedOverlayPoint(history ?? [], sample, HISTORY_SAMPLE_CAP);
+}
+
+function refractionFluxComponent(components: SimulationStepV3["renderSignals"]["fluxComponents"]): number {
+  return Number.isFinite(components.refraction) ? (components.refraction as number) : 0;
+}
+
+function scatterShoulderFlux(components: SimulationStepV3["renderSignals"]["fluxComponents"]): number {
+  return (
+    components.stellarPreTransit * components.transitFactor +
+    components.forwardScattering +
+    components.ringScattering +
+    refractionFluxComponent(components)
+  );
+}
+
+function pushMeasuredHistorySample(
+  state: FrameLoopVisualizationState,
+  tSec: number,
+  measuredFlux: number | undefined,
+): void {
+  if (Number.isFinite(measuredFlux)) {
+    pushHistoryPoint(state.measuredHistory, { t: tSec, flux: measuredFlux as number });
+  }
+}
+
+function pushComponentHistorySamples(
+  state: FrameLoopVisualizationState,
+  components: SimulationStepV3["renderSignals"]["fluxComponents"],
+  tSec: number,
+): void {
+  pushHistoryPoint(state.componentBaselineHistory, { t: tSec, flux: components.stellarPreTransit });
+  pushHistoryPoint(state.componentTransitHistory, {
+    t: tSec,
+    flux: components.stellarPreTransit * components.transitFactor,
+  });
+  pushHistoryPoint(state.componentScatterHistory, { t: tSec, flux: scatterShoulderFlux(components) });
+}
+
 export function pushHistorySamples(
   state: FrameLoopVisualizationState,
   step: SimulationStepV3,
@@ -127,32 +193,9 @@ export function pushHistorySamples(
 ): void {
   const physicalFlux = displayFluxFromStep(step, state.displayFluxScale);
   const components = step.renderSignals.fluxComponents;
-  pushCappedOverlayPoint(state.physicalHistory ?? [], { t: tSec, flux: physicalFlux }, 900);
-  if (Number.isFinite(measuredFlux)) {
-    pushCappedOverlayPoint(state.measuredHistory ?? [], { t: tSec, flux: measuredFlux as number }, 900);
-  }
-  pushCappedOverlayPoint(
-    state.componentBaselineHistory ?? [],
-    { t: tSec, flux: components.stellarPreTransit },
-    900,
-  );
-  pushCappedOverlayPoint(
-    state.componentTransitHistory ?? [],
-    { t: tSec, flux: components.stellarPreTransit * components.transitFactor },
-    900,
-  );
-  pushCappedOverlayPoint(
-    state.componentScatterHistory ?? [],
-    {
-      t: tSec,
-      flux:
-        components.stellarPreTransit * components.transitFactor +
-        components.forwardScattering +
-        components.ringScattering +
-        (Number.isFinite(components.refraction) ? (components.refraction as number) : 0),
-    },
-    900,
-  );
+  pushHistoryPoint(state.physicalHistory, { t: tSec, flux: physicalFlux });
+  pushMeasuredHistorySample(state, tSec, measuredFlux);
+  pushComponentHistorySamples(state, components, tSec);
 }
 
 function shouldShowEpochGhost(params: SystemParams): boolean {
@@ -225,6 +268,139 @@ function buildVisualizationSetters(plot: LightCurvePlot, renderer: Canvas2DRende
   };
 }
 
+function modeOverlaySeries(
+  plotMode: string,
+  physicalHistory: LightCurveOverlayPoint[],
+  measuredHistory: LightCurveOverlayPoint[],
+): LightCurveOverlaySeries[] {
+  if (plotMode === "measured" && physicalHistory.length > 0) {
+    return [
+      {
+        id: "physical-truth",
+        label: "physical truth",
+        color: "#4cc9f0",
+        style: "dashed",
+        alpha: 0.85,
+        samples: [...physicalHistory],
+      },
+    ];
+  }
+
+  if (plotMode !== "measured" && measuredHistory.length > 0) {
+    return [
+      {
+        id: "measured-trace",
+        label: "measured trace",
+        color: "#ffb703",
+        style: "dashed",
+        alpha: 0.8,
+        samples: [...measuredHistory],
+      },
+    ];
+  }
+
+  return [];
+}
+
+function dynamicComponentSeries(state: FrameLoopVisualizationState): LightCurveOverlaySeries[] {
+  if ((state.componentBaselineHistory?.length ?? 0) <= 1) return [];
+  return [
+    {
+      id: "dynamic-stellar-baseline",
+      label: "stellar baseline",
+      color: "#6c757d",
+      style: "dashed",
+      alpha: 0.65,
+      samples: [...(state.componentBaselineHistory ?? [])],
+    },
+    {
+      id: "dynamic-transit-attenuation",
+      label: "transit attenuation",
+      color: "#8ecae6",
+      style: "dotted",
+      alpha: 0.78,
+      samples: [...(state.componentTransitHistory ?? [])],
+    },
+    {
+      id: "dynamic-scatter-shoulder",
+      label: "scatter/refraction shoulder",
+      color: "#ffb703",
+      style: "solid",
+      alpha: 0.8,
+      samples: [...(state.componentScatterHistory ?? [])],
+    },
+  ];
+}
+
+function dynamicHistoryRange(
+  physicalHistory: LightCurveOverlayPoint[],
+): { startSec: number; endSec: number } | undefined {
+  if (physicalHistory.length <= 1) return undefined;
+  return { startSec: physicalHistory[0].t, endSec: physicalHistory[physicalHistory.length - 1].t };
+}
+
+function sampleTimesForRange(range: { startSec: number; endSec: number }, sampleCount: number): number[] {
+  const spanSec = Math.max(1, range.endSec - range.startSec);
+  return Array.from(
+    { length: sampleCount },
+    (_, index) => range.startSec + (index / Math.max(1, sampleCount - 1)) * spanSec,
+  );
+}
+
+function dynamicBandOverlaySeries(
+  params: SystemParams,
+  range: { startSec: number; endSec: number } | undefined,
+  physicalHistory: LightCurveOverlayPoint[],
+): DynamicBandOverlayResult {
+  if (!range) return { series: [], hasChromaticLane: false };
+  const bandVariants = buildBandVariantSystems(params);
+  if (bandVariants.length <= 1) return { series: [], hasChromaticLane: false };
+
+  const sampleCount = Math.min(96, Math.max(24, physicalHistory.length));
+  const times = sampleTimesForRange(range, sampleCount);
+  return { series: sampleBandOverlaySeries({ variants: bandVariants, times }), hasChromaticLane: true };
+}
+
+function dynamicOverlaySeries(args: {
+  params: SystemParams;
+  plotMode: string;
+  state: FrameLoopVisualizationState;
+  physicalHistory: LightCurveOverlayPoint[];
+  measuredHistory: LightCurveOverlayPoint[];
+  range: { startSec: number; endSec: number } | undefined;
+}): DynamicBandOverlayResult {
+  const overlaySeries: LightCurveOverlaySeries[] = [
+    ...modeOverlaySeries(args.plotMode, args.physicalHistory, args.measuredHistory),
+    ...dynamicComponentSeries(args.state),
+    ...buildNoiseEnvelopeSeries(args.measuredHistory, estimateMeasurementSigma(args.params, args.state.t)),
+    ...(args.state.comparisonCurveSeries ?? []),
+  ];
+  const bandOverlay = dynamicBandOverlaySeries(args.params, args.range, args.physicalHistory);
+  overlaySeries.push(...bandOverlay.series);
+  return { series: overlaySeries, hasChromaticLane: bandOverlay.hasChromaticLane };
+}
+
+function dynamicBadges(
+  params: SystemParams,
+  step: SimulationStepV3,
+  state: FrameLoopVisualizationState,
+  hasChromaticLane: boolean,
+): LightCurveBadge[] {
+  const badges = [...buildMeasurementBadges(params, step, state.t), ...(state.comparisonBadges ?? [])];
+  if (hasChromaticLane && !badges.some((badge) => badge.label === "chromatic lane")) {
+    badges.push({ label: "chromatic lane", color: "#ffb703" });
+  }
+  return badges;
+}
+
+function dynamicSceneGhosts(
+  simulation: AppSimulationRuntime,
+  params: SystemParams,
+  state: FrameLoopVisualizationState,
+): SceneGhostGeometry[] {
+  return [...(state.comparisonGhosts ?? []), ...buildEpochGhosts(simulation, params, state.t)];
+}
+
 export function applyDynamicVisualizationState(args: {
   simulation: AppSimulationRuntime;
   params: SystemParams;
@@ -238,81 +414,11 @@ export function applyDynamicVisualizationState(args: {
   const setters = buildVisualizationSetters(plot, renderer);
   const physicalHistory = state.physicalHistory ?? [];
   const measuredHistory = state.measuredHistory ?? [];
-  const overlaySeries: LightCurveOverlaySeries[] = [];
+  const range = dynamicHistoryRange(physicalHistory);
+  const overlays = dynamicOverlaySeries({ params, plotMode, state, physicalHistory, measuredHistory, range });
+  const badges = dynamicBadges(params, step, state, overlays.hasChromaticLane);
 
-  if (plotMode === "measured" && physicalHistory.length > 0) {
-    overlaySeries.push({
-      id: "physical-truth",
-      label: "physical truth",
-      color: "#4cc9f0",
-      style: "dashed",
-      alpha: 0.85,
-      samples: [...physicalHistory],
-    });
-  } else if (plotMode !== "measured" && measuredHistory.length > 0) {
-    overlaySeries.push({
-      id: "measured-trace",
-      label: "measured trace",
-      color: "#ffb703",
-      style: "dashed",
-      alpha: 0.8,
-      samples: [...measuredHistory],
-    });
-  }
-
-  if ((state.componentBaselineHistory?.length ?? 0) > 1) {
-    overlaySeries.push(
-      {
-        id: "dynamic-stellar-baseline",
-        label: "stellar baseline",
-        color: "#6c757d",
-        style: "dashed",
-        alpha: 0.65,
-        samples: [...(state.componentBaselineHistory ?? [])],
-      },
-      {
-        id: "dynamic-transit-attenuation",
-        label: "transit attenuation",
-        color: "#8ecae6",
-        style: "dotted",
-        alpha: 0.78,
-        samples: [...(state.componentTransitHistory ?? [])],
-      },
-      {
-        id: "dynamic-scatter-shoulder",
-        label: "scatter/refraction shoulder",
-        color: "#ffb703",
-        style: "solid",
-        alpha: 0.8,
-        samples: [...(state.componentScatterHistory ?? [])],
-      },
-    );
-  }
-
-  overlaySeries.push(...buildNoiseEnvelopeSeries(measuredHistory, estimateMeasurementSigma(params, state.t)));
-  if (state.comparisonCurveSeries?.length) overlaySeries.push(...state.comparisonCurveSeries);
-
-  const range =
-    physicalHistory.length > 1
-      ? { startSec: physicalHistory[0].t, endSec: physicalHistory[physicalHistory.length - 1].t }
-      : undefined;
-  const bandVariants = range ? buildBandVariantSystems(params) : [];
-  if (range && bandVariants.length > 1) {
-    const sampleCount = Math.min(96, Math.max(24, physicalHistory.length));
-    const spanSec = Math.max(1, range.endSec - range.startSec);
-    const times = Array.from(
-      { length: sampleCount },
-      (_, index) => range.startSec + (index / Math.max(1, sampleCount - 1)) * spanSec,
-    );
-    overlaySeries.push(...sampleBandOverlaySeries({ variants: bandVariants, times }));
-  }
-
-  const badges = [...buildMeasurementBadges(params, step, state.t), ...(state.comparisonBadges ?? [])];
-  if (range && bandVariants.length > 1 && !badges.some((badge) => badge.label === "chromatic lane")) {
-    badges.push({ label: "chromatic lane", color: "#ffb703" });
-  }
-
-  setters.setOverlaySeries(overlaySeries);
+  setters.setOverlaySeries(overlays.series);
   setters.setWindowOverlays(
     buildGapWindowOverlays(getInstrumentCfgFromPhotometry(params.star.photometry)?.observer, range),
   );
@@ -324,7 +430,7 @@ export function applyDynamicVisualizationState(args: {
       params,
       step,
       tSec: state.t,
-      ghosts: [...(state.comparisonGhosts ?? []), ...buildEpochGhosts(simulation, params, state.t)],
+      ghosts: dynamicSceneGhosts(simulation, params, state),
       extraBadges: badges,
     }),
   );
@@ -341,16 +447,8 @@ function deriveFixedPlotWindow(
   params: SystemParams,
 ): { startSec: number; endSec: number } {
   const timing = step0.timing;
-  const durationSec = Math.max(
-    finitePositive(timing?.planetTransitDurationSec) ?? 0,
-    finitePositive(timing?.moonTransitDurationSec) ?? 0,
-  );
-  const eventExtentSec = Math.max(
-    Math.abs(timing?.planetIngressSec ?? 0),
-    Math.abs(timing?.planetEgressSec ?? 0),
-    Math.abs(timing?.moonIngressSec ?? 0),
-    Math.abs(timing?.moonEgressSec ?? 0),
-  );
+  const durationSec = fixedPlotDurationSec(timing);
+  const eventExtentSec = fixedPlotEventExtentSec(timing);
   const cadenceSec = finitePositive(params.star.photometry?.cadenceSec) ?? 60;
   const halfWindowSec = Math.max(
     FIXED_PLOT_MIN_HALF_WINDOW_SEC,
@@ -359,6 +457,34 @@ function deriveFixedPlotWindow(
     eventExtentSec + durationSec * 2,
   );
   return { startSec: -halfWindowSec, endSec: halfWindowSec };
+}
+
+function finitePositiveOrZero(value: unknown): number {
+  return finitePositive(value) ?? 0;
+}
+
+function finiteNumberOrZero(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function fixedPlotDurationSec(timing: SimulationStepV3["timing"]): number {
+  return Math.max(
+    finitePositiveOrZero(timing?.planetTransitDurationSec),
+    finitePositiveOrZero(timing?.moonTransitDurationSec),
+  );
+}
+
+function absTimingOffsetSec(value: unknown): number {
+  return Math.abs(finiteNumberOrZero(value));
+}
+
+function fixedPlotEventExtentSec(timing: SimulationStepV3["timing"]): number {
+  return Math.max(
+    absTimingOffsetSec(timing?.planetIngressSec),
+    absTimingOffsetSec(timing?.planetEgressSec),
+    absTimingOffsetSec(timing?.moonIngressSec),
+    absTimingOffsetSec(timing?.moonEgressSec),
+  );
 }
 
 export function rebuildFixedPlot(args: {
