@@ -1,0 +1,17 @@
+import { renderAtmosphereControls, renderScatteringControls } from "./parameterPlanetAtmosphere";
+import { renderPlanetCoreControls, renderPlanetPhaseControls } from "./parameterPlanetCore";
+import { renderPlanetShapeControls, renderPlanetThermalInertiaControls } from "./parameterPlanetShape";
+
+export function renderPlanetFieldset(): string {
+  return `
+      <fieldset>
+        <legend>Planet</legend>
+        ${renderPlanetCoreControls()}
+        ${renderPlanetPhaseControls()}
+        ${renderPlanetThermalInertiaControls()}
+        ${renderPlanetShapeControls()}
+        ${renderScatteringControls()}
+        ${renderAtmosphereControls()}
+      </fieldset>
+  `;
+}

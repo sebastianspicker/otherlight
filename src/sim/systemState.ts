@@ -1,7 +1,7 @@
-import type { OrbitElements, SkyPoint, SystemParams } from "../core/types";
-import { G_SI, normalizeFiniteDiffDtSec } from "../core/units";
+import type { ExomoonTimingShapeParams, OrbitElements, SkyPoint, SystemParams } from "../core/types";
+import { G_SI, isFinitePositive, normalizeFiniteDiffDtSec } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
-import { VEC3ZERO, vAdd, vAddScaled, vCross, vIsFinite, vScale } from "../physics/vec3";
+import { VEC3ZERO, vAdd, vAddScaled, vCross, vIsFinite, vScale, vSub } from "../physics/vec3";
 import { buildSkyBasis, projectToSky } from "../physics/frames";
 import {
   computeBodyKinematics,
@@ -19,10 +19,21 @@ import {
   applyApsidalPrecession,
   normalizeRelativityParams,
   resolveGrPrecessionPerOrbit,
+  solveLightTimeCorrectedResult,
   solveLightTimeCorrectedTime,
 } from "../physics/relativity";
 import { muFromPeriodAndA } from "../physics/kepler";
 
+// Dynamic state resolver used by observables and timing diagnostics.
+//
+// Priority order:
+// 1. sampled N-body state when the planet-moon integrator is enabled;
+// 2. direct Kepler/exomoon-timing state when the orbit model is analytic enough;
+// 3. finite-difference velocities from the kinematic sampler as a conservative fallback.
+//
+// Body positions are returned relative to the star where downstream transit and
+// sky-projection code expects relative geometry. The star state is kept too
+// because RV/astrometry diagnostics need the reflex motion.
 export type DynamicBodyState = {
   r: Vec3;
   v: Vec3;
@@ -36,6 +47,24 @@ export type DynamicSystemState = {
   moon?: DynamicBodyState;
   star: DynamicBodyState;
 };
+
+type PositionVelocity = Pick<DynamicBodyState, "r" | "v">;
+type DirectPairState = {
+  baryState: PositionVelocity;
+  planet: PositionVelocity;
+  moon?: PositionVelocity;
+};
+type DynamicResolveContext = {
+  system: SystemParams;
+  tObs: number;
+  observerDir: Vec3;
+  kinAtT: BodyKinematics;
+  dt: number;
+  rel: ReturnType<typeof normalizeRelativityParams>;
+};
+type NBodySample = NonNullable<ReturnType<typeof getNBodyStateAt>>;
+type NBodySampleAt = (time: number) => NBodySample;
+type LightTimeShapiroConfig = NonNullable<Parameters<typeof solveLightTimeCorrectedResult>[0]["shapiro"]>;
 
 function finiteDiffVelocity(positionAt: (t: number) => Vec3, t: number, dt: number, central = true): Vec3 {
   const h = normalizeFiniteDiffDtSec(dt, 2);
@@ -187,80 +216,14 @@ function resolveDirectKeplerSystemState(params: {
   })();
   const pairStateAt = (time: number) => {
     const baryState = baryStateAt(time);
-    let planetState: Pick<DynamicBodyState, "r" | "v"> = {
-      r: baryState.r,
-      v: baryState.v,
-    };
-    let moonState: Pick<DynamicBodyState, "r" | "v"> | undefined;
-
-    if (system.moon) {
-      const moonOrbitBase = resolveMoonOrbitForKinematics(system, time, "moon.orbitAroundPlanet");
-      if (!moonOrbitBase) return undefined;
-      const moonOrbitEvolved = evolveMoonOrbitForExomoonTiming(system, time, moonOrbitBase);
-      const moonOrbit =
-        rel.enabled && rel.grPrecession
-          ? applyApsidalPrecession(
-              moonOrbitEvolved,
-              time,
-              resolveGrPrecessionPerOrbit({
-                orbit: moonOrbitEvolved,
-                c: rel.c,
-                override: rel.moonPrecessionPerOrbit,
-              }),
-            )
-          : moonOrbitEvolved;
-      const muPlanetMoon = muFromPeriodAndA(moonOrbit.period, moonOrbit.a);
-      const moonRelStateBase = stateFromResolvedElements(
-        moonOrbit,
-        time,
-        muPlanetMoon,
-        "moon.orbitAroundPlanet",
-      );
-      const orientationAngularVelocity = exomoonTimingAngularVelocity(system, moonOrbitEvolved);
-      const moonRelState = {
-        r: moonRelStateBase.r,
-        v: vAdd(moonRelStateBase.v, vCross(orientationAngularVelocity, moonRelStateBase.r)),
-      };
-      const split = trySplitBarycentricPair({
-        rBary: baryState.r,
-        rRel: moonRelState.r,
-        mPrimary: system.planet.m,
-        mSecondary: system.moon.m,
-      });
-
-      if (split) {
-        planetState = {
-          r: split.rPrimary,
-          v: vAddScaled(baryState.v, moonRelState.v, -split.muSecondary),
-        };
-        moonState = {
-          r: split.rSecondary,
-          v: vAddScaled(baryState.v, moonRelState.v, split.muPrimary),
-        };
-      } else {
-        moonState = {
-          r: vAdd(baryState.r, moonRelState.r),
-          v: vAdd(baryState.v, moonRelState.v),
-        };
-      }
-
-      if (moonState && Number.isFinite(exo?.moonImpactYDot) && exo!.moonImpactYDot !== 0) {
-        const yDot = exo!.moonImpactYDot as number;
-        const tRef = Number.isFinite(exo?.tRef) ? (exo!.tRef as number) : 0;
-        const driftY = (time - tRef) * yDot;
-        const { ey } = buildSkyBasis(observerDir);
-        moonState = {
-          r: vAddScaled(moonState.r, ey, driftY),
-          v: vAddScaled(moonState.v, ey, yDot),
-        };
-      }
-    }
-
-    return {
+    return directPairStateAt({
+      system,
+      time,
+      observerDir,
+      rel,
+      exo,
       baryState,
-      planet: planetState,
-      moon: moonState,
-    };
+    });
   };
   const shapiroSolve = (() => {
     const shapiroMu = shapiroMuStar;
@@ -346,6 +309,323 @@ function resolveDirectKeplerSystemState(params: {
   return { tObs, observerDir, planet, moon, star };
 }
 
+function directPairStateAt(args: {
+  system: SystemParams;
+  time: number;
+  observerDir: Vec3;
+  rel: ReturnType<typeof normalizeRelativityParams>;
+  exo: ExomoonTimingShapeParams | undefined;
+  baryState: PositionVelocity;
+}): DirectPairState | undefined {
+  const { system, time, observerDir, rel, exo, baryState } = args;
+  if (!system.moon) return { baryState, planet: baryState };
+
+  const moonRelState = directMoonRelativeState(system, time, rel);
+  if (!moonRelState) return undefined;
+
+  return applyDirectMoonImpactDrift(
+    splitDirectPlanetMoonState(system, baryState, moonRelState),
+    exo,
+    observerDir,
+    time,
+  );
+}
+
+function directMoonRelativeState(
+  system: SystemParams,
+  time: number,
+  rel: ReturnType<typeof normalizeRelativityParams>,
+): PositionVelocity | undefined {
+  const moonOrbitBase = resolveMoonOrbitForKinematics(system, time, "moon.orbitAroundPlanet");
+  if (!moonOrbitBase) return undefined;
+
+  const moonOrbitEvolved = evolveMoonOrbitForExomoonTiming(system, time, moonOrbitBase);
+  const moonOrbit = directMoonOrbitWithRelativity(moonOrbitEvolved, time, rel);
+  const muPlanetMoon = muFromPeriodAndA(moonOrbit.period, moonOrbit.a);
+  const moonRelStateBase = stateFromResolvedElements(moonOrbit, time, muPlanetMoon, "moon.orbitAroundPlanet");
+  const orientationAngularVelocity = exomoonTimingAngularVelocity(system, moonOrbitEvolved);
+
+  return {
+    r: moonRelStateBase.r,
+    v: vAdd(moonRelStateBase.v, vCross(orientationAngularVelocity, moonRelStateBase.r)),
+  };
+}
+
+function directMoonOrbitWithRelativity(
+  moonOrbitEvolved: OrbitElements,
+  time: number,
+  rel: ReturnType<typeof normalizeRelativityParams>,
+): OrbitElements {
+  if (!rel.enabled || !rel.grPrecession) return moonOrbitEvolved;
+
+  return applyApsidalPrecession(
+    moonOrbitEvolved,
+    time,
+    resolveGrPrecessionPerOrbit({
+      orbit: moonOrbitEvolved,
+      c: rel.c,
+      override: rel.moonPrecessionPerOrbit,
+    }),
+  );
+}
+
+function splitDirectPlanetMoonState(
+  system: SystemParams,
+  baryState: PositionVelocity,
+  moonRelState: PositionVelocity,
+): DirectPairState {
+  const split = trySplitBarycentricPair({
+    rBary: baryState.r,
+    rRel: moonRelState.r,
+    mPrimary: system.planet.m,
+    mSecondary: system.moon?.m,
+  });
+
+  if (!split) {
+    return {
+      baryState,
+      planet: baryState,
+      moon: {
+        r: vAdd(baryState.r, moonRelState.r),
+        v: vAdd(baryState.v, moonRelState.v),
+      },
+    };
+  }
+
+  return {
+    baryState,
+    planet: {
+      r: split.rPrimary,
+      v: vAddScaled(baryState.v, moonRelState.v, -split.muSecondary),
+    },
+    moon: {
+      r: split.rSecondary,
+      v: vAddScaled(baryState.v, moonRelState.v, split.muPrimary),
+    },
+  };
+}
+
+function applyDirectMoonImpactDrift(
+  pairState: DirectPairState,
+  exo: ExomoonTimingShapeParams | undefined,
+  observerDir: Vec3,
+  time: number,
+): DirectPairState {
+  if (!pairState.moon || !Number.isFinite(exo?.moonImpactYDot) || exo!.moonImpactYDot === 0) return pairState;
+
+  const yDot = exo!.moonImpactYDot as number;
+  const tRef = Number.isFinite(exo?.tRef) ? (exo!.tRef as number) : 0;
+  const driftY = (time - tRef) * yDot;
+  const { ey } = buildSkyBasis(observerDir);
+
+  return {
+    ...pairState,
+    moon: {
+      r: vAddScaled(pairState.moon.r, ey, driftY),
+      v: vAddScaled(pairState.moon.v, ey, yDot),
+    },
+  };
+}
+
+function resolveNBodyDynamicSystemState(
+  context: DynamicResolveContext,
+  nbodySample: NBodySample,
+): DynamicSystemState {
+  const { system, tObs, observerDir } = context;
+  const sampleAt = nBodySampleAt(system, nbodySample);
+  const shapiroSolve = resolveNBodyShapiroSolve(context, sampleAt);
+  const tPlanet = solveNBodyEmissionTime(
+    context,
+    shapiroSolve,
+    (time) => nBodyPlanetAt(sampleAt, observerDir, time).r,
+  );
+  const tMoon = system.moon
+    ? solveNBodyEmissionTime(context, shapiroSolve, (time) => nBodyMoonAt(sampleAt, observerDir, time).r)
+    : tObs;
+  const tStar = solveNBodyEmissionTime(
+    context,
+    shapiroSolve,
+    (time) => nBodyStarAt(sampleAt, observerDir, time).r,
+  );
+
+  const planet = nBodyPlanetAt(sampleAt, observerDir, tPlanet);
+  const moon: DynamicBodyState | undefined = system.moon
+    ? nBodyMoonAt(sampleAt, observerDir, tMoon)
+    : undefined;
+  const star = nBodyStarAt(sampleAt, observerDir, tStar);
+
+  sanitizeDynamicVelocities(planet, moon, star);
+
+  return { tObs, observerDir, planet, moon, star };
+}
+
+function nBodySampleAt(system: SystemParams, initialSample: NBodySample): NBodySampleAt {
+  return (time) => getNBodyStateAt(system, time) ?? initialSample;
+}
+
+function nBodyPlanetAt(sampleAt: NBodySampleAt, observerDir: Vec3, time: number): DynamicBodyState {
+  const sample = sampleAt(time);
+  const r = vSub(sample.state.rP, sample.state.rS);
+  return { r, v: vSub(sample.state.vP, sample.state.vS), sky: projectToSky(r, observerDir) };
+}
+
+function nBodyMoonAt(sampleAt: NBodySampleAt, observerDir: Vec3, time: number): DynamicBodyState {
+  const sample = sampleAt(time);
+  const r = vSub(sample.state.rM, sample.state.rS);
+  return { r, v: vSub(sample.state.vM, sample.state.vS), sky: projectToSky(r, observerDir) };
+}
+
+function nBodyStarAt(sampleAt: NBodySampleAt, observerDir: Vec3, time: number): DynamicBodyState {
+  const sample = sampleAt(time);
+  return {
+    r: sample.state.rS,
+    v: sample.state.vS,
+    sky: projectToSky(sample.state.rS, observerDir),
+  };
+}
+
+function resolveNBodyShapiroSolve(
+  context: DynamicResolveContext,
+  sampleAt: NBodySampleAt,
+): LightTimeShapiroConfig | undefined {
+  const { system, rel } = context;
+  if (!(rel.enabled && rel.shapiro)) return undefined;
+
+  const muStarRel = nBodyRelativityMuStar(system);
+  if (system.dynamics?.relativityLevel === "enhanced") {
+    return {
+      enabled: true,
+      minImpact: rel.shapiroMinImpact,
+      massesAtTime: (time) => nBodyShapiroMassesAtTime(system, sampleAt, muStarRel, time),
+    };
+  }
+
+  if (!isFinitePositive(muStarRel)) return undefined;
+  return {
+    enabled: true,
+    mu: muStarRel,
+    minImpact: rel.shapiroMinImpact,
+  };
+}
+
+function nBodyRelativityMuStar(system: SystemParams): number | undefined {
+  const nbodyMuStar = system.dynamics?.nbodyPlanetMoon?.muStar;
+  if (isFinitePositive(nbodyMuStar)) return nbodyMuStar;
+  return isFinitePositive(system.star.m) ? G_SI * system.star.m : undefined;
+}
+
+function nBodyShapiroMassesAtTime(
+  system: SystemParams,
+  sampleAt: NBodySampleAt,
+  muStarRel: number | undefined,
+  time: number,
+): Array<{ mu: number; r: Vec3 }> {
+  const sample = sampleAt(time);
+  const masses: Array<{ mu: number; r: Vec3 }> = [];
+
+  if (isFinitePositive(muStarRel)) masses.push({ mu: muStarRel, r: VEC3ZERO });
+  if (isFinitePositive(system.planet.m)) {
+    masses.push({ mu: G_SI * system.planet.m, r: vSub(sample.state.rP, sample.state.rS) });
+  }
+  if (isFinitePositive(system.moon?.m)) {
+    masses.push({ mu: G_SI * system.moon.m, r: vSub(sample.state.rM, sample.state.rS) });
+  }
+
+  return masses;
+}
+
+function solveNBodyEmissionTime(
+  context: DynamicResolveContext,
+  shapiroSolve: LightTimeShapiroConfig | undefined,
+  rAtTime: (time: number) => Vec3,
+): number {
+  const { tObs, observerDir, rel } = context;
+  // N-body samples are stored on the observer-time grid. When LTTE is active,
+  // solve each body's emission time before re-sampling retarded positions.
+  if (!(rel.enabled && rel.ltte)) return tObs;
+
+  return solveLightTimeCorrectedResult({
+    tObs,
+    rAtTime,
+    observerDir,
+    c: rel.c,
+    shapiro: shapiroSolve,
+    maxIters: rel.ltteIters,
+    tolSec: rel.ltteTolSec,
+  }).tEmit;
+}
+
+function resolveFiniteDifferenceDynamicSystemState(context: DynamicResolveContext): DynamicSystemState {
+  const { system, tObs, observerDir, kinAtT, dt } = context;
+  const kinAt = (time: number) => computeBodyKinematics(system, time, observerDir);
+  const planet = finiteDifferencePlanetState(kinAtT, tObs, dt, (time) => kinAt(time).rPlanetAbs);
+  const moon = finiteDifferenceMoonState(
+    kinAtT,
+    observerDir,
+    tObs,
+    dt,
+    (time) => kinAt(time).rMoonAbs ?? VEC3ZERO,
+  );
+  const star = finiteDifferenceStarState(system, observerDir, planet, moon);
+
+  sanitizeDynamicVelocities(planet, moon, star);
+
+  return { tObs, observerDir, planet, moon, star };
+}
+
+function finiteDifferencePlanetState(
+  kinAtT: BodyKinematics,
+  tObs: number,
+  dt: number,
+  positionAt: (time: number) => Vec3,
+): DynamicBodyState {
+  return {
+    r: kinAtT.rPlanetAbs,
+    v: finiteDiffVelocity(positionAt, tObs, dt, true),
+    sky: kinAtT.planetSky,
+  };
+}
+
+function finiteDifferenceMoonState(
+  kinAtT: BodyKinematics,
+  observerDir: Vec3,
+  tObs: number,
+  dt: number,
+  positionAt: (time: number) => Vec3,
+): DynamicBodyState | undefined {
+  if (!kinAtT.rMoonAbs) return undefined;
+
+  return {
+    r: kinAtT.rMoonAbs,
+    v: finiteDiffVelocity(positionAt, tObs, dt, true),
+    sky: kinAtT.moonSky ?? projectToSky(kinAtT.rMoonAbs, observerDir),
+  };
+}
+
+function finiteDifferenceStarState(
+  system: SystemParams,
+  observerDir: Vec3,
+  planet: DynamicBodyState,
+  moon?: DynamicBodyState,
+): DynamicBodyState {
+  const starReflex = estimateStarReflexFromMassClosure(system, planet, moon);
+  return {
+    r: starReflex.r,
+    v: starReflex.v,
+    sky: projectToSky(starReflex.r, observerDir),
+  };
+}
+
+function sanitizeDynamicVelocities(
+  planet: DynamicBodyState,
+  moon: DynamicBodyState | undefined,
+  star: DynamicBodyState,
+) {
+  if (!vIsFinite(planet.v)) planet.v = VEC3ZERO;
+  if (moon && !vIsFinite(moon.v)) moon.v = VEC3ZERO;
+  if (!vIsFinite(star.v)) star.v = VEC3ZERO;
+}
+
 export function resolveDynamicSystemState(params: {
   system: SystemParams;
   tObs: number;
@@ -357,50 +637,12 @@ export function resolveDynamicSystemState(params: {
   assertTimeObserverContract({ system, tObs, observerDir });
   const kinAtT = params.kinAtT ?? computeBodyKinematics(system, tObs, observerDir);
   const dt = normalizeFiniteDiffDtSec(params.velDtSec, 2);
+  const rel = normalizeRelativityParams(system.dynamics?.relativity);
+  const context: DynamicResolveContext = { system, tObs, observerDir, kinAtT, dt, rel };
   const nbodySample = isNBodyEnabled(system) ? getNBodyStateAt(system, tObs) : null;
 
   if (nbodySample) {
-    const planet: DynamicBodyState = {
-      r: {
-        x: nbodySample.state.rP.x - nbodySample.state.rS.x,
-        y: nbodySample.state.rP.y - nbodySample.state.rS.y,
-        z: nbodySample.state.rP.z - nbodySample.state.rS.z,
-      },
-      v: {
-        x: nbodySample.state.vP.x - nbodySample.state.vS.x,
-        y: nbodySample.state.vP.y - nbodySample.state.vS.y,
-        z: nbodySample.state.vP.z - nbodySample.state.vS.z,
-      },
-      sky: kinAtT.planetSky,
-    };
-
-    const moon: DynamicBodyState | undefined = kinAtT.rMoonAbs
-      ? {
-          r: {
-            x: nbodySample.state.rM.x - nbodySample.state.rS.x,
-            y: nbodySample.state.rM.y - nbodySample.state.rS.y,
-            z: nbodySample.state.rM.z - nbodySample.state.rS.z,
-          },
-          v: {
-            x: nbodySample.state.vM.x - nbodySample.state.vS.x,
-            y: nbodySample.state.vM.y - nbodySample.state.vS.y,
-            z: nbodySample.state.vM.z - nbodySample.state.vS.z,
-          },
-          sky: kinAtT.moonSky ?? projectToSky(kinAtT.rMoonAbs, observerDir),
-        }
-      : undefined;
-
-    const star: DynamicBodyState = {
-      r: nbodySample.state.rS,
-      v: nbodySample.state.vS,
-      sky: projectToSky(nbodySample.state.rS, observerDir),
-    };
-
-    if (!vIsFinite(planet.v)) planet.v = VEC3ZERO;
-    if (moon && !vIsFinite(moon.v)) moon.v = VEC3ZERO;
-    if (!vIsFinite(star.v)) star.v = VEC3ZERO;
-
-    return { tObs, observerDir, planet, moon, star };
+    return resolveNBodyDynamicSystemState(context, nbodySample);
   }
 
   if (canUseDirectKeplerState(system)) {
@@ -408,34 +650,5 @@ export function resolveDynamicSystemState(params: {
     if (direct) return direct;
   }
 
-  const kinAt = (t: number) => computeBodyKinematics(system, t, observerDir);
-  const planetPosAt = (t: number) => kinAt(t).rPlanetAbs;
-  const moonPosAt = (t: number) => kinAt(t).rMoonAbs ?? VEC3ZERO;
-
-  const planet: DynamicBodyState = {
-    r: kinAtT.rPlanetAbs,
-    v: finiteDiffVelocity(planetPosAt, tObs, dt, true),
-    sky: kinAtT.planetSky,
-  };
-
-  const moon: DynamicBodyState | undefined = kinAtT.rMoonAbs
-    ? {
-        r: kinAtT.rMoonAbs,
-        v: finiteDiffVelocity(moonPosAt, tObs, dt, true),
-        sky: kinAtT.moonSky ?? projectToSky(kinAtT.rMoonAbs, observerDir),
-      }
-    : undefined;
-
-  const starReflex = estimateStarReflexFromMassClosure(system, planet, moon);
-  const star: DynamicBodyState = {
-    r: starReflex.r,
-    v: starReflex.v,
-    sky: projectToSky(starReflex.r, observerDir),
-  };
-
-  if (!vIsFinite(planet.v)) planet.v = VEC3ZERO;
-  if (moon && !vIsFinite(moon.v)) moon.v = VEC3ZERO;
-  if (!vIsFinite(star.v)) star.v = VEC3ZERO;
-
-  return { tObs, observerDir, planet, moon, star };
+  return resolveFiniteDifferenceDynamicSystemState(context);
 }

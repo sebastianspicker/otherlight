@@ -12,13 +12,13 @@ flowchart TD
   Dev --> Fast["Fast local loop: lint + typecheck + test"]
   Fast --> Full{"Need release-level confidence?"}
   Full -->|No| Continue["Continue feature work"]
-  Full -->|Yes| Verify["Run ci:verify + benchmark gates"]
+  Full -->|Yes| Verify["Run ./scripts/ci-local.sh"]
   Verify --> Ship["Create PR / release candidate"]
 ```
 
 ## Prerequisites
 
-- Node.js 18+ (recommended)
+- Node.js 20.19+ or 22.12+ (matches current Vite engine requirements)
 - pnpm 9.x for local development (lockfile present)
 
 ## Setup
@@ -40,24 +40,46 @@ Open `http://localhost:5173`.
 ## Fast Loop (local)
 
 ```bash
+pnpm hygiene:public
 pnpm lint
 pnpm typecheck
 pnpm test
 ```
 
-## Full Loop (CI parity)
+## Repository hygiene
+
+Check the current public candidate tree, including non-ignored untracked files:
+
+```bash
+pnpm hygiene:public
+```
+
+Remove reproducible build, coverage, browser-test, and audit output:
+
+```bash
+pnpm clean
+```
+
+The hygiene gate rejects local tool state, generated reports, secret-bearing filenames, private-key
+material, and absolute user-home paths. Do not use `.gitignore` to hide maintained source, tests, or
+configuration required by a clean clone.
+
+## Hosted Baseline Loop
 
 ```bash
 pnpm ci:verify
 ```
 
-Optional release-level gates:
+## Full Loop (local release confidence)
 
 ```bash
-pnpm literature-benchmarks
-pnpm didactics-acceptance
-pnpm perf-smoke
-pnpm migration-regression
+./scripts/ci-local.sh
+```
+
+Add the local moderate-threshold dependency security audit when needed:
+
+```bash
+CI_AUDIT=1 ./scripts/ci-local.sh
 ```
 
 ## Lint / Format
@@ -104,6 +126,8 @@ Notes:
 - `pnpm audit` requires network access.
 - Secret scanning is handled in CI via `gitleaks`.
 - SAST is handled in CI via CodeQL.
+- `pnpm hygiene:public` is the local filename/private-path boundary check; it complements rather
+  than replaces gitleaks.
 
 ## Troubleshooting
 

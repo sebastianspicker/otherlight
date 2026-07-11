@@ -1,4 +1,4 @@
-import type { SystemParams } from "../core/types";
+import type { OrbitElements, SystemParams } from "../core/types";
 import {
   AU_M,
   DAY_S,
@@ -47,6 +47,25 @@ export type RealSystemOption = {
   label: string;
 };
 
+type RealSystemRequiredFields = Pick<
+  RealSystemSnapshotEntry,
+  | "id"
+  | "label"
+  | "hostname"
+  | "starRadiusSolar"
+  | "semiMajorAxisAu"
+  | "periodDays"
+  | "planetRadiusJupiter"
+  | "planetRadiusEarth"
+>;
+
+type RealSystemScalars = {
+  starRadiusM: number;
+  orbitA: number;
+  orbitPeriod: number;
+  bodyRadius: number;
+};
+
 const FALLBACK_SNAPSHOT: RealSystemsSnapshot = {
   meta: {
     source: "NASA Exoplanet Archive (snapshot unavailable)",
@@ -75,52 +94,93 @@ function asString(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
 
+function stringWithFallback(v: unknown, fallback: string): string {
+  return asString(v) ?? fallback;
+}
+
+function normalizedRowCount(v: unknown): number {
+  return Math.max(0, Math.floor(finite(v) ?? 0));
+}
+
 function normalizeMeta(raw: unknown): RealSystemsSnapshotMeta {
   if (!isObject(raw)) return FALLBACK_SNAPSHOT.meta;
 
   return {
-    source: asString(raw.source) ?? FALLBACK_SNAPSHOT.meta.source,
-    fetchedAt: asString(raw.fetchedAt) ?? "",
-    rowCount: Math.max(0, Math.floor(finite(raw.rowCount) ?? 0)),
-    selectionPolicy: asString(raw.selectionPolicy) ?? FALLBACK_SNAPSHOT.meta.selectionPolicy,
+    source: stringWithFallback(raw.source, FALLBACK_SNAPSHOT.meta.source),
+    fetchedAt: stringWithFallback(raw.fetchedAt, ""),
+    rowCount: normalizedRowCount(raw.rowCount),
+    selectionPolicy: stringWithFallback(raw.selectionPolicy, FALLBACK_SNAPSHOT.meta.selectionPolicy),
   };
 }
 
 function normalizeEntry(raw: unknown): RealSystemSnapshotEntry | null {
   if (!isObject(raw)) return null;
 
+  const required = normalizeRequiredEntryFields(raw);
+  if (!required) return null;
+
+  return {
+    ...required,
+    ...normalizeOptionalEntryFields(raw),
+  };
+}
+
+function normalizeRequiredEntryFields(raw: Record<string, unknown>): RealSystemRequiredFields | null {
+  const textFields = normalizeEntryTextFields(raw);
+  const orbitFields = normalizeEntryOrbitFields(raw);
+  const radiusFields = normalizeEntryPlanetRadiusFields(raw);
+
+  if (!textFields || !orbitFields || !radiusFields) return null;
+
+  return {
+    ...textFields,
+    ...orbitFields,
+    ...radiusFields,
+  };
+}
+
+function normalizeEntryTextFields(
+  raw: Record<string, unknown>,
+): Pick<RealSystemRequiredFields, "id" | "label" | "hostname"> | null {
   const id = asString(raw.id);
   const label = asString(raw.label);
   const hostname = asString(raw.hostname);
 
+  if (!id || !label || !hostname) return null;
+  return { id, label, hostname };
+}
+
+function normalizeEntryOrbitFields(
+  raw: Record<string, unknown>,
+): Pick<RealSystemRequiredFields, "starRadiusSolar" | "semiMajorAxisAu" | "periodDays"> | null {
   const starRadiusSolar = finitePos(raw.starRadiusSolar);
   const semiMajorAxisAu = finitePos(raw.semiMajorAxisAu);
   const periodDays = finitePos(raw.periodDays);
 
+  if (!starRadiusSolar || !semiMajorAxisAu || !periodDays) return null;
+  return { starRadiusSolar, semiMajorAxisAu, periodDays };
+}
+
+function normalizeEntryPlanetRadiusFields(
+  raw: Record<string, unknown>,
+): Pick<RealSystemRequiredFields, "planetRadiusJupiter" | "planetRadiusEarth"> | null {
   const planetRadiusJupiter = finitePos(raw.planetRadiusJupiter);
   const planetRadiusEarth = finitePos(raw.planetRadiusEarth);
 
-  if (!id || !label || !hostname) return null;
-  if (!starRadiusSolar || !semiMajorAxisAu || !periodDays) return null;
   if (!planetRadiusJupiter && !planetRadiusEarth) return null;
+  return { planetRadiusJupiter, planetRadiusEarth };
+}
 
+function normalizeOptionalEntryFields(raw: Record<string, unknown>): Partial<RealSystemSnapshotEntry> {
   const discYear = finite(raw.discYear);
   const eccentricity = finite(raw.eccentricity);
   const inclinationDeg = finite(raw.inclinationDeg);
 
   return {
-    id,
-    label,
-    hostname,
     discYear: typeof discYear === "number" ? Math.floor(discYear) : undefined,
-    starRadiusSolar,
     starMassSolar: finitePos(raw.starMassSolar),
-    planetRadiusJupiter,
-    planetRadiusEarth,
     planetMassJupiter: finitePos(raw.planetMassJupiter),
     planetMassEarth: finitePos(raw.planetMassEarth),
-    semiMajorAxisAu,
-    periodDays,
     eccentricity,
     inclinationDeg,
   };
@@ -172,54 +232,18 @@ export function getRealSystemById(id: string): RealSystemSnapshotEntry | undefin
 
 export function mapSnapshotSystemToParams(entry: RealSystemSnapshotEntry): SystemParams {
   const base = cloneParams(SCENARIO_DEFAULTS);
+  const scalars = realSystemScalars(entry);
+  validateRealSystemScalars(entry, scalars);
 
-  const starRadiusM = entry.starRadiusSolar * SOLAR_RADIUS_M;
-  const orbitA = entry.semiMajorAxisAu * AU_M;
-  const orbitPeriod = entry.periodDays * DAY_S;
-  const bodyRadius = planetRadiusMeters(entry);
-
-  if (!Number.isFinite(starRadiusM) || starRadiusM <= 0) {
-    throw new Error(`Real system ${entry.id} has invalid stellar radius.`);
-  }
-  if (!Number.isFinite(orbitA) || orbitA <= 0 || !Number.isFinite(orbitPeriod) || orbitPeriod <= 0) {
-    throw new Error(`Real system ${entry.id} has invalid orbit parameters.`);
-  }
-  if (!Number.isFinite(bodyRadius) || bodyRadius <= 0) {
-    throw new Error(`Real system ${entry.id} has invalid planet radius.`);
-  }
-
-  const eRaw = typeof entry.eccentricity === "number" ? entry.eccentricity : 0;
-  const e = Number.isFinite(eRaw) ? Math.min(0.999, Math.max(0, eRaw)) : 0;
-
-  const incDeg = typeof entry.inclinationDeg === "number" ? entry.inclinationDeg : 90;
-  const inc = Number.isFinite(incDeg) ? Math.min(Math.PI, Math.max(0, incDeg * DEG2RAD)) : 90 * DEG2RAD;
-
-  base.star.r = starRadiusM;
-  if (typeof entry.starMassSolar === "number") {
-    base.star.m = entry.starMassSolar * SOLAR_MASS_KG;
-  } else {
-    delete base.star.m;
-  }
-
-  base.planet.r = bodyRadius;
-
-  const pm = planetMassKg(entry);
-  if (typeof pm === "number" && Number.isFinite(pm) && pm > 0) {
-    base.planet.m = pm;
-  } else {
-    delete base.planet.m;
-  }
-
-  if (typeof base.planet.orbit === "function") {
-    throw new Error("Expected static orbit elements in scenario defaults.");
-  }
+  applyRealSystemStar(base, entry, scalars.starRadiusM);
+  applyRealSystemPlanet(base, entry, scalars.bodyRadius);
 
   base.planet.orbit = {
-    ...base.planet.orbit,
-    a: orbitA,
-    period: orbitPeriod,
-    e,
-    inc,
+    ...staticPlanetOrbit(base),
+    a: scalars.orbitA,
+    period: scalars.orbitPeriod,
+    e: normalizedEccentricity(entry),
+    inc: normalizedInclinationRad(entry),
     Omega: 0,
     omega: 0,
     t0: 0,
@@ -227,6 +251,64 @@ export function mapSnapshotSystemToParams(entry: RealSystemSnapshotEntry): Syste
 
   delete base.moon;
   return base;
+}
+
+function realSystemScalars(entry: RealSystemSnapshotEntry): RealSystemScalars {
+  return {
+    starRadiusM: entry.starRadiusSolar * SOLAR_RADIUS_M,
+    orbitA: entry.semiMajorAxisAu * AU_M,
+    orbitPeriod: entry.periodDays * DAY_S,
+    bodyRadius: planetRadiusMeters(entry),
+  };
+}
+
+function validateRealSystemScalars(entry: RealSystemSnapshotEntry, scalars: RealSystemScalars): void {
+  assertPositiveRealSystemScalar(entry, scalars.starRadiusM, "stellar radius");
+  assertPositiveRealSystemScalar(entry, scalars.orbitA, "orbit parameters");
+  assertPositiveRealSystemScalar(entry, scalars.orbitPeriod, "orbit parameters");
+  assertPositiveRealSystemScalar(entry, scalars.bodyRadius, "planet radius");
+}
+
+function assertPositiveRealSystemScalar(entry: RealSystemSnapshotEntry, value: number, label: string): void {
+  if (Number.isFinite(value) && value > 0) return;
+  throw new Error(`Real system ${entry.id} has invalid ${label}.`);
+}
+
+function normalizedEccentricity(entry: RealSystemSnapshotEntry): number {
+  const raw = typeof entry.eccentricity === "number" ? entry.eccentricity : 0;
+  return Number.isFinite(raw) ? Math.min(0.999, Math.max(0, raw)) : 0;
+}
+
+function normalizedInclinationRad(entry: RealSystemSnapshotEntry): number {
+  const rawDeg = typeof entry.inclinationDeg === "number" ? entry.inclinationDeg : 90;
+  return Number.isFinite(rawDeg) ? Math.min(Math.PI, Math.max(0, rawDeg * DEG2RAD)) : 90 * DEG2RAD;
+}
+
+function applyRealSystemStar(base: SystemParams, entry: RealSystemSnapshotEntry, starRadiusM: number): void {
+  base.star.r = starRadiusM;
+  if (typeof entry.starMassSolar === "number") {
+    base.star.m = entry.starMassSolar * SOLAR_MASS_KG;
+  } else {
+    delete base.star.m;
+  }
+}
+
+function applyRealSystemPlanet(base: SystemParams, entry: RealSystemSnapshotEntry, bodyRadius: number): void {
+  base.planet.r = bodyRadius;
+
+  const massKg = planetMassKg(entry);
+  if (typeof massKg === "number" && Number.isFinite(massKg) && massKg > 0) {
+    base.planet.m = massKg;
+  } else {
+    delete base.planet.m;
+  }
+}
+
+function staticPlanetOrbit(base: SystemParams): OrbitElements {
+  if (typeof base.planet.orbit === "function") {
+    throw new Error("Expected static orbit elements in scenario defaults.");
+  }
+  return base.planet.orbit;
 }
 
 export function buildParamsFromRealSystem(id: string): SystemParams {

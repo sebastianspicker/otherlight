@@ -80,8 +80,8 @@ active so the visible shell stays consistent with the detached-binary contract.
 
 ## Implementation Rule
 
-Use `renderScene({ step, renderConfig, ... })` as the rendering entrypoint.
-`renderScene` requires `drawFrameV3(...)`; legacy `drawFrame(...)` is removed from the standard render path.
+Use `Canvas2DRenderer.drawFrameV3(...)` from the app frame-loop path as the rendering entrypoint.
+Legacy `drawFrame(...)` is removed from the standard render path.
 
 Didactic overlays must be driven from app/frame-loop state, not from ad hoc DOM mutations. The frame loop is responsible for synchronizing:
 

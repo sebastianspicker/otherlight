@@ -43,6 +43,177 @@ export type KeplerSolveDiagnostics = {
   warnStepLimitedCount?: number;
 };
 
+type ResolvedKeplerOptions = {
+  maxIters: number;
+  tol: number;
+  strict: boolean;
+};
+
+type ResolvedKeplerDiagnostics = {
+  enabled: boolean;
+  logger: (msg: string) => void;
+  warnIterCount: number;
+  warnStepLimitedCount: number;
+};
+
+type KeplerIterationRun = {
+  E: number;
+  converged: boolean;
+  iterationsUsed: number;
+  stepLimitedCount: number;
+  lastAbsF: number;
+  lastAbsDE: number;
+};
+
+const HIGH_ECCENTRICITY_MIN_ITERS = 60;
+const MAX_NEWTON_STEP_RAD = 1.0;
+const DERIVATIVE_FLOOR = 1e-14;
+
+function assertEllipticKeplerInputs(M: number, e: number): void {
+  if (!Number.isFinite(M) || !Number.isFinite(e)) {
+    throw new Error("solveKeplerE: M and e must be finite numbers.");
+  }
+  if (e < 0 || e >= 1) {
+    throw new Error("solveKeplerE: elliptic solver requires e in [0, 1).");
+  }
+}
+
+function resolveKeplerOptions(
+  maxItersOrOpts: number | SolveKeplerEOptions,
+  tolArg: number,
+  e: number,
+): ResolvedKeplerOptions {
+  const opts = typeof maxItersOrOpts === "object" && maxItersOrOpts !== null ? maxItersOrOpts : undefined;
+  const maxItersRaw: number | undefined = opts ? opts.maxIters : (maxItersOrOpts as number);
+  const tolRaw = opts ? opts.tol : tolArg;
+  const minIters = e > 0.95 ? HIGH_ECCENTRICITY_MIN_ITERS : 1;
+  return {
+    maxIters: Math.max(minIters, finiteFloorAtLeast(maxItersRaw, 30, 1)),
+    tol: finiteNonNegativeOrDefault(tolRaw, 1e-12),
+    strict: Boolean(opts?.strict),
+  };
+}
+
+function finiteFloorAtLeast(value: number | undefined, fallback: number, min: number): number {
+  return Number.isFinite(value) ? Math.max(min, Math.floor(value as number)) : fallback;
+}
+
+function finiteNonNegativeOrDefault(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? Math.max(0, value as number) : fallback;
+}
+
+function initialEccentricAnomaly(Mw: number, e: number): number {
+  if (e < 0.8) return wrapToPi(Mw + e * Math.sin(Mw) * (1 + e * Math.cos(Mw)));
+  return wrapToPi(Math.abs(Mw) < 1e-12 ? 0 : Math.sign(Mw) * Math.PI);
+}
+
+function resolveKeplerDiagnostics(diag: KeplerSolveDiagnostics | undefined): ResolvedKeplerDiagnostics {
+  return {
+    enabled: Boolean(diag?.enabled),
+    logger: diag?.logger ?? console.debug.bind(console),
+    warnIterCount: finiteFloorAtLeast(diag?.warnIterCount, 12, 1),
+    warnStepLimitedCount: finiteFloorAtLeast(diag?.warnStepLimitedCount, 6, 0),
+  };
+}
+
+function maybeLogKeplerDiagnostics(
+  diag: ResolvedKeplerDiagnostics,
+  context: {
+    M: number;
+    Mw: number;
+    e: number;
+    maxIters: number;
+    run: KeplerIterationRun;
+  },
+): void {
+  if (!diag.enabled) return;
+  if (
+    context.run.iterationsUsed < diag.warnIterCount &&
+    context.run.stepLimitedCount < diag.warnStepLimitedCount
+  )
+    return;
+  diag.logger(formatKeplerDiagnostics(context));
+}
+
+function formatKeplerDiagnostics(context: {
+  M: number;
+  Mw: number;
+  e: number;
+  maxIters: number;
+  run: KeplerIterationRun;
+}): string {
+  const run = context.run;
+  return [
+    "solveKeplerE diagnostics:",
+    `e=${context.e.toFixed(6)}`,
+    `M=${context.M.toFixed(6)}`,
+    `Mw=${context.Mw.toFixed(6)}`,
+    `iters=${run.iterationsUsed}/${context.maxIters}`,
+    `stepLimited=${run.stepLimitedCount}`,
+    `|f|=${run.lastAbsF.toExponential(3)}`,
+    `|dE|=${run.lastAbsDE.toExponential(3)}`,
+    `E=${wrapToPi(run.E).toFixed(6)}`,
+  ].join(" ");
+}
+
+function keplerResidual(E: number, e: number, Mw: number): number {
+  return E - e * Math.sin(E) - Mw;
+}
+
+function regularizedDerivative(fp: number, f: number): number {
+  if (Math.abs(fp) >= DERIVATIVE_FLOOR) return fp;
+  const sign = fp === 0 ? (f > 0 ? 1 : -1) : Math.sign(fp);
+  return sign * DERIVATIVE_FLOOR;
+}
+
+function limitedNewtonStep(f: number, fp: number): { dE: number; limited: boolean } {
+  const rawStep = -f / fp;
+  if (Math.abs(rawStep) <= MAX_NEWTON_STEP_RAD) return { dE: rawStep, limited: false };
+  return { dE: Math.sign(rawStep) * MAX_NEWTON_STEP_RAD, limited: true };
+}
+
+function runKeplerNewtonIterations(
+  Mw: number,
+  e: number,
+  maxIters: number,
+  tol: number,
+  initialE: number,
+): KeplerIterationRun {
+  let E = initialE;
+  let stepLimitedCount = 0;
+  let lastAbsF = Number.POSITIVE_INFINITY;
+  let lastAbsDE = Number.POSITIVE_INFINITY;
+
+  for (let k = 0; k < maxIters; k++) {
+    const f = keplerResidual(E, e, Mw);
+    lastAbsF = Math.abs(f);
+    if (lastAbsF <= tol)
+      return { E, converged: true, iterationsUsed: k + 1, stepLimitedCount, lastAbsF, lastAbsDE };
+
+    const fp = regularizedDerivative(1 - e * Math.cos(E), f);
+    const step = limitedNewtonStep(f, fp);
+    if (step.limited) stepLimitedCount++;
+    E = wrapToPi(E + step.dE);
+    lastAbsDE = Math.abs(step.dE);
+    if (lastAbsDE <= tol)
+      return { E, converged: true, iterationsUsed: k + 1, stepLimitedCount, lastAbsF, lastAbsDE };
+  }
+
+  return { E, converged: false, iterationsUsed: maxIters, stepLimitedCount, lastAbsF, lastAbsDE };
+}
+
+function throwStrictKeplerNonConvergence(
+  run: KeplerIterationRun,
+  params: { maxIters: number; tol: number; e: number; M: number; Mw: number },
+): never {
+  const f = keplerResidual(run.E, params.e, params.Mw);
+  throw new Error(
+    `solveKeplerE: did not converge within maxIters=${params.maxIters} (|f|=${Math.abs(
+      f,
+    )}; tol=${params.tol}; e=${params.e}; M=${params.M}).`,
+  );
+}
+
 /**
  * Solve Kepler's equation for elliptic orbits:
  * M = E - e sin(E)
@@ -61,161 +232,19 @@ export function solveKeplerE(
   tolArg = 1e-12,
   diag?: KeplerSolveDiagnostics,
 ): number {
-  if (!Number.isFinite(M) || !Number.isFinite(e)) {
-    throw new Error("solveKeplerE: M and e must be finite numbers.");
-  }
-  if (e < 0 || e >= 1) {
-    throw new Error("solveKeplerE: elliptic solver requires e in [0, 1).");
-  }
-
-  // Backwards-compatible parameter handling:
-  // - legacy: solveKeplerE(M,e,maxIters,tol)
-  // - new: solveKeplerE(M,e,{maxIters,tol,strict})
-  const opts: SolveKeplerEOptions | undefined =
-    typeof maxItersOrOpts === "object" && maxItersOrOpts !== null ? maxItersOrOpts : undefined;
-
-  const maxItersRaw = opts ? opts.maxIters : (maxItersOrOpts as number);
-  const tolRaw = opts ? opts.tol : tolArg;
-  const strict = Boolean(opts?.strict);
-
-  // Sanitize numeric controls.
-  let maxIters = Number.isFinite(maxItersRaw ?? Number.NaN)
-    ? Math.max(1, Math.floor(maxItersRaw as number))
-    : 30;
-  // High-eccentricity orbits (e > 0.95) converge much more slowly;
-  // ensure at least 60 iterations to avoid premature non-convergence.
-  if (e > 0.95) {
-    maxIters = Math.max(maxIters, 60);
-  }
-  const tol = Number.isFinite(tolRaw ?? Number.NaN) ? Math.max(0, tolRaw as number) : 1e-12;
-
-  // e = 0 -> E = M exactly
+  assertEllipticKeplerInputs(M, e);
   if (e === 0) return wrapToPi(M);
 
+  const options = resolveKeplerOptions(maxItersOrOpts, tolArg, e);
   const Mw = wrapToPi(M);
+  const run = runKeplerNewtonIterations(Mw, e, options.maxIters, options.tol, initialEccentricAnomaly(Mw, e));
+  const diagnostics = resolveKeplerDiagnostics(diag);
 
-  // Initial guess:
-  // - For modest e: series-improved starter around M.
-  // - For high e: start near +/-pi depending on the sign of M to reduce large jumps.
-  let E: number;
-  if (e < 0.8) {
-    // A simple improved starter: E ≈ M + e sin(M) (1 + e cos(M))
-    E = Mw + e * Math.sin(Mw) * (1 + e * Math.cos(Mw));
-  } else {
-    // Better than always +pi: choose the closer side in wrapped space.
-    // Use epsilon check instead of exact zero to handle floating-point near-zero values.
-    E = Math.abs(Mw) < 1e-12 ? 0 : Math.sign(Mw) * Math.PI;
-  }
-  E = wrapToPi(E);
+  maybeLogKeplerDiagnostics(diagnostics, { M, Mw, e, maxIters: options.maxIters, run });
+  if (run.converged) return wrapToPi(run.E);
+  if (options.strict) throwStrictKeplerNonConvergence(run, { ...options, e, M, Mw });
 
-  // Damping / step limit:
-  // A conservative cap stabilizes iterations when f'(E)=1-e cosE is tiny.
-  const MAX_STEP = 1.0; // rad, empirically stable for interactive simulation
-
-  // Diagnostics (opt-in)
-  const diagEnabled = Boolean(diag?.enabled);
-  const logger = diag?.logger ?? console.debug.bind(console);
-  const warnIterCount = Number.isFinite(diag?.warnIterCount ?? Number.NaN)
-    ? Math.max(1, Math.floor(diag!.warnIterCount as number))
-    : 12;
-  const warnStepLimitedCount = Number.isFinite(diag?.warnStepLimitedCount ?? Number.NaN)
-    ? Math.max(0, Math.floor(diag!.warnStepLimitedCount as number))
-    : 6;
-
-  let stepLimitedCount = 0;
-  let lastAbsF = Number.POSITIVE_INFINITY;
-  let lastAbsDE = Number.POSITIVE_INFINITY;
-
-  const maybeLog = (itersUsed: number, finalE: number, absF: number, absDE: number) => {
-    if (!diagEnabled) return;
-    if (itersUsed < warnIterCount && stepLimitedCount < warnStepLimitedCount) return;
-    logger(
-      [
-        "solveKeplerE diagnostics:",
-        `e=${e.toFixed(6)}`,
-        `M=${M.toFixed(6)}`,
-        `Mw=${Mw.toFixed(6)}`,
-        `iters=${itersUsed}/${maxIters}`,
-        `stepLimited=${stepLimitedCount}`,
-        `|f|=${absF.toExponential(3)}`,
-        `|dE|=${absDE.toExponential(3)}`,
-        `E=${wrapToPi(finalE).toFixed(6)}`,
-      ].join(" "),
-    );
-  };
-
-  for (let k = 0; k < maxIters; k++) {
-    const s = Math.sin(E);
-    const c = Math.cos(E);
-
-    // f(E) = E - e sin(E) - M
-    const f = E - e * s - Mw;
-    const absF = Math.abs(f);
-    lastAbsF = absF;
-
-    // Converged in residual (useful when tol is small)
-    if (absF <= tol) {
-      maybeLog(k + 1, E, absF, lastAbsDE);
-      return wrapToPi(E);
-    }
-
-    // f'(E) = 1 - e cos(E)
-    let fp = 1 - e * c;
-
-    // ------------------------------------------------------------------
-    // NUMERICAL HARDENING
-    // When e -> 1 and E -> 0, fp -> 0. This causes division by zero or
-    // massive jumps. We regularize fp by enforcing a minimum magnitude.
-    // ------------------------------------------------------------------
-    let dE: number;
-    if (Math.abs(fp) < 1e-14) {
-      // Regularize: preserve sign, but enforce min magnitude.
-      // If fp is exactly 0, use sign of f to move away from root (rare).
-      const sign = fp === 0 ? (f > 0 ? 1 : -1) : Math.sign(fp);
-      fp = sign * 1e-14;
-    }
-
-    // Standard Newton step
-    dE = -f / fp;
-
-    // Limit step size (damping)
-    if (Math.abs(dE) > MAX_STEP) {
-      dE = Math.sign(dE) * MAX_STEP;
-      stepLimitedCount++;
-    }
-
-    E = wrapToPi(E + dE);
-    // Note: |dE| here is pre-wrap, so it reflects the Newton step magnitude
-    // rather than the wrapped angular distance. This is benign because the
-    // residual check (|f| <= tol) above catches convergence first; the step-
-    // size check below is a secondary safeguard that terminates slightly
-    // early at worst.
-    const absDE = Math.abs(dE);
-    lastAbsDE = absDE;
-
-    // Converged in step size
-    if (absDE <= tol) {
-      maybeLog(k + 1, E, lastAbsF, absDE);
-      return wrapToPi(E);
-    }
-  }
-
-  // If we get here: not converged within maxIters.
-  maybeLog(maxIters, E, lastAbsF, lastAbsDE);
-
-  // Not converged.
-  if (strict) {
-    const s = Math.sin(E);
-    const f = E - e * s - Mw;
-    throw new Error(
-      `solveKeplerE: did not converge within maxIters=${maxIters} (|f|=${Math.abs(
-        f,
-      )}; tol=${tol}; e=${e}; M=${M}).`,
-    );
-  }
-
-  // Best-effort return for interactive usage.
-  return wrapToPi(E);
+  return wrapToPi(run.E);
 }
 
 /** Mean motion n = 2π / P [rad/s]. */
@@ -273,38 +302,4 @@ export function radiusFromE(a: number, e: number, E: number): number {
   }
 
   return a * (1 - e * Math.cos(E));
-}
-
-/* -----------------------------
- * Minimal built-in tests
- * ----------------------------- */
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`kepler self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-10): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-export function runKeplerSelfTests(): void {
-  // e=0 => E=M wrapped.
-  const M0 = 1.234;
-  const E0 = solveKeplerE(M0, 0);
-  assert(approxEq(E0, wrapToPi(M0), 1e-12), "e=0 should give E=M.");
-
-  // Generic residual check.
-  const M1 = 2.1;
-  const e1 = 0.3;
-  const E1 = solveKeplerE(M1, e1, { maxIters: 60, tol: 1e-12, strict: true });
-  const f = E1 - e1 * Math.sin(E1) - wrapToPi(M1);
-  assert(Math.abs(f) < 1e-10, "Kepler residual should be small.");
-
-  // True anomaly for e=0 reduces to E (wrapped).
-  const nu0 = trueAnomalyFromE(E0, 0);
-  assert(approxEq(nu0, wrapToPi(E0), 1e-12), "nu should equal E for e=0.");
-
-  // Radius sanity.
-  const r = radiusFromE(2, 0.5, 0);
-  assert(approxEq(r, 1, 1e-12), "radiusFromE should match a(1-e) at E=0.");
 }

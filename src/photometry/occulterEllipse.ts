@@ -10,6 +10,9 @@
 
 import { isFiniteNumber, isFinitePositive } from "../core/units";
 import { type CircleOcculter } from "./occulterCircle";
+import { isCircleOcculter, isEllipseOcculter, isRingOcculter } from "./occulterShapeGuards";
+export { sanitizeOcculterShapes } from "./occulterSanitize";
+export { isCircleOcculter, isEllipseOcculter, isRingOcculter } from "./occulterShapeGuards";
 
 export type EllipseOcculter = {
   kind: "ellipse";
@@ -39,88 +42,134 @@ export type RingOcculter = {
 
 export type OcculterShape = CircleOcculter | EllipseOcculter | RingOcculter;
 
-export function isCircleOcculter(o: OcculterShape): o is CircleOcculter {
-  return !("kind" in o) || o.kind === undefined || o.kind === "circle";
+function hasFiniteCenter(o: { dx: number; dy: number }): boolean {
+  return isFiniteNumber(o.dx) && isFiniteNumber(o.dy);
 }
 
-export function isEllipseOcculter(o: OcculterShape): o is EllipseOcculter {
-  return "kind" in o && o.kind === "ellipse";
+type CirclePre = { kind: "circle"; dx: number; dy: number; r2: number };
+
+type EllipsePre = {
+  kind: "ellipse";
+  dx: number;
+  dy: number;
+  cosA: number;
+  sinA: number;
+  invRx2: number;
+  invRy2: number;
+};
+
+type RingPre = {
+  kind: "ring";
+  dx: number;
+  dy: number;
+  cosA: number;
+  sinA: number;
+  invOuterRx2: number;
+  invOuterRy2: number;
+  invInnerRx2?: number;
+  invInnerRy2?: number;
+  /** Ring opacity in [0,1]. 1 = fully opaque (default). */
+  opacity: number;
+};
+
+export type OcculterPre = CirclePre | EllipsePre | RingPre;
+
+type Rotation = {
+  cosA: number;
+  sinA: number;
+};
+
+type EllipsePointTest = Rotation & {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  invRx2: number;
+  invRy2: number;
+  inclusive?: boolean;
+};
+
+function finiteAngle(angle: number | undefined): number {
+  return typeof angle === "number" && Number.isFinite(angle) ? angle : 0;
 }
 
-export function isRingOcculter(o: OcculterShape): o is RingOcculter {
-  return "kind" in o && o.kind === "ring";
+function rotationForAngle(angle: number | undefined): Rotation {
+  const safeAngle = finiteAngle(angle);
+  return { cosA: Math.cos(safeAngle), sinA: Math.sin(safeAngle) };
 }
 
-function overlapsStarByRadius(dx: number, dy: number, rOccMax: number, rStar: number): boolean {
-  if (!isFinitePositive(rStar) || !isFinitePositive(rOccMax)) return false;
-  const d = Math.hypot(dx, dy);
-  if (!Number.isFinite(d)) return false;
-  // Tangency is measure-zero: treat d >= rStar + rOccMax as no overlap.
-  return d < rStar + rOccMax;
+function clampedOpacity(opacity: number | undefined): number {
+  return typeof opacity === "number" && Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
 }
 
-/**
- * Filter a mixed list of occulters for validity and potential overlap with the star.
- * Uses conservative bounding radii for non-circular shapes.
- */
-export function sanitizeOcculterShapes(rStar: number, occulters?: readonly OcculterShape[]): OcculterShape[] {
-  const out: OcculterShape[] = [];
-  if (!isFinitePositive(rStar)) return out;
-  if (!Array.isArray(occulters) || occulters.length === 0) return out;
-
-  for (const o of occulters) {
-    if (!o) continue;
-
-    if (isCircleOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-      if (!overlapsStarByRadius(o.dx, o.dy, o.r, rStar)) continue;
-      out.push(o);
-      continue;
-    }
-
-    if (isEllipseOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
-      if (!isFinitePositive(o.rx) || !isFinitePositive(o.ry)) continue;
-
-      const rMax = Math.max(o.rx, o.ry);
-      if (!overlapsStarByRadius(o.dx, o.dy, rMax, rStar)) continue;
-      out.push(o);
-      continue;
-    }
-
-    if (isRingOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
-      if (!isFinitePositive(o.rOuter)) continue;
-      const rInner = Number.isFinite(o.rInner) ? Math.max(0, o.rInner) : 0;
-      if (!(o.rOuter > rInner)) continue;
-
-      if (!overlapsStarByRadius(o.dx, o.dy, o.rOuter, rStar)) continue;
-      out.push({
-        ...o,
-        rInner,
-      });
-    }
-  }
-
-  return out;
+function normalizedRingInnerRadius(o: RingOcculter): number {
+  return Number.isFinite(o.rInner) ? Math.max(0, o.rInner) : 0;
 }
 
-export type OcculterPre =
-  | { kind: "circle"; dx: number; dy: number; r2: number }
-  | { kind: "ellipse"; dx: number; dy: number; cosA: number; sinA: number; invRx2: number; invRy2: number }
-  | {
-      kind: "ring";
-      dx: number;
-      dy: number;
-      cosA: number;
-      sinA: number;
-      invOuterRx2: number;
-      invOuterRy2: number;
-      invInnerRx2?: number;
-      invInnerRy2?: number;
-      /** Ring opacity in [0,1]. 1 = fully opaque (default). */
-      opacity: number;
-    };
+function precomputeCircleOcculter(o: CircleOcculter): OcculterPre | undefined {
+  if (!hasFiniteCenter(o) || !isFinitePositive(o.r)) return undefined;
+  return { kind: "circle", dx: o.dx, dy: o.dy, r2: o.r * o.r };
+}
+
+function precomputeEllipseOcculter(o: EllipseOcculter): OcculterPre | undefined {
+  if (!hasFiniteCenter(o)) return undefined;
+  if (!isFinitePositive(o.rx) || !isFinitePositive(o.ry)) return undefined;
+
+  const { cosA, sinA } = rotationForAngle(o.angle);
+  return {
+    kind: "ellipse",
+    dx: o.dx,
+    dy: o.dy,
+    cosA,
+    sinA,
+    invRx2: 1 / (o.rx * o.rx),
+    invRy2: 1 / (o.ry * o.ry),
+  };
+}
+
+function projectedRingAxes(
+  o: RingOcculter,
+): { rInner: number; outerRy: number; innerRy: number } | undefined {
+  if (!isFinitePositive(o.rOuter)) return undefined;
+
+  const rInner = normalizedRingInnerRadius(o);
+  if (!(o.rOuter > rInner)) return undefined;
+
+  const cosInc = Math.abs(Math.cos(finiteAngle(o.inc)));
+  const outerRy = o.rOuter * cosInc;
+  if (!(outerRy > 0)) return undefined; // edge-on -> zero area, ignore
+
+  return { rInner, outerRy, innerRy: rInner * cosInc };
+}
+
+function precomputeRingOcculter(o: RingOcculter): OcculterPre | undefined {
+  if (!hasFiniteCenter(o)) return undefined;
+
+  const axes = projectedRingAxes(o);
+  if (!axes) return undefined;
+
+  const { cosA, sinA } = rotationForAngle(o.angle);
+  return {
+    kind: "ring",
+    dx: o.dx,
+    dy: o.dy,
+    cosA,
+    sinA,
+    invOuterRx2: 1 / (o.rOuter * o.rOuter),
+    invOuterRy2: 1 / (axes.outerRy * axes.outerRy),
+    invInnerRx2: axes.rInner > 0 ? 1 / (axes.rInner * axes.rInner) : undefined,
+    invInnerRy2: axes.rInner > 0 && axes.innerRy > 0 ? 1 / (axes.innerRy * axes.innerRy) : undefined,
+    opacity: clampedOpacity(o.opacity),
+  };
+}
+
+function precomputeOcculterShape(o: OcculterShape | null | undefined): OcculterPre | undefined {
+  if (!o) return undefined;
+  if (isCircleOcculter(o)) return precomputeCircleOcculter(o);
+  if (isEllipseOcculter(o)) return precomputeEllipseOcculter(o);
+  if (isRingOcculter(o)) return precomputeRingOcculter(o);
+  return undefined;
+}
 
 /**
  * Precompute occulter coefficients for fast point-in-shape tests.
@@ -130,95 +179,53 @@ export function precomputeOcculterShapes(occulters: OcculterShape[]): OcculterPr
   if (!Array.isArray(occulters) || occulters.length === 0) return out;
 
   for (const o of occulters) {
-    if (!o) continue;
-
-    if (isCircleOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-      out.push({ kind: "circle", dx: o.dx, dy: o.dy, r2: o.r * o.r });
-      continue;
-    }
-
-    if (isEllipseOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
-      if (!isFinitePositive(o.rx) || !isFinitePositive(o.ry)) continue;
-
-      const angleRaw = o.angle;
-      const angle = typeof angleRaw === "number" && Number.isFinite(angleRaw) ? angleRaw : 0;
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-      out.push({
-        kind: "ellipse",
-        dx: o.dx,
-        dy: o.dy,
-        cosA,
-        sinA,
-        invRx2: 1 / (o.rx * o.rx),
-        invRy2: 1 / (o.ry * o.ry),
-      });
-      continue;
-    }
-
-    if (isRingOcculter(o)) {
-      if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy)) continue;
-      if (!isFinitePositive(o.rOuter)) continue;
-
-      const rInnerRaw = o.rInner;
-      const rInner = typeof rInnerRaw === "number" && Number.isFinite(rInnerRaw) ? Math.max(0, rInnerRaw) : 0;
-      if (!(o.rOuter > rInner)) continue;
-
-      const incRaw = o.inc;
-      const inc = typeof incRaw === "number" && Number.isFinite(incRaw) ? incRaw : 0;
-      const cosInc = Math.abs(Math.cos(inc));
-      const outerRy = o.rOuter * cosInc;
-      if (!(outerRy > 0)) continue; // edge-on -> zero area, ignore
-
-      const innerRy = rInner * cosInc;
-      const angleRaw = o.angle;
-      const angle = typeof angleRaw === "number" && Number.isFinite(angleRaw) ? angleRaw : 0;
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-
-      const rawOpacity = o.opacity;
-      const opacity =
-        typeof rawOpacity === "number" && Number.isFinite(rawOpacity)
-          ? Math.max(0, Math.min(1, rawOpacity))
-          : 1;
-
-      out.push({
-        kind: "ring",
-        dx: o.dx,
-        dy: o.dy,
-        cosA,
-        sinA,
-        invOuterRx2: 1 / (o.rOuter * o.rOuter),
-        invOuterRy2: 1 / (outerRy * outerRy),
-        invInnerRx2: rInner > 0 ? 1 / (rInner * rInner) : undefined,
-        invInnerRy2: rInner > 0 && innerRy > 0 ? 1 / (innerRy * innerRy) : undefined,
-        opacity,
-      });
-    }
+    const precomputed = precomputeOcculterShape(o);
+    if (precomputed) out.push(precomputed);
   }
 
   return out;
 }
 
-function pointInEllipse(
-  x: number,
-  y: number,
-  dx: number,
-  dy: number,
-  cosA: number,
-  sinA: number,
-  invRx2: number,
-  invRy2: number,
-  inclusive = false,
-): boolean {
+function normalizedEllipseDistanceSquared(test: EllipsePointTest): number {
+  const { x, y, dx, dy, cosA, sinA, invRx2, invRy2 } = test;
   const xp = x - dx;
   const yp = y - dy;
   const xr = xp * cosA + yp * sinA;
   const yr = -xp * sinA + yp * cosA;
-  const v = xr * xr * invRx2 + yr * yr * invRy2;
-  return inclusive ? v <= 1 : v < 1;
+  return xr * xr * invRx2 + yr * yr * invRy2;
+}
+
+function pointInEllipse(test: EllipsePointTest): boolean {
+  const v = normalizedEllipseDistanceSquared(test);
+  if (test.inclusive) return v <= 1;
+  return v < 1;
+}
+
+function pointInRing(x: number, y: number, o: RingPre): boolean {
+  const insideOuter = pointInEllipse({
+    x,
+    y,
+    dx: o.dx,
+    dy: o.dy,
+    cosA: o.cosA,
+    sinA: o.sinA,
+    invRx2: o.invOuterRx2,
+    invRy2: o.invOuterRy2,
+  });
+  if (!insideOuter) return false;
+
+  if (o.invInnerRx2 === undefined || o.invInnerRy2 === undefined) return true;
+  return !pointInEllipse({
+    x,
+    y,
+    dx: o.dx,
+    dy: o.dy,
+    cosA: o.cosA,
+    sinA: o.sinA,
+    invRx2: o.invInnerRx2,
+    invRy2: o.invInnerRy2,
+    inclusive: true,
+  });
 }
 
 /**
@@ -243,31 +250,24 @@ export function pointOccultedFraction(x: number, y: number, occ: OcculterPre[]):
     }
 
     if (o.kind === "ellipse") {
-      if (pointInEllipse(x, y, o.dx, o.dy, o.cosA, o.sinA, o.invRx2, o.invRy2, false)) return 1;
+      if (
+        pointInEllipse({
+          x,
+          y,
+          dx: o.dx,
+          dy: o.dy,
+          cosA: o.cosA,
+          sinA: o.sinA,
+          invRx2: o.invRx2,
+          invRy2: o.invRy2,
+        })
+      )
+        return 1;
       continue;
     }
 
     // Ring: inside outer AND outside inner (inner boundary is treated as unblocked).
-    const insideOuter = pointInEllipse(x, y, o.dx, o.dy, o.cosA, o.sinA, o.invOuterRx2, o.invOuterRy2, false);
-    if (!insideOuter) continue;
-
-    let inRing = true;
-    if (o.invInnerRx2 !== undefined && o.invInnerRy2 !== undefined) {
-      const insideInner = pointInEllipse(
-        x,
-        y,
-        o.dx,
-        o.dy,
-        o.cosA,
-        o.sinA,
-        o.invInnerRx2,
-        o.invInnerRy2,
-        true,
-      );
-      if (insideInner) inRing = false;
-    }
-
-    if (inRing) {
+    if (pointInRing(x, y, o)) {
       if (o.opacity >= 1) return 1; // fully opaque, short-circuit
       transparencyProduct *= 1 - o.opacity;
     }

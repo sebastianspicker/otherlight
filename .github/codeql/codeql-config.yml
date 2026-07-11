@@ -1,0 +1,19 @@
+name: CodeQL configuration
+
+paths-ignore:
+  - "AGENTS.md"
+  - "docs/archive/**"
+  - "docs/audit/**"
+  - "docs/architecture-map.md"
+  - "docs/code-index.md"
+  - "docs/deprecation-and-simplification-audit.md"
+  - "docs/logic-and-correctness-audit.md"
+  - "docs/verification-baseline.md"
+  - "docs/deprecated/**"
+  - "deprecated/**"
+  - "node_modules/**"
+  - "vendor/**"
+  - "third_party/**"
+  - "third-party/**"
+  - "3rdparty/**"
+  - "external/**"

@@ -1,9 +1,42 @@
+import { drawOcPlotFrame, type OcPlotPoint } from "./ocPlotCanvas";
 import type { TransitHistorySeries, TransitHistoryState } from "./transitHistory";
 
 export type OcBody = "planet" | "moon";
 export type OcUnit = "s" | "ms";
 export type OcTrendMode = "raw" | "fit" | "detrended";
 export type OcCsvOptions = { unit?: OcUnit; trendMode?: OcTrendMode };
+
+type OcPoint = { x: number; y: number; centerSec: number };
+type OcFit = NonNullable<ReturnType<typeof fitLinearEphemeris>>;
+type OcPanelStats = {
+  body: OcBody;
+  unit: OcUnit;
+  trendMode: OcTrendMode;
+  n: number;
+  latest: number | undefined;
+  rms: number | undefined;
+  lastDur: number | undefined;
+  slopePerEpoch: number | undefined;
+  rmsResidual: number | undefined;
+  unitTxt: string;
+};
+type OcCsvRowContext = {
+  body: OcBody;
+  unit: OcUnit;
+  trendMode: OcTrendMode;
+  scale: number;
+  fitByCenter: Map<number, number>;
+};
+type OcRenderOptions = {
+  unit: OcUnit;
+  trendMode: OcTrendMode;
+  scale: number;
+};
+type OcCanvasMetrics = {
+  ctx: CanvasRenderingContext2D;
+  w: number;
+  h: number;
+};
 
 function finite(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
@@ -30,9 +63,7 @@ function fmtWithUnit(v: number | undefined, unit: OcUnit): string {
   return fmt(typeof v === "number" ? v * s : undefined);
 }
 
-function collectFiniteOcPoints(
-  series: TransitHistorySeries,
-): Array<{ x: number; y: number; centerSec: number }> {
+function collectFiniteOcPoints(series: TransitHistorySeries): OcPoint[] {
   // Use epoch index k (ordinal 0,1,2,...) for the x-coordinate of the linear fit,
   // not the absolute time.  Fitting O-C vs absolute time produces a slope whose
   // numerical value is dominated by the magnitude of t, making it meaningless.
@@ -85,26 +116,51 @@ export function formatOcPanelStats(
   body: OcBody,
   opts: { unit?: OcUnit; trendMode?: OcTrendMode } = {},
 ): string {
+  const stats = ocPanelStats(state, body, opts);
+  if (stats.trendMode === "raw") return formatRawOcPanelStats(stats);
+  if (stats.trendMode === "fit") return formatFitOcPanelStats(stats);
+  return formatDetrendedOcPanelStats(stats);
+}
+
+function ocPanelStats(
+  state: TransitHistoryState,
+  body: OcBody,
+  opts: { unit?: OcUnit; trendMode?: OcTrendMode },
+): OcPanelStats {
   const unit = opts.unit ?? "s";
   const trendMode = opts.trendMode ?? "raw";
   const series = getOcSeries(state, body);
   const points = collectFiniteOcPoints(series);
-  const fit = trendMode === "raw" ? undefined : fitLinearEphemeris(points);
+  const fit = ocPanelFit(points, trendMode);
   const n = series.events.length;
-  const latest = series.latestOcSec;
-  const rms = series.rmsOcSec;
-  const lastDur = finite(series.events[n - 1]?.durationSec);
-  const slopePerEpoch = fit ? fit.slope : undefined;
-  const rmsResidual = fit ? fit.rmsResidual : undefined;
-  const unitTxt = unitLabel(unit);
+  return {
+    body,
+    unit,
+    trendMode,
+    n,
+    latest: series.latestOcSec,
+    rms: series.rmsOcSec,
+    lastDur: finite(series.events[n - 1]?.durationSec),
+    slopePerEpoch: fit ? fit.slope : undefined,
+    rmsResidual: fit ? fit.rmsResidual : undefined,
+    unitTxt: unitLabel(unit),
+  };
+}
 
-  if (trendMode === "raw") {
-    return `${body} events=${n} latest=${fmtWithUnit(latest, unit)} rms=${fmtWithUnit(rms, unit)} dur=${fmt(lastDur)} s [${unitTxt}]`;
-  }
-  if (trendMode === "fit") {
-    return `${body} events=${n} latest=${fmtWithUnit(latest, unit)} rms=${fmtWithUnit(rms, unit)} slope=${fmtWithUnit(slopePerEpoch, unit)}/epoch`;
-  }
-  return `${body} events=${n} detrendedRms=${fmtWithUnit(rmsResidual, unit)} slope=${fmtWithUnit(slopePerEpoch, unit)}/epoch`;
+function ocPanelFit(points: OcPoint[], trendMode: OcTrendMode): OcFit | undefined {
+  return trendMode === "raw" ? undefined : fitLinearEphemeris(points);
+}
+
+function formatRawOcPanelStats(stats: OcPanelStats): string {
+  return `${stats.body} events=${stats.n} latest=${fmtWithUnit(stats.latest, stats.unit)} rms=${fmtWithUnit(stats.rms, stats.unit)} dur=${fmt(stats.lastDur)} s [${stats.unitTxt}]`;
+}
+
+function formatFitOcPanelStats(stats: OcPanelStats): string {
+  return `${stats.body} events=${stats.n} latest=${fmtWithUnit(stats.latest, stats.unit)} rms=${fmtWithUnit(stats.rms, stats.unit)} slope=${fmtWithUnit(stats.slopePerEpoch, stats.unit)}/epoch`;
+}
+
+function formatDetrendedOcPanelStats(stats: OcPanelStats): string {
+  return `${stats.body} events=${stats.n} detrendedRms=${fmtWithUnit(stats.rmsResidual, stats.unit)} slope=${fmtWithUnit(stats.slopePerEpoch, stats.unit)}/epoch`;
 }
 
 export function formatOcFitSummary(
@@ -127,36 +183,65 @@ export function buildOcCsv(state: TransitHistoryState, body: OcBody, opts: OcCsv
   const series = getOcSeries(state, body);
   const points = collectFiniteOcPoints(series);
   const fit = fitLinearEphemeris(points);
-  const fitByCenter = new Map<number, number>();
-  for (const p of points) {
-    if (fit) fitByCenter.set(p.centerSec, fit.intercept + fit.slope * p.x);
-  }
+  const fitByCenter = fitValuesByCenter(points, fit);
+  const context: OcCsvRowContext = { body, unit, trendMode, scale, fitByCenter };
 
   const header =
     "body,index,center_sec,oc_raw_sec,oc_fit_sec,oc_residual_sec,oc_display,duration_sec,ingress_sec,egress_sec,detected_at_sec,unit,trend_mode";
-  const rows = series.events.map((e, i) => {
-    const raw = finite(e.ocSec);
-    const fitSec = fitByCenter.get(e.centerSec);
-    const residual = raw !== undefined && fitSec !== undefined ? raw - fitSec : undefined;
-    const displayRaw = trendMode === "detrended" ? residual : raw;
-    const display = displayRaw !== undefined ? displayRaw * scale : undefined;
-    return [
-      body,
-      String(i),
-      String(e.centerSec),
-      raw ?? "",
-      fitSec ?? "",
-      residual ?? "",
-      display ?? "",
-      e.durationSec ?? "",
-      e.ingressSec ?? "",
-      e.egressSec ?? "",
-      e.detectedAtSec,
-      unit,
-      trendMode,
-    ].join(",");
-  });
+  const rows = series.events.map((event, index) => ocCsvRow(event, index, context));
   return `${header}\n${rows.join("\n")}\n`;
+}
+
+function fitValuesByCenter(points: OcPoint[], fit: OcFit | undefined): Map<number, number> {
+  const fitByCenter = new Map<number, number>();
+  if (!fit) return fitByCenter;
+  for (const point of points) {
+    fitByCenter.set(point.centerSec, fit.intercept + fit.slope * point.x);
+  }
+  return fitByCenter;
+}
+
+function ocCsvRow(
+  event: TransitHistorySeries["events"][number],
+  index: number,
+  context: OcCsvRowContext,
+): string {
+  const raw = finite(event.ocSec);
+  const fitSec = context.fitByCenter.get(event.centerSec);
+  const residual = ocResidual(raw, fitSec);
+  const display = ocDisplayValue(raw, residual, context);
+  return [
+    context.body,
+    String(index),
+    String(event.centerSec),
+    csvValue(raw),
+    csvValue(fitSec),
+    csvValue(residual),
+    csvValue(display),
+    csvValue(event.durationSec),
+    csvValue(event.ingressSec),
+    csvValue(event.egressSec),
+    event.detectedAtSec,
+    context.unit,
+    context.trendMode,
+  ].join(",");
+}
+
+function ocResidual(raw: number | undefined, fitSec: number | undefined): number | undefined {
+  return raw !== undefined && fitSec !== undefined ? raw - fitSec : undefined;
+}
+
+function ocDisplayValue(
+  raw: number | undefined,
+  residual: number | undefined,
+  context: OcCsvRowContext,
+): number | undefined {
+  const displayRaw = context.trendMode === "detrended" ? residual : raw;
+  return displayRaw !== undefined ? displayRaw * context.scale : undefined;
+}
+
+function csvValue(value: number | undefined): number | "" {
+  return value ?? "";
 }
 
 export function exportOcCsv(state: TransitHistoryState, body: OcBody, opts: OcCsvOptions = {}): void {
@@ -179,13 +264,41 @@ export function renderOcHistoryCanvas(
   body: OcBody,
   opts: { unit?: OcUnit; trendMode?: OcTrendMode } = {},
 ): void {
-  const unit = opts.unit ?? "s";
-  const trendMode = opts.trendMode ?? "raw";
-  const scale = unitScale(unit);
+  const renderOptions = ocRenderOptions(opts);
+  const metrics = canvas ? prepareOcCanvas(canvas) : undefined;
+  if (!metrics) return;
+  const { ctx, w, h } = metrics;
+  drawOcBackground(ctx, w, h);
 
-  if (!canvas) return;
+  const series = getOcSeries(state, body);
+  const points = collectFiniteOcPoints(series);
+  const fit = ocPanelFit(points, renderOptions.trendMode);
+  const pointsY = ocDisplayPoints(points, fit, renderOptions.trendMode, renderOptions.scale);
+  drawOcPlotFrame({
+    ctx,
+    w,
+    h,
+    body,
+    pointsY,
+    fit,
+    trendMode: renderOptions.trendMode,
+    scale: renderOptions.scale,
+    unit: renderOptions.unit,
+  });
+}
+
+function ocRenderOptions(opts: { unit?: OcUnit; trendMode?: OcTrendMode }): OcRenderOptions {
+  const unit = opts.unit ?? "s";
+  return {
+    unit,
+    trendMode: opts.trendMode ?? "raw",
+    scale: unitScale(unit),
+  };
+}
+
+function prepareOcCanvas(canvas: HTMLCanvasElement): OcCanvasMetrics | undefined {
   const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!ctx) return undefined;
 
   // Apply devicePixelRatio scaling for HiDPI displays.
   const dpr = window.devicePixelRatio || 1;
@@ -200,109 +313,32 @@ export function renderOcHistoryCanvas(
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: cssW, h: cssH };
+}
 
-  const w = cssW;
-  const h = cssH;
+function drawOcBackground(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#04080d";
   ctx.fillRect(0, 0, w, h);
+}
 
-  const series = getOcSeries(state, body);
-  const points = collectFiniteOcPoints(series);
-  const fit = trendMode === "raw" ? undefined : fitLinearEphemeris(points);
+function ocDisplayPoints(
+  points: OcPoint[],
+  fit: OcFit | undefined,
+  trendMode: OcTrendMode,
+  scale: number,
+): OcPlotPoint[] {
   // Use centerSec for the x-axis display, but epoch index (p.x) for the fit evaluation.
-  const pointsY = points.map((p) => {
-    const yRaw = p.y;
-    if (trendMode === "detrended" && fit) {
-      return { x: p.centerSec, epoch: p.x, y: (yRaw - (fit.intercept + fit.slope * p.x)) * scale };
-    }
-    return { x: p.centerSec, epoch: p.x, y: yRaw * scale };
-  });
+  return points.map((point) => ({
+    x: point.centerSec,
+    epoch: point.x,
+    y: ocDisplayY(point, fit, trendMode, scale),
+  }));
+}
 
-  const m = { l: 46, r: 12, t: 14, b: 28 };
-  const x0 = m.l;
-  const y0 = h - m.b;
-  const pw = Math.max(1, w - m.l - m.r);
-  const ph = Math.max(1, h - m.t - m.b);
-
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x0, y0);
-  ctx.lineTo(x0 + pw, y0);
-  ctx.moveTo(x0, m.t);
-  ctx.lineTo(x0, y0);
-  ctx.stroke();
-
-  if (pointsY.length === 0) {
-    ctx.fillStyle = "rgba(220,230,240,0.8)";
-    ctx.font = "12px Space Mono, monospace";
-    ctx.fillText(`No ${body} O-C events`, x0 + 8, m.t + 16);
-    return;
+function ocDisplayY(point: OcPoint, fit: OcFit | undefined, trendMode: OcTrendMode, scale: number): number {
+  if (trendMode === "detrended" && fit) {
+    return (point.y - (fit.intercept + fit.slope * point.x)) * scale;
   }
-
-  let xMin = pointsY[0].x;
-  let xMax = pointsY[0].x;
-  let yMaxAbs = Math.abs(pointsY[0].y);
-  for (const p of pointsY) {
-    xMin = Math.min(xMin, p.x);
-    xMax = Math.max(xMax, p.x);
-    yMaxAbs = Math.max(yMaxAbs, Math.abs(p.y));
-  }
-  if (xMax <= xMin) xMax = xMin + 1;
-  if (!(yMaxAbs > 0)) yMaxAbs = 1e-9;
-  yMaxAbs *= 1.25;
-
-  const sx = (x: number) => x0 + ((x - xMin) / (xMax - xMin)) * pw;
-  const sy = (y: number) => m.t + ((yMaxAbs - y) / (2 * yMaxAbs)) * ph;
-
-  const yZero = sy(0);
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
-  ctx.beginPath();
-  ctx.moveTo(x0, yZero);
-  ctx.lineTo(x0 + pw, yZero);
-  ctx.stroke();
-
-  if (trendMode === "fit" && fit && pointsY.length >= 2) {
-    ctx.save();
-    ctx.strokeStyle = "rgba(245,194,107,0.7)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    // Evaluate fit at first and last epoch, position at their centerSec x-coordinates.
-    const first = pointsY[0];
-    const last = pointsY[pointsY.length - 1];
-    const yFit0 = (fit.intercept + fit.slope * first.epoch) * scale;
-    const yFit1 = (fit.intercept + fit.slope * last.epoch) * scale;
-    ctx.moveTo(sx(first.x), sy(yFit0));
-    ctx.lineTo(sx(last.x), sy(yFit1));
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  ctx.strokeStyle = "rgba(46,195,177,0.9)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  pointsY.forEach((p, i) => {
-    const x = sx(p.x);
-    const y = sy(p.y);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  ctx.fillStyle = "#f5c26b";
-  for (const p of pointsY) {
-    ctx.beginPath();
-    ctx.arc(sx(p.x), sy(p.y), 2.6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.fillStyle = "rgba(220,230,240,0.85)";
-  ctx.font = "11px Space Mono, monospace";
-  const label = trendMode === "detrended" ? `detrended O-C [${unitLabel(unit)}]` : `O-C [${unitLabel(unit)}]`;
-  ctx.fillText(label, 8, m.t + 10);
-  ctx.fillText(String(xMin.toFixed(0)), x0, h - 8);
-  const xText = String(xMax.toFixed(0));
-  ctx.fillText(xText, x0 + pw - ctx.measureText(xText).width, h - 8);
+  return point.y * scale;
 }

@@ -17,6 +17,27 @@ export type NBodyPlanetMoonParamsLike = {
   throwOnOverlap?: boolean;
 };
 
+type ResolveEnabledNBodyOptions = {
+  onInvalid?: "throw" | "disable";
+  defaultDtMaxAbs?: number;
+  masses?: { star?: number; planet?: number; moon?: number };
+  G?: number;
+};
+
+type ResolvedEnabledNBodyPlanetMoonConfig = {
+  muStar: number;
+  muPlanet: number;
+  muMoon: number;
+  dtMaxAbs: number;
+  softening: number;
+  throwOnOverlap: boolean;
+};
+
+type DynamicsConfig = NonNullable<SystemParams["dynamics"]>;
+type IntegratorConfig = DynamicsConfig["integrator"];
+type NBodyPlanetMoonConfig = NonNullable<DynamicsConfig["nbodyPlanetMoon"]>;
+type NBodyPerturberConfig = NonNullable<NonNullable<NBodyPlanetMoonConfig["perturbers"]>[number]>;
+
 function isFinitePositiveNumber(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x) && x > 0;
 }
@@ -30,79 +51,119 @@ function resolveMuFromInputs(params: { mu?: unknown; m?: unknown; G: number }): 
 
 export function resolveEnabledNBodyPlanetMoonConfig(
   cfg: NBodyPlanetMoonParamsLike | undefined,
-  opts?: {
-    onInvalid?: "throw" | "disable";
-    defaultDtMaxAbs?: number;
-    masses?: { star?: number; planet?: number; moon?: number };
-    G?: number;
-  },
-): {
-  muStar: number;
-  muPlanet: number;
-  muMoon: number;
-  dtMaxAbs: number;
-  softening: number;
-  throwOnOverlap: boolean;
-} | null {
+  opts?: ResolveEnabledNBodyOptions,
+): ResolvedEnabledNBodyPlanetMoonConfig | null {
   if (!cfg?.enabled) return null;
 
   const onInvalid = opts?.onInvalid ?? "throw";
-  const fail = (msg: string): null => {
-    if (onInvalid === "throw") throw new Error(msg);
-    return null;
+  const G = resolveGravityConstant(opts);
+  const mus = resolveRequiredNBodyMus(cfg, opts, G, onInvalid);
+  const dtMaxAbs = resolveDtMaxAbs(cfg, opts, onInvalid);
+  if (!mus || dtMaxAbs === null) return null;
+
+  return {
+    ...mus,
+    dtMaxAbs,
+    softening: resolveSoftening(cfg),
+    throwOnOverlap: Boolean(cfg.throwOnOverlap),
   };
+}
 
-  const G = isFinitePositiveNumber(opts?.G) ? (opts!.G as number) : G_SI;
+function failInvalid(onInvalid: "throw" | "disable", msg: string): null {
+  if (onInvalid === "throw") throw new Error(msg);
+  return null;
+}
 
-  const muStar = resolveMuFromInputs({
-    mu: cfg.muStar,
-    m: cfg.mStar ?? opts?.masses?.star,
+function resolveGravityConstant(opts: ResolveEnabledNBodyOptions | undefined): number {
+  return isFinitePositiveNumber(opts?.G) ? opts.G : G_SI;
+}
+
+function resolveRequiredNBodyMus(
+  cfg: NBodyPlanetMoonParamsLike,
+  opts: ResolveEnabledNBodyOptions | undefined,
+  G: number,
+  onInvalid: "throw" | "disable",
+): Pick<ResolvedEnabledNBodyPlanetMoonConfig, "muStar" | "muPlanet" | "muMoon"> | null {
+  const muStar = resolveRequiredStarMu(cfg, opts, G, onInvalid);
+  if (muStar === null) return null;
+
+  const muPlanet = resolveRequiredPlanetMu(cfg, opts, G, onInvalid);
+  if (muPlanet === null) return null;
+
+  const muMoon = resolveRequiredMoonMu(cfg, opts, G, onInvalid);
+  if (muMoon === null) return null;
+
+  return { muStar, muPlanet, muMoon };
+}
+
+const resolveRequiredStarMu = (
+  cfg: NBodyPlanetMoonParamsLike,
+  opts: ResolveEnabledNBodyOptions | undefined,
+  G: number,
+  onInvalid: "throw" | "disable",
+): number | null => {
+  return resolveRequiredMu("muStar", "mStar", cfg.muStar, cfg.mStar ?? opts?.masses?.star, G, onInvalid);
+};
+
+const resolveRequiredPlanetMu = (
+  cfg: NBodyPlanetMoonParamsLike,
+  opts: ResolveEnabledNBodyOptions | undefined,
+  G: number,
+  onInvalid: "throw" | "disable",
+): number | null => {
+  return resolveRequiredMu(
+    "muPlanet",
+    "mPlanet",
+    cfg.muPlanet,
+    cfg.mPlanet ?? opts?.masses?.planet,
     G,
-  });
-  if (!(muStar && muStar > 0 && Number.isFinite(muStar))) {
-    return fail("nbody enabled: muStar (or mStar) must be provided and > 0.");
-  }
+    onInvalid,
+  );
+};
 
-  const muPlanet = resolveMuFromInputs({
-    mu: cfg.muPlanet,
-    m: cfg.mPlanet ?? opts?.masses?.planet,
-    G,
-  });
-  if (!(muPlanet && muPlanet > 0 && Number.isFinite(muPlanet))) {
-    return fail("nbody enabled: muPlanet (or mPlanet) must be provided and > 0.");
-  }
+const resolveRequiredMoonMu = (
+  cfg: NBodyPlanetMoonParamsLike,
+  opts: ResolveEnabledNBodyOptions | undefined,
+  G: number,
+  onInvalid: "throw" | "disable",
+): number | null => {
+  return resolveRequiredMu("muMoon", "mMoon", cfg.muMoon, cfg.mMoon ?? opts?.masses?.moon, G, onInvalid);
+};
 
-  const muMoon = resolveMuFromInputs({
-    mu: cfg.muMoon,
-    m: cfg.mMoon ?? opts?.masses?.moon,
-    G,
-  });
-  if (!(muMoon && muMoon > 0 && Number.isFinite(muMoon))) {
-    return fail("nbody enabled: muMoon (or mMoon) must be provided and > 0.");
-  }
+const resolveRequiredMu = (
+  muName: string,
+  massName: string,
+  mu: unknown,
+  mass: unknown,
+  G: number,
+  onInvalid: "throw" | "disable",
+): number | null => {
+  const resolved = resolveMuFromInputs({ mu, m: mass, G });
+  if (resolved) return resolved;
+  return failInvalid(onInvalid, `nbody enabled: ${muName} (or ${massName}) must be provided and > 0.`);
+};
 
+const resolveDtMaxAbs = (
+  cfg: NBodyPlanetMoonParamsLike,
+  opts: ResolveEnabledNBodyOptions | undefined,
+  onInvalid: "throw" | "disable",
+): number | null => {
   const dtRaw = cfg.dtMax;
   const dtMaxAbs =
     typeof dtRaw === "number" && Number.isFinite(dtRaw) && dtRaw > 0
       ? Math.abs(dtRaw)
       : Math.abs(opts?.defaultDtMaxAbs ?? 10);
 
-  if (!(dtMaxAbs > 0 && Number.isFinite(dtMaxAbs))) {
-    return fail("nbody enabled: dtMax must be > 0 (or a positive defaultDtMaxAbs must be provided).");
-  }
+  if (dtMaxAbs > 0 && Number.isFinite(dtMaxAbs)) return dtMaxAbs;
+  return failInvalid(
+    onInvalid,
+    "nbody enabled: dtMax must be > 0 (or a positive defaultDtMaxAbs must be provided).",
+  );
+};
 
-  const softening =
-    typeof cfg.softening === "number" && Number.isFinite(cfg.softening) ? Math.max(0, cfg.softening) : 0;
-
-  return {
-    muStar,
-    muPlanet,
-    muMoon,
-    dtMaxAbs,
-    softening,
-    throwOnOverlap: Boolean(cfg.throwOnOverlap),
-  };
-}
+const resolveSoftening = (cfg: NBodyPlanetMoonParamsLike): number => {
+  return typeof cfg.softening === "number" && Number.isFinite(cfg.softening) ? Math.max(0, cfg.softening) : 0;
+};
 
 export function resolveNBodyConfig(
   params: SystemParams,
@@ -118,6 +179,20 @@ export function resolveNBodyConfig(
   });
   if (!resolvedCfg) return null;
 
+  const keyInputs = resolveNBodyKeyInputs(params);
+  const perturbers = resolvePerturbers(nbody);
+  const cfg = buildResolvedNBodyConfig(params, nbody, resolvedCfg, perturbers);
+
+  return {
+    cfg,
+    keyInputs: {
+      ...keyInputs,
+      perturbers,
+    },
+  };
+}
+
+function resolveNBodyKeyInputs(params: SystemParams): Omit<KeyInputs, "perturbers"> {
   if (!params.moon) {
     throw new Error("nbody enabled requires a moon configuration.");
   }
@@ -131,84 +206,62 @@ export function resolveNBodyConfig(
     );
   }
 
-  const planetEl = resolveOrbitElements(params.planet.orbit, ANCHOR_TIME_SEC, "planet.orbit");
-  const moonEl = resolveOrbitElements(
-    params.moon.orbitAroundPlanet,
-    ANCHOR_TIME_SEC,
-    "moon.orbitAroundPlanet",
-  );
+  return {
+    planetEl: resolveOrbitElements(params.planet.orbit, ANCHOR_TIME_SEC, "planet.orbit"),
+    moonEl: resolveOrbitElements(params.moon.orbitAroundPlanet, ANCHOR_TIME_SEC, "moon.orbitAroundPlanet"),
+  };
+}
 
+function resolvePerturbers(nbody: NBodyPlanetMoonConfig | undefined): NBodyPerturberResolved[] {
   const perturbers: NBodyPerturberResolved[] = [];
-  const extra = Array.isArray(nbody?.perturbers) ? nbody!.perturbers! : [];
+  const extra = Array.isArray(nbody?.perturbers) ? nbody.perturbers : [];
 
   for (let i = 0; i < extra.length; i++) {
-    const p = extra[i];
-    if (!p || p.enabled === false) continue;
-    const mu = isFinitePositive(p.mu) ? p.mu : isFinitePositive(p.m) ? G_SI * p.m : undefined;
-    if (!isFinitePositive(mu)) continue;
-    if (!p.orbit) continue;
-    if (typeof p.orbit === "function") {
-      throw new Error("nbody perturbers require static orbit elements (initial conditions).");
-    }
-    const el = resolveOrbitElements(
-      p.orbit,
-      ANCHOR_TIME_SEC,
-      `dynamics.nbodyPlanetMoon.perturbers[${i}].orbit`,
-    );
-    perturbers.push({ mu, orbit: el });
+    const resolved = resolvePerturber(extra[i], i);
+    if (resolved) perturbers.push(resolved);
   }
 
-  const rel = normalizeRelativityParams(params.dynamics?.relativity);
-  const relativity = {
-    grOn: Boolean(rel.enabled && rel.grPrecession),
-    c: rel.c,
-  };
+  return perturbers;
+}
 
-  const globalIntegrator = params.dynamics?.integrator;
-  const localIntegrator = nbody?.integrator;
-  const mode =
-    (localIntegrator?.mode ??
-      globalIntegrator?.mode ??
-      (params.dynamics?.fidelityProfile === "accurate" || params.dynamics?.fidelityProfile === "reference"
-        ? "adaptive-verlet"
-        : "fixed-verlet")) === "adaptive-verlet"
-      ? "adaptive-verlet"
-      : "fixed-verlet";
+function resolvePerturber(
+  perturber: NBodyPerturberConfig | undefined,
+  index: number,
+): NBodyPerturberResolved | null {
+  if (!perturber || perturber.enabled === false) return null;
 
-  const dtMin = Math.max(1e-6, Number(localIntegrator?.dtMin ?? globalIntegrator?.dtMin ?? 1e-3));
-  const errorTolAbs = Math.max(
-    1e-9,
-    Number(
-      localIntegrator?.errorTolAbs ??
-        globalIntegrator?.errorTolAbs ??
-        (params.dynamics?.fidelityProfile === "reference"
-          ? 1e-3
-          : params.dynamics?.fidelityProfile === "accurate"
-            ? 1e-2
-            : 1e-1),
+  const mu = resolvePerturberMu(perturber);
+  if (!isFinitePositive(mu) || !perturber.orbit) return null;
+
+  if (typeof perturber.orbit === "function") {
+    throw new Error("nbody perturbers require static orbit elements (initial conditions).");
+  }
+
+  return {
+    mu,
+    orbit: resolveOrbitElements(
+      perturber.orbit,
+      ANCHOR_TIME_SEC,
+      `dynamics.nbodyPlanetMoon.perturbers[${index}].orbit`,
     ),
-  );
-  const growthFactor = Math.min(
-    4,
-    Math.max(1.05, Number(localIntegrator?.growthFactor ?? globalIntegrator?.growthFactor ?? 1.5)),
-  );
-  const shrinkFactor = Math.min(
-    0.9,
-    Math.max(0.1, Number(localIntegrator?.shrinkFactor ?? globalIntegrator?.shrinkFactor ?? 0.5)),
-  );
-  const maxSubsteps = Math.max(
-    10_000,
-    Math.floor(Number(localIntegrator?.maxSubsteps ?? globalIntegrator?.maxSubsteps ?? 2_000_000)),
-  );
+  };
+}
 
-  const collisionCfg = params.dynamics?.collisionPolicy;
-  const collision = {
-    enabled: Boolean(collisionCfg?.enabled),
-    minSeparation: Math.max(0, Number(collisionCfg?.minSeparation ?? 0)),
-    onCloseEncounter: collisionCfg?.onCloseEncounter === "abort" ? "abort" : "warn",
-  } as const;
+function resolvePerturberMu(perturber: NBodyPerturberConfig): number | undefined {
+  return isFinitePositive(perturber.mu)
+    ? perturber.mu
+    : isFinitePositive(perturber.m)
+      ? G_SI * perturber.m
+      : undefined;
+}
 
-  const cfg: ResolvedNBodyConfig = {
+function buildResolvedNBodyConfig(
+  params: SystemParams,
+  nbody: NBodyPlanetMoonConfig | undefined,
+  resolvedCfg: ResolvedEnabledNBodyPlanetMoonConfig,
+  perturbers: NBodyPerturberResolved[],
+): ResolvedNBodyConfig {
+  return {
     muStar: resolvedCfg.muStar,
     muPlanet: resolvedCfg.muPlanet,
     muMoon: resolvedCfg.muMoon,
@@ -216,26 +269,120 @@ export function resolveNBodyConfig(
     softening: resolvedCfg.softening,
     throwOnOverlap: resolvedCfg.throwOnOverlap,
     perturbers,
-    relativity,
-    integrator: {
-      mode,
-      errorTolAbs,
-      dtMin,
-      growthFactor,
-      shrinkFactor,
-      maxSubsteps,
-    },
-    collision,
+    relativity: resolveRelativityConfig(params),
+    integrator: resolveIntegratorConfig(params, nbody),
+    collision: resolveCollisionConfig(params),
   };
+}
+
+function resolveRelativityConfig(params: SystemParams): ResolvedNBodyConfig["relativity"] {
+  const rel = normalizeRelativityParams(params.dynamics?.relativity);
+  return {
+    grOn: Boolean(rel.enabled && rel.grPrecession),
+    c: rel.c,
+  };
+}
+
+function resolveIntegratorConfig(
+  params: SystemParams,
+  nbody: NBodyPlanetMoonConfig | undefined,
+): ResolvedNBodyConfig["integrator"] {
+  const globalIntegrator = params.dynamics?.integrator;
+  const localIntegrator = nbody?.integrator;
 
   return {
-    cfg,
-    keyInputs: {
-      planetEl,
-      moonEl,
-      perturbers,
-    },
+    mode: resolveIntegratorMode(params, nbody),
+    errorTolAbs: resolveErrorTolerance(params, localIntegrator, globalIntegrator),
+    dtMin: resolveDtMin(localIntegrator, globalIntegrator),
+    growthFactor: resolveGrowthFactor(localIntegrator, globalIntegrator),
+    shrinkFactor: resolveShrinkFactor(localIntegrator, globalIntegrator),
+    maxSubsteps: resolveMaxSubsteps(localIntegrator, globalIntegrator),
   };
+}
+
+function resolveIntegratorMode(
+  params: SystemParams,
+  nbody: NBodyPlanetMoonConfig | undefined,
+): ResolvedNBodyConfig["integrator"]["mode"] {
+  const selected =
+    nbody?.integrator?.mode ?? params.dynamics?.integrator?.mode ?? defaultIntegratorMode(params.dynamics);
+
+  return selected === "adaptive-verlet" ? "adaptive-verlet" : "fixed-verlet";
+}
+
+function defaultIntegratorMode(
+  dynamics: DynamicsConfig | undefined,
+): ResolvedNBodyConfig["integrator"]["mode"] {
+  return dynamics?.fidelityProfile === "accurate" || dynamics?.fidelityProfile === "reference"
+    ? "adaptive-verlet"
+    : "fixed-verlet";
+}
+
+function resolveErrorTolerance(
+  params: SystemParams,
+  localIntegrator: IntegratorConfig | undefined,
+  globalIntegrator: IntegratorConfig | undefined,
+): number {
+  return Math.max(
+    1e-9,
+    Number(
+      localIntegrator?.errorTolAbs ?? globalIntegrator?.errorTolAbs ?? defaultErrorTolerance(params.dynamics),
+    ),
+  );
+}
+
+function defaultErrorTolerance(dynamics: DynamicsConfig | undefined): number {
+  return dynamics?.fidelityProfile === "reference"
+    ? 1e-3
+    : dynamics?.fidelityProfile === "accurate"
+      ? 1e-2
+      : 1e-1;
+}
+
+function resolveDtMin(
+  localIntegrator: IntegratorConfig | undefined,
+  globalIntegrator: IntegratorConfig | undefined,
+): number {
+  return Math.max(1e-6, Number(localIntegrator?.dtMin ?? globalIntegrator?.dtMin ?? 1e-3));
+}
+
+function resolveGrowthFactor(
+  localIntegrator: IntegratorConfig | undefined,
+  globalIntegrator: IntegratorConfig | undefined,
+): number {
+  return Math.min(
+    4,
+    Math.max(1.05, Number(localIntegrator?.growthFactor ?? globalIntegrator?.growthFactor ?? 1.5)),
+  );
+}
+
+function resolveShrinkFactor(
+  localIntegrator: IntegratorConfig | undefined,
+  globalIntegrator: IntegratorConfig | undefined,
+): number {
+  return Math.min(
+    0.9,
+    Math.max(0.1, Number(localIntegrator?.shrinkFactor ?? globalIntegrator?.shrinkFactor ?? 0.5)),
+  );
+}
+
+function resolveMaxSubsteps(
+  localIntegrator: IntegratorConfig | undefined,
+  globalIntegrator: IntegratorConfig | undefined,
+): number {
+  return Math.max(
+    1,
+    Math.floor(Number(localIntegrator?.maxSubsteps ?? globalIntegrator?.maxSubsteps ?? 2_000_000)),
+  );
+}
+
+function resolveCollisionConfig(params: SystemParams): ResolvedNBodyConfig["collision"] {
+  const collisionCfg = params.dynamics?.collisionPolicy;
+  return {
+    enabled: Boolean(collisionCfg?.enabled),
+    minSeparation: Math.max(0, Number(collisionCfg?.minSeparation ?? 0)),
+    onCloseEncounter: collisionCfg?.onCloseEncounter === "abort" ? "abort" : "warn",
+  } as const;
 }
 
 export type KeyInputs = {

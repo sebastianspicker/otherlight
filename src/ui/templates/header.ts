@@ -1,35 +1,31 @@
 export function renderHeaderTemplate(): string {
   return `
     <header class="app-header">
-      <h1>Transit-Exomoon-Lightcurve-Simulator</h1>
-      <p class="help">
-        Conventions: radii and distances in metres (SI), times in seconds, angles in degrees (UI) / radians
-        (internal).
-      </p>
+      <div class="product-heading">
+        <h1>Transit Light-Curve Lab</h1>
+        <p>Explore how orbital geometry becomes measured light.</p>
+      </div>
 
-      <details class="help">
-        <summary>Measurement pipeline (Plot)</summary>
-        <p class="help">
-          <b>physical</b>: idealised instantaneous flux from geometric occultation.<br />
-          <b>measured</b>: optional boxcar smearing (cadence + sub-samples) plus optional instrument noise /
-          systematics with persistent state.
-        </p>
-      </details>
-
-      <div class="help">
-        <label class="inline" for="productModeSelect">
-          Product mode
-          <select id="productModeSelect" aria-label="Select product mode">
+      <nav class="mode-nav" aria-label="Primary workspace">
+        <button id="modeSimulationBtn" class="mode-nav__item" type="button" data-mode="simulation" aria-current="page">
+          Simulation
+        </button>
+        <button id="modeLabBtn" class="mode-nav__item" type="button" data-mode="lab">
+          Guided Labs
+        </button>
+        <label class="sr-only" for="productModeSelect">Workspace</label>
+        <select id="productModeSelect" class="sr-only" aria-hidden="true" tabindex="-1">
             <option value="simulation" selected>Simulation</option>
-            <option value="lab">Lab</option>
-          </select>
-        </label>
+            <option value="lab">Guided Labs</option>
+        </select>
+      </nav>
 
+      <section class="context-toolbar" aria-label="Current context">
         <label class="inline" for="uiModeSelect" data-product-mode="simulation">
-          UI mode
-          <select id="uiModeSelect" aria-label="Select UI mode">
-            <option value="normal" selected>Normal</option>
-            <option value="expert">Expert</option>
+          Controls
+          <select id="uiModeSelect" aria-label="Control level">
+            <option value="normal" selected>Essential</option>
+            <option value="expert">Advanced</option>
           </select>
         </label>
 
@@ -37,35 +33,25 @@ export function renderHeaderTemplate(): string {
           Lab type
           <select id="simModeSelect" aria-label="Select lab type">
             <option value="preset-lab" selected>Transit / exomoon lab</option>
-            <option value="binary-lab">Binary black-box lab</option>
-          </select>
-        </label>
-
-        <label class="inline" for="runtimeModeSelect" data-ui-tier="expert" data-product-mode="simulation">
-          Runtime mode
-          <select id="runtimeModeSelect" aria-label="Select runtime mode">
-            <option value="realtime" selected>realtime</option>
-            <option value="reference">reference (deterministic)</option>
+            <option value="binary-lab">Binary eclipse lab</option>
           </select>
         </label>
 
         <label class="inline" for="presetSelect" data-product-mode="simulation">
-          Preset
+          Preset scenario
           <select id="presetSelect" aria-label="Select preset"></select>
         </label>
-        <p id="presetDesc" class="help" data-product-mode="simulation"></p>
 
         <label class="inline" for="realSystemSelect" data-product-mode="simulation">
-          Real systems
+          Committed real system
           <select id="realSystemSelect" aria-label="Select real system"></select>
         </label>
-        <p id="realSystemMeta" class="help" data-product-mode="simulation"></p>
-
-        <p class="help" data-product-mode="lab">
-          Lab mode focuses on guided lessons and black-box reasoning. Simulation mode is for presets and
-          real systems without the didactic scaffolding.
+        <p id="presetDesc" class="context-description" data-product-mode="simulation"></p>
+        <p id="realSystemMeta" class="context-description mono" data-product-mode="simulation"></p>
+        <p class="context-description" data-product-mode="lab">
+          Predict, observe, test a hypothesis, and export your evidence.
         </p>
-      </div>
+      </section>
     </header>
   `;
 }

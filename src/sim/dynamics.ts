@@ -23,8 +23,9 @@ import { integrateToTimeWithConfig, unpackBodyArrays } from "./nbody/integrator"
 // Module-level singleton cache.  This is shared across all callers within
 // the same JS context.  Tests MUST call resetNBodyCache() in beforeEach to
 // prevent cross-test contamination via stale cache entries.
-let cacheKey = "";
+let activeNBodyCacheIdentity = "";
 let cache: NBodyCacheEntry[] = [];
+type ResolvedNBody = NonNullable<ReturnType<typeof resolveNBodyConfig>>;
 
 /**
  * Reset the module-level N-body cache.
@@ -32,7 +33,7 @@ let cache: NBodyCacheEntry[] = [];
  * stale cache hits if the key computation happens to collide.
  */
 export function resetNBodyCache(): void {
-  cacheKey = "";
+  activeNBodyCacheIdentity = "";
   cache = [];
 }
 
@@ -138,34 +139,49 @@ export function isNBodyEnabled(params: SystemParams): boolean {
 }
 
 export function getNBodyStateAt(params: SystemParams, t: number): { state: NBodyState; rBary: Vec3 } | null {
-  if (!Number.isFinite(t)) throw new Error("getNBodyStateAt: t must be finite.");
+  assertFiniteNBodyTime(t);
 
   const resolved = resolveNBodyConfig(params);
   if (!resolved) return null;
 
-  const { cfg, keyInputs } = resolved;
-  const key = makeCacheKey(cfg, keyInputs.planetEl, keyInputs.moonEl, keyInputs.perturbers);
-
-  if (key !== cacheKey || cache.length === 0) {
-    const init = computeInitialState(params, cfg, ANCHOR_TIME_SEC);
-    cacheKey = key;
-    cache = [{ t: init.t, state: cloneState(init) }];
-  }
-
-  const base = findClosestEntry(cache, t) ?? cache[0];
-  const state = integrateToTimeWithConfig({ state: base.state, tTarget: t, cfg });
+  ensureNBodyCache(params, resolved);
+  const state = integrateFromClosestCache(t, resolved.cfg);
 
   storeEntry(cache, state);
 
+  return { state, rBary: relativePlanetMoonBarycenter(state, resolved.cfg) };
+}
+
+function assertFiniteNBodyTime(t: number): void {
+  if (!Number.isFinite(t)) throw new Error("getNBodyStateAt: t must be finite.");
+}
+
+function ensureNBodyCache(params: SystemParams, resolved: ResolvedNBody): void {
+  const nextCacheIdentity = makeResolvedCacheIdentity(resolved);
+  if (nextCacheIdentity === activeNBodyCacheIdentity && cache.length > 0) return;
+
+  const init = computeInitialState(params, resolved.cfg, ANCHOR_TIME_SEC);
+  activeNBodyCacheIdentity = nextCacheIdentity;
+  cache = [{ t: init.t, state: cloneState(init) }];
+}
+
+function makeResolvedCacheIdentity(resolved: ResolvedNBody): string {
+  const { cfg, keyInputs } = resolved;
+  return makeCacheKey(cfg, keyInputs.planetEl, keyInputs.moonEl, keyInputs.perturbers);
+}
+
+function integrateFromClosestCache(t: number, cfg: ResolvedNBodyConfig): NBodyState {
+  const base = findClosestEntry(cache, t) ?? cache[0];
+  return integrateToTimeWithConfig({ state: base.state, tTarget: t, cfg });
+}
+
+function relativePlanetMoonBarycenter(state: NBodyState, cfg: ResolvedNBodyConfig): Vec3 {
   const muTot = cfg.muPlanet + cfg.muMoon;
   const hasMu = Number.isFinite(muTot) && muTot > 0;
-  const rBaryAbs = hasMu
-    ? vScale(vAdd(vScale(state.rP, cfg.muPlanet), vScale(state.rM, cfg.muMoon)), 1 / muTot)
-    : VEC3ZERO;
+  if (!hasMu) return VEC3ZERO;
 
-  const rBary = hasMu ? vSub(rBaryAbs, state.rS) : VEC3ZERO;
-
-  return { state, rBary };
+  const rBaryAbs = vScale(vAdd(vScale(state.rP, cfg.muPlanet), vScale(state.rM, cfg.muMoon)), 1 / muTot);
+  return vSub(rBaryAbs, state.rS);
 }
 
 export type { NBodyConservationDiagnostics } from "./nbody/types";

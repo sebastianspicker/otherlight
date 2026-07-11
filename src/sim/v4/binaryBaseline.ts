@@ -1,27 +1,58 @@
 import { resolveDetachedBinaryLuminosities } from "../../photometry/stellarBandFlux";
-import type { SimulationConfigV4 } from "./types";
+import type { PassbandId } from "../../core/types";
+import type { SimulationConfigV4, StarBodyV4 } from "./types";
+
+type DetachedBinaryStars = {
+  primary: StarBodyV4;
+  secondary: StarBodyV4;
+};
+
+function isDetachedBinaryLab(config: SimulationConfigV4): boolean {
+  return config.mode === "detached-binary-lab";
+}
+
+function detachedBinaryStars(config: SimulationConfigV4): DetachedBinaryStars | undefined {
+  const [primary, secondary] = config.bodies.stars;
+  return primary && secondary ? { primary, secondary } : undefined;
+}
+
+function isScientificBrowser(config: SimulationConfigV4): boolean {
+  return config.runtime?.executionMode === "scientific-browser";
+}
+
+function detachedBinaryFallbackPassband(config: SimulationConfigV4): PassbandId | undefined {
+  return isScientificBrowser(config) ? undefined : config.photometry?.limbDarkeningModel?.bandpass;
+}
+
+function detachedBinarySecondaryFallbackScale(config: SimulationConfigV4): number {
+  return isScientificBrowser(config) ? 0 : 0.3;
+}
+
+function canUseDetachedBinaryLuminositySource(config: SimulationConfigV4, source: string): boolean {
+  return !isScientificBrowser(config) || source === "physical-bandpass";
+}
+
+function positiveOrUndefined(value: number): number | undefined {
+  return value > 0 ? value : undefined;
+}
 
 export function detachedBinaryBaselineFlux(config: SimulationConfigV4): number | undefined {
-  if (config.mode !== "detached-binary-lab") return undefined;
-  const [starA, starB] = config.bodies.stars;
-  if (!starA || !starB) return undefined;
+  if (!isDetachedBinaryLab(config)) return undefined;
+  const stars = detachedBinaryStars(config);
+  if (!stars) return undefined;
 
   const resolved = resolveDetachedBinaryLuminosities({
-    primary: starA,
-    secondary: starB,
-    fallbackPassband:
-      config.runtime?.executionMode === "scientific-browser"
-        ? undefined
-        : config.photometry?.limbDarkeningModel?.bandpass,
-    secondaryFallbackLuminosityScale: config.runtime?.executionMode === "scientific-browser" ? 0 : 0.3,
+    primary: stars.primary,
+    secondary: stars.secondary,
+    fallbackPassband: detachedBinaryFallbackPassband(config),
+    secondaryFallbackLuminosityScale: detachedBinarySecondaryFallbackScale(config),
   });
 
-  if (config.runtime?.executionMode === "scientific-browser" && resolved.source !== "physical-bandpass") {
+  if (!canUseDetachedBinaryLuminositySource(config, resolved.source)) {
     return undefined;
   }
 
-  const total = resolved.primary + resolved.secondary;
-  return total > 0 ? total : undefined;
+  return positiveOrUndefined(resolved.primary + resolved.secondary);
 }
 
 export function displayFluxValueForConfig(config: SimulationConfigV4, flux: number): number {

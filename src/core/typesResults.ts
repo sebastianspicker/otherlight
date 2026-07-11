@@ -185,8 +185,10 @@ export type StepMeta = {
  * - fluxRingScattering: additive ring-scattering term (stellar units).
  *
  * Recommended invariant (Physical Model):
- *   fluxTotal = fluxStellarPreTransit * fluxTransitFactor + (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering)
- *   + fluxRingScattering
+ *   fluxTotal =
+ *     fluxStellarPreTransit * fluxTransitFactor +
+ *     fluxPlanetPhase + fluxMoonPhase +
+ *     fluxForwardScattering + fluxRingScattering + fluxRefraction
  *
  * Precision Note:
  * Due to IEEE 754 floating-point arithmetic, this equality holds only within a small numerical tolerance

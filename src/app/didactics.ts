@@ -35,21 +35,43 @@ export type DidacticsRuntimeState = {
 };
 
 export function ensureDidacticsConfig(system: SystemParams): SystemParams {
-  const prev = system.didactics ?? {};
   return {
     ...system,
-    didactics: {
-      ...prev,
-      enabled: prev.enabled ?? true,
-      activeLessonId: prev.activeLessonId ?? DEFAULT_LESSON_ID,
-      autoAssess: prev.autoAssess ?? true,
-      hintLevel: prev.hintLevel ?? "L1",
-      misconceptionChecks: { enabled: prev.misconceptionChecks?.enabled ?? true },
-      compareLabs: {
-        enabled: prev.compareLabs?.enabled ?? true,
-        autoInterpret: prev.compareLabs?.autoInterpret ?? true,
-      },
-    },
+    didactics: didacticsConfigWithDefaults(system.didactics),
+  };
+}
+
+function defaultWhenMissing<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+function didacticsConfigWithDefaults(
+  prev: SystemParams["didactics"],
+): NonNullable<SystemParams["didactics"]> {
+  const didactics = prev ?? {};
+  return {
+    ...didactics,
+    enabled: defaultWhenMissing(didactics.enabled, true),
+    activeLessonId: defaultWhenMissing(didactics.activeLessonId, DEFAULT_LESSON_ID),
+    autoAssess: defaultWhenMissing(didactics.autoAssess, true),
+    hintLevel: defaultWhenMissing(didactics.hintLevel, "L1"),
+    misconceptionChecks: misconceptionChecksWithDefaults(didactics.misconceptionChecks),
+    compareLabs: compareLabsWithDefaults(didactics.compareLabs),
+  };
+}
+
+function misconceptionChecksWithDefaults(
+  prev: NonNullable<SystemParams["didactics"]>["misconceptionChecks"],
+): NonNullable<NonNullable<SystemParams["didactics"]>["misconceptionChecks"]> {
+  return { enabled: defaultWhenMissing(prev?.enabled, true) };
+}
+
+function compareLabsWithDefaults(
+  prev: NonNullable<SystemParams["didactics"]>["compareLabs"],
+): NonNullable<NonNullable<SystemParams["didactics"]>["compareLabs"]> {
+  return {
+    enabled: defaultWhenMissing(prev?.enabled, true),
+    autoInterpret: defaultWhenMissing(prev?.autoInterpret, true),
   };
 }
 

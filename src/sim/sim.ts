@@ -25,12 +25,14 @@
 // - Optional limb darkening requires prepareSimulation() to be awaited for deterministic usage.
 
 import type {
+  BrightnessPatch,
   StepAdvancedTimingDiagnostics,
   StepResult,
   StepTimingDiagnostics,
   SystemParams,
 } from "../core/types";
 import { G_SI, toFiniteNumber } from "../core/units";
+import type { Vec3 } from "../physics/vec3";
 import { assertStepInputs } from "./validation";
 import {
   kickoffOptionalLimbDarkeningIfRequested,
@@ -62,6 +64,57 @@ import { resolvePlanetOrbitForKinematics } from "./kinematics";
 export { preloadOptionalLimbDarkening } from "./optionalLimbDarkening";
 export { sampleOrbitSky, sampleMoonOrbitSkyAbsolute } from "./sampling";
 export type { OrbitSampleOptions } from "./sampling";
+
+type ObserverDir = ReturnType<typeof getObserverDir>;
+type BodyKinematicsState = ReturnType<typeof computeBodyKinematics>;
+type OcculterSet = ReturnType<typeof buildOcculters>;
+type AdditiveFluxComponents = ReturnType<typeof computeAdditiveFluxComponents>;
+type StepObservablesResult = ReturnType<typeof computeStepObservables>;
+type TransitTimingResult = ReturnType<typeof computeTransitTimingDiagnostics>;
+type DynamicSystemState = ReturnType<typeof resolveDynamicSystemState>;
+type RelativityConfig = ReturnType<typeof normalizeRelativityParams>;
+type TimekeepingConfig = NonNullable<NonNullable<SystemParams["observer"]>["timekeeping"]>;
+type NBodySample = NonNullable<ReturnType<typeof getNBodyStateAt>>;
+
+type StepGeometry = {
+  observerDir: ObserverDir;
+  kin: BodyKinematicsState;
+  occulters: OcculterSet;
+};
+
+type StepFluxTerms = {
+  baselineFluxUsed: number;
+  fluxTransitFactor: number;
+  fluxStellarPreTransit: number;
+  fluxTotal: number;
+  fluxStellarVar: number;
+  fluxPlanetPhase: number;
+  fluxMoonPhase: number;
+  fluxForwardScattering: number;
+  fluxRingScattering: number;
+  fluxRefraction: number;
+  additive: AdditiveFluxComponents;
+};
+
+type StepTimingBundle = {
+  exoDiag: ReturnType<typeof computeExoDiagnostics>;
+  dynamicTiming: TransitTimingResult;
+  advancedTiming: StepAdvancedTimingDiagnostics | undefined;
+  observables: StepObservablesResult;
+  timing: StepTimingDiagnostics | undefined;
+  conservation: NonNullable<StepObservablesResult>["conservation"] | undefined;
+};
+
+type AdvancedTimingContext = {
+  params: SystemParams;
+  tObsSec: number;
+  observerDir: ObserverDir;
+  clockOffsetSec: number;
+  rel: RelativityConfig;
+  mu: number | undefined;
+  dynamic: DynamicSystemState;
+  closeEncounterDistance: number | undefined;
+};
 
 function mapTimingSolveDiagnostics(
   timingSolve: ReturnType<typeof computeBodyKinematics>["timingSolve"],
@@ -102,16 +155,33 @@ function mapTimingSolveDiagnostics(
 function resolveObserverClockOffsetSec(params: SystemParams, tObsSec: number): number {
   const tk = params.observer?.timekeeping;
   if (!tk?.enabled) return 0;
-  const constant = Number.isFinite(tk.barycentricOffsetSec) ? (tk.barycentricOffsetSec as number) : 0;
-  const amp = Number.isFinite(tk.periodicErrorAmpSec) ? (tk.periodicErrorAmpSec as number) : 0;
-  const periodSec = Number.isFinite(tk.periodSec) ? (tk.periodSec as number) : Number.NaN;
-  const phaseSec = Number.isFinite(tk.phaseSec) ? (tk.phaseSec as number) : 0;
-  const periodic =
-    Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0
-      ? amp * Math.sin((2 * Math.PI * (tObsSec - phaseSec)) / periodSec)
-      : 0;
-  const offset = constant + periodic;
-  return Number.isFinite(offset) ? offset : 0;
+
+  return finiteClockOffset(clockConstantOffsetSec(tk) + periodicClockOffsetSec(tk, tObsSec));
+}
+
+function clockConstantOffsetSec(tk: TimekeepingConfig): number {
+  return finiteConfigNumber(tk.barycentricOffsetSec, 0);
+}
+
+function periodicClockOffsetSec(tk: TimekeepingConfig, tObsSec: number): number {
+  const amp = finiteConfigNumber(tk.periodicErrorAmpSec, 0);
+  const periodSec = finiteConfigNumber(tk.periodSec, Number.NaN);
+  if (!hasPeriodicClockOffset(amp, periodSec)) return 0;
+
+  const phaseSec = finiteConfigNumber(tk.phaseSec, 0);
+  return amp * Math.sin((2 * Math.PI * (tObsSec - phaseSec)) / periodSec);
+}
+
+function hasPeriodicClockOffset(amp: number, periodSec: number): boolean {
+  return Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0;
+}
+
+function finiteConfigNumber(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? (value as number) : fallback;
+}
+
+function finiteClockOffset(offsetSec: number): number {
+  return Number.isFinite(offsetSec) ? offsetSec : 0;
 }
 
 function applyClockOffsetToTiming(
@@ -152,112 +222,439 @@ function currentCloseEncounterDistance(params: SystemParams, tObsSec: number): n
   if (!isNBodyEnabled(params)) return undefined;
   const sample = getNBodyStateAt(params, tObsSec);
   if (!sample) return undefined;
-  const bodies = [
-    sample.state.rS,
-    sample.state.rP,
-    sample.state.rM,
-    ...(sample.state.perturbers?.map((p) => p.r) ?? []),
-  ];
+
+  return closestFinitePairDistance(closeEncounterBodies(sample));
+}
+
+function closeEncounterBodies(sample: NBodySample): Vec3[] {
+  return [sample.state.rS, sample.state.rP, sample.state.rM, ...closeEncounterPerturberBodies(sample)];
+}
+
+function closeEncounterPerturberBodies(sample: NBodySample): Vec3[] {
+  return sample.state.perturbers?.map((perturber) => perturber.r) ?? [];
+}
+
+function closestFinitePairDistance(bodies: Vec3[]): number | undefined {
   let best = Number.POSITIVE_INFINITY;
   for (let i = 0; i < bodies.length; i++) {
     for (let j = i + 1; j < bodies.length; j++) {
-      const dx = bodies[j].x - bodies[i].x;
-      const dy = bodies[j].y - bodies[i].y;
-      const dz = bodies[j].z - bodies[i].z;
-      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (Number.isFinite(d) && d < best) best = d;
+      best = smallerFiniteDistance(best, distanceBetween(bodies[i], bodies[j]));
     }
   }
   return Number.isFinite(best) ? best : undefined;
 }
 
+function distanceBetween(a: Vec3, b: Vec3): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dz = b.z - a.z;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+function smallerFiniteDistance(current: number, candidate: number): number {
+  return Number.isFinite(candidate) && candidate < current ? candidate : current;
+}
+
 function computeAdvancedTimingDiagnostics(
   params: SystemParams,
   tObsSec: number,
-  observerDir: ReturnType<typeof getObserverDir>,
-  kin: ReturnType<typeof computeBodyKinematics>,
+  observerDir: ObserverDir,
+  kin: BodyKinematicsState,
   clockOffsetSec: number,
 ): StepAdvancedTimingDiagnostics | undefined {
+  const context = advancedTimingContext(params, tObsSec, observerDir, kin, clockOffsetSec);
+  const out = advancedTimingOutput(context);
+  return hasAdvancedTimingOutput(out) ? out : undefined;
+}
+
+function advancedTimingContext(
+  params: SystemParams,
+  tObsSec: number,
+  observerDir: ObserverDir,
+  kin: BodyKinematicsState,
+  clockOffsetSec: number,
+): AdvancedTimingContext {
   const rel = normalizeRelativityParams(params.dynamics?.relativity);
   const mu = deriveCentralMu(params, tObsSec);
   const dynamic = resolveDynamicSystemState({ system: params, tObs: tObsSec, observerDir, kinAtT: kin });
-  const validityFlags: string[] = [];
 
-  const einsteinPlanetSec =
-    rel.einsteinDelay && mu
-      ? einsteinDelaySurrogateSec({
-          r: dynamic.planet.r,
-          v: dynamic.planet.v,
-          mu,
-          c: rel.c,
-          tObs: tObsSec,
-          tRef: rel.timingRefSec,
-        })
-      : undefined;
-  const einsteinMoonSec =
-    rel.einsteinDelay && mu && dynamic.moon
-      ? einsteinDelaySurrogateSec({
-          r: dynamic.moon.r,
-          v: dynamic.moon.v,
-          mu,
-          c: rel.c,
-          tObs: tObsSec,
-          tRef: rel.timingRefSec,
-        })
-      : undefined;
+  return {
+    params,
+    tObsSec,
+    observerDir,
+    clockOffsetSec,
+    rel,
+    mu,
+    dynamic,
+    closeEncounterDistance: currentCloseEncounterDistance(params, tObsSec),
+  };
+}
 
-  const lightBendingPlanetRad =
-    rel.lightBending && mu
-      ? lightBendingAngleRad({
-          r: dynamic.planet.r,
-          observerDir,
-          mu,
-          c: rel.c,
-          minImpact: rel.shapiroMinImpact,
-        })
-      : undefined;
-  const lightBendingMoonRad =
-    rel.lightBending && mu && dynamic.moon
-      ? lightBendingAngleRad({
-          r: dynamic.moon.r,
-          observerDir,
-          mu,
-          c: rel.c,
-          minImpact: rel.shapiroMinImpact,
-        })
-      : undefined;
-
-  const closeEncounterDistance = currentCloseEncounterDistance(params, tObsSec);
-
-  if ((rel.einsteinDelay || rel.lightBending) && validityFlags.indexOf("surrogate-model") === -1) {
-    validityFlags.push("surrogate-model");
-  }
-  if (Number.isFinite(clockOffsetSec) && clockOffsetSec !== 0) validityFlags.push("clock-frame-mismatch");
-  const minSeparation = params.dynamics?.collisionPolicy?.minSeparation;
-  if (
-    Number.isFinite(closeEncounterDistance) &&
-    Number.isFinite(minSeparation) &&
-    (closeEncounterDistance as number) < (minSeparation as number)
-  ) {
-    validityFlags.push("close-encounter");
-  }
-
+function advancedTimingOutput(context: AdvancedTimingContext): StepAdvancedTimingDiagnostics {
   const out: StepAdvancedTimingDiagnostics = {
-    einsteinPlanetSec: Number.isFinite(einsteinPlanetSec) ? einsteinPlanetSec : undefined,
-    einsteinMoonSec: Number.isFinite(einsteinMoonSec) ? einsteinMoonSec : undefined,
-    barycentricClockOffsetSec:
-      Number.isFinite(clockOffsetSec) && clockOffsetSec !== 0 ? clockOffsetSec : undefined,
-    lightBendingPlanetRad: Number.isFinite(lightBendingPlanetRad) ? lightBendingPlanetRad : undefined,
-    lightBendingMoonRad: Number.isFinite(lightBendingMoonRad) ? lightBendingMoonRad : undefined,
-    closeEncounterDistance: Number.isFinite(closeEncounterDistance) ? closeEncounterDistance : undefined,
-    validityFlags,
+    einsteinPlanetSec: einsteinDelayForBody(context, context.dynamic.planet),
+    einsteinMoonSec: einsteinDelayForBody(context, context.dynamic.moon),
+    barycentricClockOffsetSec: finiteNonZeroOrUndefined(context.clockOffsetSec),
+    lightBendingPlanetRad: lightBendingForBody(context, context.dynamic.planet),
+    lightBendingMoonRad: lightBendingForBody(context, context.dynamic.moon),
+    closeEncounterDistance: finiteNumberOrUndefined(context.closeEncounterDistance),
+    validityFlags: advancedValidityFlags(context),
   };
 
-  return Object.values(out).some((value) =>
-    Array.isArray(value) ? value.length > 0 : typeof value === "number",
-  )
-    ? out
-    : undefined;
+  return out;
+}
+
+function einsteinDelayForBody(
+  context: AdvancedTimingContext,
+  body: DynamicSystemState["planet"] | undefined,
+): number | undefined {
+  if (!context.rel.einsteinDelay || !context.mu || !body) return undefined;
+
+  return finiteNumberOrUndefined(
+    einsteinDelaySurrogateSec({
+      r: body.r,
+      v: body.v,
+      mu: context.mu,
+      c: context.rel.c,
+      tObs: context.tObsSec,
+      tRef: context.rel.timingRefSec,
+    }),
+  );
+}
+
+function lightBendingForBody(
+  context: AdvancedTimingContext,
+  body: DynamicSystemState["planet"] | undefined,
+): number | undefined {
+  if (!context.rel.lightBending || !context.mu || !body) return undefined;
+
+  return finiteNumberOrUndefined(
+    lightBendingAngleRad({
+      r: body.r,
+      observerDir: context.observerDir,
+      mu: context.mu,
+      c: context.rel.c,
+      minImpact: context.rel.shapiroMinImpact,
+    }),
+  );
+}
+
+function advancedValidityFlags(context: AdvancedTimingContext): string[] {
+  const flags: string[] = [];
+  addFlagIf(flags, "surrogate-model", usesSurrogateTimingModel(context.rel));
+  addFlagIf(flags, "clock-frame-mismatch", hasClockFrameMismatch(context.clockOffsetSec));
+  addFlagIf(flags, "close-encounter", hasCloseEncounter(context));
+  return flags;
+}
+
+function usesSurrogateTimingModel(rel: RelativityConfig): boolean {
+  return rel.einsteinDelay || rel.lightBending;
+}
+
+function hasClockFrameMismatch(clockOffsetSec: number): boolean {
+  return Number.isFinite(clockOffsetSec) && clockOffsetSec !== 0;
+}
+
+function hasCloseEncounter(context: AdvancedTimingContext): boolean {
+  const minSeparation = context.params.dynamics?.collisionPolicy?.minSeparation;
+  if (!Number.isFinite(context.closeEncounterDistance)) return false;
+  if (!Number.isFinite(minSeparation)) return false;
+  return (context.closeEncounterDistance as number) < (minSeparation as number);
+}
+
+function addFlagIf(flags: string[], flag: string, enabled: boolean): void {
+  if (enabled && flags.indexOf(flag) === -1) flags.push(flag);
+}
+
+function finiteNumberOrUndefined(value: number | undefined): number | undefined {
+  return Number.isFinite(value) ? (value as number) : undefined;
+}
+
+function finiteNonZeroOrUndefined(value: number): number | undefined {
+  return Number.isFinite(value) && value !== 0 ? value : undefined;
+}
+
+function hasAdvancedTimingOutput(out: StepAdvancedTimingDiagnostics): boolean {
+  return Object.values(out).some(isAdvancedTimingValuePresent);
+}
+
+function isAdvancedTimingValuePresent(value: unknown): boolean {
+  return Array.isArray(value) ? value.length > 0 : typeof value === "number";
+}
+
+function buildStepGeometry(params: SystemParams, t: number): StepGeometry {
+  const observerDir = getObserverDir(params);
+  assertTimeObserverContract({ system: params, tObs: t, observerDir });
+
+  const kin = computeBodyKinematics(params, t, observerDir);
+  return {
+    observerDir,
+    kin,
+    occulters: buildOcculters(params, kin),
+  };
+}
+
+function stepSpotPatches(
+  params: SystemParams,
+  t: number,
+  observerDir: ObserverDir,
+): BrightnessPatch[] | undefined {
+  const phot = params.star.photometry;
+  const evolvedPatches = evolvedSpotPatches(phot, t);
+  if (!usesProjectedSurfacePatches(params, phot)) return evolvedPatches;
+
+  return projectSurfacePatchesToSky({
+    patches: evolvedPatches,
+    t,
+    tRef: phot?.spotEvolution?.tRef,
+    observerDir,
+    rStar: params.star.r,
+    model: phot?.stellarSurface,
+  });
+}
+
+function evolvedSpotPatches(
+  phot: SystemParams["star"]["photometry"],
+  t: number,
+): BrightnessPatch[] | undefined {
+  const patches = phot?.brightnessPatches;
+  const spotModel = phot?.spotEvolution;
+  if (spotModel?.enabled && Array.isArray(patches) && patches.length > 0) {
+    return evolveBrightnessPatches({ patches, t, model: spotModel });
+  }
+  return patches;
+}
+
+function usesProjectedSurfacePatches(
+  params: SystemParams,
+  phot: SystemParams["star"]["photometry"],
+): boolean {
+  return (
+    isPhysicsFeatureEnabled(params, "stellarSurface") &&
+    Boolean(phot?.stellarSurface?.enabled && phot.stellarSurface.useSurfacePatches)
+  );
+}
+
+function computeStepFluxTerms(params: SystemParams, t: number, geometry: StepGeometry): StepFluxTerms {
+  const phot = params.star.photometry;
+  const spotPatches = stepSpotPatches(params, t, geometry.observerDir);
+  const fluxTransitFactor = computeTransitFlux(params, geometry.occulters, geometry.kin, {
+    brightnessPatchesOverride: spotPatches,
+  });
+  const additive = computeAdditiveFluxComponents(params, t, geometry.observerDir, geometry.kin);
+
+  const baselineFluxUsed = toFiniteNumber(phot?.baselineFlux, 1.0);
+  const fluxStellarVar = additive.fluxStellarVarOnly;
+  const fluxPlanetPhase = additive.fluxPlanetOnly;
+  const fluxMoonPhase = additive.fluxMoonOnly;
+  const fluxForwardScattering = additive.fluxForwardScatteringOnly;
+  const fluxRingScattering = additive.fluxRingScatteringOnly;
+  const fluxRefraction = additive.fluxRefractionOnly;
+  // Patches are forwarded to the transit integrator; do not multiply them into the stellar baseline again.
+  const fluxStellarPreTransit = baselineFluxUsed + fluxStellarVar;
+  const fluxTotal = composedFluxTotal({
+    fluxStellarPreTransit,
+    fluxTransitFactor,
+    fluxPlanetPhase,
+    fluxMoonPhase,
+    fluxForwardScattering,
+    fluxRingScattering,
+    fluxRefraction,
+  });
+
+  return {
+    baselineFluxUsed,
+    fluxTransitFactor,
+    fluxStellarPreTransit,
+    fluxTotal,
+    fluxStellarVar,
+    fluxPlanetPhase,
+    fluxMoonPhase,
+    fluxForwardScattering,
+    fluxRingScattering,
+    fluxRefraction,
+    additive,
+  };
+}
+
+function composedFluxTotal(terms: {
+  fluxStellarPreTransit: number;
+  fluxTransitFactor: number;
+  fluxPlanetPhase: number;
+  fluxMoonPhase: number;
+  fluxForwardScattering: number;
+  fluxRingScattering: number;
+  fluxRefraction: number;
+}): number {
+  return (
+    terms.fluxStellarPreTransit * terms.fluxTransitFactor +
+    (terms.fluxPlanetPhase +
+      terms.fluxMoonPhase +
+      terms.fluxForwardScattering +
+      terms.fluxRingScattering +
+      terms.fluxRefraction)
+  );
+}
+
+function computeStepTimingBundle(params: SystemParams, t: number, geometry: StepGeometry): StepTimingBundle {
+  const exoDiag = computeExoDiagnostics(params, t, geometry.observerDir, geometry.kin);
+  const observablesRaw = computeStepObservables(params, t, geometry.observerDir, geometry.kin);
+  const dynamicTiming = computeTransitTimingDiagnostics(params, t, geometry.observerDir, geometry.kin);
+  const clockOffsetSec = resolveObserverClockOffsetSec(params, t);
+  const advancedTiming = computeAdvancedTimingDiagnostics(
+    params,
+    t,
+    geometry.observerDir,
+    geometry.kin,
+    clockOffsetSec,
+  );
+  const timing = resolvedStepTiming(observablesRaw, dynamicTiming, advancedTiming, clockOffsetSec);
+
+  return {
+    exoDiag,
+    dynamicTiming,
+    advancedTiming,
+    observables: observablesWithTiming(observablesRaw, timing),
+    timing,
+    conservation: observablesRaw?.conservation,
+  };
+}
+
+function resolvedStepTiming(
+  observablesRaw: StepObservablesResult,
+  dynamicTiming: TransitTimingResult,
+  advancedTiming: StepAdvancedTimingDiagnostics | undefined,
+  clockOffsetSec: number,
+): StepTimingDiagnostics | undefined {
+  const mergedTiming = timingWithAdvanced(
+    {
+      ...(observablesRaw?.timing ?? {}),
+      ...(dynamicTiming.timing ?? {}),
+    },
+    advancedTiming,
+  );
+  const timingWithClock = applyClockOffsetToTiming(mergedTiming, clockOffsetSec);
+  return hasFiniteTimingNumber(timingWithClock) ? timingWithClock : undefined;
+}
+
+function timingWithAdvanced(
+  timing: StepTimingDiagnostics,
+  advancedTiming: StepAdvancedTimingDiagnostics | undefined,
+): StepTimingDiagnostics {
+  return {
+    ...timing,
+    ...advancedTimingFields(advancedTiming),
+  };
+}
+
+function advancedTimingFields(
+  advancedTiming: StepAdvancedTimingDiagnostics | undefined,
+): Partial<StepTimingDiagnostics> {
+  const fields: Partial<StepTimingDiagnostics> = {};
+  if (advancedTiming?.einsteinPlanetSec !== undefined)
+    fields.einsteinPlanetSec = advancedTiming.einsteinPlanetSec;
+  if (advancedTiming?.einsteinMoonSec !== undefined) fields.einsteinMoonSec = advancedTiming.einsteinMoonSec;
+  if (advancedTiming?.barycentricClockOffsetSec !== undefined) {
+    fields.barycentricClockOffsetSec = advancedTiming.barycentricClockOffsetSec;
+  }
+  return fields;
+}
+
+function hasFiniteTimingNumber(timing: StepTimingDiagnostics | undefined): boolean {
+  return Object.values(timing ?? {}).some((value) => typeof value === "number" && Number.isFinite(value));
+}
+
+function observablesWithTiming(
+  observablesRaw: StepObservablesResult,
+  timing: StepTimingDiagnostics | undefined,
+): StepObservablesResult {
+  if (!observablesRaw) return undefined;
+  return {
+    ...observablesRaw,
+    timing,
+  };
+}
+
+function buildStepResult(
+  t: number,
+  geometry: StepGeometry,
+  flux: StepFluxTerms,
+  timing: StepTimingBundle,
+): StepResult {
+  return {
+    fluxTotal: toFiniteNumber(flux.fluxTotal, 1.0),
+    fluxTransitFactor: flux.fluxTransitFactor,
+    fluxStellarPreTransit: flux.fluxStellarPreTransit,
+    fluxStellarVar: flux.fluxStellarVar,
+    fluxPlanetPhase: flux.fluxPlanetPhase,
+    fluxMoonPhase: flux.fluxMoonPhase,
+    fluxForwardScattering: flux.fluxForwardScattering,
+    fluxRingScattering: flux.fluxRingScattering,
+    fluxRefraction: flux.fluxRefraction,
+    planetSky: geometry.kin.planetSky,
+    moonSky: geometry.kin.moonSky,
+    meta: buildStepMeta(t, geometry, flux, timing),
+  };
+}
+
+function buildStepMeta(
+  t: number,
+  geometry: StepGeometry,
+  flux: StepFluxTerms,
+  timing: StepTimingBundle,
+): NonNullable<StepResult["meta"]> {
+  return {
+    t,
+    nOcculters: geometry.occulters.length,
+    planetVisibleFraction: flux.additive.planetVisibleFraction,
+    moonVisibleFraction: flux.additive.moonVisibleFraction,
+    stellarVariabilityFlux: flux.fluxStellarVar,
+    forwardScatteringFlux: flux.fluxForwardScattering,
+    ringScatteringFlux: flux.fluxRingScattering,
+    baselineFluxUsed: flux.baselineFluxUsed,
+    vPlanetSky: timing.exoDiag.vPlanetSky,
+    vPlanetSkyRef: timing.exoDiag.vPlanetSkyRef,
+    tdvRatio: timing.exoDiag.tdvRatio,
+    bPlanet: timing.exoDiag.bPlanet,
+    bMoon: timing.exoDiag.bMoon,
+    observables: timing.observables,
+    timing: timing.timing,
+    advancedTiming: timing.advancedTiming,
+    eventTimingConvergence: timing.dynamicTiming.eventTimingConvergence,
+    timingConvergence: mapTimingSolveDiagnostics(geometry.kin.timingSolve),
+    conservation: timing.conservation,
+    fluxDecomposition: fluxDecomposition(flux),
+  };
+}
+
+function fluxDecomposition(
+  flux: StepFluxTerms,
+): NonNullable<NonNullable<StepResult["meta"]>["fluxDecomposition"]> {
+  return {
+    stellarA: flux.baselineFluxUsed * flux.fluxTransitFactor,
+    stellarB: 0,
+    binaryEclipseTerms: flux.fluxTransitFactor,
+    additivePlanetary: flux.fluxPlanetPhase + flux.fluxForwardScattering + flux.fluxRingScattering,
+    additiveLunar: flux.fluxMoonPhase,
+    instrumental: 0,
+    stellarPreTransit: flux.fluxStellarPreTransit,
+    stellarVariability: flux.fluxStellarVar,
+    transitFactor: flux.fluxTransitFactor,
+    planetPhase: flux.fluxPlanetPhase,
+    moonPhase: flux.fluxMoonPhase,
+    forwardScattering: flux.fluxForwardScattering,
+    ringScattering: flux.fluxRingScattering,
+    refraction: flux.fluxRefraction,
+    total: toFiniteNumber(flux.fluxTotal, 1.0),
+  };
+}
+
+function attachDidacticSignals(params: SystemParams, stepBase: StepResult): StepResult {
+  const didacticsHook = getDidacticsHook();
+  const didacticSignals = didacticsHook ? didacticsHook(params, stepBase) : undefined;
+  return didacticSignals && stepBase.meta
+    ? { ...stepBase, meta: { ...stepBase.meta, didacticSignals } }
+    : stepBase;
 }
 
 /**
@@ -275,152 +672,12 @@ function computeAdvancedTimingDiagnostics(
 export function stepSystem(params: SystemParams, t: number): StepResult {
   assertStepInputs(params, t);
 
-  // Best-effort background load so later steps can use LD if caller forgot to await prepareSimulation().
   kickoffOptionalLimbDarkeningIfRequested(params);
 
-  const observerDir = getObserverDir(params);
-  assertTimeObserverContract({ system: params, tObs: t, observerDir });
-  const kin = computeBodyKinematics(params, t, observerDir);
-  const occulters = buildOcculters(params, kin);
-
-  const phot = params.star.photometry;
-  const spotModel = phot?.spotEvolution;
-  const evolvedPatches =
-    spotModel?.enabled && Array.isArray(phot?.brightnessPatches) && phot.brightnessPatches.length > 0
-      ? evolveBrightnessPatches({ patches: phot.brightnessPatches, t, model: spotModel })
-      : phot?.brightnessPatches;
-  const spotPatches =
-    isPhysicsFeatureEnabled(params, "stellarSurface") &&
-    phot?.stellarSurface?.enabled &&
-    phot.stellarSurface.useSurfacePatches
-      ? projectSurfacePatchesToSky({
-          patches: evolvedPatches,
-          t,
-          tRef: spotModel?.tRef,
-          observerDir,
-          rStar: params.star.r,
-          model: phot.stellarSurface,
-        })
-      : evolvedPatches;
-  // BUG FIX: Brightness patches are forwarded to the transit integrator via
-  // brightnessPatchesOverride (below), which already accounts for their
-  // effect internally.  Previously, spotFluxFactor was also computed from
-  // the same patches and multiplied into the pre-transit baseline, causing
-  // the patch effect to be double-counted.  Since patches are always
-  // forwarded to the transit integrator, spotFluxFactor must be 1 here.
-  const spotFluxFactor = 1;
-
-  // Multiplicative stellar attenuation factor in [0,1].
-  const fluxTransitFactor = computeTransitFlux(params, occulters, kin, {
-    brightnessPatchesOverride: spotPatches,
-  });
-
-  // Additive (non-stellar-surface) terms and stellar variability term.
-  const additive = computeAdditiveFluxComponents(params, t, observerDir, kin);
-
-  const baselineFluxUsed = toFiniteNumber(phot?.baselineFlux, 1.0);
-  const fluxStellarVar = additive.fluxStellarVarOnly;
-  const fluxPlanetPhase = additive.fluxPlanetOnly;
-  const fluxMoonPhase = additive.fluxMoonOnly;
-  const fluxForwardScattering = additive.fluxForwardScatteringOnly;
-  const fluxRingScattering = additive.fluxRingScatteringOnly;
-  const fluxRefraction = additive.fluxRefractionOnly;
-
-  const fluxStellarPreTransit = baselineFluxUsed * spotFluxFactor + fluxStellarVar;
-
-  // Physically consistent composition: stellar term is attenuated, additive terms are not.
-  // Assumption: Stellar variability is photospheric.
-  const fluxTotal =
-    fluxStellarPreTransit * fluxTransitFactor +
-    (fluxPlanetPhase + fluxMoonPhase + fluxForwardScattering + fluxRingScattering + fluxRefraction);
-
-  const exoDiag = computeExoDiagnostics(params, t, observerDir, kin);
-  const observablesRaw = computeStepObservables(params, t, observerDir, kin);
-  const dynamicTiming = computeTransitTimingDiagnostics(params, t, observerDir, kin);
-  const clockOffsetSec = resolveObserverClockOffsetSec(params, t);
-  const mergedTiming: StepTimingDiagnostics = {
-    ...(observablesRaw?.timing ?? {}),
-    ...(dynamicTiming.timing ?? {}),
-  };
-  const advancedTiming = computeAdvancedTimingDiagnostics(params, t, observerDir, kin, clockOffsetSec);
-  if (advancedTiming?.einsteinPlanetSec !== undefined)
-    mergedTiming.einsteinPlanetSec = advancedTiming.einsteinPlanetSec;
-  if (advancedTiming?.einsteinMoonSec !== undefined)
-    mergedTiming.einsteinMoonSec = advancedTiming.einsteinMoonSec;
-  if (advancedTiming?.barycentricClockOffsetSec !== undefined) {
-    mergedTiming.barycentricClockOffsetSec = advancedTiming.barycentricClockOffsetSec;
-  }
-  const timingWithClock = applyClockOffsetToTiming(mergedTiming, clockOffsetSec);
-  const timing = Object.values(timingWithClock ?? {}).some((v) => typeof v === "number" && Number.isFinite(v))
-    ? timingWithClock
-    : undefined;
-  const observables = observablesRaw
-    ? {
-        ...observablesRaw,
-        timing,
-      }
-    : undefined;
-  const conservation = observablesRaw?.conservation;
-
-  const stepBase: StepResult = {
-    // UI robustness: never return NaN/Inf; fail-open to 1.0 (normalized no-event level).
-    fluxTotal: toFiniteNumber(fluxTotal, 1.0),
-    fluxTransitFactor,
-    fluxStellarPreTransit,
-    fluxStellarVar,
-    fluxPlanetPhase,
-    fluxMoonPhase,
-    fluxForwardScattering,
-    fluxRingScattering,
-    fluxRefraction,
-    planetSky: kin.planetSky,
-    moonSky: kin.moonSky,
-    meta: {
-      t,
-      nOcculters: occulters.length,
-      planetVisibleFraction: additive.planetVisibleFraction,
-      moonVisibleFraction: additive.moonVisibleFraction,
-      stellarVariabilityFlux: fluxStellarVar,
-      forwardScatteringFlux: fluxForwardScattering,
-      ringScatteringFlux: fluxRingScattering,
-      baselineFluxUsed,
-      vPlanetSky: exoDiag.vPlanetSky,
-      vPlanetSkyRef: exoDiag.vPlanetSkyRef,
-      tdvRatio: exoDiag.tdvRatio,
-      bPlanet: exoDiag.bPlanet,
-      bMoon: exoDiag.bMoon,
-      observables,
-      timing,
-      advancedTiming,
-      eventTimingConvergence: dynamicTiming.eventTimingConvergence,
-      timingConvergence: mapTimingSolveDiagnostics(kin.timingSolve),
-      conservation,
-      fluxDecomposition: {
-        stellarA: baselineFluxUsed * spotFluxFactor * fluxTransitFactor,
-        stellarB: 0, // V3 has no secondary star, so stellarB is always 0.
-        binaryEclipseTerms: fluxTransitFactor,
-        additivePlanetary: fluxPlanetPhase + fluxForwardScattering + fluxRingScattering,
-        additiveLunar: fluxMoonPhase,
-        instrumental: 0,
-        stellarPreTransit: fluxStellarPreTransit,
-        stellarVariability: fluxStellarVar,
-        transitFactor: fluxTransitFactor,
-        planetPhase: fluxPlanetPhase,
-        moonPhase: fluxMoonPhase,
-        forwardScattering: fluxForwardScattering,
-        ringScattering: fluxRingScattering,
-        refraction: fluxRefraction,
-        total: toFiniteNumber(fluxTotal, 1.0),
-      },
-    },
-  };
-
-  const didacticsHook = getDidacticsHook();
-  const didacticSignals = didacticsHook ? didacticsHook(params, stepBase) : undefined;
-
-  return didacticSignals && stepBase.meta
-    ? { ...stepBase, meta: { ...stepBase.meta, didacticSignals } }
-    : stepBase;
+  const geometry = buildStepGeometry(params, t);
+  const flux = computeStepFluxTerms(params, t, geometry);
+  const timing = computeStepTimingBundle(params, t, geometry);
+  return attachDidacticSignals(params, buildStepResult(t, geometry, flux, timing));
 }
 
 // Call once before a simulation loop if limbDarkeningModel is configured.

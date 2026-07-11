@@ -4,113 +4,186 @@
 
 import { clamp, toFiniteNumber } from "../core/units";
 import type { UiRefs } from "./refs";
+import { getParamUiMeta } from "./paramValidation";
 
 type WireParamSlidersOptions = {
   signal?: AbortSignal;
 };
 
+type NumericInputRange = {
+  input: HTMLInputElement;
+  min: number;
+  max: number;
+  step: number;
+};
+
+type NumericBounds = {
+  min: number;
+  max: number;
+};
+
+function listenerOptions(signal: AbortSignal | undefined): AddEventListenerOptions | undefined {
+  return signal ? { signal } : undefined;
+}
+
+function numberInputsInParamForm(): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
+}
+
+function numericBounds(input: HTMLInputElement): NumericBounds | undefined {
+  const minAttr = input.getAttribute("min");
+  const maxAttr = input.getAttribute("max");
+  if (minAttr === null || maxAttr === null) return undefined;
+
+  const min = Number(minAttr);
+  const max = Number(maxAttr);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || !(max > min)) return undefined;
+
+  return { min, max };
+}
+
+function numericStep(input: HTMLInputElement, bounds: NumericBounds): number {
+  const stepAttr = input.getAttribute("step");
+  const fallbackStep = (bounds.max - bounds.min) / 500;
+  const step = stepAttr ? Number(stepAttr) : fallbackStep;
+
+  return Number.isFinite(step) && step > 0 ? step : fallbackStep;
+}
+
+function numericInputRange(input: HTMLInputElement): NumericInputRange | undefined {
+  if (!input.id) return undefined;
+
+  const bounds = numericBounds(input);
+  if (!bounds) return undefined;
+
+  return {
+    input,
+    min: bounds.min,
+    max: bounds.max,
+    step: numericStep(input, bounds),
+  };
+}
+
+function dispatchNumberInputEvents(input: HTMLInputElement): void {
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function sliderValueForInput(range: NumericInputRange): string {
+  return String(clamp(toFiniteNumber(range.input.value, range.min), range.min, range.max));
+}
+
+function createSliderRow(range: NumericInputRange): { row: HTMLDivElement; slider: HTMLInputElement } {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const name = document.createElement("div");
+  name.className = "name";
+  const meta = getParamUiMeta(range.input);
+  name.textContent = meta.unit ? `${meta.label} (${meta.unit})` : meta.label;
+
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.id = `slider-${range.input.id}`;
+  slider.setAttribute("aria-label", `Adjust ${meta.label}`);
+  if (meta.help) slider.title = meta.help;
+  slider.min = String(range.min);
+  slider.max = String(range.max);
+  slider.step = String(range.step);
+  slider.value = sliderValueForInput(range);
+
+  row.appendChild(name);
+  row.appendChild(slider);
+
+  return { row, slider };
+}
+
+function clampedNumberValue(range: NumericInputRange, overrideEnabled: boolean): number | undefined {
+  const value = toFiniteNumber(range.input.value, NaN);
+  if (!Number.isFinite(value)) return undefined;
+
+  const physicalMin = range.min >= 0 ? 0 : -Infinity;
+  return overrideEnabled ? Math.max(physicalMin, value) : clamp(value, range.min, range.max);
+}
+
+function syncNumberFromSlider(input: HTMLInputElement, slider: HTMLInputElement): void {
+  input.value = slider.value;
+  dispatchNumberInputEvents(input);
+}
+
+function syncSliderFromNumber(
+  range: NumericInputRange,
+  slider: HTMLInputElement,
+  overrideEnabled: boolean,
+): void {
+  const value = toFiniteNumber(range.input.value, NaN);
+  const clampedValue = clampedNumberValue(range, overrideEnabled);
+  if (clampedValue === undefined) return;
+
+  if (!Object.is(clampedValue, value)) {
+    range.input.value = String(clampedValue);
+  }
+
+  slider.value = String(clamp(clampedValue, range.min, range.max));
+}
+
+function wireSliderRow(
+  range: NumericInputRange,
+  root: HTMLElement,
+  overrideEnabled: () => boolean,
+  options: AddEventListenerOptions | undefined,
+): void {
+  const { row, slider } = createSliderRow(range);
+
+  slider.addEventListener("input", () => syncNumberFromSlider(range.input, slider), options);
+  range.input.addEventListener(
+    "input",
+    () => syncSliderFromNumber(range, slider, overrideEnabled()),
+    options,
+  );
+
+  root.appendChild(row);
+}
+
+function clampRangeInput(range: NumericInputRange): void {
+  const value = toFiniteNumber(range.input.value, NaN);
+  if (!Number.isFinite(value)) return;
+
+  range.input.value = String(clamp(value, range.min, range.max));
+  range.input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function clampInputsToRanges(ranges: NumericInputRange[]): void {
+  for (const range of ranges) {
+    clampRangeInput(range);
+  }
+}
+
 export function wireParamSliders(r: UiRefs, options: WireParamSlidersOptions = {}): void {
   if (!r.sliderRootEl) return;
 
-  const listenerOptions = options.signal ? { signal: options.signal } : undefined;
-
+  const eventOptions = listenerOptions(options.signal);
   const isOverrideOn = () => Boolean(r.overrideModeEl?.checked);
+  const ranges = numberInputsInParamForm().flatMap((input) => {
+    const range = numericInputRange(input);
+    return range ? [range] : [];
+  });
 
   // Keep slider root visible; override changes only clamp policy.
   r.sliderRootEl.style.display = "";
   r.sliderRootEl.replaceChildren();
 
-  const nums = Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
-
-  for (const num of nums) {
-    if (!num.id) continue; // Skip inputs without an ID to avoid duplicate slider-param IDs
-
-    const minAttr = num.getAttribute("min");
-    const maxAttr = num.getAttribute("max");
-    if (minAttr === null || maxAttr === null) continue;
-
-    const min = Number(minAttr);
-    const max = Number(maxAttr);
-    if (!Number.isFinite(min) || !Number.isFinite(max) || !(max > min)) continue;
-
-    const stepAttr = num.getAttribute("step");
-    const step = stepAttr ? Number(stepAttr) : (max - min) / 500;
-    const safeStep = Number.isFinite(step) && step > 0 ? step : (max - min) / 500;
-
-    const row = document.createElement("div");
-    row.className = "row";
-
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = num.id || "param";
-
-    const range = document.createElement("input");
-    range.type = "range";
-    range.id = `slider-${num.id || "param"}`;
-    range.setAttribute("aria-label", num.id || "parameter slider");
-    range.min = String(min);
-    range.max = String(max);
-    range.step = String(safeStep);
-    range.value = String(clamp(toFiniteNumber(num.value, min), min, max));
-
-    // Slider -> Number
-    range.addEventListener(
-      "input",
-      () => {
-        num.value = range.value;
-        num.dispatchEvent(new Event("input", { bubbles: true }));
-        num.dispatchEvent(new Event("change", { bubbles: true }));
-      },
-      listenerOptions,
-    );
-
-    // Number -> Slider (and clamp when override OFF)
-    num.addEventListener(
-      "input",
-      () => {
-        const v = toFiniteNumber(num.value, NaN);
-        if (!Number.isFinite(v)) return;
-
-        // Even in override mode, enforce physical minimum constraints:
-        // - Radii and masses must be non-negative (min >= 0 attributes).
-        // - Periods must be positive.
-        // This prevents unphysical values like negative radii while still
-        // allowing the user to exceed the soft slider range.
-        const physicalMin = min >= 0 ? 0 : -Infinity;
-        const vc = isOverrideOn() ? Math.max(physicalMin, v) : clamp(v, min, max);
-        if (!Object.is(vc, v)) num.value = String(vc);
-
-        range.value = String(clamp(vc, min, max));
-      },
-      listenerOptions,
-    );
-
-    row.appendChild(name);
-    row.appendChild(range);
-    r.sliderRootEl.appendChild(row);
+  for (const range of ranges) {
+    wireSliderRow(range, r.sliderRootEl, isOverrideOn, eventOptions);
   }
 
   r.overrideModeEl?.addEventListener(
     "change",
     () => {
-      // When override is turned OFF: immediately clamp inputs into their ranges so slider/number stay consistent.
       if (!isOverrideOn()) {
-        for (const num of nums) {
-          const minAttr = num.getAttribute("min");
-          const maxAttr = num.getAttribute("max");
-          if (minAttr === null || maxAttr === null) continue;
-
-          const min = Number(minAttr);
-          const max = Number(maxAttr);
-
-          const v = toFiniteNumber(num.value, NaN);
-          if (Number.isFinite(min) && Number.isFinite(max) && Number.isFinite(v)) {
-            num.value = String(clamp(v, min, max));
-            num.dispatchEvent(new Event("input", { bubbles: true }));
-          }
-        }
+        clampInputsToRanges(ranges);
       }
     },
-    listenerOptions,
+    eventOptions,
   );
 }

@@ -6,24 +6,13 @@ import type {
   LessonPhaseSpec,
   LessonSpec,
   RubricCriterionV2,
-  StepResult,
-  SystemParams,
 } from "../core/types";
-import { toFiniteNumber } from "../core/units";
+import type { NumericSignals } from "./engineNumericSignals";
 import { getLessonStepPhases } from "./lessons";
 
-type NumericSignals = {
-  bPlanet: number;
-  bMoon: number;
-  fluxTransitFactor: number;
-  tdvRatio: number;
-  rvStar: number;
-  rvPlanet: number;
-  depthApprox: number;
-  depthObserved: number;
-  combinedFluxDrop: number;
-  moonLeadLagSec: number;
-};
+export { collectNumericSignals } from "./engineNumericSignals";
+
+type LessonCheckRule = LessonSpec["steps"][number]["checks"][number];
 
 const DEFAULT_RUBRIC_CRITERIA: RubricCriterionV2[] = [
   { id: "check-pass-rate", label: "Check pass rate", weight: 0.7, metric: "check-pass-rate" },
@@ -35,11 +24,57 @@ const DEFAULT_RUBRIC_CRITERIA: RubricCriterionV2[] = [
   },
 ];
 
+const PASSED_STATUS_BY_SIGNAL: Partial<Record<LessonCheckRule["signal"], string>> = {
+  bPlanet: "The main transit chord is in the target geometry.",
+  bMoon: "The moon is crossing the star from the learner's line of sight.",
+  moonLeadLagSec: "The moon signal is temporally separated from the planet dip.",
+  combinedFluxDrop: "The combined stellar light curve shows a measurable eclipse.",
+  rvStar: "The stellar reflex velocity is large enough to be discussed.",
+  tdvRatio: "Transit timing or duration is no longer static.",
+};
+
 // Pre-computed hint levels for all 8 boolean input combinations.
 // buildHintLevels is called once per frame; memoizing by (checksFailed × bPlanetFinite × depthMismatch)
 // eliminates three array allocations per call while keeping the return type stable (stored references
 // in DidacticSignals are safe since cached objects are never mutated).
 const _hintLevelsCache = new Map<string, { L1: string[]; L2: string[]; L3: string[] }>();
+
+function hasDepthMismatch(params: { depthApprox: number; depthObserved: number }): boolean {
+  return (
+    Number.isFinite(params.depthApprox) &&
+    Number.isFinite(params.depthObserved) &&
+    Math.abs(params.depthObserved - params.depthApprox) > 0.2
+  );
+}
+
+function emptyHintLevels(): { L1: string[]; L2: string[]; L3: string[] } {
+  return { L1: [], L2: [], L3: [] };
+}
+
+function appendInvalidGeometryHints(out: { L1: string[]; L2: string[]; L3: string[] }): void {
+  out.L1.push("Check observer direction, inclination, and whether the body is in front of the star.");
+  out.L2.push("Bring the orbit into a front-of-star transit geometry before adjusting radii.");
+  out.L3.push("Invalid b indicates that physical transit geometry is unavailable at this step.");
+}
+
+function appendFailedCheckHints(out: { L1: string[]; L2: string[]; L3: string[] }): void {
+  out.L1.push("Change one parameter and re-check the curve.");
+  out.L2.push("Compare physical vs measured mode after each parameter change.");
+  out.L3.push(
+    "Track depth_theory=(Rp/Rs)^2 against the physical transit depth to isolate geometry vs noise effects.",
+  );
+}
+
+function appendDepthMismatchHints(out: { L1: string[]; L2: string[]; L3: string[] }): void {
+  out.L2.push("Large depth mismatch suggests limb-darkening or non-central transit effects.");
+  out.L3.push("Inspect ingress/egress curvature and impact parameter before tuning planet radius.");
+}
+
+function appendDefaultHints(out: { L1: string[]; L2: string[]; L3: string[] }): void {
+  if (out.L1.length === 0) out.L1.push("All checks currently pass.");
+  if (out.L2.length === 0) out.L2.push("Use A/B compare to confirm causal signal changes.");
+  if (out.L3.length === 0) out.L3.push("Export report and validate rubric consistency across steps.");
+}
 
 /**
  * Build tiered hint strings for the current didactics state.
@@ -53,34 +88,16 @@ export function buildHintLevels(params: {
   depthApprox: number;
   depthObserved: number;
 }): { L1: string[]; L2: string[]; L3: string[] } {
-  const depthMismatch =
-    Number.isFinite(params.depthApprox) &&
-    Number.isFinite(params.depthObserved) &&
-    Math.abs(params.depthObserved - params.depthApprox) > 0.2;
+  const depthMismatch = hasDepthMismatch(params);
   const key = `${params.checksFailed}:${params.bPlanetFinite}:${depthMismatch}`;
   const hit = _hintLevelsCache.get(key);
   if (hit) return hit;
 
-  const out = { L1: [] as string[], L2: [] as string[], L3: [] as string[] };
-  if (!params.bPlanetFinite) {
-    out.L1.push("Check observer direction, inclination, and whether the body is in front of the star.");
-    out.L2.push("Bring the orbit into a front-of-star transit geometry before adjusting radii.");
-    out.L3.push("Invalid b indicates that physical transit geometry is unavailable at this step.");
-  }
-  if (params.checksFailed) {
-    out.L1.push("Change one parameter and re-check the curve.");
-    out.L2.push("Compare physical vs measured mode after each parameter change.");
-    out.L3.push(
-      "Track depth_theory=(Rp/Rs)^2 against the physical transit depth to isolate geometry vs noise effects.",
-    );
-  }
-  if (depthMismatch) {
-    out.L2.push("Large depth mismatch suggests limb-darkening or non-central transit effects.");
-    out.L3.push("Inspect ingress/egress curvature and impact parameter before tuning planet radius.");
-  }
-  if (out.L1.length === 0) out.L1.push("All checks currently pass.");
-  if (out.L2.length === 0) out.L2.push("Use A/B compare to confirm causal signal changes.");
-  if (out.L3.length === 0) out.L3.push("Export report and validate rubric consistency across steps.");
+  const out = emptyHintLevels();
+  if (!params.bPlanetFinite) appendInvalidGeometryHints(out);
+  if (params.checksFailed) appendFailedCheckHints(out);
+  if (depthMismatch) appendDepthMismatchHints(out);
+  appendDefaultHints(out);
 
   _hintLevelsCache.set(key, out);
   return out;
@@ -115,90 +132,43 @@ export function buildMisconceptions(params: {
 }
 
 /**
- * Extract the numeric signals used by rubric checks from the current system and step result.
- * All returned values are finite numbers or `Number.NaN` (never `undefined`).
- */
-export function collectNumericSignals(system: SystemParams, step: StepResult): NumericSignals {
-  const rs = toFiniteNumber(system.star.r, 1);
-  const rp = toFiniteNumber(system.planet.r, 0);
-  const depthApprox = rs > 0 ? (rp / rs) ** 2 : 0;
-  const fluxTransitFactor = toFiniteNumber(step.fluxTransitFactor, 1);
-  const depthObserved = Math.max(0, 1 - fluxTransitFactor);
-  const baselineFlux = toFiniteNumber(
-    step.meta?.baselineFluxUsed,
-    toFiniteNumber(system.star.photometry?.baselineFlux, 1),
-  );
-  const fluxTotal = toFiniteNumber(step.fluxTotal, baselineFlux);
-  const displayFlux = toFiniteNumber(step.meta?.displayFluxValue, Number.NaN);
-  const combinedFluxDrop = Number.isFinite(displayFlux)
-    ? Math.max(0, 1 - displayFlux)
-    : baselineFlux > 0
-      ? Math.max(0, 1 - fluxTotal / baselineFlux)
-      : 0;
-  const timing = step.meta?.observables?.timing ?? step.meta?.timing;
-
-  const rvStar = Math.abs(toFiniteNumber(step.meta?.observables?.rvStar, 0));
-  const rvPlanet = Math.abs(toFiniteNumber(step.meta?.observables?.rvPlanet, 0));
-
-  return {
-    bPlanet: toFiniteNumber(step.meta?.bPlanet, Number.NaN),
-    bMoon: toFiniteNumber(step.meta?.bMoon, Number.NaN),
-    fluxTransitFactor,
-    tdvRatio: toFiniteNumber(step.meta?.tdvRatio, Number.NaN),
-    rvStar,
-    rvPlanet,
-    depthApprox,
-    depthObserved,
-    combinedFluxDrop,
-    moonLeadLagSec:
-      Number.isFinite(timing?.moonTransitCenterSec) && Number.isFinite(timing?.planetTransitCenterSec)
-        ? (timing!.moonTransitCenterSec as number) - (timing!.planetTransitCenterSec as number)
-        : Number.NaN,
-  };
-}
-
-/**
  * Produce a one-sentence status message for a single lesson check,
  * suitable for display in the lesson progress panel.
  */
+function passedCheckStatus(signal: LessonCheckRule["signal"]): string {
+  return PASSED_STATUS_BY_SIGNAL[signal] ?? "This lesson check currently passes.";
+}
+
+function failedRangeStatus(rule: LessonCheckRule, observed: number, expected: string): string {
+  if (rule.signal === "bPlanet")
+    return `Move the main chord closer to the stellar center. Target ${expected}.`;
+  if (rule.signal === "bMoon") {
+    return `Tilt the moon orbit back toward a front-of-star crossing. Target ${expected}.`;
+  }
+  if (rule.signal === "combinedFluxDrop") {
+    return `The eclipse is still too shallow to read clearly. Current drop ${observed.toFixed(3)}; target ${expected}.`;
+  }
+  return `Keep adjusting until the observed value fits ${expected}.`;
+}
+
+function failedCheckStatus(rule: LessonCheckRule, observed: number, expected: string): string {
+  if (rule.kind === "range") return failedRangeStatus(rule, observed, expected);
+  if (rule.kind === "distance" && rule.signal === "moonLeadLagSec") {
+    return "Increase moon spacing until the moon dip leads or trails the planet more clearly.";
+  }
+  if (rule.kind === "signal-approx") {
+    return "The measured lesson signal still does not match the geometric prediction closely enough.";
+  }
+  return `This check still fails. Compare observed=${Number.isFinite(observed) ? observed.toFixed(3) : "n/a"} with ${expected}.`;
+}
+
 export function buildCheckStatusText(
-  rule: LessonSpec["steps"][number]["checks"][number],
+  rule: LessonCheckRule,
   passed: boolean,
   observed: number,
   expected: string,
 ): string {
-  if (passed) {
-    if (rule.signal === "bPlanet") return "The main transit chord is in the target geometry.";
-    if (rule.signal === "bMoon") return "The moon is crossing the star from the learner's line of sight.";
-    if (rule.signal === "moonLeadLagSec")
-      return "The moon signal is temporally separated from the planet dip.";
-    if (rule.signal === "combinedFluxDrop")
-      return "The combined stellar light curve shows a measurable eclipse.";
-    if (rule.signal === "rvStar") return "The stellar reflex velocity is large enough to be discussed.";
-    if (rule.signal === "tdvRatio") return "Transit timing or duration is no longer static.";
-    return "This lesson check currently passes.";
-  }
-
-  if (rule.kind === "range") {
-    if (rule.signal === "bPlanet")
-      return `Move the main chord closer to the stellar center. Target ${expected}.`;
-    if (rule.signal === "bMoon")
-      return `Tilt the moon orbit back toward a front-of-star crossing. Target ${expected}.`;
-    if (rule.signal === "combinedFluxDrop") {
-      return `The eclipse is still too shallow to read clearly. Current drop ${observed.toFixed(3)}; target ${expected}.`;
-    }
-    return `Keep adjusting until the observed value fits ${expected}.`;
-  }
-
-  if (rule.kind === "distance" && rule.signal === "moonLeadLagSec") {
-    return "Increase moon spacing until the moon dip leads or trails the planet more clearly.";
-  }
-
-  if (rule.kind === "signal-approx") {
-    return "The measured lesson signal still does not match the geometric prediction closely enough.";
-  }
-
-  return `This check still fails. Compare observed=${Number.isFinite(observed) ? observed.toFixed(3) : "n/a"} with ${expected}.`;
+  return passed ? passedCheckStatus(rule.signal) : failedCheckStatus(rule, observed, expected);
 }
 
 /**

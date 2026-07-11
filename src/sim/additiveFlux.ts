@@ -24,34 +24,82 @@ import { isPhysicsFeatureEnabled } from "./fidelity";
 
 const MUTUAL_OCCULTER_GRID_RES = 120;
 
+type SkyPosition = { x: number; y: number; z: number };
+type BandWeight = { lambdaNm: number; w: number };
+type FluxPair = {
+  fluxPlanetOnly: number;
+  fluxMoonOnly: number;
+};
+type AdditiveFluxContext = {
+  params: SystemParams;
+  t: number;
+  observerDir: Vec3;
+  kin: BodyKinematics;
+  phot: SystemParams["star"]["photometry"];
+  starRadius: number;
+  bands: BandWeight[];
+  orbit: ReturnType<typeof resolveOrbitElements>;
+  thermalModelAdvanced: ThermalModelAdvancedParams | undefined;
+  scientificEnergyComposition: boolean;
+  rt: AtmosphereRTParams | undefined;
+};
+type RefractionContext = {
+  rt: AtmosphereRTParams;
+  refraction: NonNullable<AtmosphereRTParams["refraction"]>;
+  bands: BandWeight[];
+  starRadius: number;
+  amp: number;
+  lambdaRef: number;
+  chromaticSlope: number;
+};
+type VisibleFractions = Pick<AdditiveFluxComponents, "planetVisibleFraction" | "moonVisibleFraction">;
+type RtEmissionContext = {
+  amp: number;
+  lag: number;
+  target: "planet" | "moon";
+};
+type RingScatteringContext = {
+  amp: number;
+  sigma: number;
+  inclination: number | undefined;
+};
+
 function addOcculterIfFront(
   occulters: CircleOcculter[],
-  targetSky: { x: number; y: number; z: number },
-  occulterSky: { x: number; y: number; z: number },
+  targetSky: SkyPosition,
+  occulterSky: SkyPosition,
   rOcculter: number,
 ): void {
-  if (!Number.isFinite(rOcculter) || rOcculter <= 0) return;
-  if (
-    !Number.isFinite(targetSky.x) ||
-    !Number.isFinite(targetSky.y) ||
-    !Number.isFinite(targetSky.z) ||
-    !Number.isFinite(occulterSky.x) ||
-    !Number.isFinite(occulterSky.y) ||
-    !Number.isFinite(occulterSky.z)
-  ) {
-    return;
-  }
+  const occulter = frontOcculterForTarget(targetSky, occulterSky, rOcculter);
+  if (!occulter) return;
+  occulters.push(occulter);
+}
 
-  if (!(occulterSky.z > targetSky.z)) return;
+const frontOcculterForTarget = (
+  targetSky: SkyPosition,
+  occulterSky: SkyPosition,
+  rOcculter: number,
+): CircleOcculter | undefined => {
+  if (!isPositiveFinite(rOcculter)) return undefined;
+  if (!isFiniteSkyPosition(targetSky) || !isFiniteSkyPosition(occulterSky)) return undefined;
+  if (!(occulterSky.z > targetSky.z)) return undefined;
 
-  occulters.push({
+  return {
     dx: occulterSky.x - targetSky.x,
     dy: occulterSky.y - targetSky.y,
     r: rOcculter,
-  });
-}
+  };
+};
 
-function visibleFractionWithOcculters(rTarget: number, occulters: CircleOcculter[]): number {
+const isPositiveFinite = (value: number | undefined): value is number => {
+  return Number.isFinite(value) && (value as number) > 0;
+};
+
+const isFiniteSkyPosition = (sky: SkyPosition | undefined): sky is SkyPosition => {
+  return Boolean(sky && Number.isFinite(sky.x) && Number.isFinite(sky.y) && Number.isFinite(sky.z));
+};
+
+const visibleFractionWithOcculters = (rTarget: number, occulters: CircleOcculter[]): number => {
   if (!Number.isFinite(rTarget) || rTarget <= 0) return 1;
   if (occulters.length === 0) return 1;
 
@@ -65,13 +113,13 @@ function visibleFractionWithOcculters(rTarget: number, occulters: CircleOcculter
     // Fail-open: grid-based occlusion computation failed; assume full visibility (flux = 1).
     return 1;
   }
-}
+};
 
-function effectiveProjectedRadius(body: {
+const effectiveProjectedRadius = (body: {
   r: number;
   shape?: { oblateness?: number };
   rings?: { outerRadius: number };
-}): number {
+}): number => {
   const rBody = Number.isFinite(body.r) && body.r > 0 ? body.r : 0;
   const f = Number.isFinite(body.shape?.oblateness)
     ? Math.max(0, Math.min(0.95, body.shape!.oblateness as number))
@@ -81,7 +129,7 @@ function effectiveProjectedRadius(body: {
     ? Math.max(0, body.rings!.outerRadius as number)
     : 0;
   return Math.max(oblateEquiv, ringOuter, rBody);
-}
+};
 
 export type AdditiveFluxComponents = {
   fluxPlanetOnly: number;
@@ -94,36 +142,60 @@ export type AdditiveFluxComponents = {
   moonVisibleFraction?: number;
 };
 
-function normalizedBandWeights(
-  phot: SystemParams["star"]["photometry"],
-): Array<{ lambdaNm: number; w: number }> {
+function normalizedBandWeights(phot: SystemParams["star"]["photometry"]): BandWeight[] {
   const bp = phot?.spectralBandpass;
   if (!bp?.enabled || !Array.isArray(bp.lambdaNm) || bp.lambdaNm.length === 0) {
-    return [{ lambdaNm: 550, w: 1 }];
+    return defaultBandWeights();
   }
+
+  const entries = positiveBandpassEntries(bp.lambdaNm);
+  if (entries.lambda.length === 0) return defaultBandWeights();
+
+  const raw = selectedBandpassWeights(bp.weights, bp.lambdaNm.length, entries);
+  const norm = normalizedPositiveWeights(raw, entries.lambda.length);
+  return entries.lambda.map((lambdaNm, i) => ({ lambdaNm, w: norm[i] }));
+}
+
+const defaultBandWeights = (): BandWeight[] => {
+  return [{ lambdaNm: 550, w: 1 }];
+};
+
+const positiveBandpassEntries = (lambdaNm: number[]): { keepIdx: number[]; lambda: number[] } => {
   const keepIdx: number[] = [];
   const lambda: number[] = [];
-  for (let index = 0; index < bp.lambdaNm.length; index++) {
-    const value = bp.lambdaNm[index];
-    if (!(Number.isFinite(value) && value > 0)) continue;
+
+  for (let index = 0; index < lambdaNm.length; index++) {
+    const value = lambdaNm[index];
+    if (!isPositiveFinite(value)) continue;
     keepIdx.push(index);
     lambda.push(value);
   }
-  if (lambda.length === 0) return [{ lambdaNm: 550, w: 1 }];
-  const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
-  const raw =
-    rawWeights.length === bp.lambdaNm.length
-      ? keepIdx.map((index) => rawWeights[index])
-      : rawWeights.length === lambda.length
-        ? rawWeights
-        : lambda.map(() => 1);
-  const clipped = raw.map((x) => (Number.isFinite(x) && x > 0 ? x : 0));
-  const sum = clipped.reduce((a, b) => a + b, 0);
-  const norm = sum > 0 ? clipped.map((x) => x / sum) : lambda.map(() => 1 / lambda.length);
-  return lambda.map((lambdaNm, i) => ({ lambdaNm, w: norm[i] }));
-}
 
-function bandScatteringBoost(lambdaNm: number, rt: AtmosphereRTParams | undefined): number {
+  return { keepIdx, lambda };
+};
+
+const selectedBandpassWeights = (
+  weights: number[] | undefined,
+  sourceLength: number,
+  entries: { keepIdx: number[]; lambda: number[] },
+): number[] => {
+  const rawWeights = Array.isArray(weights) ? weights : [];
+  if (rawWeights.length === sourceLength) return entries.keepIdx.map((index) => rawWeights[index]);
+  if (rawWeights.length === entries.lambda.length) return rawWeights;
+  return entries.lambda.map(() => 1);
+};
+
+const normalizedPositiveWeights = (raw: number[], count: number): number[] => {
+  const clipped = raw.map((x) => (isPositiveFinite(x) ? x : 0));
+  const sum = clipped.reduce((a, b) => a + b, 0);
+  return sum > 0 ? clipped.map((x) => x / sum) : equalWeights(count);
+};
+
+const equalWeights = (count: number): number[] => {
+  return Array.from({ length: count }, () => 1 / count);
+};
+
+const bandScatteringBoost = (lambdaNm: number, rt: AtmosphereRTParams | undefined): number => {
   if (!rt?.scattering?.enabled) return 1;
   const gain = Number.isFinite(rt.scattering.gain) ? Math.max(0, rt.scattering.gain as number) : 0;
   const g = Number.isFinite(rt.scattering.g) ? Math.max(-0.95, Math.min(0.95, rt.scattering.g as number)) : 0;
@@ -131,24 +203,24 @@ function bandScatteringBoost(lambdaNm: number, rt: AtmosphereRTParams | undefine
   const wl = Number.isFinite(lambdaNm) ? Math.max(1, lambdaNm) : lambdaRef;
   const wlScale = Math.pow(wl / lambdaRef, -(0.3 + 0.4 * Math.max(0, g)));
   return 1 + gain * wlScale;
-}
+};
 
-function gaussianPhaseWeight(phase: number, sigma: number): number {
+const gaussianPhaseWeight = (phase: number, sigma: number): number => {
   const d = Math.atan2(Math.sin(phase), Math.cos(phase));
   const s = Math.max(1e-6, sigma);
   return Math.exp(-(d * d) / (2 * s * s));
-}
+};
 
-function gaussianDistanceWeight(distance: number, sigma: number): number {
+const gaussianDistanceWeight = (distance: number, sigma: number): number => {
   const s = Math.max(1e-9, sigma);
   return Math.exp(-(distance * distance) / (2 * s * s));
-}
+};
 
-function hasActiveThermalPhaseChannel(args: {
+const hasActiveThermalPhaseChannel = (args: {
   model: PhaseCurveParams | undefined;
   thermalModelAdvanced: ThermalModelAdvancedParams | undefined;
   system: SystemParams;
-}): boolean {
+}): boolean => {
   if (!args.model?.enabled) return false;
   if (Number.isFinite(args.model.thermAmp) && (args.model.thermAmp as number) > 0) return true;
   if (Number.isFinite(args.model.constant) && (args.model.constant as number) > 0) return true;
@@ -156,12 +228,12 @@ function hasActiveThermalPhaseChannel(args: {
     return true;
   }
   return false;
-}
+};
 
-function hasActiveReflectedPhaseChannel(model: PhaseCurveParams | undefined): boolean {
+const hasActiveReflectedPhaseChannel = (model: PhaseCurveParams | undefined): boolean => {
   if (!model?.enabled) return false;
   return Number.isFinite(model.reflAmp) && (model.reflAmp as number) > 0;
-}
+};
 
 export function computeAdditiveFluxComponents(
   params: SystemParams,
@@ -169,252 +241,389 @@ export function computeAdditiveFluxComponents(
   observerDir: Vec3,
   kin: BodyKinematics,
 ): AdditiveFluxComponents {
-  const phot = params.star.photometry;
-  const starRadius = params.star.r;
-  const bands = normalizedBandWeights(phot);
+  const context = additiveFluxContext(params, t, observerDir, kin);
+  const emittedFlux = applyRtEmissionTerms(context, computePhaseFluxTerms(context));
+  const visibleFractions = computeMutualVisibleFractions(context, emittedFlux);
+  const occultedFlux = applyBodyOccultationTerms(context, emittedFlux);
 
-  const orbit = kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit");
-  const thermalModelAdvanced = isPhysicsFeatureEnabled(params, "thermalEnergyBalance")
-    ? phot?.thermalModelAdvanced
-    : undefined;
-  const scientificEnergyComposition =
-    params.dynamics?.fidelityProfile === "accurate" || params.dynamics?.fidelityProfile === "reference";
-
-  // Phase / self-reflected light terms (additive).
-  // Planet phase is always computed (uses planet orbit period for thermal inertia / phase).
-  let fluxPlanetOnly = 0;
-  for (const b of bands) {
-    const base = bodyPhaseFlux({
-      rBody: kin.rPlanetAbs,
-      rBodyRadius: params.planet.r,
-      rStarRadius: starRadius,
-      observerDir,
-      orbitPeriodSec: orbit.period,
-      model: phot?.phaseCurve,
-      dayNightVisibility: phot?.dayNightVisibility,
-      thermalModelAdvanced,
-    });
-    fluxPlanetOnly += b.w * base * bandScatteringBoost(b.lambdaNm, phot?.atmosphereRT);
-  }
-
-  // Moon phase is optional. Use the moon's orbit period (around planet), not the planet's, for correct thermal/phase timescale.
-  let fluxMoonOnly = 0;
-  if (params.moon && kin.rMoonAbs) {
-    const moonOrbitEl = resolveOrbitElements(params.moon.orbitAroundPlanet, t, "moon.orbitAroundPlanet");
-    for (const b of bands) {
-      const base = bodyPhaseFlux({
-        rBody: kin.rMoonAbs,
-        rBodyRadius: params.moon.r,
-        rStarRadius: starRadius,
-        observerDir,
-        orbitPeriodSec: moonOrbitEl.period,
-        model: phot?.moonPhaseCurve,
-        dayNightVisibility: phot?.dayNightVisibility,
-        thermalModelAdvanced,
-      });
-      fluxMoonOnly += b.w * base * bandScatteringBoost(b.lambdaNm, phot?.atmosphereRT);
-    }
-  }
-
-  const rt = isPhysicsFeatureEnabled(params, "atmosphereRT") ? phot?.atmosphereRT : undefined;
-  if (rt?.enabled && rt.emission?.enabled) {
-    const amp = Number.isFinite(rt.emission.amp) ? Math.max(0, rt.emission.amp as number) : 0;
-    const lag = Number.isFinite(rt.emission.phaseLag) ? (rt.emission.phaseLag as number) : 0;
-    if (amp > 0) {
-      const applyEmission = (rBody: Vec3): number => {
-        const alpha = phaseAngleRadFromBodyPos(rBody, observerDir);
-        if (!Number.isFinite(alpha)) return 0;
-        const w = Math.max(0, 0.5 * (1 + Math.cos(alpha - lag)));
-        return amp * w;
-      };
-      if (
-        (rt.target ?? "planet") === "planet" &&
-        !(
-          scientificEnergyComposition &&
-          hasActiveThermalPhaseChannel({
-            model: phot?.phaseCurve,
-            thermalModelAdvanced,
-            system: params,
-          })
-        )
-      ) {
-        fluxPlanetOnly += applyEmission(kin.rPlanetAbs);
-      } else if (
-        params.moon &&
-        kin.rMoonAbs &&
-        !(
-          scientificEnergyComposition &&
-          hasActiveThermalPhaseChannel({
-            model: phot?.moonPhaseCurve,
-            thermalModelAdvanced,
-            system: params,
-          })
-        )
-      ) {
-        fluxMoonOnly += applyEmission(kin.rMoonAbs);
-      }
-    }
-  }
-
-  // Mutual events: compute visible fractions for diagnostics.
-  // Limitation: Mutual events assume uniform disks for the bodies, ignoring phase geometry overlap (crescent-on-crescent effects).
-  //
-  // NOTE (intentional divergence): The diagnostic visible fractions below use a
-  // simple pairwise circle-occultation model (visibleFractionWhenOcculted) so
-  // they are cheap to compute and easy to interpret.  The flux-affecting
-  // fractions computed further down use visibleFractionWithOcculters, which
-  // handles the union of all occulters simultaneously (star + mutual body).
-  // The two models can disagree when multiple occulters overlap.  This is
-  // intentional: diagnostics show the mutual-event geometry in isolation,
-  // while flux uses the physically accurate combined occlusion.
-  let planetVisibleFraction: number | undefined;
-  let moonVisibleFraction: number | undefined;
-
-  if (params.moon && kin.moonSky) {
-    // Moon in front of planet => diagnostic visible fraction.
-    if (fluxPlanetOnly !== 0 && kin.moonSky.z > kin.planetSky.z) {
-      const visPlanet = visibleFractionWhenOcculted({
-        targetSky: kin.planetSky,
-        occulterSky: kin.moonSky,
-        rTarget: params.planet.r,
-        rOcculter: params.moon.r,
-      });
-      if (Number.isFinite(visPlanet)) {
-        planetVisibleFraction = visPlanet;
-      }
-    }
-
-    // Planet in front of moon => diagnostic visible fraction.
-    if (fluxMoonOnly !== 0 && kin.planetSky.z > kin.moonSky.z) {
-      const visMoon = visibleFractionWhenOcculted({
-        targetSky: kin.moonSky,
-        occulterSky: kin.planetSky,
-        rTarget: params.moon.r,
-        rOcculter: params.planet.r,
-      });
-      if (Number.isFinite(visMoon)) {
-        moonVisibleFraction = visMoon;
-      }
-    }
-  }
-
-  // Secondary eclipse + mutual events combined: use union-of-occulters for accurate visible fraction.
-  // (Toy model: uniform-brightness disk for the body.)
-  const STAR_SKY = { x: 0, y: 0, z: 0 };
-
-  if (fluxPlanetOnly !== 0) {
-    const planetOcculters: CircleOcculter[] = [];
-    addOcculterIfFront(planetOcculters, kin.planetSky, STAR_SKY, starRadius);
-    if (params.moon && kin.moonSky) {
-      const moonOccR = isPhysicsFeatureEnabled(params, "nonSphericalFlux")
-        ? effectiveProjectedRadius(params.moon)
-        : params.moon.r;
-      addOcculterIfFront(planetOcculters, kin.planetSky, kin.moonSky, moonOccR);
-    }
-    const planetTargetR = isPhysicsFeatureEnabled(params, "nonSphericalFlux")
-      ? effectiveProjectedRadius(params.planet)
-      : params.planet.r;
-    const planetVis = visibleFractionWithOcculters(planetTargetR, planetOcculters);
-    if (Number.isFinite(planetVis)) fluxPlanetOnly *= planetVis;
-  }
-
-  if (fluxMoonOnly !== 0 && params.moon && kin.moonSky) {
-    const moonOcculters: CircleOcculter[] = [];
-    addOcculterIfFront(moonOcculters, kin.moonSky, STAR_SKY, starRadius);
-    const planetOccR = isPhysicsFeatureEnabled(params, "nonSphericalFlux")
-      ? effectiveProjectedRadius(params.planet)
-      : params.planet.r;
-    addOcculterIfFront(moonOcculters, kin.moonSky, kin.planetSky, planetOccR);
-    const moonTargetR = isPhysicsFeatureEnabled(params, "nonSphericalFlux")
-      ? effectiveProjectedRadius(params.moon)
-      : params.moon.r;
-    const moonVis = visibleFractionWithOcculters(moonTargetR, moonOcculters);
-    if (Number.isFinite(moonVis)) fluxMoonOnly *= moonVis;
-  }
-
-  // Stellar variability is an emitted stellar term (added to baseline) that will be multiplied by F_transit upstream.
-  const fluxStellarVarOnly = stellarVariabilityFlux({
-    t,
-    orbit,
-    model: phot?.stellarVariability,
+  return finalizeAdditiveFluxComponents({
+    ...occultedFlux,
+    fluxStellarVarOnly: computeStellarVariabilityTerm(context),
+    fluxForwardScatteringOnly: computeForwardScatteringTerm(context),
+    fluxRingScatteringOnly: computeRingScatteringTerm(context),
+    fluxRefractionOnly: computeRefractionTerm(context),
+    ...visibleFractions,
   });
+}
 
-  // Forward scattering (additive). Modeled only for the planet in this UI schema.
-  const phase = transitCenteredPhaseRadFromBodyPos(kin.rPlanetAbs, observerDir);
-  const fluxForwardScatteringOnly = computeForwardScatteringFlux({
-    rBody: kin.rPlanetAbs,
+function additiveFluxContext(
+  params: SystemParams,
+  t: number,
+  observerDir: Vec3,
+  kin: BodyKinematics,
+): AdditiveFluxContext {
+  const phot = params.star.photometry;
+  return {
+    params,
+    t,
     observerDir,
-    model:
-      scientificEnergyComposition && hasActiveReflectedPhaseChannel(phot?.phaseCurve)
-        ? { ...phot?.forwardScattering, enabled: false }
-        : phot?.forwardScattering,
+    kin,
+    phot,
+    starRadius: params.star.r,
+    bands: normalizedBandWeights(phot),
+    orbit: kin.planetOrbit ?? resolveOrbitElements(params.planet.orbit, t, "planet.orbit"),
+    thermalModelAdvanced: isPhysicsFeatureEnabled(params, "thermalEnergyBalance")
+      ? phot?.thermalModelAdvanced
+      : undefined,
+    scientificEnergyComposition:
+      params.dynamics?.fidelityProfile === "accurate" || params.dynamics?.fidelityProfile === "reference",
+    rt: isPhysicsFeatureEnabled(params, "atmosphereRT") ? phot?.atmosphereRT : undefined,
+  };
+}
+
+function computePhaseFluxTerms(context: AdditiveFluxContext): FluxPair {
+  return {
+    fluxPlanetOnly: weightedBodyPhaseFlux(context, {
+      rBody: context.kin.rPlanetAbs,
+      rBodyRadius: context.params.planet.r,
+      orbitPeriodSec: context.orbit.period,
+      model: context.phot?.phaseCurve,
+    }),
+    fluxMoonOnly: computeMoonPhaseFlux(context),
+  };
+}
+
+function computeMoonPhaseFlux(context: AdditiveFluxContext): number {
+  const { params, t, kin } = context;
+  if (!params.moon || !kin.rMoonAbs) return 0;
+
+  const moonOrbitEl = resolveOrbitElements(params.moon.orbitAroundPlanet, t, "moon.orbitAroundPlanet");
+  return weightedBodyPhaseFlux(context, {
+    rBody: kin.rMoonAbs,
+    rBodyRadius: params.moon.r,
+    orbitPeriodSec: moonOrbitEl.period,
+    model: context.phot?.moonPhaseCurve,
+  });
+}
+
+const weightedBodyPhaseFlux = (
+  context: AdditiveFluxContext,
+  body: {
+    rBody: Vec3;
+    rBodyRadius: number;
+    orbitPeriodSec: number;
+    model: PhaseCurveParams | undefined;
+  },
+): number => {
+  let flux = 0;
+  for (const band of context.bands) {
+    const base = bodyPhaseFlux({
+      rBody: body.rBody,
+      rBodyRadius: body.rBodyRadius,
+      rStarRadius: context.starRadius,
+      observerDir: context.observerDir,
+      orbitPeriodSec: body.orbitPeriodSec,
+      model: body.model,
+      dayNightVisibility: context.phot?.dayNightVisibility,
+      thermalModelAdvanced: context.thermalModelAdvanced,
+    });
+    flux += band.w * base * bandScatteringBoost(band.lambdaNm, context.phot?.atmosphereRT);
+  }
+  return flux;
+};
+
+const applyRtEmissionTerms = (context: AdditiveFluxContext, flux: FluxPair): FluxPair => {
+  const emission = activeRtEmissionContext(context);
+  if (!emission) return flux;
+  if (emission.target === "planet") return applyPlanetEmission(context, flux, emission.amp, emission.lag);
+  return applyMoonEmission(context, flux, emission.amp, emission.lag);
+};
+
+const activeRtEmissionContext = (context: AdditiveFluxContext): RtEmissionContext | undefined => {
+  const rt = context.rt;
+  const emission = rt?.emission;
+  if (!rt?.enabled || !emission?.enabled) return undefined;
+
+  const amp = Number.isFinite(emission.amp) ? Math.max(0, emission.amp as number) : 0;
+  if (amp <= 0) return undefined;
+
+  return {
+    amp,
+    lag: Number.isFinite(emission.phaseLag) ? (emission.phaseLag as number) : 0,
+    target: (rt.target ?? "planet") === "moon" ? "moon" : "planet",
+  };
+};
+
+const applyPlanetEmission = (
+  context: AdditiveFluxContext,
+  flux: FluxPair,
+  amp: number,
+  lag: number,
+): FluxPair => {
+  if (suppressesThermalEmission(context, context.phot?.phaseCurve)) return flux;
+  return {
+    ...flux,
+    fluxPlanetOnly: flux.fluxPlanetOnly + emissionFlux(context.kin.rPlanetAbs, context.observerDir, amp, lag),
+  };
+};
+
+function applyMoonEmission(context: AdditiveFluxContext, flux: FluxPair, amp: number, lag: number): FluxPair {
+  if (!context.params.moon || !context.kin.rMoonAbs) return flux;
+  if (suppressesThermalEmission(context, context.phot?.moonPhaseCurve)) return flux;
+  return {
+    ...flux,
+    fluxMoonOnly: flux.fluxMoonOnly + emissionFlux(context.kin.rMoonAbs, context.observerDir, amp, lag),
+  };
+}
+
+function suppressesThermalEmission(
+  context: AdditiveFluxContext,
+  model: PhaseCurveParams | undefined,
+): boolean {
+  return (
+    context.scientificEnergyComposition &&
+    hasActiveThermalPhaseChannel({
+      model,
+      thermalModelAdvanced: context.thermalModelAdvanced,
+      system: context.params,
+    })
+  );
+}
+
+function emissionFlux(rBody: Vec3, observerDir: Vec3, amp: number, lag: number): number {
+  const alpha = phaseAngleRadFromBodyPos(rBody, observerDir);
+  if (!Number.isFinite(alpha)) return 0;
+  const weight = Math.max(0, 0.5 * (1 + Math.cos(alpha - lag)));
+  return amp * weight;
+}
+
+// Diagnostic visible fractions intentionally use pairwise circle occultation; flux
+// attenuation below uses the simultaneous union of star and mutual occulters.
+function computeMutualVisibleFractions(context: AdditiveFluxContext, flux: FluxPair): VisibleFractions {
+  const { params, kin } = context;
+  if (!params.moon || !kin.moonSky) return {};
+
+  return {
+    planetVisibleFraction: diagnosticVisibleFraction({
+      activeFlux: flux.fluxPlanetOnly,
+      targetSky: kin.planetSky,
+      occulterSky: kin.moonSky,
+      rTarget: params.planet.r,
+      rOcculter: params.moon.r,
+    }),
+    moonVisibleFraction: diagnosticVisibleFraction({
+      activeFlux: flux.fluxMoonOnly,
+      targetSky: kin.moonSky,
+      occulterSky: kin.planetSky,
+      rTarget: params.moon.r,
+      rOcculter: params.planet.r,
+    }),
+  };
+}
+
+function diagnosticVisibleFraction(args: {
+  activeFlux: number;
+  targetSky: SkyPosition;
+  occulterSky: SkyPosition;
+  rTarget: number;
+  rOcculter: number;
+}): number | undefined {
+  if (args.activeFlux === 0 || !(args.occulterSky.z > args.targetSky.z)) return undefined;
+  const visible = visibleFractionWhenOcculted(args);
+  return Number.isFinite(visible) ? visible : undefined;
+}
+
+function applyBodyOccultationTerms(context: AdditiveFluxContext, flux: FluxPair): FluxPair {
+  return {
+    fluxPlanetOnly: applyPlanetOccultation(context, flux.fluxPlanetOnly),
+    fluxMoonOnly: applyMoonOccultation(context, flux.fluxMoonOnly),
+  };
+}
+
+function applyPlanetOccultation(context: AdditiveFluxContext, fluxPlanetOnly: number): number {
+  if (fluxPlanetOnly === 0) return fluxPlanetOnly;
+
+  const { params, kin, starRadius } = context;
+  const occulters: CircleOcculter[] = [];
+  addOcculterIfFront(occulters, kin.planetSky, { x: 0, y: 0, z: 0 }, starRadius);
+  if (params.moon && kin.moonSky) {
+    addOcculterIfFront(occulters, kin.planetSky, kin.moonSky, projectedBodyRadius(context, params.moon));
+  }
+
+  return fluxWithVisibleFraction(fluxPlanetOnly, projectedBodyRadius(context, params.planet), occulters);
+}
+
+function applyMoonOccultation(context: AdditiveFluxContext, fluxMoonOnly: number): number {
+  const { params, kin, starRadius } = context;
+  if (fluxMoonOnly === 0 || !params.moon || !kin.moonSky) return fluxMoonOnly;
+
+  const occulters: CircleOcculter[] = [];
+  addOcculterIfFront(occulters, kin.moonSky, { x: 0, y: 0, z: 0 }, starRadius);
+  addOcculterIfFront(occulters, kin.moonSky, kin.planetSky, projectedBodyRadius(context, params.planet));
+  return fluxWithVisibleFraction(fluxMoonOnly, projectedBodyRadius(context, params.moon), occulters);
+}
+
+function projectedBodyRadius(
+  context: AdditiveFluxContext,
+  body: { r: number; shape?: { oblateness?: number }; rings?: { outerRadius: number } },
+): number {
+  return isPhysicsFeatureEnabled(context.params, "nonSphericalFlux")
+    ? effectiveProjectedRadius(body)
+    : body.r;
+}
+
+function fluxWithVisibleFraction(flux: number, targetRadius: number, occulters: CircleOcculter[]): number {
+  const visible = visibleFractionWithOcculters(targetRadius, occulters);
+  return Number.isFinite(visible) ? flux * visible : flux;
+}
+
+function computeStellarVariabilityTerm(context: AdditiveFluxContext): number {
+  return stellarVariabilityFlux({
+    t: context.t,
+    orbit: context.orbit,
+    model: context.phot?.stellarVariability,
+  });
+}
+
+function computeForwardScatteringTerm(context: AdditiveFluxContext): number {
+  const phase = transitCenteredPhaseRadFromBodyPos(context.kin.rPlanetAbs, context.observerDir);
+  return computeForwardScatteringFlux({
+    rBody: context.kin.rPlanetAbs,
+    observerDir: context.observerDir,
+    model: forwardScatteringModel(context),
     phase: Number.isFinite(phase) ? phase : undefined,
   });
+}
 
-  let fluxRingScatteringOnly = 0;
-  const ringSc = isPhysicsFeatureEnabled(params, "nonSphericalFlux") ? phot?.ringScattering : undefined;
-  if (
-    ringSc?.enabled &&
-    params.planet?.rings &&
-    Number.isFinite(ringSc.amp) &&
-    !(scientificEnergyComposition && hasActiveReflectedPhaseChannel(phot?.phaseCurve))
-  ) {
-    const amp = Math.max(0, ringSc.amp as number);
-    if (amp > 0) {
-      const sigma = Number.isFinite(ringSc.sigmaPhase) ? Math.max(1e-4, ringSc.sigmaPhase as number) : 0.25;
-      const phaseW = Number.isFinite(phase) ? gaussianPhaseWeight(phase, sigma) : 0;
-      const inc = Number.isFinite(params.planet.rings.inclination)
-        ? (params.planet.rings.inclination as number)
-        : 0;
-      const tilt = clamp(Math.abs(Math.cos(inc)), 0.1, 1);
-      fluxRingScatteringOnly = amp * phaseW * tilt;
-    }
+function forwardScatteringModel(context: AdditiveFluxContext) {
+  if (context.scientificEnergyComposition && hasActiveReflectedPhaseChannel(context.phot?.phaseCurve)) {
+    return { ...context.phot?.forwardScattering, enabled: false };
   }
+  return context.phot?.forwardScattering;
+}
 
-  let fluxRefractionOnly = 0;
-  if (rt?.enabled && rt.refraction?.enabled) {
-    const refraction = rt.refraction;
-    const amp = Number.isFinite(refraction.amp) ? Math.max(0, refraction.amp as number) : 0;
-    const lambdaRef = Number.isFinite(rt.lambdaRefNm) ? Math.max(1, rt.lambdaRefNm as number) : 550;
-    const chromaticSlope = Number.isFinite(refraction.chromaticSlope)
-      ? (refraction.chromaticSlope as number)
-      : 0;
-    const refractionForBody = (
-      body: { r: number },
-      sky: { x: number; y: number; z: number } | undefined,
-      target: "planet" | "moon",
-    ): number => {
-      if (!sky || !(sky.z > 0) || (rt.target ?? "planet") !== target || amp <= 0) return 0;
-      const contactRadius = starRadius + body.r;
-      const b = Math.hypot(sky.x, sky.y);
-      const sigma =
-        Number.isFinite(refraction.width) && (refraction.width as number) > 0
-          ? (refraction.width as number)
-          : Math.max(body.r * 0.8, starRadius * 0.04);
-      const weight = gaussianDistanceWeight(b - contactRadius, sigma);
-      let bandWeighted = 0;
-      for (const band of bands) {
-        const wlScale = Math.pow(Math.max(1, band.lambdaNm) / lambdaRef, -chromaticSlope);
-        bandWeighted += band.w * wlScale;
-      }
-      return amp * weight * bandWeighted;
-    };
+function computeRingScatteringTerm(context: AdditiveFluxContext): number {
+  const ring = activeRingScatteringContext(context);
+  if (!ring) return 0;
 
-    fluxRefractionOnly += refractionForBody(params.planet, kin.planetSky, "planet");
-    if (params.moon && kin.moonSky) {
-      fluxRefractionOnly += refractionForBody(params.moon, kin.moonSky, "moon");
-    }
-  }
+  const phase = transitCenteredPhaseRadFromBodyPos(context.kin.rPlanetAbs, context.observerDir);
+  const phaseWeight = Number.isFinite(phase) ? gaussianPhaseWeight(phase, ring.sigma) : 0;
+  return ring.amp * phaseWeight * ringTiltWeight(ring.inclination);
+}
 
-  // Robustness: enforce finite outputs (fail-open to 0 for additive components).
+function activeRingScatteringContext(context: AdditiveFluxContext): RingScatteringContext | undefined {
+  const ringSc = enabledRingScatteringConfig(context);
+  if (!ringSc) return undefined;
+  const rings = context.params.planet.rings;
+  if (!rings) return undefined;
+
+  const amp = positiveRingScatteringAmp(ringSc.amp);
+  if (amp === undefined) return undefined;
+
   return {
-    fluxPlanetOnly: toFiniteNumber(fluxPlanetOnly, 0),
-    fluxMoonOnly: toFiniteNumber(fluxMoonOnly, 0),
-    fluxStellarVarOnly: toFiniteNumber(fluxStellarVarOnly, 0),
-    fluxForwardScatteringOnly: toFiniteNumber(fluxForwardScatteringOnly, 0),
-    fluxRingScatteringOnly: toFiniteNumber(fluxRingScatteringOnly, 0),
-    fluxRefractionOnly: toFiniteNumber(fluxRefractionOnly, 0),
-    planetVisibleFraction,
-    moonVisibleFraction,
+    amp,
+    sigma: ringScatteringSigma(ringSc.sigmaPhase),
+    inclination: rings.inclination,
+  };
+}
+
+function enabledRingScatteringConfig(context: AdditiveFluxContext) {
+  if (!isPhysicsFeatureEnabled(context.params, "nonSphericalFlux")) return undefined;
+  if (!context.params.planet.rings) return undefined;
+  if (context.scientificEnergyComposition && hasActiveReflectedPhaseChannel(context.phot?.phaseCurve)) {
+    return undefined;
+  }
+  return context.phot?.ringScattering?.enabled ? context.phot.ringScattering : undefined;
+}
+
+function positiveRingScatteringAmp(amp: number | undefined): number | undefined {
+  const value = Number.isFinite(amp) ? Math.max(0, amp as number) : 0;
+  return value > 0 ? value : undefined;
+}
+
+function ringScatteringSigma(sigmaPhase: number | undefined): number {
+  return Number.isFinite(sigmaPhase) ? Math.max(1e-4, sigmaPhase as number) : 0.25;
+}
+
+function ringTiltWeight(inclination: number | undefined): number {
+  const inc = Number.isFinite(inclination) ? (inclination as number) : 0;
+  return clamp(Math.abs(Math.cos(inc)), 0.1, 1);
+}
+
+function computeRefractionTerm(context: AdditiveFluxContext): number {
+  const refractionContext = buildRefractionContext(context);
+  if (!refractionContext) return 0;
+
+  let flux = refractionForBody(refractionContext, context.params.planet, context.kin.planetSky, "planet");
+  if (context.params.moon && context.kin.moonSky) {
+    flux += refractionForBody(refractionContext, context.params.moon, context.kin.moonSky, "moon");
+  }
+  return flux;
+}
+
+function buildRefractionContext(context: AdditiveFluxContext): RefractionContext | undefined {
+  const rt = context.rt;
+  const refraction = rt?.refraction;
+  if (!rt?.enabled || !refraction?.enabled) return undefined;
+
+  return {
+    rt,
+    refraction,
+    bands: context.bands,
+    starRadius: context.starRadius,
+    amp: Number.isFinite(refraction.amp) ? Math.max(0, refraction.amp as number) : 0,
+    lambdaRef: Number.isFinite(rt.lambdaRefNm) ? Math.max(1, rt.lambdaRefNm as number) : 550,
+    chromaticSlope: Number.isFinite(refraction.chromaticSlope) ? (refraction.chromaticSlope as number) : 0,
+  };
+}
+
+function refractionForBody(
+  context: RefractionContext,
+  body: { r: number },
+  sky: SkyPosition | undefined,
+  target: "planet" | "moon",
+): number {
+  if (!canApplyRefraction(context, sky, target)) return 0;
+
+  const contactRadius = context.starRadius + body.r;
+  const impactDistance = Math.hypot(sky.x, sky.y);
+  const weight = gaussianDistanceWeight(impactDistance - contactRadius, refractionSigma(context, body));
+  return context.amp * weight * refractionBandWeight(context);
+}
+
+function canApplyRefraction(
+  context: RefractionContext,
+  sky: SkyPosition | undefined,
+  target: "planet" | "moon",
+): sky is SkyPosition {
+  return Boolean(sky && sky.z > 0 && (context.rt.target ?? "planet") === target && context.amp > 0);
+}
+
+function refractionSigma(context: RefractionContext, body: { r: number }): number {
+  const width = context.refraction.width;
+  return Number.isFinite(width) && (width as number) > 0
+    ? (width as number)
+    : Math.max(body.r * 0.8, context.starRadius * 0.04);
+}
+
+function refractionBandWeight(context: RefractionContext): number {
+  let bandWeighted = 0;
+  for (const band of context.bands) {
+    const wlScale = Math.pow(Math.max(1, band.lambdaNm) / context.lambdaRef, -context.chromaticSlope);
+    bandWeighted += band.w * wlScale;
+  }
+  return bandWeighted;
+}
+
+function finalizeAdditiveFluxComponents(components: AdditiveFluxComponents): AdditiveFluxComponents {
+  return {
+    fluxPlanetOnly: toFiniteNumber(components.fluxPlanetOnly, 0),
+    fluxMoonOnly: toFiniteNumber(components.fluxMoonOnly, 0),
+    fluxStellarVarOnly: toFiniteNumber(components.fluxStellarVarOnly, 0),
+    fluxForwardScatteringOnly: toFiniteNumber(components.fluxForwardScatteringOnly, 0),
+    fluxRingScatteringOnly: toFiniteNumber(components.fluxRingScatteringOnly, 0),
+    fluxRefractionOnly: toFiniteNumber(components.fluxRefractionOnly, 0),
+    planetVisibleFraction: components.planetVisibleFraction,
+    moonVisibleFraction: components.moonVisibleFraction,
   };
 }

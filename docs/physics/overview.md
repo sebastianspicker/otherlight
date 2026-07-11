@@ -67,7 +67,7 @@ Runtime contracts and consistency:
 
 Rendering/debug contract:
 
-- `src/render/scene.ts` accepts the active simulation step payload and dispatches the canonical draw path.
+- `src/app/frameLoopControllerLogic.ts` calls `Canvas2DRenderer.drawFrameV3(...)` with the active simulation step payload.
 - The active UI path does not require a legacy step payload.
 - Debug overlays consume `drawDebugOverlay...` data mapped from:
   - `simulationStep.debug`
@@ -119,7 +119,7 @@ Key files:
 - Relativity and timing: `src/physics/relativity.ts`
 - Photometry: `src/sim/transitFlux.ts`, `src/photometry/*`
 - Runtime V4 mapping: `src/sim/v4/runtime.ts`
-- V3 render entry: `src/render/scene.ts`, `src/render/canvas2d.ts`
+- V3 render entry: `src/app/frameLoopControllerLogic.ts`, `src/render/canvas2d.ts`
 - V3 debug overlay: `src/render/overlays.ts`
 - Rendering contract: `docs/rendering/physics-visualization-contract.md`
 - Photometry details: `docs/physics/photometry.md`

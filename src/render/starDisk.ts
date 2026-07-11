@@ -94,6 +94,19 @@ export type StarDiskRenderOptions = {
   nStops?: number;
 };
 
+type StarDiskRenderState = {
+  centerPx: { x: number; y: number };
+  pixelsPerUnit: number;
+  rStar: number;
+  Rpx: number;
+  baseRGB: [number, number, number];
+  highlightRGB: [number, number, number];
+  gamma: number;
+  maxDisplayIntensity: number;
+  law: LimbDarkeningLaw | undefined;
+  nStops: number;
+};
+
 export class StarDiskCache {
   // Store radial stop lists (position + color string) keyed by parameters.
   // Bounded to prevent unbounded memory growth.
@@ -269,63 +282,239 @@ function drawBrightnessPatches(params: {
   patchStrength: number;
   patches: BrightnessPatch[];
 }): void {
-  const { ctx, centerPx, pixelsPerUnit, rStar } = params;
-
-  if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit <= 0) return;
-  if (!Number.isFinite(rStar) || rStar <= 0) return;
-
-  const strength = clamp(params.patchStrength, 0, 1);
-  if (strength <= 0) return;
-
-  // Clip patches to stellar disk (projected).
-  const Rpx = rStar * pixelsPerUnit;
+  const setup = brightnessPatchSetup(params);
+  if (!setup) return;
+  const { ctx, centerPx, pixelsPerUnit, patches } = params;
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(centerPx.x, centerPx.y, Rpx, 0, Math.PI * 2);
+  ctx.arc(centerPx.x, centerPx.y, setup.Rpx, 0, Math.PI * 2);
   ctx.clip();
 
-  for (const p of params.patches) {
-    if (!p || typeof p !== "object") continue;
+  for (const patch of patches) drawBrightnessPatch(ctx, centerPx, pixelsPerUnit, setup.strength, patch);
 
-    const factor = typeof p.factor === "number" && Number.isFinite(p.factor) ? p.factor : 1;
-    if (!Number.isFinite(factor) || factor === 1) continue;
+  ctx.restore();
+}
 
-    // Map patch factor to an overlay alpha.
-    // This is NOT a physically exact multiply, but a qualitative visualization:
-    // - factor < 1 => darker (black overlay)
-    // - factor > 1 => brighter (white overlay)
-    const dark = factor < 1;
-    const delta = Math.abs(1 - factor);
-    const alpha = clamp(delta * 0.7 * strength, 0, 0.85);
+function brightnessPatchSetup(params: {
+  pixelsPerUnit: number;
+  rStar: number;
+  patchStrength: number;
+}): { Rpx: number; strength: number } | null {
+  if (!Number.isFinite(params.pixelsPerUnit) || params.pixelsPerUnit <= 0) return null;
+  if (!Number.isFinite(params.rStar) || params.rStar <= 0) return null;
 
-    ctx.save();
-    ctx.fillStyle = dark ? `rgba(0,0,0,${alpha})` : `rgba(255,255,255,${alpha})`;
+  const strength = clamp(params.patchStrength, 0, 1);
+  return strength > 0 ? { Rpx: params.rStar * params.pixelsPerUnit, strength } : null;
+}
 
-    const xPx = centerPx.x + (Number.isFinite(p.x) ? p.x : 0) * pixelsPerUnit;
-    const yPx = centerPx.y - (Number.isFinite(p.y) ? p.y : 0) * pixelsPerUnit;
+function drawBrightnessPatch(
+  ctx: CanvasRenderingContext2D,
+  centerPx: { x: number; y: number },
+  pixelsPerUnit: number,
+  strength: number,
+  patch: BrightnessPatch,
+): void {
+  const fillStyle = brightnessPatchFillStyle(patch, strength);
+  if (!fillStyle) return;
 
-    if (p.shape === "circle") {
-      const rr = (Number.isFinite(p.r) ? (p.r as number) : 0) * pixelsPerUnit;
-      if (rr > 0) {
-        ctx.beginPath();
-        ctx.arc(xPx, yPx, rr, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (p.shape === "ellipse") {
-      const rx = (Number.isFinite(p.rx) ? (p.rx as number) : 0) * pixelsPerUnit;
-      const ry = (Number.isFinite(p.ry) ? (p.ry as number) : 0) * pixelsPerUnit;
-      if (rx > 0 && ry > 0) {
-        const ang = Number.isFinite(p.angle) ? (p.angle as number) : 0;
-        ctx.beginPath();
-        ctx.ellipse(xPx, yPx, rx, ry, ang, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+  ctx.save();
+  ctx.fillStyle = fillStyle;
+  drawBrightnessPatchShape(ctx, patch, patchCenterPx(centerPx, pixelsPerUnit, patch), pixelsPerUnit);
+  ctx.restore();
+}
 
-    ctx.restore();
+function brightnessPatchFillStyle(patch: BrightnessPatch, strength: number): string | null {
+  const factor = finitePatchValue(patch.factor, 1);
+  if (factor === 1) return null;
+
+  const alpha = clamp(Math.abs(1 - factor) * 0.7 * strength, 0, 0.85);
+  return factor < 1 ? `rgba(0,0,0,${alpha})` : `rgba(255,255,255,${alpha})`;
+}
+
+function patchCenterPx(
+  centerPx: { x: number; y: number },
+  pixelsPerUnit: number,
+  patch: BrightnessPatch,
+): { x: number; y: number } {
+  return {
+    x: centerPx.x + finitePatchValue(patch.x, 0) * pixelsPerUnit,
+    y: centerPx.y - finitePatchValue(patch.y, 0) * pixelsPerUnit,
+  };
+}
+
+function drawBrightnessPatchShape(
+  ctx: CanvasRenderingContext2D,
+  patch: BrightnessPatch,
+  patchCenter: { x: number; y: number },
+  pixelsPerUnit: number,
+): void {
+  if (patch.shape === "circle") {
+    drawCircleBrightnessPatch(ctx, patch, patchCenter, pixelsPerUnit);
+    return;
   }
+  if (patch.shape === "ellipse") drawEllipseBrightnessPatch(ctx, patch, patchCenter, pixelsPerUnit);
+}
 
+function drawCircleBrightnessPatch(
+  ctx: CanvasRenderingContext2D,
+  patch: BrightnessPatch,
+  patchCenter: { x: number; y: number },
+  pixelsPerUnit: number,
+): void {
+  const rr = finitePatchValue(patch.r, 0) * pixelsPerUnit;
+  if (!(rr > 0)) return;
+  ctx.beginPath();
+  ctx.arc(patchCenter.x, patchCenter.y, rr, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawEllipseBrightnessPatch(
+  ctx: CanvasRenderingContext2D,
+  patch: BrightnessPatch,
+  patchCenter: { x: number; y: number },
+  pixelsPerUnit: number,
+): void {
+  const rx = finitePatchValue(patch.rx, 0) * pixelsPerUnit;
+  const ry = finitePatchValue(patch.ry, 0) * pixelsPerUnit;
+  if (!(rx > 0 && ry > 0)) return;
+  ctx.beginPath();
+  ctx.ellipse(patchCenter.x, patchCenter.y, rx, ry, finitePatchValue(patch.angle, 0), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function finitePatchValue(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function starDiskOptionDefault<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+function resolveStarDiskRenderState(params: SystemParams, opts: StarDiskRenderOptions): StarDiskRenderState {
+  const pixelsPerUnit = toFinitePositiveOr(opts.pixelsPerUnit, 1);
+  const rStar = toFinitePositiveOr(params.star?.r, 1);
+  const Rpx = rStar * pixelsPerUnit;
+  const useLD = starDiskOptionDefault(opts.useLimbDarkening, true);
+  return {
+    centerPx: opts.centerPx,
+    pixelsPerUnit,
+    rStar,
+    Rpx,
+    baseRGB: parseHexColor(starDiskOptionDefault(opts.baseColor, "#f2a33a"), [242, 163, 58]),
+    highlightRGB: parseHexColor(starDiskOptionDefault(opts.highlightColor, "#ffe1a6"), [255, 225, 166]),
+    gamma: toFinitePositiveOr(opts.gamma, 2.2),
+    maxDisplayIntensity: toFinitePositiveOr(opts.maxDisplayIntensity, 1.4),
+    law: useLD ? resolveLawFromParams(params) : undefined,
+    nStops: Math.max(8, Math.floor(starDiskOptionDefault(opts.nStops, chooseStops(Rpx)))),
+  };
+}
+
+function resolveStarDiskStops(
+  state: StarDiskRenderState,
+  cache: StarDiskCache | undefined,
+): Array<{ pos: number; color: string }> {
+  if (!cache) return buildStarDiskStops(state);
+
+  const key = starDiskStopsCacheKey(state);
+  let stops = cache.getStops(key);
+  if (!stops) {
+    stops = buildStarDiskStops(state);
+    cache.setStops(key, stops);
+  }
+  return stops;
+}
+
+function starDiskStopsCacheKey(state: StarDiskRenderState): string {
+  const base = rgbToCss(state.baseRGB);
+  if (state.law) {
+    return [
+      "ld",
+      lawKey(state.law),
+      `R:${Math.round(state.Rpx)}`,
+      `base:${base}`,
+      `g:${state.gamma.toFixed(3)}`,
+      `I:${state.maxDisplayIntensity.toFixed(3)}`,
+      `n:${state.nStops}`,
+    ].join("|");
+  }
+  return [
+    "decor",
+    `R:${Math.round(state.Rpx)}`,
+    `base:${base}`,
+    `hi:${rgbToCss(state.highlightRGB)}`,
+    `n:${state.nStops}`,
+  ].join("|");
+}
+
+function buildStarDiskStops(state: StarDiskRenderState): Array<{ pos: number; color: string }> {
+  if (state.law) {
+    return buildLimbDarkeningStops({
+      law: state.law,
+      Rpx: state.Rpx,
+      baseRGB: state.baseRGB,
+      gamma: state.gamma,
+      maxDisplayIntensity: state.maxDisplayIntensity,
+      nStops: state.nStops,
+    });
+  }
+  return buildDecorativeStops({
+    baseRGB: state.baseRGB,
+    highlightRGB: state.highlightRGB,
+    nStops: state.nStops,
+  });
+}
+
+function drawStarDiskFillAndPatches(
+  ctx: CanvasRenderingContext2D,
+  params: SystemParams,
+  opts: StarDiskRenderOptions,
+  state: StarDiskRenderState,
+  stops: Array<{ pos: number; color: string }>,
+): void {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(state.centerPx.x, state.centerPx.y, state.Rpx, 0, Math.PI * 2);
+  ctx.fillStyle = applyStopsToGradient(ctx, state.centerPx.x, state.centerPx.y, state.Rpx, stops);
+  ctx.fill();
+  drawStarDiskPatches(ctx, params, opts, state);
+  ctx.restore();
+}
+
+function drawStarDiskPatches(
+  ctx: CanvasRenderingContext2D,
+  params: SystemParams,
+  opts: StarDiskRenderOptions,
+  state: StarDiskRenderState,
+): void {
+  if (!starDiskOptionDefault(opts.showPatches, true)) return;
+
+  const patches = params.star.photometry?.brightnessPatches;
+  if (!(Array.isArray(patches) && patches.length > 0)) return;
+
+  drawBrightnessPatches({
+    ctx,
+    centerPx: state.centerPx,
+    pixelsPerUnit: state.pixelsPerUnit,
+    rStar: state.rStar,
+    patchStrength: starDiskOptionDefault(opts.patchStrength, 0.65),
+    patches: patches as BrightnessPatch[],
+  });
+}
+
+function drawStarDiskOutline(
+  ctx: CanvasRenderingContext2D,
+  opts: StarDiskRenderOptions,
+  state: StarDiskRenderState,
+): void {
+  if (!starDiskOptionDefault(opts.drawOutline, true)) return;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(state.centerPx.x, state.centerPx.y, state.Rpx, 0, Math.PI * 2);
+  ctx.strokeStyle = opts.outlineStyle?.strokeStyle ?? "rgba(0,0,0,0.25)";
+  ctx.lineWidth = toFinitePositiveOr(opts.outlineStyle?.lineWidth, 1);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -339,84 +528,10 @@ export function drawStarDisk(
   params: SystemParams,
   opts: StarDiskRenderOptions,
 ): void {
-  const centerPx = opts.centerPx;
-  const pixelsPerUnit = toFinitePositiveOr(opts.pixelsPerUnit, 1);
-
-  const rStar = toFinitePositiveOr(params.star?.r, 1);
-  const Rpx = rStar * pixelsPerUnit;
-
-  const baseRGB = parseHexColor(opts.baseColor ?? "#f2a33a", [242, 163, 58]);
-  const highlightRGB = parseHexColor(opts.highlightColor ?? "#ffe1a6", [255, 225, 166]);
-
-  const gamma = toFinitePositiveOr(opts.gamma, 2.2);
-  const maxDisplayIntensity = toFinitePositiveOr(opts.maxDisplayIntensity, 1.4);
-
-  const useLD = opts.useLimbDarkening ?? true;
-  const law = useLD ? resolveLawFromParams(params) : undefined;
-
-  const nStops = Math.max(8, Math.floor(opts.nStops ?? chooseStops(Rpx)));
-
-  // Build or fetch cached stops
-  let stops: Array<{ pos: number; color: string }> | undefined;
-
-  const cache = opts.cache;
-  if (cache) {
-    const key = law
-      ? `ld|${lawKey(law)}|R:${Math.round(Rpx)}|base:${rgbToCss(baseRGB)}|g:${gamma.toFixed(3)}|I:${maxDisplayIntensity.toFixed(3)}|n:${nStops}`
-      : `decor|R:${Math.round(Rpx)}|base:${rgbToCss(baseRGB)}|hi:${rgbToCss(highlightRGB)}|n:${nStops}`;
-
-    stops = cache.getStops(key);
-    if (!stops) {
-      stops = law
-        ? buildLimbDarkeningStops({ law, Rpx, baseRGB, gamma, maxDisplayIntensity, nStops })
-        : buildDecorativeStops({ baseRGB, highlightRGB, nStops });
-      cache.setStops(key, stops);
-    }
-  } else {
-    stops = law
-      ? buildLimbDarkeningStops({ law, Rpx, baseRGB, gamma, maxDisplayIntensity, nStops })
-      : buildDecorativeStops({ baseRGB, highlightRGB, nStops });
-  }
-
-  // Paint disk
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(centerPx.x, centerPx.y, Rpx, 0, Math.PI * 2);
-
-  const grad = applyStopsToGradient(ctx, centerPx.x, centerPx.y, Rpx, stops);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Optional patch overlay
-  const showPatches = opts.showPatches ?? true;
-  if (showPatches) {
-    const patches = params.star.photometry?.brightnessPatches;
-    if (Array.isArray(patches) && patches.length > 0) {
-      drawBrightnessPatches({
-        ctx,
-        centerPx,
-        pixelsPerUnit,
-        rStar,
-        patchStrength: opts.patchStrength ?? 0.65,
-        patches: patches as BrightnessPatch[],
-      });
-    }
-  }
-
-  ctx.restore();
-
-  // Outline drawn in a separate save/restore so that (a) the arc path is
-  // reconstructed (drawBrightnessPatches may have replaced it) and (b) stroke
-  // state does not leak to the caller.
-  if (opts.drawOutline ?? true) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerPx.x, centerPx.y, Rpx, 0, Math.PI * 2);
-    ctx.strokeStyle = opts.outlineStyle?.strokeStyle ?? "rgba(0,0,0,0.25)";
-    ctx.lineWidth = toFinitePositiveOr(opts.outlineStyle?.lineWidth, 1);
-    ctx.stroke();
-    ctx.restore();
-  }
+  const state = resolveStarDiskRenderState(params, opts);
+  const stops = resolveStarDiskStops(state, opts.cache);
+  drawStarDiskFillAndPatches(ctx, params, opts, state, stops);
+  drawStarDiskOutline(ctx, opts, state);
 }
 
 /**

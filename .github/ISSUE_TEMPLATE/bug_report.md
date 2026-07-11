@@ -9,6 +9,10 @@ labels: bug
 
 Describe the issue in one or two sentences.
 
+## Actual behavior
+
+What happened?
+
 ## Expected behavior
 
 What should happen instead?
@@ -34,9 +38,11 @@ What should happen instead?
 
 ## Verification evidence
 
-- [ ] Reproduced on latest `dev`
+- [ ] Reproduced on latest `main`
 - [ ] Reproduced after `pnpm ci:verify`
+- [ ] Browser console checked
 
 ## Logs / screenshots
 
-Attach console output, stack traces, screenshots, or short recordings.
+Attach redacted console output, stack traces, screenshots, or short recordings. Do not include
+tokens, private paths, unpublished data, or personal information.

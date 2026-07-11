@@ -2,24 +2,24 @@
 
 This project has two validation layers:
 
-1. Hard input validation (throws):
+## 1. Hard input validation (throws)
 
 - Implemented in `src/sim/validation/assertions.ts` via `assertStepInputs()` and `assertOrbit()`.
 - Enforces finite/positive radii, orbit basics, N-body prerequisites, and key photometry ranges.
 
-2. Soft plausibility warnings (non-fatal):
+## 2. Soft plausibility warnings (non-fatal)
 
 - Implemented in `src/sim/validation/warnings.ts` via `collectParamWarnings()`.
 - Implemented in `src/physics/hill.ts` via `validateSystemParamsPhysics()`.
 - Returned warnings are shown in the UI as guidance for likely unphysical or numerically risky setups.
 
-3. Shared numeric sanitization (fail-open):
+## 3. Shared numeric sanitization (fail-open)
 
 - Implemented in `src/core/units.ts`.
 - Helpers such as `clamp()`, `toFiniteNumber()`, `toFiniteNonNeg()`, and `toFinitePositiveOr()` coerce invalid values to safe bounds or fallbacks instead of throwing.
 - This policy keeps the interactive simulator running, but it should be treated as an explicit contract, not invisible magic.
 
-4. Solver fallback policy:
+## 4. Solver fallback policy
 
 - `src/physics/kepler.ts` throws only in `strict` mode.
 - Non-`strict` callers receive a finite wrapped best-effort anomaly if Newton iteration exhausts its retry budget.

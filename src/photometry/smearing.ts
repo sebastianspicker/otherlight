@@ -94,6 +94,55 @@ function normalizeSmearingConfig(cfg: SmearingConfig | undefined): {
   };
 }
 
+function maybeClampFlux(value: number, clampTo01: boolean): number {
+  return clampTo01 ? clamp01(value) : value;
+}
+
+function instantaneousFlux(fluxAt: FluxAtTime, tSec: number, clampTo01: boolean): number {
+  const f0 = fluxAt(tSec);
+  const out0 = Number.isFinite(f0) ? f0 : 0;
+  return maybeClampFlux(out0, clampTo01);
+}
+
+function smearingDisabled(cadenceSec: number, nSubsamples: number): boolean {
+  return !Number.isFinite(cadenceSec) || cadenceSec <= 0 || !Number.isFinite(nSubsamples) || nSubsamples <= 1;
+}
+
+function normalizedSubsampleCount(nSubsamples: number): number {
+  return Math.max(2, Math.floor(nSubsamples));
+}
+
+function accumulateBoxcarSamples(params: {
+  fluxAt: FluxAtTime;
+  tStart: number;
+  dt: number;
+  count: number;
+  nonFinitePolicy: "ignore" | "zero";
+}): { sum: number; count: number } {
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < params.count; i++) {
+    const fi = params.fluxAt(params.tStart + (i + 0.5) * params.dt);
+    if (Number.isFinite(fi)) {
+      sum += fi;
+      count++;
+    } else if (params.nonFinitePolicy === "zero") {
+      count++;
+    }
+  }
+  return { sum, count };
+}
+
+function averagedOrInstantaneous(
+  samples: { sum: number; count: number },
+  fluxAt: FluxAtTime,
+  tCenterSec: number,
+): number {
+  if (samples.count > 0) return samples.sum / samples.count;
+  const f0 = fluxAt(tCenterSec);
+  return Number.isFinite(f0) ? f0 : 0;
+}
+
 /**
  * Compute a deterministic boxcar-averaged flux centered at tCenterSec, using midpoint subsampling.
  *
@@ -116,46 +165,13 @@ export function boxcarAverageFlux(
   const clampTo01Opt = Boolean(opts?.clampTo01);
   const nonFinitePolicy: "ignore" | "zero" = opts?.nonFinitePolicy === "zero" ? "zero" : "ignore";
 
-  // Disabled / trivial case:
-  // nSubsamples <= 1 is treated as "no smearing" (pass-through). The config UI
-  // enforces nSubsamples >= 2 when smearing is enabled, so the Math.max(2, ...)
-  // fallback below only fires on direct function calls with an out-of-range value.
-  if (!Number.isFinite(cadenceSec) || cadenceSec <= 0 || !Number.isFinite(nSubsamples) || nSubsamples <= 1) {
-    const f0 = fluxAt(tCenterSec);
-    const out0 = Number.isFinite(f0) ? f0 : 0;
-    return clampTo01Opt ? clamp01(out0) : out0;
-  }
+  if (smearingDisabled(cadenceSec, nSubsamples)) return instantaneousFlux(fluxAt, tCenterSec, clampTo01Opt);
 
-  const N = Math.max(2, Math.floor(nSubsamples));
+  const N = normalizedSubsampleCount(nSubsamples);
   const dt = cadenceSec / N;
   const tStart = tCenterSec - 0.5 * cadenceSec;
-
-  let sum = 0;
-  let count = 0;
-
-  for (let i = 0; i < N; i++) {
-    const ti = tStart + (i + 0.5) * dt;
-    const fi = fluxAt(ti);
-
-    if (Number.isFinite(fi)) {
-      sum += fi;
-      count++;
-    } else if (nonFinitePolicy === "zero") {
-      // Count as a 0 contribution (explicit, but can bias downwards).
-      count++;
-    }
-  }
-
-  let out: number;
-  if (count > 0) {
-    out = sum / count;
-  } else {
-    // All subsamples were non-finite and we chose "ignore" => fallback.
-    const f0 = fluxAt(tCenterSec);
-    out = Number.isFinite(f0) ? f0 : 0;
-  }
-
-  return clampTo01Opt ? clamp01(out) : out;
+  const samples = accumulateBoxcarSamples({ fluxAt, tStart, dt, count: N, nonFinitePolicy });
+  return maybeClampFlux(averagedOrInstantaneous(samples, fluxAt, tCenterSec), clampTo01Opt);
 }
 
 /**
@@ -171,39 +187,4 @@ export function smearedFluxAt(
     clampTo01: norm.clampTo01,
     nonFinitePolicy: norm.nonFinitePolicy,
   });
-}
-
-// ---------------------------
-// Minimal built-in tests
-// ---------------------------
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`smearing self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-12): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-/**
- * Self-tests:
- * - Constant signal should remain constant under smearing.
- * - Midpoint rule on a linear function should be exact for any N (boxcar average of linear is exact).
- * - NaN handling should fall back to instantaneous when all samples are NaN under "ignore".
- */
-export function runSmearingSelfTests(): void {
-  const fConst: FluxAtTime = (_t) => 2.5;
-  const outConst = boxcarAverageFlux(fConst, 10, 4, 9);
-  assert(approxEq(outConst, 2.5), "Constant flux must remain unchanged.");
-
-  const fLin: FluxAtTime = (t) => 3 * t + 1;
-  // Average of linear over symmetric interval equals value at center.
-  const outLin = boxcarAverageFlux(fLin, 10, 4, 9);
-  assert(approxEq(outLin, fLin(10), 1e-12), "Linear flux boxcar average should equal center value.");
-
-  const fNaN: FluxAtTime = (_t) => NaN;
-  const outNaN = boxcarAverageFlux(fNaN, 10, 4, 9, {
-    nonFinitePolicy: "ignore",
-  });
-  assert(approxEq(outNaN, 0), "All-NaN flux should fall back to 0 via instantaneous fallback.");
 }

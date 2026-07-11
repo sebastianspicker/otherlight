@@ -1,9 +1,13 @@
 export function renderVisualizationTemplate(): string {
   return `
-    <section class="panel vizStack">
-      <div class="col">
-        <h2>Sky-plane</h2>
-        <canvas id="skyCanvas" width="960" height="540" role="img" aria-label="Sky-plane visualization"></canvas>
+    <section class="panel vizStack" aria-label="Scientific figures">
+      <figure class="scientific-figure">
+        <div class="figure-heading">
+          <h2>Sky-plane geometry</h2>
+          <span class="figure-key">Observer view</span>
+        </div>
+        <canvas id="skyCanvas" width="960" height="540" role="img" aria-label="Sky-plane geometry" aria-describedby="skySummary"></canvas>
+        <figcaption id="skySummary">The star is centered. Geometry details will appear when the scenario is ready.</figcaption>
         <p id="skyBlackboxHint" class="help" hidden>
           Black-box mode active: only the light curve is visible. Select a hypothesis and click “Reveal sky”
           to see the orbital geometry.
@@ -34,12 +38,16 @@ export function renderVisualizationTemplate(): string {
             Note: the debug overlay is purely visual and does not affect the physics or photometry calculations.
           </p>
         </details>
-      </div>
+      </figure>
 
-      <div class="col">
-        <h2>Light curve</h2>
-        <canvas id="lcCanvas" width="960" height="240" role="img" aria-label="Light curve plot"></canvas>
-      </div>
+      <figure class="scientific-figure">
+        <div class="figure-heading">
+          <h2>Light curve</h2>
+          <button id="lcExportBtn" type="button">Export light-curve CSV</button>
+        </div>
+        <canvas id="lcCanvas" width="960" height="240" role="img" aria-label="Light curve plot" aria-describedby="lcSummary"></canvas>
+        <figcaption id="lcSummary">No plotted samples yet. Start the simulation or jump to an event.</figcaption>
+      </figure>
     </section>
   `;
 }

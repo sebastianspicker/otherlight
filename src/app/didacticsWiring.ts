@@ -55,135 +55,155 @@ export type WireDidacticsUiDeps = {
   signal?: AbortSignal;
 };
 
-export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
-  const {
-    refs,
-    state,
-    getSimulation,
-    currentLessonSimMode,
-    seekToTime,
-    syncBinaryUi,
-    warnEl,
-    getSuccessMessage,
-    signal,
-  } = deps;
-  const listenerOptions = signal ? { signal } : undefined;
+type ListenerOptions = AddEventListenerOptions | undefined;
+type DidacticsWireContext = WireDidacticsUiDeps & {
+  listenerOptions: ListenerOptions;
+};
+type HintLevel = "L1" | "L2" | "L3";
 
+function announceDidacticResult(message: string): void {
+  const region = typeof document === "undefined" ? null : document.getElementById("didAnnouncement");
+  if (region) region.textContent = message;
+}
+
+function focusPhaseHeading(): void {
+  const heading = typeof document === "undefined" ? null : document.getElementById("didPhaseTitle");
+  heading?.focus();
+}
+
+export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
+  const context: DidacticsWireContext = {
+    ...deps,
+    listenerOptions: deps.signal ? { signal: deps.signal } : undefined,
+  };
+
+  initializeDidacticsUi(context);
+  wireLessonSelection(context);
+  wireResponseInputs(context);
+  wireHintControls(context);
+  wireAssessmentControls(context);
+  wireLessonNavigation(context);
+  wireReportAndJumpControls(context);
+  wireComparisonControl(context);
+  wireBinaryLabControls(context);
+}
+
+function initializeDidacticsUi(context: DidacticsWireContext): void {
+  const { refs, state, currentLessonSimMode } = context;
   populateDidacticsControls(refs, currentLessonSimMode());
   syncDidacticsControlsFromParams(state.params, refs, currentLessonSimMode());
+  populateComparePresetOptions(refs);
+}
 
-  if (refs.didComparePreset) {
-    refs.didComparePreset.replaceChildren();
-    for (const preset of PRESETS) {
-      const opt = document.createElement("option");
-      opt.value = preset.id;
-      opt.textContent = preset.label;
-      refs.didComparePreset.appendChild(opt);
-    }
-    refs.didComparePreset.value = "nbody-with-perturber";
+function populateComparePresetOptions(refs: UiRefs): void {
+  const select = refs.didComparePreset;
+  if (!select) return;
+  select.replaceChildren();
+  for (const preset of PRESETS) {
+    const opt = document.createElement("option");
+    opt.value = preset.id;
+    opt.textContent = preset.label;
+    select.appendChild(opt);
   }
+  select.value = "nbody-with-perturber";
+}
 
-  refs.didLessonSelect?.addEventListener(
+function wireLessonSelection(context: DidacticsWireContext): void {
+  const { refs, state, currentLessonSimMode, listenerOptions } = context;
+  const select = refs.didLessonSelect;
+  select?.addEventListener(
     "change",
     () => {
       state.params = ensureDidacticsConfig(state.params);
       state.didacticsRuntime = switchDidacticsLesson(
         state.params,
         state.didacticsRuntime,
-        refs.didLessonSelect!.value,
+        select.value,
         state.t,
         currentLessonSimMode(),
       );
       renderDidacticSignals(refs, state.didacticsRuntime);
+      announceDidacticResult(
+        `Lesson changed. ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "First phase"}.`,
+      );
+      focusPhaseHeading();
     },
     listenerOptions,
   );
+}
 
-  refs.didPrimaryResponseInput?.addEventListener(
+function wireResponseInputs(context: DidacticsWireContext): void {
+  const { refs, state, listenerOptions } = context;
+  const primary = refs.didPrimaryResponseInput;
+  const secondary = refs.didSecondaryResponseInput;
+
+  primary?.addEventListener(
     "input",
     () => {
       state.didacticsRuntime = updateDidacticResponse(
         state.didacticsRuntime,
-        { primary: refs.didPrimaryResponseInput!.value },
+        { primary: primary.value },
         state.t,
       );
     },
     listenerOptions,
   );
 
-  refs.didSecondaryResponseInput?.addEventListener(
+  secondary?.addEventListener(
     "input",
     () => {
       state.didacticsRuntime = updateDidacticResponse(
         state.didacticsRuntime,
-        { secondary: refs.didSecondaryResponseInput!.value },
+        { secondary: secondary.value },
         state.t,
       );
     },
     listenerOptions,
   );
+}
 
+function wireHintControls(context: DidacticsWireContext): void {
+  const { refs, listenerOptions } = context;
   refs.didHintLevelSelect?.addEventListener(
     "change",
-    () => {
-      const nextLevel =
-        refs.didHintLevelSelect!.value === "L3"
-          ? "L3"
-          : refs.didHintLevelSelect!.value === "L2"
-            ? "L2"
-            : "L1";
-      state.params = ensureDidacticsConfig(state.params);
-      state.params = {
-        ...state.params,
-        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-      };
-      renderDidacticSignals(refs, state.didacticsRuntime);
-    },
+    () => setHintLevel(context, normalizedHintLevel(refs.didHintLevelSelect?.value)),
     listenerOptions,
   );
-
   refs.didHintLessBtn?.addEventListener(
     "click",
-    () => {
-      const currentLevel =
-        state.params.didactics?.hintLevel === "L3"
-          ? "L3"
-          : state.params.didactics?.hintLevel === "L2"
-            ? "L2"
-            : "L1";
-      const nextLevel = previousHintLevel(currentLevel);
-      state.params = ensureDidacticsConfig(state.params);
-      state.params = {
-        ...state.params,
-        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-      };
-      if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
-      renderDidacticSignals(refs, state.didacticsRuntime);
-    },
+    () => setHintLevel(context, previousHintLevel(currentHintLevel(context.state.params))),
     listenerOptions,
   );
-
   refs.didHintMoreBtn?.addEventListener(
     "click",
-    () => {
-      const currentLevel =
-        state.params.didactics?.hintLevel === "L3"
-          ? "L3"
-          : state.params.didactics?.hintLevel === "L2"
-            ? "L2"
-            : "L1";
-      const nextLevel = nextHintLevel(currentLevel);
-      state.params = ensureDidacticsConfig(state.params);
-      state.params = {
-        ...state.params,
-        didactics: { ...state.params.didactics!, hintLevel: nextLevel },
-      };
-      if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
-      renderDidacticSignals(refs, state.didacticsRuntime);
-    },
+    () => setHintLevel(context, nextHintLevel(currentHintLevel(context.state.params))),
     listenerOptions,
   );
+}
 
+function normalizedHintLevel(value: string | undefined): HintLevel {
+  if (value === "L3") return "L3";
+  if (value === "L2") return "L2";
+  return "L1";
+}
+
+function currentHintLevel(params: SystemParams): HintLevel {
+  return normalizedHintLevel(params.didactics?.hintLevel);
+}
+
+function setHintLevel(context: DidacticsWireContext, nextLevel: HintLevel): void {
+  const { refs, state } = context;
+  state.params = ensureDidacticsConfig(state.params);
+  state.params = {
+    ...state.params,
+    didactics: { ...state.params.didactics!, hintLevel: nextLevel },
+  };
+  if (refs.didHintLevelSelect) refs.didHintLevelSelect.value = nextLevel;
+  renderDidacticSignals(refs, state.didacticsRuntime);
+}
+
+function wireAssessmentControls(context: DidacticsWireContext): void {
+  const { refs, state, listenerOptions } = context;
   refs.didAutoAssess?.addEventListener(
     "input",
     () => {
@@ -195,7 +215,11 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     },
     listenerOptions,
   );
+  wireCheckButton(context);
+}
 
+function wireCheckButton(context: DidacticsWireContext): void {
+  const { refs, state, getSimulation, warnEl, getSuccessMessage, listenerOptions } = context;
   refs.didCheckBtn?.addEventListener(
     "click",
     () => {
@@ -210,31 +234,47 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
             state.t,
           );
           renderDidacticSignals(refs, state.didacticsRuntime);
+          const checks = state.didacticsRuntime.latestSignals?.checks ?? [];
+          const passed = checks.filter((check) => check.passed).length;
+          announceDidacticResult(`Check complete. ${passed} of ${checks.length} criteria are on target.`);
         },
         { statusEl: warnEl, getSuccessMessage },
       );
     },
     listenerOptions,
   );
+}
 
+function wireLessonNavigation(context: DidacticsWireContext): void {
+  const { refs, state, listenerOptions } = context;
   refs.didPrevBtn?.addEventListener(
     "click",
     () => {
       state.didacticsRuntime = retreatLessonFlow(state.params, state.didacticsRuntime, state.t);
       renderDidacticSignals(refs, state.didacticsRuntime);
+      announceDidacticResult(
+        `Moved to ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "the previous phase"}.`,
+      );
+      focusPhaseHeading();
     },
     listenerOptions,
   );
-
   refs.didNextBtn?.addEventListener(
     "click",
     () => {
       state.didacticsRuntime = advanceLessonFlow(state.params, state.didacticsRuntime, state.t);
       renderDidacticSignals(refs, state.didacticsRuntime);
+      announceDidacticResult(
+        `Moved to ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "the next phase"}.`,
+      );
+      focusPhaseHeading();
     },
     listenerOptions,
   );
+}
 
+function wireReportAndJumpControls(context: DidacticsWireContext): void {
+  const { refs, state, warnEl, getSuccessMessage, seekToTime, listenerOptions } = context;
   refs.didExportBtn?.addEventListener(
     "click",
     () => {
@@ -246,7 +286,6 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     },
     listenerOptions,
   );
-
   refs.didJumpEventBtn?.addEventListener(
     "click",
     () => {
@@ -261,36 +300,60 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     },
     listenerOptions,
   );
+}
 
+function wireComparisonControl(context: DidacticsWireContext): void {
+  const { refs, state, listenerOptions } = context;
   refs.didCompareBtn?.addEventListener(
     "click",
     () => {
       runWithErrorHandling(
         () => {
-          const presetB = getPresetById(refs.didComparePreset?.value ?? "default");
-          const tCmp = Number(refs.didCompareTime?.value ?? "0");
-          const cmp = compareScenariosAtTime(
-            state.params,
-            cloneParams(presetB.params),
-            Number.isFinite(tCmp) ? tCmp : 0,
-          );
-          const comparisonText = interpretDidacticComparison(cmp, {
-            lessonId: state.didacticsRuntime.learning.lessonId,
-            comparisonPrompt: state.didacticsRuntime.latestSignals?.comparisonPrompt,
-          });
-          renderDidacticComparison(refs, comparisonText);
-          state.didacticsRuntime = updateDidacticComparison(state.didacticsRuntime, cmp, comparisonText);
-          state.comparisonCurveSeries = cmp.visual?.curveSeries;
-          state.comparisonInset = cmp.visual?.comparisonInset;
-          state.comparisonGhosts = cmp.visual?.sceneGhosts;
-          state.comparisonBadges = cmp.visual?.badges;
+          const comparison = runDidacticComparison(context);
+          renderDidacticComparison(refs, comparison.text);
+          applyDidacticComparisonState(state, comparison);
         },
         { statusEl: refs.didCompareOut, errorPrefix: "Compare failed: " },
       );
     },
     listenerOptions,
   );
+}
 
+function runDidacticComparison(context: DidacticsWireContext): {
+  comparison: ReturnType<typeof compareScenariosAtTime>;
+  text: string;
+} {
+  const { refs, state } = context;
+  const presetB = getPresetById(refs.didComparePreset?.value ?? "default");
+  const tCmp = Number(refs.didCompareTime?.value ?? "0");
+  const comparison = compareScenariosAtTime(
+    state.params,
+    cloneParams(presetB.params),
+    Number.isFinite(tCmp) ? tCmp : 0,
+  );
+  return {
+    comparison,
+    text: interpretDidacticComparison(comparison, {
+      lessonId: state.didacticsRuntime.learning.lessonId,
+      comparisonPrompt: state.didacticsRuntime.latestSignals?.comparisonPrompt,
+    }),
+  };
+}
+
+function applyDidacticComparisonState(
+  state: DidacticsUiState,
+  result: { comparison: ReturnType<typeof compareScenariosAtTime>; text: string },
+): void {
+  state.didacticsRuntime = updateDidacticComparison(state.didacticsRuntime, result.comparison, result.text);
+  state.comparisonCurveSeries = result.comparison.visual?.curveSeries;
+  state.comparisonInset = result.comparison.visual?.comparisonInset;
+  state.comparisonGhosts = result.comparison.visual?.sceneGhosts;
+  state.comparisonBadges = result.comparison.visual?.badges;
+}
+
+function wireBinaryLabControls(context: DidacticsWireContext): void {
+  const { refs, state, syncBinaryUi, warnEl, listenerOptions } = context;
   refs.didHypothesisSelect?.addEventListener(
     "change",
     () => {
@@ -311,12 +374,12 @@ export function wireDidacticsUi(deps: WireDidacticsUiDeps): void {
     },
     listenerOptions,
   );
-
   refs.didRevealSkyBtn?.addEventListener(
     "click",
     () => {
       state.binaryLabState = revealSky(state.binaryLabState);
       syncBinaryUi();
+      announceDidacticResult("Sky geometry revealed. Compare it with your hypothesis and the light curve.");
     },
     listenerOptions,
   );
