@@ -61,11 +61,11 @@ const HARD_POSITIVE_IDS = new Set([
   "exoVelDt",
 ]);
 
-function normalizedText(value: string | null | undefined): string {
+const normalizedText = (value: string | null | undefined): string => {
   return (value ?? "").replace(/\s+/g, " ").trim();
-}
+};
 
-function labelTextForInput(input: HTMLInputElement): string {
+const labelTextForInput = (input: HTMLInputElement): string => {
   const override = LABEL_OVERRIDES[input.id];
   if (override) return override;
   const explicit = normalizedText(input.getAttribute("aria-label"));
@@ -78,30 +78,44 @@ function labelTextForInput(input: HTMLInputElement): string {
     if (text) return text;
   }
   return "Scientific parameter";
-}
+};
 
-function finiteAttribute(input: HTMLInputElement, name: "min" | "max"): number | undefined {
+const finiteAttribute = (input: HTMLInputElement, name: "min" | "max"): number | undefined => {
   const raw = input.getAttribute(name);
   if (raw === null) return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : undefined;
-}
+};
 
-export function getParamUiMeta(input: HTMLInputElement): ParamUiMeta {
+const inputGroup = (input: HTMLInputElement): string => {
   const fieldset = input.closest("fieldset");
-  const group = normalizedText(fieldset?.querySelector(":scope > legend")?.textContent) || "Parameters";
-  const rawLabel = labelTextForInput(input);
+  const legend = fieldset?.querySelector(":scope > legend")?.textContent;
+  return normalizedText(legend) || "Parameters";
+};
+
+const inputUnit = (rawLabel: string): string | undefined => {
   const unitMatch = rawLabel.match(/\[([^\]]+)\]|\(([^)]+)\)\s*$/);
+  const unit = unitMatch?.[1] ?? unitMatch?.[2];
+  return normalizedText(unit) || undefined;
+};
+
+const inputHelp = (input: HTMLInputElement): string | undefined => {
+  const help = input.closest("[data-tooltip]")?.getAttribute("data-tooltip");
+  return normalizedText(help) || undefined;
+};
+
+export const getParamUiMeta = (input: HTMLInputElement): ParamUiMeta => {
+  const rawLabel = labelTextForInput(input);
   return {
     id: input.id,
     label: rawLabel,
-    group,
-    unit: normalizedText(unitMatch?.[1] ?? unitMatch?.[2]) || undefined,
+    group: inputGroup(input),
+    unit: inputUnit(rawLabel),
     min: finiteAttribute(input, "min"),
     max: finiteAttribute(input, "max"),
-    help: normalizedText(input.closest("[data-tooltip]")?.getAttribute("data-tooltip")) || undefined,
+    help: inputHelp(input),
   };
-}
+};
 
 function inputError(input: HTMLInputElement, overrideRanges: boolean): ParamValidationError | undefined {
   const raw = input.value.trim();

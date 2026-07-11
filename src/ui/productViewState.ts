@@ -34,11 +34,11 @@ export const DEFAULT_PRODUCT_VIEW_STATE: ProductViewState = {
   runtime: "interactive",
 };
 
-const STABLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 /** True when a value is safe to use as a stable preset, system, or lesson ID. */
 export function isStableProductViewId(value: string): boolean {
-  return value.length <= 128 && STABLE_ID_PATTERN.test(value);
+  if (value.length === 0 || value.length > 128) return false;
+  if (value.startsWith("-") || value.endsWith("-") || value.includes("--")) return false;
+  return /^[a-z0-9-]+$/.test(value);
 }
 
 function enumValue<T extends string>(

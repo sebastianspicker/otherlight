@@ -1,4 +1,4 @@
 @import "./styles/base.css";
 @import "./styles/shell.css";
 @import "./styles/features.css";
-@import "./styles/public-alpha.css";
+@import url("./styles/public-alpha.css");

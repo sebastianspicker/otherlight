@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
-### Added
+### Added in Unreleased
 
 - Added peer Simulation and Guided Labs navigation, durable URL context, accessible canvas summaries,
   scientific input validation, reversible history clearing, fatal-error recovery, and an
@@ -12,14 +12,14 @@ All notable changes to this project are documented in this file.
 - Added `pnpm hygiene:public` to keep generated output, local tool state, secrets, and workstation
   paths out of the public candidate tree.
 
-### Changed
+### Changed in Unreleased
 
 - Renamed the browser product to Transit Light-Curve Lab and introduced the Classroom Observatory
   visual system with a light shell, dark scientific plots, responsive controls, and explicit status.
 - Expanded browser journeys for Chromium, Firefox, WebKit, tablet landscape, mobile smoke, URL
   recovery, validation, history, and focus behavior.
 
-### Removed
+### Removed in Unreleased
 
 - Removed the unsupported V2 migration script/test surface and superseded root screenshot gallery;
   V4 migration and `docs/screenshots/` are the maintained paths.

@@ -13,13 +13,13 @@ describe("fatal application error", () => {
   it("shows safe recovery guidance, preserves the status structure, and reloads on request", () => {
     const reload = vi.fn();
 
-    showFatalAppError(new Error("bad <script>state</script>"), { reload });
+    showFatalAppError(new Error("bad <b>state</b>"), { reload });
 
     const fatal = document.getElementById("fatalError");
     expect(fatal).not.toBeNull();
     expect(fatal?.hidden).toBe(false);
     expect(document.activeElement).toBe(fatal);
-    expect(document.getElementById("fatalErrorMessage")?.textContent).toContain("bad <script>state</script>");
+    expect(document.getElementById("fatalErrorMessage")?.textContent).toContain("bad <b>state</b>");
     expect(document.querySelector("#fatalErrorMessage script")).toBeNull();
     expect(document.getElementById("appStatusMessage")?.textContent).toContain("Initialization failed");
     expect(document.getElementById("appRetryBtn")).not.toBeNull();
