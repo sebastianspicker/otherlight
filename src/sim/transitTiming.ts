@@ -172,11 +172,12 @@ function planetTransitReferenceEpochSec(
 
 function planetReferenceEpochKey(context: TransitTimingContext): string {
   const { params, kin, observerDir } = context;
+  const referenceOrbit = resolveOrbitElements(params.planet.orbit, kin.planetOrbit.t0, "planet.orbit");
   return [
     "planet",
     params.star.r,
     params.planet.r,
-    orbitTimingKey("orbit", kin.planetOrbit),
+    orbitTimingKey("orbit", referenceOrbit),
     observerDir.x,
     observerDir.y,
     observerDir.z,
@@ -214,11 +215,11 @@ function moonOrbitAtObservation(context: TransitTimingContext) {
     : undefined;
 }
 
-function moonTransitReferenceEpochSec(
+const moonTransitReferenceEpochSec = (
   context: TransitTimingContext,
   moonOrbit: ReturnType<typeof moonOrbitAtObservation>,
   sampleAt: TransitSampleAt | undefined,
-): number | undefined {
+): number | undefined => {
   const { params } = context;
   return cachedTransitReferenceEpochSec(params, moonReferenceEpochKey(context, moonOrbit), () =>
     computeTransitReferenceEpochSec({
@@ -229,19 +230,27 @@ function moonTransitReferenceEpochSec(
       sampleAt,
     }),
   );
-}
+};
 
 function moonReferenceEpochKey(
   context: TransitTimingContext,
   moonOrbit: ReturnType<typeof moonOrbitAtObservation>,
 ): string {
   const { params, kin, observerDir } = context;
+  const planetReferenceOrbit = resolveOrbitElements(params.planet.orbit, kin.planetOrbit.t0, "planet.orbit");
+  const moonReferenceOrbit = params.moon
+    ? resolveOrbitElements(
+        params.moon.orbitAroundPlanet,
+        moonOrbit?.t0 ?? context.tObsSec,
+        "moon.orbitAroundPlanet",
+      )
+    : undefined;
   return [
     "moon",
     params.star.r,
     params.moon?.r ?? Number.NaN,
-    orbitTimingKey("planet-orbit", kin.planetOrbit),
-    orbitTimingKey("moon-orbit", moonOrbit),
+    orbitTimingKey("planet-orbit", planetReferenceOrbit),
+    orbitTimingKey("moon-orbit", moonReferenceOrbit),
     observerDir.x,
     observerDir.y,
     observerDir.z,
