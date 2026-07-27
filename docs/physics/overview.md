@@ -1,4 +1,4 @@
-# Physics Overview
+# Physics Overview and Execution Truth Boundary
 
 This simulator uses SI units internally:
 
@@ -7,26 +7,36 @@ This simulator uses SI units internally:
 - Angles: radians in the model (UI uses degrees and converts).
 - Gravitational parameter: $\mu = GM$ in m^3/s^2.
 
-## What is simulated (short)
+## Which runtime executes which physics
 
-At each time `t` the simulator computes:
+There are three distinct paths. They must not be described as interchangeable:
 
-1. 3D inertial positions (Kepler or N-body) and a sky-plane projection.
-2. A stellar flux bundle together with a diagnostic **transit attenuation factor** $F_{\mathrm{transit}}(t) \in [0,1]$.
-3. Optional **additive** flux terms (phase curves, variability, forward scattering, ring scattering, refraction, ...).
-4. Optional observables bundle (RV, astrometry, timing/conservation diagnostics).
+| Path                                      | Actual dynamics                                                         | Scientific status                                                                                                     |
+| ----------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| V4 browser runtime (`createSimulationV4`) | Independently parameterized Kepler snapshots                            | Educational preview                                                                                                   |
+| Compatibility kernel (`stepSystem`)       | Kepler or optional velocity-Verlet N-body, plus optional timing helpers | Bounded implementation used by tests and legacy callers; not the shipped V4 engine                                    |
+| V5/local backend                          | Explicit-epoch barycentric Newtonian DOP853 when SciPy is available     | Bounded scientific computation with a validated input/execution contract and complete manifest; otherwise fail closed |
+
+V4 always constructs Kepler snapshots. The strict `scientific-browser` V4
+validation profile rejects requests that enable N-body or relativity with a
+structured unavailable-capability error. Interactive V4 may accept those
+configuration flags, but it does not execute those solvers and reports them as
+unavailable/not run; it is never labelled as an N-body or relativity result.
+Its `reference` profile means deterministic in-thread supersampling, not an
+independent solver.
+
+At each V4 preview time `t`, the runtime computes 3D Kepler states, sky-plane
+geometry, relative stellar/transit flux, optional educational additive terms,
+and diagnostics. Some formulas also exist in the compatibility kernel, but
+their presence in the repository does not imply that V4 calls them.
 
 ## Physics Diagram 1: Orbital State to Sky Projection
 
 ```mermaid
 flowchart TD
-  Elements["Orbital Elements (a, e, i, Ω, ω, period, t0)"] --> Mode{"Dynamics Mode"}
-  Mode -->|Kepler| Kepler["Kepler Solver"]
-  Mode -->|N-body| NBody["N-body Integrator"]
+  Elements["Orbital Elements (a, e, i, Ω, ω, period, t0)"] --> Kepler["V4 Kepler Snapshot"]
   Kepler --> State["3D Inertial State Vectors"]
-  NBody --> State
-  State --> Relativity["Timing and Relativity Corrections (LTTE/Shapiro/GR)"]
-  Relativity --> Projection["Sky-plane Projection with Observer Direction"]
+  State --> Projection["Sky-plane Projection with Observer Direction"]
   Projection --> Geometry["Transit Geometry and Occulter Construction"]
 ```
 
@@ -54,8 +64,13 @@ Current runtime note:
 
 - The shipped default path is the interactive V4 browser runtime.
 - The active native V4 path now carries forward scattering, ring scattering, and bounded atmosphere-refraction terms into `flux.total` and into the exported `renderSignals.fluxComponents` decomposition.
-- The separate `scientific-browser` execution path is stricter than the default interactive shell and may reject some additive photometry channels until they are explicitly supported there.
-- The `scientific-browser` path remains a bounded validation/runtime contract rather than a claim of finished high-fidelity scientific coverage.
+- `scientific-browser` is a strict V4 validation profile, not a scientific
+  solver. It rejects unsupported N-body and relativity requests and remains
+  educational when it succeeds.
+- Bounded V5 scientific jobs use the separate contract/local backend and
+  require a provenance-complete manifest. Unsupported capabilities fail
+  closed. A complete manifest is execution evidence, not independent research
+  validation.
 
 Runtime contracts and consistency:
 
@@ -83,9 +98,10 @@ Learner-visible visualization contract:
   - `physical`: the native/runtime flux surface and its decomposition
   - `measured`: the same underlying physics after cadence smearing and bounded instrument/observer contamination
 
-Fidelity and feature gates:
+Preview fidelity and feature gates:
 
-- `dynamics.fidelityProfile`: `interactive | accurate | reference`.
+- `dynamics.fidelityProfile`: `interactive | accurate | reference`; these are
+  preview sampling profiles, not levels of scientific validation.
 - `dynamics.physicsFeatures.*`: explicit toggles for advanced modules.
 
 Coordinate system and projection:
@@ -97,17 +113,18 @@ Coordinate system and projection:
 
 ## Didactic use-cases (UI presets)
 
-Use the **Preset** dropdown in the UI (implemented in `src/app/presets.ts`) as a guided path:
+Use the `Preset` dropdown in the UI (implemented in `src/app/presets.ts`) as a guided path:
 
-1. **Kepler: planet-only transit**
+1. `Kepler: planet-only transit`
    - Demonstrates the geometry of transits (impact parameter, ingress/egress).
    - Recommended knobs: `planetInc`, `planetR`, `observerZ`, `gridRes`, limb darkening (`ldU1/ldU2`).
-2. **Limb darkening: multi-band variation**
+2. `Limb darkening: multi-band variation`
    - Demonstrates how stronger LD changes ingress/egress curvature and depth normalization.
    - Use `ldBandpass` to switch `bands` (multi-band coefficients).
-3. **N-body: perturber + star reflex**
-   - Demonstrates how coupled dynamics can produce timing/velocity changes (TTV/TDV-style diagnostics).
-   - Recommended knobs: `nbodyDtMax`, perturber orbit/mu, and the plot mode (physical vs measured).
+3. `Dynamics/timing comparison`
+   - Demonstrates preview timing and velocity diagnostics. V4 does not execute
+     its N-body toggle; use the compatibility kernel only for bounded tests or
+     a capability-confirmed V5 backend for research propagation.
 
 For a complete mapping of UI fields to model paths and units, see `docs/params.md`.
 
@@ -123,3 +140,6 @@ Key files:
 - V3 debug overlay: `src/render/overlays.ts`
 - Rendering contract: `docs/rendering/physics-visualization-contract.md`
 - Photometry details: `docs/physics/photometry.md`
+- Model ownership and validation status: `docs/physics/model-registry.json`,
+  `docs/physics/model-status.md`
+- V5 scientific contract: `docs/physics/v5-scientific-contract.md`

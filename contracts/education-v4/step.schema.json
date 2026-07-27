@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/transit-light-curve-lab/education-v4/step.schema.json",
+  "title": "Scoped Education step fixture",
+  "type": "object",
+  "required": ["timeSec", "kinematics", "flux", "renderSignals", "warningFlags"],
+  "properties": {
+    "timeSec": { "type": "number" },
+    "kinematics": {
+      "type": "object",
+      "required": ["planetSky"],
+      "properties": {
+        "planetSky": { "$ref": "#/$defs/vector3" },
+        "moonSky": { "$ref": "#/$defs/vector3" }
+      },
+      "additionalProperties": false
+    },
+    "flux": {
+      "type": "object",
+      "required": ["total", "transitFactor", "stellarPreTransit", "planetPhase", "moonPhase"],
+      "properties": {
+        "total": { "type": "number" },
+        "transitFactor": { "type": "number" },
+        "stellarPreTransit": { "type": "number" },
+        "planetPhase": { "type": "number" },
+        "moonPhase": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "timing": { "type": "object", "additionalProperties": { "type": "number" } },
+    "renderSignals": {
+      "type": "object",
+      "required": ["occulters", "events"],
+      "properties": {
+        "occulters": { "type": "array", "items": { "$ref": "#/$defs/occulter" } },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+      },
+      "additionalProperties": false
+    },
+    "warningFlags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "vector3": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "occulter": {
+      "type": "object",
+      "required": ["body", "kind", "center"],
+      "properties": {
+        "body": { "enum": ["planet", "moon", "star"] },
+        "kind": { "enum": ["circle", "ellipse", "ring"] },
+        "center": { "$ref": "#/$defs/vector3" },
+        "radius": { "type": "number", "exclusiveMinimum": 0 },
+        "rx": { "type": "number", "exclusiveMinimum": 0 },
+        "ry": { "type": "number", "exclusiveMinimum": 0 },
+        "angle": { "type": "number" },
+        "innerRadius": { "type": "number", "minimum": 0 },
+        "outerRadius": { "type": "number", "exclusiveMinimum": 0 },
+        "inclination": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "kind", "label", "active"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "enum": ["transit", "mutual-event", "conjunction", "timing"] },
+        "label": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

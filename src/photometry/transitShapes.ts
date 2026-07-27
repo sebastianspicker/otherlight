@@ -1,4 +1,4 @@
-// src/photometry/transitShapes.ts
+/** Integrates mixed occulter silhouettes across the projected stellar disk. */
 //
 // Generic transit integrators for mixed-shape occulters (ellipses, rings).
 // These are numeric midpoint integrations and are used as a fallback when

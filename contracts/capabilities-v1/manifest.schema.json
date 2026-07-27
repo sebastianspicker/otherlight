@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/transit-light-curve-lab/capabilities-v1/manifest.schema.json",
+  "title": "Cross-platform capability manifest",
+  "type": "object",
+  "required": ["schemaVersion", "oracle", "capabilities"],
+  "properties": {
+    "schemaVersion": { "const": "capabilities-v1" },
+    "oracle": {
+      "type": "object",
+      "required": ["behavior", "scientificNumerics"],
+      "properties": {
+        "behavior": { "const": "website" },
+        "scientificNumerics": { "const": "python-scipy-1.18" }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capability" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "platformStatus": {
+      "type": "object",
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": { "enum": ["available", "experimental", "unavailable"] },
+        "availability": { "enum": ["capability-gated"] },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "capability": {
+      "type": "object",
+      "required": ["id", "area", "title", "website", "macos", "iphone", "ipad"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$" },
+        "area": { "enum": ["product", "education", "labs", "history", "science"] },
+        "title": { "type": "string", "minLength": 1 },
+        "website": { "$ref": "#/$defs/platformStatus" },
+        "macos": { "$ref": "#/$defs/platformStatus" },
+        "iphone": { "$ref": "#/$defs/platformStatus" },
+        "ipad": { "$ref": "#/$defs/platformStatus" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

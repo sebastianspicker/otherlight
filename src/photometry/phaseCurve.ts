@@ -1,4 +1,4 @@
-// src/photometry/phaseCurve.ts
+/** Computes reflected and thermal body phase-curve flux contributions. */
 //
 // Reflection + thermal emission phase-curve utilities.
 //

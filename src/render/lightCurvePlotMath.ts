@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Math support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { clamp } from "../core/units";
 
 function sortFiniteScratchPrefix(values: number[], count: number): void {

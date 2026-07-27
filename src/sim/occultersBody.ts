@@ -1,3 +1,6 @@
+/**
+ * Owns occulters Body support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { isFinitePositive } from "../core/units";
 import type { OcculterShape } from "../photometry/occulterEllipse";
 import type { BodyOcculterArgs } from "./occulters";

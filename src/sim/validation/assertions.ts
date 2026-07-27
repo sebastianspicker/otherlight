@@ -1,4 +1,4 @@
-// src/sim/validation/assertions.ts
+/** Provides strict simulation assertions that fail invalid internal contracts early. */
 //
 // Centralized validation helpers (ported from the original monolithic sim.ts).
 // Keep these checks strict and early to preserve "fail fast" behavior.

@@ -1,3 +1,6 @@
+/**
+ * Owns patch Geometry support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { PatchPre, PatchPreCircle, PatchPreEllipse } from "./patchTypes";
 
 /** Test if point (x,y) lies inside a precomputed patch. */

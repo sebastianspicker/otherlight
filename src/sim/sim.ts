@@ -1,4 +1,4 @@
-// src/sim/sim.ts
+/** Coordinates a single simulation step across dynamics, photometry, and diagnostics. */
 
 //
 // Slim orchestrator around the simulation pipeline.

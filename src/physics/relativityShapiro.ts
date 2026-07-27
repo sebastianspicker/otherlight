@@ -1,3 +1,6 @@
+/**
+ * Owns relativity Shapiro support within the physics layer. Keeps numerical and frame conventions centralized for all consumers.
+ */
 import type { Vec3 } from "./vec3";
 import { vDot, vIsFinite, vLen, vNormalizeOrZero } from "./vec3";
 
@@ -79,11 +82,15 @@ function evaluateShapiroGeometry(params: {
 }): ShapiroDelayEvaluation {
   const z = vDot(params.r, params.dir);
   const minImpact = nonNegativeFiniteOrDefault(params.minImpact, DEFAULT_SHAPIRO_MIN_IMPACT);
-  const minR = Math.max(1e-12, minImpact);
-  const rawRPlusZ = params.rMag + z;
-  const impactFloorEngaged = rawRPlusZ < minR;
-  const rPlusZ = Math.max(rawRPlusZ, minR);
-  return shapiroDelayFromGeometry(params, rPlusZ, impactFloorEngaged);
+  const impact = Math.sqrt(Math.max(0, params.rMag * params.rMag - z * z));
+  const impactFloorEngaged = impact < minImpact;
+  const effectiveImpact = Math.max(impact, minImpact);
+  const effectiveRadius = Math.hypot(z, effectiveImpact);
+
+  // For a source behind the gravitating mass, r + z suffers catastrophic
+  // cancellation. The equivalent b^2/(r-z) form remains well conditioned.
+  const rPlusZ = z < 0 ? (effectiveImpact * effectiveImpact) / (effectiveRadius - z) : effectiveRadius + z;
+  return shapiroDelayFromGeometry({ ...params, rMag: effectiveRadius }, rPlusZ, impactFloorEngaged);
 }
 
 function shapiroDelayFromGeometry(
@@ -91,10 +98,13 @@ function shapiroDelayFromGeometry(
   rPlusZ: number,
   impactFloorEngaged: boolean,
 ): ShapiroDelayEvaluation {
-  const arg = rPlusZ / params.rMag;
-  if (!(arg > 0) || !Number.isFinite(arg)) return { delaySec: 0, impactFloorEngaged };
+  const arg = Math.max(Number.MIN_VALUE, rPlusZ / params.rMag);
+  if (!Number.isFinite(arg)) return { delaySec: 0, impactFloorEngaged };
 
-  const delay = (2 * params.mu * Math.log(arg)) / (params.c * params.c * params.c);
+  // This is a geometry-dependent relative delay; its arbitrary additive
+  // constant is fixed by dividing by r. Superior conjunction (small impact)
+  // must increase the delay, hence the leading minus sign.
+  const delay = -(2 * params.mu * Math.log(arg)) / (params.c * params.c * params.c);
   return {
     delaySec: finiteOrZero(delay),
     impactFloorEngaged,

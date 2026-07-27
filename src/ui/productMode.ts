@@ -1,3 +1,6 @@
+/**
+ * Owns product Mode support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { setHidden } from "../core/dom";
 
 export type ProductMode = "simulation" | "lab";

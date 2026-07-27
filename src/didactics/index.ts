@@ -1,3 +1,4 @@
+/** Exposes the supported didactics surface without leaking internal lesson helpers. */
 export {
   LESSONS,
   DEFAULT_LESSON_ID,

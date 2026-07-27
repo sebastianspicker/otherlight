@@ -1,3 +1,6 @@
+/**
+ * Owns photometry support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type {
   AtmosphereTransmissionParams,
   BrightnessPatch,
@@ -8,43 +11,17 @@ import type {
   ThermalInertiaParams,
 } from "../../core/types";
 import { clamp } from "../../core/units";
+import {
+  MAX_SMEARING_SUBSAMPLES,
+  MAX_TRANSIT_GRID_RES,
+  MIN_TRANSIT_GRID_RES,
+} from "../../core/transitComputeBudget";
 import { readCheckbox, readNumberInput, readSelect, sanitizeFinite, sanitizePositive } from "../inputs";
 import type { UiRefs } from "../refs";
 import { ensurePhotometry, getQuadraticLDFromModel, parseNumberList, parseQuadraticBands } from "./common";
 export { loadPhotometryIntoUI } from "./photometryLoad";
 
-type DefaultPatchInputs = {
-  p1x: number;
-  p1y: number;
-  p1r: number;
-  p1f: number;
-  p2x: number;
-  p2y: number;
-  p2rx: number;
-  p2ry: number;
-  p2angle: number;
-  p2f: number;
-};
-
-function roundPatchLength(v: number): number {
-  return Math.round(v / 1e6) * 1e6;
-}
-
-function defaultPatchInputs(starRadius: number): DefaultPatchInputs {
-  const rStar = Math.max(1, starRadius);
-  return {
-    p1x: roundPatchLength(-0.28 * rStar),
-    p1y: roundPatchLength(0.22 * rStar),
-    p1r: roundPatchLength(0.16 * rStar),
-    p1f: 0.75,
-    p2x: roundPatchLength(0.33 * rStar),
-    p2y: roundPatchLength(-0.17 * rStar),
-    p2rx: roundPatchLength(0.21 * rStar),
-    p2ry: roundPatchLength(0.09 * rStar),
-    p2angle: 0.6,
-    p2f: 1.12,
-  };
-}
+import { defaultPatchInputs } from "./common";
 
 function buildPatchesFromUI(r: UiRefs): BrightnessPatch[] {
   const defaults = defaultPatchInputs(sanitizePositive(readNumberInput(r.starR, 6.957e8), 1, 1e12));
@@ -151,7 +128,13 @@ export function readPhotometryFromUI(next: SystemParams, r: UiRefs): void {
 
 function readPhotometryBasics(ph: PhotometryParams, r: UiRefs): void {
   ph.baselineFlux = sanitizePositive(readNumberInput(r.baselineFlux, valueOr(ph.baselineFlux, 1)), 0, 1e9);
-  ph.gridRes = Math.floor(sanitizePositive(readNumberInput(r.gridRes, valueOr(ph.gridRes, 220)), 10, 5000));
+  ph.gridRes = Math.floor(
+    sanitizePositive(
+      readNumberInput(r.gridRes, valueOr(ph.gridRes, 220)),
+      MIN_TRANSIT_GRID_RES,
+      MAX_TRANSIT_GRID_RES,
+    ),
+  );
 }
 
 function readLimbDarkeningFromUI(ph: PhotometryParams, r: UiRefs): void {
@@ -344,7 +327,7 @@ function readSmearingFromUI(ph: PhotometryParams, r: UiRefs): void {
   }
   ph.cadenceSec = sanitizePositive(readNumberInput(r.cadenceSec, valueOr(ph.cadenceSec, 60)), 0, 1e9);
   ph.nSubsamples = Math.floor(
-    sanitizePositive(readNumberInput(r.nSubsamples, valueOr(ph.nSubsamples, 9)), 1, 4096),
+    sanitizePositive(readNumberInput(r.nSubsamples, valueOr(ph.nSubsamples, 9)), 1, MAX_SMEARING_SUBSAMPLES),
   );
 }
 

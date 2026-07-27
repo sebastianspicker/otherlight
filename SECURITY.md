@@ -1,64 +1,100 @@
-# Security Policy
+# Security policy
 
 ## Supported versions
 
-Security fixes are provided for the current `main` branch.
+No tagged release is currently published. Security reports are accepted for the
+current default branch and the browser, Scientific service, and native Apple
+code in this repository.
 
 ## Reporting a vulnerability
 
-Do not open public issues for security vulnerabilities.
+Do not open a public issue for a vulnerability.
 
-Preferred path: GitHub Security Advisories (private report)
+Use GitHub Security Advisories:
 
-1. Open the repository on GitHub.
-2. Go to the **Security** tab.
-3. Click **Report a vulnerability**.
-4. Include a clear reproduction, impact description, and affected versions/commits if known.
+1. Open the repository Security tab.
+2. Select `Report a vulnerability`.
+3. Include the affected revision, reproduction steps, impact, and relevant
+   configuration.
 
-If Security Advisories are unavailable, contact the maintainer via GitHub and request a private channel.
+If private reporting is unavailable, contact the maintainer through GitHub and
+request a private channel.
 
-## Response expectations
+The target for initial triage is five business days. Do not publish exploit
+details before the maintainer has assessed the report and coordinated a fix.
 
-- Initial triage target: within 5 business days.
-- You may be asked for additional reproduction details or environment information.
-- Coordinated disclosure is preferred; please avoid publishing exploit details before a fix is available.
+## Trust boundaries
 
-## Security notes
+### Browser application
 
-### Architecture and trust boundaries
+The browser application is a static Vite bundle. It has no account, remote
+session, or server-side authentication model. Its inputs include form controls,
+URL state, imported `.otherlight` files, and committed JSON data.
 
-- Runtime surface: static Vite browser app, no server-side auth/session layer in this repository.
-- Input boundary: browser form controls, lesson response textareas, preset selections, and committed JSON
-  scenario/snapshot data.
-- File boundary: local maintenance scripts read and write developer-provided paths only when invoked from the
-  CLI.
-- Network boundary: `scripts/fetch-real-systems-snapshot.mjs` fetches NASA TAP data for the committed real
-  systems snapshot; the shipped browser app uses the committed snapshot and does not call the NASA endpoint at
-  runtime.
-- Security gates: GitHub Actions run CodeQL, gitleaks, and weekly/manual dependency audit; local dependency
-  audit is `pnpm audit --audit-level=moderate`.
+`vite.config.ts` sets CSP and related response headers for development and local
+preview. A separate hosting system must preserve equivalent headers.
 
-### Defensive review finding log
+### Scientific service
 
-#### F-2026-05-01-01: Unbounded NASA snapshot response parsing
+The Python service is for one local user. It must bind to `127.0.0.1` and must
+not be exposed to a LAN or the public internet.
 
-- Severity: Low.
-- Evidence: `fetchNasaTransitRows()` previously parsed the TAP response with `response.json()` without a
-  timeout or response-size limit.
-- Impact: a stalled or unexpectedly large upstream response could hang or exhaust resources during local
-  snapshot refresh or CI-style maintenance runs.
-- Patch: enforce a request timeout and a bounded JSON response body before parsing.
-- Regression tests: `tests/scripts/fetch-real-systems-snapshot.test.ts` covers successful bounded parsing,
-  oversized `content-length`, and streamed responses that exceed the parser limit.
+The browser client accepts only loopback HTTP service URLs. It rejects
+credentials, query strings, fragments, non-loopback hosts, and non-HTTP
+schemes.
 
-#### F-2026-05-01-02: Moderate transitive dev dependency denial-of-service advisory
+The service has no authentication or authorization. Arrow files in
+`.science-cache/` are content-addressed local files, not protected storage.
+Request size, body count, sample count, queue capacity, polling, and terminal
+record retention are bounded, but these limits do not make the service suitable
+for hostile remote clients.
 
-- Severity: Moderate.
-- Evidence: `pnpm audit --audit-level=moderate` reports GHSA-f886-m6hf-6m8v for
-  `brace-expansion@5.0.2` through ESLint/minimatch development-tooling paths.
-- Impact: malicious or accidental zero-step brace patterns can hang or exhaust memory in affected tooling.
-  This is not shipped in the browser runtime, but it affects local/CI lint surfaces.
-- Patch: add a narrow `pnpm.overrides` entry for `brace-expansion@5.0.5`, refresh the lockfile, and
-  tighten local/hosted dependency audits to `pnpm audit --audit-level=moderate`.
-- Regression checks: `pnpm why brace-expansion` should resolve to `5.0.5`, and
-  `pnpm audit --audit-level=moderate` / `pnpm audit:security` should pass.
+### Native Apple application
+
+The native application has no runtime network client, account, analytics,
+telemetry, or cloud synchronization. It uses sandboxed user-selected file
+access. See [`native-apple/PRIVACY.md`](native-apple/PRIVACY.md).
+
+### Maintenance scripts
+
+`scripts/fetch-real-systems-snapshot.mjs` connects to the NASA Exoplanet Archive
+only when invoked. The browser reads the committed snapshot and does not contact
+NASA at runtime.
+
+Apple release scripts use developer-supplied signing identities, team IDs, and
+notary keychain profiles. Do not place those values or exported signing
+material in the repository.
+
+## Dependency and source checks
+
+- pnpm installs use `pnpm-lock.yaml`.
+- `pnpm-workspace.yaml` permits the required esbuild install script and pins
+  selected transitive dependency overrides.
+- Python development and runtime extras are pinned in
+  `science_backend/pyproject.toml`.
+- GitHub Actions run CodeQL and gitleaks on pull requests and pushes.
+- Dependabot monitors pnpm, Python, and GitHub Actions dependencies.
+- A scheduled and manually dispatched workflow runs
+  `pnpm audit --audit-level=moderate`.
+
+Run the dependency check locally with:
+
+```bash
+pnpm audit:security
+```
+
+## Sensitive files
+
+Do not commit:
+
+- `.env` files;
+- credentials, private keys, certificates, or provisioning profiles;
+- Apple signing or notarization material;
+- local databases and caches;
+- scientific result files;
+- browser traces, reports, or build products;
+- machine-specific editor or development-tool state.
+
+`pnpm hygiene:public` checks repository paths and selected text content.
+Authentication-bearing package-manager configuration is covered by gitleaks
+rather than printed by the public-surface checker.

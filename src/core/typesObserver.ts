@@ -1,4 +1,4 @@
-// src/core/typesObserver.ts
+/** Defines observer geometry and viewing-frame configuration contracts. */
 
 //
 // Observer & sky-projection related types.

@@ -1,6 +1,14 @@
 # Validation and Warnings
 
-This project has two validation layers:
+> Execution-status correction: `scientific-browser` is a strict V4 input
+> validation profile, not a scientific solver. V4 always executes Kepler
+> snapshots and now rejects enabled N-body or relativity features. The legacy
+> `scientific-calibration` script name denotes compatibility regression
+> evidence; its internal/direct-model fixtures do not promote a model to
+> research-validated status. Authoritative classifications live in
+> `docs/physics/model-registry.json`.
+
+The browser and backend use four complementary validation layers:
 
 ## 1. Hard input validation (throws)
 
@@ -25,23 +33,30 @@ This project has two validation layers:
 - Non-`strict` callers receive a finite wrapped best-effort anomaly if Newton iteration exhausts its retry budget.
 - Use `strict: true` in scientific or regression-sensitive paths that must fail closed.
 
-## Current Contract vs. Planned Scientific Contract
+## Execution validation boundaries
 
-- The current shipped application is an interactive browser simulator with mixed hard assertions, soft warnings, shared numeric sanitization, and selected strict-path call sites.
-- The repo now has a separate bounded `scientific-browser` runtime contract in the V4 path.
-- That runtime is still incomplete:
-  - it rejects excluded interactive photometry surfaces
-  - it rejects selected invalid native/runtime inputs that interactive mode still normalizes
-  - it uses strict Kepler solving on the scientific-browser path
-  - it emits structured failure payloads for current fail-closed guards
-- `scientific-browser` is not yet a complete scientific execution mode. It still needs broader removal of inherited fail-open numeric helper usage plus later `S2+` physics milestones.
+- Education V4 uses the hard assertions, plausibility warnings, bounded
+  sanitization, and documented fallback behavior above. It is an interactive
+  teaching preview.
+- `scientific-browser` remains a strict V4 compatibility-validation profile.
+  It rejects unsupported dynamics and selected inherited normalization paths,
+  but it is not the user-facing Scientific solver and cannot produce a V5
+  result.
+- Scientific V5 in the browser uses the exact schema and capability checks
+  in `src/science/validation.ts`. It converts only supported static SI states
+  and fails closed when a capability, field, invariant, or backend response is
+  missing or invalid.
+- The Python backend independently validates the V5 request, bounded
+  three-body/sample limits, barycentric state, finite-radius separation,
+  solver output, cancellation, artifact publication, and provenance manifest.
+  Stable HTTP failures use a structured `{code, message}` payload.
 
-Frozen excluded scope for the `S0` browser-only roadmap:
+Excluded from the current alpha:
 
 - full stellar-atmosphere or SED-grid synthesis
 - full radiative-transfer atmosphere/transmission or emission modeling
 - scientific support for all current additive toy photometry controls as if they were one validated physical surface
-- backend-dependent or remote-calibration scientific workflows
+- remote-calibration, inference, or multi-user scientific workflows
 - solver regimes whose cost cannot be benchmarked reproducibly inside the browser budget
 
 ## Common Warning Categories
@@ -56,17 +71,20 @@ Frozen excluded scope for the `S0` browser-only roadmap:
 
 - Warnings are heuristic by design and do not guarantee physical correctness.
 - For reproducible analysis, keep units in SI (m, s, kg, rad) as documented in `docs/physics/overview.md`.
-- The browser-only scientific path now exists as an active `S1` runtime foundation and remains bounded to the surfaces that are defensible locally: strict validation, dynamics, timing/event solving, and bounded detached-binary photometry. The frozen excluded-scope list above is the binding `S0` boundary unless a later milestone explicitly re-opens one item.
+- A successful V5 result is evidence that the bounded request and execution
+  contract passed. It is not independent research validation or validation of
+  Education photometry.
 - Detached-binary V4 configs may now carry explicit per-star stellar metadata (`luminosityScale`, `teffK`, `loggCgs`, `metallicityDex`, `passband`). The runtime preserves those fields and now benchmarks unequal-star/passband behaviour on the active Binary Lab path, but the detached-binary model remains an interactive relative-flux approximation rather than a research-grade atmosphere/passband solution.
 - Atmosphere transmission currently applies only to circular occulters. Mixed-shape cases fall back to the non-transmissive solver and log a runtime warning.
 
-## Scientific Calibration Catalog
+## Compatibility calibration catalog
 
-The bounded scientific-mode claim now has an explicit calibration catalog in:
+The V4 compatibility and regression surfaces have an explicit calibration
+catalog in:
 
 - `tests/benchmarks/scientific-calibration-catalog.ts`
 
-Current active scientific calibration surfaces:
+Current compatibility calibration surfaces:
 
 - `relativity-timing`
 - `detached-binary-photometry`
@@ -94,7 +112,11 @@ That lane currently bundles:
 - `tests/sim/v4-native-parity.test.ts`
 - `tests/perf/perf-scenarios.test.ts`
 
-This is still a bounded browser-feasible scientific contract. The catalog does not claim that every reference is an external dataset; some surfaces are benchmarked against canonical astronomy targets, some against independent analytic or geometry references, some against higher-resolution numeric references, and the exact-event path also carries an explicit local performance budget.
+This is a compatibility-kernel calibration catalog, not evidence that V4 is a
+scientific runtime. Some entries compare canonical targets, independent
+analytic/geometry implementations, or higher-resolution numeric references.
+Entries that call the same production formula are explicitly
+`direct-model-reference` regressions and do not count as release evidence.
 
 Current catalog entries:
 
@@ -103,33 +125,33 @@ Current catalog entries:
 | `relativity-timing`          | `relativity-mercury-precession`      | `canonical-astronomy-target`        | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
 | `relativity-timing`          | `relativity-ltte-constant-velocity`  | `analytic-reference`                | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
 | `relativity-timing`          | `relativity-ltte-one-au`             | `canonical-astronomy-target`        | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
-| `relativity-timing`          | `relativity-shapiro-one-au`          | `canonical-astronomy-target`        | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
-| `relativity-timing`          | `relativity-shapiro-five-au`         | `canonical-astronomy-target`        | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
-| `relativity-timing`          | `relativity-shapiro-multibody`       | `analytic-reference`                | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
+| `relativity-timing`          | `relativity-shapiro-one-au`          | `direct-model-reference`            | no               | `tests/benchmarks/literature-benchmarks.test.ts` |
+| `relativity-timing`          | `relativity-shapiro-five-au`         | `direct-model-reference`            | no               | `tests/benchmarks/literature-benchmarks.test.ts` |
+| `relativity-timing`          | `relativity-shapiro-multibody`       | `direct-model-reference`            | no               | `tests/benchmarks/literature-benchmarks.test.ts` |
 | `detached-binary-photometry` | `binary-photometry-analytic-overlap` | `analytic-reference`                | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
 | `bounded-atmosphere-rt`      | `atmosphere-rt-annulus-reference`    | `high-resolution-numeric-reference` | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
-| `additive-photometry`        | `additive-direct-model-reference`    | `direct-model-reference`            | yes              | `tests/benchmarks/literature-benchmarks.test.ts` |
+| `additive-photometry`        | `additive-direct-model-reference`    | `direct-model-reference`            | no               | `tests/benchmarks/literature-benchmarks.test.ts` |
 | `exact-event-timing`         | `timing-eccentric-contact-reference` | `independent-geometry-reference`    | yes              | `tests/sim/transit-timing-tracker.test.ts`       |
 | `exact-event-timing`         | `timing-moon-contact-reference`      | `independent-geometry-reference`    | yes              | `tests/sim/transit-timing-tracker.test.ts`       |
 | `exact-event-timing`         | `timing-grazing-contact-reference`   | `independent-geometry-reference`    | yes              | `tests/sim/transit-timing-tracker.test.ts`       |
 | `exact-event-timing`         | `timing-accelerated-moon-reference`  | `independent-geometry-reference`    | yes              | `tests/sim/transit-timing-tracker.test.ts`       |
 | `exact-event-timing`         | `timing-accelerated-browser-budget`  | `local-perf-budget`                 | no               | `tests/perf/perf-scenarios.test.ts`              |
 
-The release-evidence flag is deliberate:
-
-- every active scientific surface must have at least one `release evidence = yes` entry
-- local perf-budget entries are supplementary browser-feasibility checks, not scientific release evidence on their own
+The release-evidence flag is deliberate: only independent evidence can be
+`yes`. Same-model and local performance regressions are useful engineering
+checks, but neither can promote a physical model. A surface with no independent
+entry remains an explicitly documented evidence gap.
 
 The first provenance-heavy expansion inside that catalog is now on the relativity surface. Those release-evidence entries carry explicit reference anchors instead of only concise provenance strings:
 
-| Entry ID                            | Reference anchor                                                                                                | Tolerance                                                       |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `relativity-mercury-precession`     | Canonical anomalous Mercury perihelion-precession target: approximately `42.98 arcsec/century`                  | `40 to 46 arcsec/century` with approximate `43` center check    |
-| `relativity-ltte-constant-velocity` | Closed-form constant-velocity retarded-time root for the benchmark geometry, independent of the runtime solver  | residual `<= 1e-12 s` and `tEmit` close at 10 decimals          |
-| `relativity-ltte-one-au`            | Canonical `1 AU / c` light-time reference: `499.00478 s`                                                        | `498 to 500 s` with close-to reference at 3 decimals            |
-| `relativity-shapiro-one-au`         | Solar-limb one-AU relative Shapiro-delay reference: approximately `112.643 microseconds`                        | `100 to 130 microseconds` with close-to reference at 8 decimals |
-| `relativity-shapiro-five-au`        | Solar-limb five-AU relative Shapiro-delay reference: approximately `144.352 microseconds`                       | `135 to 150 microseconds` with close-to reference at 8 decimals |
-| `relativity-shapiro-multibody`      | Direct summed point-mass LTTE plus Shapiro delay over the static benchmark-body geometry, independent reference | residual `<= 1e-12 s` and `tEmit` close at 10 decimals          |
+| Entry ID                            | Reference anchor                                                                                                 | Tolerance                                                       |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `relativity-mercury-precession`     | Canonical anomalous Mercury perihelion-precession target: approximately `42.98 arcsec/century`                   | `40 to 46 arcsec/century` with approximate `43` center check    |
+| `relativity-ltte-constant-velocity` | Closed-form constant-velocity retarded-time root for the benchmark geometry, independent of the runtime solver   | residual `<= 1e-12 s` and `tEmit` close at 10 decimals          |
+| `relativity-ltte-one-au`            | Canonical `1 AU / c` light-time reference: `499.00478 s`                                                         | `498 to 500 s` with close-to reference at 3 decimals            |
+| `relativity-shapiro-one-au`         | Repository-relative one-AU solar-limb geometry: approximately `112.643 microseconds`; arbitrary-zero regression  | `100 to 130 microseconds` with close-to reference at 8 decimals |
+| `relativity-shapiro-five-au`        | Repository-relative five-AU solar-limb geometry: approximately `144.352 microseconds`; arbitrary-zero regression | `135 to 150 microseconds` with close-to reference at 8 decimals |
+| `relativity-shapiro-multibody`      | Same production LTTE/Shapiro helpers summed over the static benchmark geometry; regression-only                  | residual `<= 1e-12 s` and `tEmit` close at 10 decimals          |
 
 The same anchor treatment now also covers the exact-event timing release-evidence entries:
 
@@ -148,4 +170,6 @@ The remaining single-entry release surfaces now carry the same explicit anchor t
 | `atmosphere-rt-annulus-reference`    | Independent gray annulus-integration reference with `4096` radial samples around the effective circle-only atmosphere opacity helper                        | `max(5e-4, 3 percent of reference opacity)` on selected gray atmosphereRT cases |
 | `additive-direct-model-reference`    | Direct photometry-model evaluation of `planetPhase`, `moonPhase`, `forwardScattering`, and `ringScattering` on sampled native snapshot geometry             | all covered additive channels close at 12 decimals                              |
 
-At this point, every `release evidence = yes` entry in the active scientific calibration catalog carries an explicit reference anchor rather than only a terse provenance string.
+Every `release evidence = yes` entry carries an explicit independent reference
+anchor. The Shapiro and additive same-model entries retain anchors for
+reproducibility while remaining `release evidence = no`.

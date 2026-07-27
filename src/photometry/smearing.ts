@@ -1,4 +1,4 @@
-// src/photometry/smearing.ts
+/** Integrates finite exposure time so rapid flux variation is observationally smeared. */
 
 //
 // Finite integration time / exposure smearing utilities.

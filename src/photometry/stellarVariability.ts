@@ -1,4 +1,4 @@
-// src/photometry/stellarVariability.ts
+/** Models phenomenological stellar variability terms in normalized flux units. */
 //
 // Small out-of-transit stellar/system photometry terms (phenomenological):
 // - Doppler beaming (a.k.a. Doppler boosting) ~ sin(phi)

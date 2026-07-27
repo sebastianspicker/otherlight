@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 /* global console, process */
 
+/**
+ * Migrates bounded legacy scenario JSON into the canonical V4 shape while
+ * applying safe defaults instead of copying malformed historical values.
+ */
+
+import { Buffer } from "node:buffer";
+
 const DEFAULT_BINARY_ORBIT = {
   a: 1,
   e: 0,
@@ -10,6 +17,9 @@ const DEFAULT_BINARY_ORBIT = {
   period: 1,
   t0: 0,
 };
+
+// Keep stdin bounded so this CLI cannot accumulate arbitrarily large JSON before parsing it.
+const MAX_STDIN_BYTES = 10 * 1024 * 1024;
 
 function isObject(x) {
   return typeof x === "object" && x !== null;
@@ -196,6 +206,31 @@ function migratedBinaryLabConfig() {
   };
 }
 
+function migrateControlPath(path) {
+  if (typeof path !== "string") return path;
+  if (path === "star.photometry" || path.startsWith("star.photometry.")) {
+    return path.slice("star.".length);
+  }
+  if (path === "star" || path.startsWith("star.")) return `bodies.stars.0${path.slice("star".length)}`;
+  if (path === "planet" || path.startsWith("planet."))
+    return `bodies.planets.0${path.slice("planet".length)}`;
+  if (path === "moon.orbitAroundPlanet" || path.startsWith("moon.orbitAroundPlanet.")) {
+    return `bodies.moons.0.orbit${path.slice("moon.orbitAroundPlanet".length)}`;
+  }
+  if (path === "moon" || path.startsWith("moon.")) return `bodies.moons.0${path.slice("moon".length)}`;
+  return path;
+}
+
+function migrateScenarioControls(ui) {
+  if (!isObject(ui) || !Array.isArray(ui.controls)) return ui;
+  return {
+    ...ui,
+    controls: ui.controls.map((control) =>
+      isObject(control) ? { ...control, path: migrateControlPath(control.path) } : control,
+    ),
+  };
+}
+
 export function migrateScenarioJsonToV4(input) {
   if (!isObject(input)) return input;
 
@@ -205,6 +240,7 @@ export function migrateScenarioJsonToV4(input) {
 
   const out = { ...input };
   out.defaults = migrateSystemParamsV4(input.defaults);
+  if (input.ui !== undefined) out.ui = migrateScenarioControls(input.ui);
 
   if (isObject(out.meta)) {
     const meta = { ...out.meta };
@@ -217,10 +253,16 @@ export function migrateScenarioJsonToV4(input) {
 }
 
 async function readStdin() {
-  process.stdin.setEncoding("utf8");
-  let raw = "";
-  for await (const chunk of process.stdin) raw += chunk;
-  return raw;
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of process.stdin) {
+    bytes += chunk.byteLength;
+    if (bytes > MAX_STDIN_BYTES) {
+      throw new Error(`Input exceeds ${MAX_STDIN_BYTES} bytes.`);
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function main() {

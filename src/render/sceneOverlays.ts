@@ -1,3 +1,6 @@
+/**
+ * Owns scene Overlays support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import type { SystemParams } from "../core/types";
 import type { RenderOcculterGeometryV3, SimulationStepV3 } from "../sim/v3/types";
 

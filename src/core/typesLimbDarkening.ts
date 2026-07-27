@@ -1,4 +1,4 @@
-// src/core/typesLimbDarkening.ts
+/** Defines limb-darkening law and constraint contracts for photometry. */
 
 //
 // Limb-darkening types (laws, validation policy, multi-band wrapper).

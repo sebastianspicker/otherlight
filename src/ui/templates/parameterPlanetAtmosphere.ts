@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Planet Atmosphere support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderScatteringControls(): string {
   return `
         <details data-ui-tier="expert">

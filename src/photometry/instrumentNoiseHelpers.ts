@@ -1,3 +1,6 @@
+/**
+ * Owns instrument Noise Helpers support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { clamp, toFiniteNumber, toFiniteNonNeg } from "../core/units";
 import {
   normal as normalSample,

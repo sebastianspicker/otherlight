@@ -1,3 +1,6 @@
+/**
+ * Owns oc Plot support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import { drawOcPlotFrame, type OcPlotPoint } from "./ocPlotCanvas";
 import type { TransitHistorySeries, TransitHistoryState } from "./transitHistory";
 

@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Series support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { drawDenseFiniteTimeSeries, drawDenseIndexSeries } from "./lightCurvePlotSeriesDense";
 
 export function computeTickLayout(

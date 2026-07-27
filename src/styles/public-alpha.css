@@ -1,29 +1,35 @@
-/* Public-alpha Classroom Observatory layer. Keep selectors class-led so stable wiring IDs remain intact. */
+/* Public-alpha structural layer. Quiet Observatory (otherlight-instrument) owns final hybrid chrome. */
 :root {
-  --bg-1: #f3f6f7;
-  --bg-2: #f3f6f7;
-  --bg-3: #f3f6f7;
+  --ink: #081923;
+  --deep-ocean: #123142;
+  --lab-paper: #eef3f4;
+  --signal-teal: #087f73;
+  --earth-blue: #315fba;
+  --starlight-gold: #c48a1f;
+  --bg-1: var(--lab-paper);
+  --bg-2: var(--lab-paper);
+  --bg-3: #e4ebed;
   --panel: #fff;
   --panel-strong: #fff;
-  --panel2: #e9eff1;
-  --text: #13242b;
-  --text-secondary: #243b44;
-  --muted: #4b6069;
-  --stroke: #9eafb5;
-  --stroke2: #c4d0d4;
-  --focus: #087f73;
-  --accent: #087f73;
-  --accent-dim: #d7eeeb;
+  --panel2: #f7fafb;
+  --text: #12242c;
+  --text-secondary: #3a525c;
+  --muted: #5a717b;
+  --stroke: #c5d2d8;
+  --stroke2: #d7e1e6;
+  --focus: var(--signal-teal);
+  --accent: var(--signal-teal);
+  --accent-dim: #e6f5f3;
   --accent-2: #8a5a00;
-  --accent-2-dim: #fff1ce;
+  --accent-2-dim: #fbf3e3;
   --danger: #b42318;
   --success: #147a45;
   --shadow: none;
-  --shadow-sm: 0 2px 8px rgb(19 36 43 / 16%);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 10px;
+  --shadow-sm: 0 8px 24px rgb(8 25 35 / 8%);
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
   --font-body: system-ui, -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;
   --font-heading: var(--font-body);
   --font-size-xs: 12px;
@@ -41,7 +47,7 @@
 
 body {
   min-width: 320px;
-  background: var(--bg-1);
+  background: #d8e0e4;
   color: var(--text);
   font-size: 15px;
   line-height: 1.5;
@@ -50,11 +56,16 @@ body {
 body::before,
 body::after {
   display: none;
+  content: none;
+  background: none;
+  opacity: 0;
 }
 
 #app {
-  max-width: 1600px;
-  padding: 16px;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  background: var(--lab-paper);
 }
 
 .sr-only {
@@ -84,11 +95,12 @@ summary:focus-visible,
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 12px 24px;
-  margin-bottom: 12px;
-  padding: 18px 20px;
-  border: 1px solid var(--stroke2);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
+  margin-bottom: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: #eef4f8;
   box-shadow: none;
 }
 
@@ -107,12 +119,25 @@ summary:focus-visible,
   margin: 0;
   background: none;
   -webkit-text-fill-color: currentcolor;
-  font-size: 24px;
+  color: var(--lab-paper);
+  font-size: 30px;
   line-height: 1.2;
 }
 
 .product-heading {
   min-width: min(100%, 310px);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
 }
 
 .product-heading p,
@@ -123,33 +148,55 @@ summary:focus-visible,
   font-size: 13px;
 }
 
-.mode-nav {
+.product-heading .brand-descriptor {
+  margin-top: 2px;
+  color: #c6dcdf;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.product-heading .brand-tagline {
+  margin-top: 12px;
+  color: #f1cd86;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.mode-nav,
+.profile-nav {
   display: flex;
   align-self: flex-start;
-  gap: 4px;
+  gap: 2px;
   padding: 3px;
-  border: 1px solid var(--stroke2);
-  border-radius: 8px;
-  background: var(--panel2);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 6%);
 }
 
-.mode-nav__item {
-  min-height: 38px;
+.mode-nav__item,
+.profile-nav__item {
+  min-height: 34px;
   border-color: transparent;
   background: transparent;
-  color: var(--muted);
+  color: #b7c5cf;
 }
 
-.mode-nav__item:hover {
-  border-color: var(--stroke);
-  background: #fff;
-  color: var(--text);
+.mode-nav__item:hover,
+.profile-nav__item:hover {
+  border-color: transparent;
+  background: rgb(255 255 255 / 6%);
+  color: #eef4f8;
 }
 
-.mode-nav__item[aria-current="page"] {
-  border-color: var(--accent);
-  background: #fff;
-  color: #065f57;
+.mode-nav__item[aria-current="page"],
+.profile-nav__item[aria-current="page"] {
+  border-color: transparent;
+  background: var(--signal-teal);
+  color: #fff;
+}
+
+.profile-nav {
+  margin-left: auto;
 }
 
 .context-toolbar {
@@ -159,14 +206,15 @@ summary:focus-visible,
   align-items: end;
   gap: 10px 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--stroke2);
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  color: var(--text);
 }
 
 .context-toolbar > .inline {
   display: grid;
   gap: 4px;
   min-width: 160px;
-  color: var(--text-secondary);
+  color: var(--muted);
   font-weight: 600;
   white-space: normal;
 }
@@ -178,11 +226,11 @@ summary:focus-visible,
 .app-status,
 .fatal-error {
   margin-bottom: 12px;
-  padding: 10px 14px;
-  border: 1px solid #a9c7c3;
-  border-radius: 8px;
-  background: #e8f4f2;
-  color: #174c47;
+  padding: 6px 12px;
+  border: 1px solid rgb(8 127 115 / 18%);
+  border-radius: 999px;
+  background: #e6f5f3;
+  color: #045248;
 }
 
 .fatal-error {
@@ -197,19 +245,18 @@ summary:focus-visible,
 }
 
 .runtime-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
+  position: static;
+  z-index: auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 18px;
-  margin-bottom: 16px;
-  padding: 12px 14px;
+  gap: 10px 14px;
+  margin-bottom: 0;
+  padding: 10px 12px;
   border: 1px solid var(--stroke2);
-  border-radius: var(--radius-lg);
-  background: #f8fafb;
-  box-shadow: 0 2px 8px rgb(19 36 43 / 10%);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: none;
 }
 
 .runtime-toolbar h2 {
@@ -260,6 +307,91 @@ summary:focus-visible,
   background: var(--panel);
   box-shadow: none;
   backdrop-filter: none;
+}
+
+.scientific-workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.scientific-workspace__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding: 20px;
+  border: 1px solid var(--stroke2);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.scientific-workspace__header h2,
+.scientific-workspace__header p {
+  margin: 0;
+}
+
+.scientific-workspace__header > div:first-child {
+  max-width: 74ch;
+}
+
+.scientific-workspace__header .eyebrow {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.scientific-workspace__status {
+  display: grid;
+  gap: 3px;
+  min-width: 220px;
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+  background: #f3f8f7;
+}
+
+.scientific-workspace__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.science-run-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 16px 0;
+}
+
+.science-scope-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.science-scope-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) 1fr;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--stroke2);
+}
+
+.science-scope-list dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.science-scope-list dd {
+  margin: 0;
+}
+
+.science-result {
+  min-height: 160px;
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .panel.sidebar,
@@ -557,6 +689,7 @@ dialog::backdrop {
   }
 
   .mode-nav,
+  .profile-nav,
   .context-toolbar,
   .context-toolbar > .inline,
   .runtime-actions,
@@ -565,12 +698,21 @@ dialog::backdrop {
   }
 
   .mode-nav__item,
+  .profile-nav__item,
   .runtime-actions > button {
     flex: 1 1 auto;
   }
 
   .context-toolbar > .inline {
     min-width: 0;
+  }
+
+  .profile-nav {
+    margin-left: 0;
+  }
+
+  .scientific-workspace__grid {
+    grid-template-columns: 1fr;
   }
 
   .runtime-toolbar {
@@ -610,5 +752,81 @@ dialog::backdrop {
   input[type="checkbox"] {
     width: 22px;
     height: 22px;
+  }
+}
+
+/* Follow the system appearance without adding an alpha-stage theme preference or toggle.
+   Dark mode uses slightly deeper lab neutrals — not the old full-dark instrument shell. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lab-paper: #1a2429;
+    --bg-1: #1a2429;
+    --bg-2: #1a2429;
+    --bg-3: #141c20;
+    --panel: #132229;
+    --panel-strong: #172a32;
+    --panel2: #1b2d35;
+    --text: #e8f0f2;
+    --text-secondary: #b7c5cf;
+    --muted: #8fa0ab;
+    --stroke: #3a4d56;
+    --stroke2: #2d3d45;
+    --focus: #2aab9c;
+    --accent: #2aab9c;
+    --accent-dim: #1a3a36;
+    --accent-2: #ffd27a;
+    --accent-2-dim: #3a3018;
+    --danger: #ff8d84;
+    --success: #68d59b;
+    --shadow-sm: 0 8px 24px rgb(0 0 0 / 28%);
+
+    color-scheme: dark;
+  }
+
+  body {
+    background: #10171b;
+  }
+
+  #app {
+    background: var(--lab-paper);
+  }
+
+  /* Keep identity band ink; only remap lab surfaces */
+  .mode-nav__item[aria-current="page"],
+  .profile-nav__item[aria-current="page"] {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  #appStatus {
+    border-color: rgb(42 171 156 / 28%);
+    background: #163431;
+    color: #d7f2ef;
+  }
+
+  .runtime-toolbar,
+  .panel.sidebar,
+  .panel.sidebar > .panel,
+  fieldset,
+  #sliderRoot .row,
+  .scientific-workspace__header {
+    background: var(--panel);
+  }
+
+  button:hover {
+    border-color: #5a717b;
+    background: var(--panel-strong);
+  }
+
+  input[aria-invalid="true"],
+  .fatal-error,
+  .param-error-summary {
+    border-color: #b65c55;
+    background: #3a1d1b;
+    color: #ffd9d5;
+  }
+
+  .field-error {
+    color: #ffb1aa;
   }
 }

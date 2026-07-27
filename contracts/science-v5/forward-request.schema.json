@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/transit-light-curve-lab/science-v5/forward-request.schema.json",
+  "title": "Scientific V5 forward radial-velocity request",
+  "type": "object",
+  "required": ["kind", "scenario", "startOffsetSec", "endOffsetSec", "sampleCadenceSec", "outputs", "seed"],
+  "properties": {
+    "kind": { "const": "forward" },
+    "scenario": { "$ref": "#/$defs/scenario" },
+    "startOffsetSec": { "type": "number" },
+    "endOffsetSec": { "type": "number" },
+    "sampleCadenceSec": { "type": "number", "exclusiveMinimum": 0 },
+    "outputs": {
+      "type": "array",
+      "prefixItems": [{ "const": "radial-velocity" }],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "vector3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "body": {
+      "type": "object",
+      "required": ["id", "kind", "massKg", "radiusM", "state"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "kind": { "enum": ["star", "planet", "moon", "companion"] },
+        "massKg": { "type": "number", "exclusiveMinimum": 0 },
+        "radiusM": { "type": "number", "exclusiveMinimum": 0 },
+        "state": {
+          "type": "object",
+          "required": ["positionM", "velocityMps"],
+          "properties": {
+            "positionM": { "$ref": "#/$defs/vector3" },
+            "velocityMps": { "$ref": "#/$defs/vector3" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["schemaVersion", "id", "epochJdTdb", "timeScale", "bodies", "observer", "integrator"],
+      "properties": {
+        "schemaVersion": { "const": "v5" },
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "epochJdTdb": { "type": "number", "exclusiveMinimum": 0 },
+        "timeScale": { "const": "TDB" },
+        "bodies": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/body" }
+        },
+        "observer": {
+          "type": "object",
+          "required": ["lineOfSight", "targetBodyId"],
+          "properties": {
+            "lineOfSight": { "$ref": "#/$defs/vector3" },
+            "targetBodyId": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "distanceM": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "integrator": {
+          "type": "object",
+          "required": [
+            "method",
+            "positionToleranceM",
+            "velocityToleranceMps",
+            "relativeTolerance",
+            "maxStepSec"
+          ],
+          "properties": {
+            "method": { "const": "DOP853" },
+            "positionToleranceM": { "type": "number", "exclusiveMinimum": 0 },
+            "velocityToleranceMps": { "type": "number", "exclusiveMinimum": 0 },
+            "relativeTolerance": {
+              "type": "number",
+              "minimum": 2.220446049250313e-14,
+              "exclusiveMaximum": 1
+            },
+            "maxStepSec": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

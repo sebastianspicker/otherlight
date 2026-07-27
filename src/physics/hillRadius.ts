@@ -1,3 +1,6 @@
+/**
+ * Owns hill Radius support within the physics layer. Keeps numerical and frame conventions centralized for all consumers.
+ */
 import { clamp } from "../core/units";
 import type { HillRadiusOptions } from "./hill";
 
@@ -11,15 +14,17 @@ function assertEccentricity(e: number, name: string): void {
 
 /**
  * Hill radius at instantaneous separation r between primary and secondary:
- *   R_H(r) ≈ r * cbrt( mSecondary / (3 (mPrimary + mSecondary)) )
+ *   R_H(r) ≈ r * cbrt( mSecondary / (3 mPrimary) )
  */
 export function hillRadiusAtDistance(r: number, mSecondary: number, mPrimary: number): number {
   assertFinitePositive(r, "r");
   assertFinitePositive(mSecondary, "mSecondary");
   assertFinitePositive(mPrimary, "mPrimary");
 
-  // Use (mPrimary + mSecondary) to remain valid when mSecondary is not negligible.
-  return r * Math.cbrt(mSecondary / (3 * (mPrimary + mSecondary)));
+  // Classical restricted-three-body Hill approximation. For non-hierarchical
+  // mass ratios the approximation itself is no longer reliable; adding the
+  // secondary mass to the denominator does not extend that validity domain.
+  return r * Math.cbrt(mSecondary / (3 * mPrimary));
 }
 
 /**
@@ -78,4 +83,19 @@ export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction =
     throw new Error("fraction must be in (0, 1).");
   }
   return hillR * fraction;
+}
+
+/**
+ * Retrograde stability limit from the Domingos, Winter & Yokoyama (2006)
+ * empirical fit:
+ *   a_crit ≈ 0.9309 * (1 - 1.0764 e_p - 0.9812 e_s + 0.9446 e_p e_s) * R_H
+ */
+export function maxStableRetrogradeMoonAxisDomingos(hillR: number, ePlanet = 0, eSat = 0): number {
+  assertFinitePositive(hillR, "hillR");
+  assertEccentricity(ePlanet, "ePlanet");
+  assertEccentricity(eSat, "eSat");
+
+  const factor = 0.9309 * (1 - 1.0764 * ePlanet - 0.9812 * eSat + 0.9446 * ePlanet * eSat);
+  const aCrit = hillR * factor;
+  return Number.isFinite(aCrit) ? clamp(aCrit, 0, hillR) : 0;
 }

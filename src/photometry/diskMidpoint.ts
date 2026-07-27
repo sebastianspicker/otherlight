@@ -1,4 +1,4 @@
-// src/photometry/diskMidpoint.ts
+/** Shares deterministic projected-disk midpoint integration across transit models. */
 
 //
 // Generic deterministic midpoint integrator over a projected stellar disk,
@@ -231,6 +231,18 @@ const shouldEarlyExit = (sums: DiskSums, earlyExitFluxEps: number): boolean => {
   return (sums.total - sums.blocked) / sums.total <= earlyExitFluxEps;
 };
 
+const diskCellContribution = (
+  setup: DiskMidpointSetup,
+  row: DiskRow,
+  x: number,
+  intensityAt: IntensityAtFn,
+): number => {
+  const rho2 = x * x + row.y2;
+  const mu = Math.sqrt(Math.max(0, 1 - rho2 / setup.rStar2));
+  const intensity = safeIntensity(intensityAt({ x, y: row.y, mu }));
+  return intensity * row.cellArea;
+};
+
 const integrateCircularDiskRow = (
   setup: DiskMidpointSetup,
   row: DiskRow,
@@ -240,12 +252,8 @@ const integrateCircularDiskRow = (
 ): void => {
   for (let ix = 0; ix < setup.nx; ix++) {
     const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
-    const rho2 = x * x + row.y2;
-    const mu = Math.sqrt(Math.max(0, 1 - rho2 / setup.rStar2));
-    const I = safeIntensity(intensityAt({ x, y: row.y, mu }));
-    if (I === 0) continue;
-
-    const dI = I * row.cellArea;
+    const dI = diskCellContribution(setup, row, x, intensityAt);
+    if (dI === 0) continue;
     sums.total += dI;
     if (pointBlockedByRowGates(x, row.y, gates)) sums.blocked += dI;
   }
@@ -260,12 +268,8 @@ const integrateShapeDiskRow = (
 ): void => {
   for (let ix = 0; ix < setup.nx; ix++) {
     const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
-    const rho2 = x * x + row.y2;
-    const mu = Math.sqrt(Math.max(0, 1 - rho2 / setup.rStar2));
-    const I = safeIntensity(intensityAt({ x, y: row.y, mu }));
-    if (I === 0) continue;
-
-    const dI = I * row.cellArea;
+    const dI = diskCellContribution(setup, row, x, intensityAt);
+    if (dI === 0) continue;
     sums.total += dI;
     const frac = occ.length > 0 ? pointOccultedFraction(x, row.y, occ) : 0;
     if (frac > 0) sums.blocked += dI * frac;

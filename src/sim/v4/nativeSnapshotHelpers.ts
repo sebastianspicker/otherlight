@@ -1,3 +1,6 @@
+/**
+ * Owns native Snapshot Helpers support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { hasExplicitLimbDarkeningBandLaw } from "../../photometry/limbDarkening";
 import { isSupportedStellarPassband } from "../../photometry/stellarBandFlux";
 import type { SolveKeplerEOptions } from "../../physics/kepler";

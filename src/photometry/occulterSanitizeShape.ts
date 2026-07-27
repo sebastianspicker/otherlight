@@ -1,3 +1,6 @@
+/**
+ * Owns occulter Sanitize Shape support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { OcculterShape } from "./occulterEllipse";
 import { isCircleOcculter, isEllipseOcculter, isRingOcculter } from "./occulterShapeGuards";
 import { sanitizeCircleOcculter } from "./occulterSanitizeCircle";

@@ -1,3 +1,6 @@
+/**
+ * Owns warnings support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { OrbitElements, SystemParams } from "../../core/types";
 import { validateSystemParamsPhysics } from "../../physics/hill";
 import type { UiValidationMessage } from "./types";

@@ -1,4 +1,4 @@
-// src/physics/relativity.ts
+/** Converts relativistic orbital corrections into transit-timing observables. */
 //
 // Lightweight relativity-inspired timing and precession utilities.
 //
@@ -47,6 +47,21 @@ export type LightTimeSolveResult = {
   diagnostics: LightTimeSolveDiagnostics;
 };
 
+type LightTimeSolveInput = {
+  tObs: number;
+  rAtTime: (t: number) => Vec3;
+  observerDir: Vec3;
+  c: number;
+  shapiro?: {
+    enabled: boolean;
+    mu?: number;
+    minImpact?: number;
+    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
+  };
+  maxIters?: number;
+  tolSec?: number;
+};
+
 const DEFAULT_LTTE_ITERS = 2;
 const DEFAULT_LTTE_TOL_SEC = 1e-6;
 const DEFAULT_SHAPIRO_MIN_IMPACT = 0;
@@ -90,12 +105,9 @@ export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number
  * Shapiro delay for a point mass at the origin, relative to a reference constant.
  * This returns a small, geometry-dependent timing correction (can be +/-).
  *
- * Note: this is a *relative-delay* model only. It computes an absolute Shapiro
- * delay without subtracting a baseline/reference geometry. This is acceptable
- * for differential timing work (e.g., TTV computation) because both the
- * reference and observed epochs receive the same systematic offset, which
- * cancels in the difference. Do not use the raw return value as a calibrated
- * absolute time delay.
+ * The additive constant is fixed by the implementation's dimensionless
+ * reference geometry. Use differences between epochs; do not interpret the
+ * raw return value as a calibrated absolute propagation time.
  */
 export function shapiroDelaySec(params: {
   r: Vec3;
@@ -126,37 +138,11 @@ export function shapiroDelayMultiBodySec(params: {
  * Solve for retarded/emission time using a fixed-point iteration:
  * t_obs = t_emit + (light travel time from r(t_emit) to observer), so t_emit = t_obs - totalDelay(r(t_emit)).
  */
-export function solveLightTimeCorrectedTime(params: {
-  tObs: number;
-  rAtTime: (t: number) => Vec3;
-  observerDir: Vec3;
-  c: number;
-  shapiro?: {
-    enabled: boolean;
-    mu?: number;
-    minImpact?: number;
-    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
-  };
-  maxIters?: number;
-  tolSec?: number;
-}): number {
+export function solveLightTimeCorrectedTime(params: LightTimeSolveInput): number {
   return solveLightTimeCorrectedResult(params).tEmit;
 }
 
-export function solveLightTimeCorrectedResult(params: {
-  tObs: number;
-  rAtTime: (t: number) => Vec3;
-  observerDir: Vec3;
-  c: number;
-  shapiro?: {
-    enabled: boolean;
-    mu?: number;
-    minImpact?: number;
-    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
-  };
-  maxIters?: number;
-  tolSec?: number;
-}): LightTimeSolveResult {
+export function solveLightTimeCorrectedResult(params: LightTimeSolveInput): LightTimeSolveResult {
   const tObs = params.tObs;
   const maxItersImplicit = !Number.isFinite(params.maxIters);
   const tolSecImplicit = !Number.isFinite(params.tolSec);

@@ -1,4 +1,4 @@
-// src/sim/limbDarkeningBridge.ts
+/** Bridges system photometry settings to transit limb-darkening evaluators. */
 //
 // Re-exports limb-darkening functions for use by the render layer.
 // This bridge allows render/ to depend on sim/ (permitted) rather than

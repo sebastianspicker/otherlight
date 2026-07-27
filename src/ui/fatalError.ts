@@ -1,3 +1,6 @@
+/**
+ * Owns fatal Error support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export type FatalErrorRecoveryOptions = {
   reload?: () => void;
 };

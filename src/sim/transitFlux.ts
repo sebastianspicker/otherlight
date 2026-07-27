@@ -1,4 +1,4 @@
-// src/sim/transitFlux.ts
+/** Combines stellar occultation and photometric terms into normalized transit flux. */
 //
 // Compute multiplicative stellar transit attenuation factor F_transit in [0,1].
 //
@@ -31,8 +31,9 @@ import { spectralContaminationWeight, totalAtmosphereTransmission } from "../pho
 import type { BodyKinematics } from "./kinematics";
 import { getLdIntegrators } from "./optionalLimbDarkening";
 import { isPhysicsFeatureEnabled } from "./fidelity";
+import { MAX_SPECTRAL_SAMPLES, maxSpectralSamplesForGrid } from "../core/transitComputeBudget";
 
-export const MAX_SPECTRAL_SAMPLES = 256;
+export { MAX_SPECTRAL_SAMPLES } from "../core/transitComputeBudget";
 
 type StarPhotometry = SystemParams["star"]["photometry"];
 type AtmosphereTransmissionConfig = NonNullable<NonNullable<StarPhotometry>["atmosphereTransmission"]>;
@@ -271,20 +272,31 @@ function buildTransmissionOcculters(
   return occulters;
 }
 
-function positiveLambdaGrid(lambdaRaw: unknown): LambdaGrid | null {
+function evenlySpacedIndices(indices: number[], limit: number): number[] {
+  if (indices.length <= limit) return indices;
+  if (limit === 1) return [indices[Math.floor((indices.length - 1) / 2)]];
+
+  return Array.from({ length: limit }, (_, index) => {
+    const sourceIndex = Math.round((index * (indices.length - 1)) / (limit - 1));
+    return indices[sourceIndex];
+  });
+}
+
+function positiveLambdaGrid(lambdaRaw: unknown, limit = MAX_SPECTRAL_SAMPLES): LambdaGrid | null {
   if (!Array.isArray(lambdaRaw)) return null;
 
-  const keepIdx: number[] = [];
-  const lambdaNm: number[] = [];
+  const validIndices: number[] = [];
   for (let i = 0; i < lambdaRaw.length; i++) {
     const x = lambdaRaw[i];
     if (isFinitePositive(x)) {
-      keepIdx.push(i);
-      lambdaNm.push(x);
-      if (lambdaNm.length >= MAX_SPECTRAL_SAMPLES) break;
+      validIndices.push(i);
+      if (validIndices.length >= MAX_SPECTRAL_SAMPLES) break;
     }
   }
-  if (lambdaNm.length === 0) return null;
+  if (validIndices.length === 0) return null;
+
+  const keepIdx = evenlySpacedIndices(validIndices, Math.max(1, Math.floor(limit)));
+  const lambdaNm = keepIdx.map((index) => lambdaRaw[index] as number);
   return { lambdaNm, keepIdx, rawLength: lambdaRaw.length };
 }
 
@@ -311,8 +323,11 @@ function legacyTauScale(lambdaGrid: LambdaGrid, tauRaw: number[] | undefined): n
   return lambdaGrid.lambdaNm.map(() => 1);
 }
 
-function normalizeLegacySpectralGrid(atm: AtmosphereTransmissionConfig | undefined): SpectralGrid | null {
-  const lambdaGrid = positiveLambdaGrid(atm?.lambdaNm);
+function normalizeLegacySpectralGrid(
+  atm: AtmosphereTransmissionConfig | undefined,
+  sampleLimit: number,
+): SpectralGrid | null {
+  const lambdaGrid = positiveLambdaGrid(atm?.lambdaNm, sampleLimit);
   if (!lambdaGrid) return null;
 
   const tauScale = legacyTauScale(lambdaGrid, atm?.tauScale);
@@ -348,11 +363,11 @@ function normalizedWeights(lambdaNm: number[], weights: number[]): number[] {
   return lambdaNm.map(() => 1 / lambdaNm.length);
 }
 
-function normalizeBandpassSpectralGrid(phot: StarPhotometry): SpectralGrid | null {
+function normalizeBandpassSpectralGrid(phot: StarPhotometry, sampleLimit: number): SpectralGrid | null {
   const bp = phot?.spectralBandpass;
   if (!bp?.enabled) return null;
 
-  const lambdaGrid = positiveLambdaGrid(bp.lambdaNm);
+  const lambdaGrid = positiveLambdaGrid(bp.lambdaNm, sampleLimit);
   if (!lambdaGrid) return null;
 
   const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
@@ -364,8 +379,12 @@ function normalizeBandpassSpectralGrid(phot: StarPhotometry): SpectralGrid | nul
   return { lambdaNm: lambdaGrid.lambdaNm, weights, tauScale: lambdaGrid.lambdaNm.map(() => 1) };
 }
 
-function normalizeBandpassGrid(phot: StarPhotometry): SpectralGrid | null {
-  return normalizeBandpassSpectralGrid(phot) ?? normalizeLegacySpectralGrid(phot?.atmosphereTransmission);
+function normalizeBandpassGrid(phot: StarPhotometry, gridRes: number | undefined): SpectralGrid | null {
+  const sampleLimit = maxSpectralSamplesForGrid(gridRes, 256);
+  return (
+    normalizeBandpassSpectralGrid(phot, sampleLimit) ??
+    normalizeLegacySpectralGrid(phot?.atmosphereTransmission, sampleLimit)
+  );
 }
 
 function assertStarRadius(params: SystemParams): number {
@@ -468,7 +487,7 @@ const computeTransmissionFlux = (
   if (!activeAtmosphereTransmission(params, inputs.phot)) return undefined;
   if (!inputs.allCircles) return undefined;
 
-  const spectral = normalizeBandpassGrid(inputs.phot);
+  const spectral = normalizeBandpassGrid(inputs.phot, inputs.gridRes);
   if (spectral) return computeSpectralTransmissionFlux(params, kin, inputs, spectral);
   return computeSingleTransmissionFlux(params, kin, inputs);
 };

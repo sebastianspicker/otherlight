@@ -1,3 +1,6 @@
+/**
+ * Owns lessons Preset Catalog support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { LessonSpec } from "../core/types";
 import {
   CURVE_READING_EXAMPLE,

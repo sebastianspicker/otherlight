@@ -1,77 +1,152 @@
-# Transit Light-Curve Lab Design System
+# Interface design
 
-## Overview
+Otherlight uses the Quiet Observatory interface system. The application shell
+uses light laboratory surfaces, while sky geometry and plots use dark evidence
+canvases.
 
-Transit Light-Curve Lab uses a Classroom Observatory visual system: a bright, neutral application shell around dark scientific plot surfaces. The interface is a precise working instrument, not a decorative space experience. Flat tonal layers, clear borders, and stable alignment carry hierarchy.
+The implementation is in `src/styles/`. The token reference is
+`docs/design/quiet-observatory.tokens.json`.
+
+The maintained static references are the
+[HTML mockup](docs/design/mockup-quiet-observatory.html) and its
+[PNG rendering](docs/design/mockup-quiet-observatory.png).
+
+## Interface layers
+
+| Layer           | Contents                                                   | Surface         |
+| --------------- | ---------------------------------------------------------- | --------------- |
+| Identity band   | Product name and Education or Scientific profile selection | Observatory ink |
+| Command strip   | Scenario, status, runtime actions, and speed               | White           |
+| Workspace       | Evidence figures and inspector                             | Lab paper       |
+| Evidence canvas | Sky geometry and light curve                               | Plot ink        |
+| Inspector       | Parameters, display, timing, and lesson controls           | White           |
+
+Education is the default profile. Scientific selection pauses Education and
+checks the loopback backend capability contract. The interface must not label
+an Education calculation as a Scientific result.
 
 ## Color
 
-- `shell`: neutral near-white for the page background.
-- `surface`: white for primary working regions.
-- `surface-subtle`: cool neutral for toolbars and secondary regions.
-- `text`: near-black blue for primary text.
-- `text-muted`: dark slate that still meets WCAG AA on shell and surface.
-- `border`: cool gray for structural separation.
-- `action`: deep teal for primary actions, selected navigation, and focus.
-- `signal`: amber for scientific emphasis and warnings, never decoration.
-- `success`, `warning`, and `error`: semantic states with text and shape in addition to color.
-- `plot`: near-black blue for canvases, with high-contrast white, teal, amber, cyan, and patterned series.
+The maintained base tokens are:
 
-All text/background pairs must meet WCAG 2.2 AA. Focus rings use a 3px teal outline with a light offset. Do not add a theme toggle for the public alpha.
+| Token             | Value     | Use                                  |
+| ----------------- | --------- | ------------------------------------ |
+| `observatory-ink` | `#081923` | Identity band and dark context       |
+| `deep-ocean`      | `#123142` | Secondary structure on dark surfaces |
+| `shell`           | `#eef3f4` | Page background                      |
+| `surface`         | `#ffffff` | Working regions                      |
+| `surface-soft`    | `#f7fafb` | Secondary controls                   |
+| `text`            | `#12242c` | Primary text                         |
+| `text-2`          | `#3a525c` | Secondary text                       |
+| `text-3`          | `#5a717b` | Metadata                             |
+| `border`          | `#c5d2d8` | Structural separation                |
+| `border-soft`     | `#d7e1e6` | Secondary separation                 |
+| `action`          | `#087f73` | Primary action, selection, and focus |
+| `action-ink`      | `#045248` | Text on action-soft                  |
+| `action-soft`     | `#e6f5f3` | Selected and status backgrounds      |
+| `world`           | `#315fba` | Product mark and scientific series   |
+| `signal`          | `#c48a1f` | Event markers                        |
+| `signal-soft`     | `#fbf3e3` | Event background                     |
+| `success`         | `#147a45` | Successful status                    |
+| `warning`         | `#8a5a00` | Warning status                       |
+| `error`           | `#b42318` | Error status                         |
+| `plot`            | `#09151d` | Evidence canvas                      |
 
-## Typography
+Color never carries state by itself. Selection also uses `aria-current`, a
+border, an underline, or another non-color indicator.
 
-Use one system sans stack for headings, controls, labels, and prose. Use the existing system monospace stack for numerical values and compact scientific data only. Body text is at least 15px; labels are at least 13px; canvas annotations are responsive and at least 11–12px. Headings use a fixed product scale, balanced wrapping, and no decorative serif or gradient treatment.
+## Typography and spacing
 
-## Shape, Spacing, and Elevation
+Use the system sans-serif stack for interface text and the system monospace
+stack for numerical values and compact data. Do not add a web-font dependency.
 
-- Spacing scale: 4, 8, 12, 16, 24, and 32px.
-- Radius scale: 4px for compact data surfaces, 6px for controls, 10px for major regions, 12px maximum for dialogs.
-- Borders establish hierarchy. Shadows are reserved for dialogs and sticky separation and use no more than 8px blur.
-- Interactive controls are at least 36px high and become at least 44px on coarse pointers.
+- Body text is at least 15px.
+- Labels are at least 13px.
+- Responsive canvas annotations are at least 11px.
+- Spacing uses 4, 8, 12, 16, 24, and 32px increments.
+- Control height is at least 36px and at least 44px for coarse pointers.
+- Borders establish hierarchy. Shadows are limited to dialogs and sticky
+  separation.
 
-## Components
+## Header and command strip
 
-### Product header and navigation
+The identity band contains the Otherlight name, the descriptor
+`Exoplanet learning & scientific modeling`, profile navigation, and Education
+mode navigation.
 
-The compact header contains the product name, a short purpose line, and peer navigation for Simulation and Guided Labs. Selected state uses color, border, and `aria-current`; it is not expressed by color alone.
+The command strip contains the context selectors, `#appStatus`, runtime
+actions, and speed control. It precedes the workspace in DOM and focus order
+and may wrap without reordering controls.
 
-### Context and runtime toolbars
+Use these labels consistently:
 
-Context selection and runtime controls appear before visualization in DOM and focus order. Toolbars may wrap but must not reorder at narrow widths. Runtime status is persistent and adjacent to the controls it describes.
+- `Parameter depth`
+- `Teaching scenario`
+- `Catalog system`
+- `Simulation`
+- `Guided Labs`
+- `Run transit`
+- `Reset time`
+- `Clear curve`
+- `Compare scenarios`
 
-### Forms
+## Evidence and inspector
 
-Every field has a visible label, optional unit, help or constraint text where needed, and a specific inline error. Form submission retains invalid text, marks `aria-invalid`, summarizes errors, focuses the first invalid field, and leaves the scientific model unchanged.
+Desktop layouts place evidence figures beside the inspector. Narrow layouts
+stack the inspector after the evidence while preserving DOM order.
 
-### Figures and data summaries
+Each canvas has:
 
-Each canvas is contained in a semantic figure with a heading, caption, and linked textual snapshot. Summaries describe scene geometry, visible events, plot ranges, series, markers, O-C statistics, and warnings. They update only for meaningful state changes. Principal data can be exported as CSV.
+- a visible heading and caption
+- a linked text summary of the current state
+- a bounded size that does not depend on viewport height alone
+- a data export path where the displayed data is exportable
 
-### Guided Lab phase
+The inspector owns parameters, display settings, timing output, and Guided Lab
+controls. The Scientific workspace presents availability, request state,
+result metadata, and provenance separately from Education controls.
 
-Show one current phase with progress, prompt, response, evidence, result, and next action. Unavailable sections are hidden. Explicit phase navigation moves focus to the phase heading; check results produce one concise announcement.
+## Forms and errors
 
-### Status and recovery
+Every field has a visible label, unit when applicable, and a specific error
+message. Invalid submitted text remains visible. The field uses
+`aria-invalid`, the error summary identifies the failure, focus moves to the
+first invalid field, and the active model remains unchanged.
 
-Use persistent status regions for neutral or busy state and `role="alert"` for actionable failures. Error surfaces explain what failed, what was preserved, and the next available action. Disable only affected controls.
+Use `role="status"` for progress and neutral state. Use `role="alert"` for
+actionable failures. Disable only controls affected by the failure.
 
-### Dialogs
+Use native `<dialog>` for consequential loss of unapplied changes. The actions
+must state the outcome, such as `Keep editing` and `Discard edits and load`.
 
-Use native `<dialog>` only for consequential unapplied-change loss. Actions are “Keep editing” and “Discard edits and load…”.
+## Guided Labs
 
-## Layout
+Show one learning phase at a time with progress, question, response, evidence,
+result, and next action. Hide unavailable sections. Explicit phase navigation
+moves focus to the phase heading, and result checks produce one concise
+announcement.
 
-The shell order is product header, mode navigation, context selector, runtime toolbar, visualization workspace, mode task panel, then Essential or Advanced parameters. Desktop uses a visualization area with a contextual right rail. Narrow layouts retain DOM order and stack the contextual panel immediately after the runtime toolbar. Plots use aspect ratio and bounded minimum heights rather than viewport-height clamps.
+## Accessibility
+
+- Text and interface surfaces must meet WCAG 2.2 AA contrast.
+- Keyboard focus uses a visible 3px teal outline with an offset.
+- Selected navigation uses a non-color indicator.
+- Coarse-pointer targets are at least 44px.
+- `prefers-reduced-motion` disables nonessential transitions.
+- Forced-colors mode preserves selected navigation and primary action state.
+- Canvas figures expose linked text summaries.
+- Status and error regions use the appropriate live-region role.
 
 ## Motion
 
-Motion communicates state only and lasts 150–200ms with an ease-out curve. There are no page-load sequences or decorative loops. `prefers-reduced-motion` removes nonessential transitions.
+Motion communicates a state change and normally lasts 150 to 200 milliseconds
+with an ease-out curve. Do not add page-load sequences, ambient animation,
+parallax, or decorative loops. A paused or hidden simulation must stop its
+continuous redraw work.
 
-## Content
+## Exclusions
 
-Use user-task terminology: “Guided Labs,” “Essential,” “Advanced,” “Calculation mode,” “Apply parameters,” “Reset time,” “Jump to event,” and “Compare scenarios.” State units and scientific constraints next to the relevant value. Empty states teach the next action.
-
-## Avoid
-
-Gradient text, glass blur, broad shadows, nested cards, custom scrollbars, decorative space backgrounds, repeated entrance animations, raw implementation IDs, vague actions, tiny uppercase legends, pill treatment on every readout, and stacked unavailable-state placeholders.
+Do not add gradient text, glass blur, broad shadows, nested card grids, custom
+scrollbars, decorative space backgrounds, photorealistic wallpaper, repeated
+entrance animation, raw implementation identifiers, vague action labels, or a
+product-specific theme toggle.

@@ -1,3 +1,6 @@
+/**
+ * Owns gaussian Features support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { SpectralGaussianFeatureParams } from "../../core/typesPhotometryAtmosphere";
 import { spectralFeatureArray, spectralFeatureCount } from "./spectralFeatureArrays";
 

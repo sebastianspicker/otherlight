@@ -1,3 +1,6 @@
+/**
+ * Owns native Model support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { clamp01 } from "../../core/units";
 import type { PhaseCurveParams } from "../../core/types";
 import { computeForwardScatteringFlux } from "../../photometry/forwardScattering";
@@ -6,9 +9,9 @@ import { bodyPhaseFlux } from "../../photometry/phaseCurve";
 import { stellarVariabilityFlux } from "../../photometry/stellarVariability";
 import { vSub } from "../../physics/vec3";
 import {
-  atmosphereOpacityForOcculter,
   circleOverlapArea,
   gaussianPhaseWeight,
+  photometricOcculterForBody,
   starVisibilityFromOcculters,
   resolveWeightedPhotometryBands,
   starVisibilityFromOpaqueOcculters,
@@ -50,6 +53,7 @@ type StellarComponents = {
   stellarPreTransit: number;
   binaryEclipseFactor: number;
   stellarVariability: number;
+  transitFactor: number;
 };
 
 type ScatteringComponents = {
@@ -82,13 +86,8 @@ function weightedFrontOcculters(
   config: SimulationConfigV4,
   star: NativeBodyState,
   occulters: NativeBodyState[],
-): NativeBodyState[] {
-  return occulters
-    .filter((oc) => oc.sky.z > star.sky.z)
-    .map((oc) => ({
-      ...oc,
-      opacity: oc.kind === "star" ? 1 : atmosphereOpacityForOcculter(config, oc),
-    }));
+): ReturnType<typeof photometricOcculterForBody>[] {
+  return occulters.filter((oc) => oc.sky.z > star.sky.z).map((oc) => photometricOcculterForBody(config, oc));
 }
 
 function primaryNonStarOcculterCount(
@@ -211,13 +210,21 @@ function computeStellarComponents(
   const stellarBaseline = stellarBaselineFlux(luminousStars);
   const stellarFromBinaryEclipses = stellarFluxAfterBinaryEclipses(luminousStars, visibility);
   const stellarVariability = stellarSurfaceVariability(config, tObsSec);
+  const stellarAfterAllOccultations = luminousStars.reduce(
+    (sum, star) => sum + star.luminosity * (visibility.byStar.get(star.id) ?? 1),
+    0,
+  );
   const primaryBinaryVis = visibility.byStarBinary.get(snap.stars[0]?.id ?? "") ?? 1;
+  const primaryAllVis = visibility.byStar.get(snap.stars[0]?.id ?? "") ?? 1;
+  const stellarPreTransit = stellarFromBinaryEclipses + stellarVariability * primaryBinaryVis;
+  const stellarAfterTransit = stellarAfterAllOccultations + stellarVariability * primaryAllVis;
   return {
     stellarA: visibleStellarFlux(snap, visibility, 0),
     stellarB: visibleStellarFlux(snap, visibility, 1),
     binaryEclipseFactor: binaryEclipseFactor(stellarBaseline, stellarFromBinaryEclipses),
     stellarVariability,
-    stellarPreTransit: stellarFromBinaryEclipses + stellarVariability * primaryBinaryVis,
+    stellarPreTransit,
+    transitFactor: stellarPreTransit > 0 ? clamp01(stellarAfterTransit / stellarPreTransit) : 1,
   };
 }
 
@@ -424,23 +431,6 @@ function computeRefraction(config: SimulationConfigV4, snap: NativeSnapshot): nu
   );
 }
 
-function computeTransitFactor(
-  config: SimulationConfigV4,
-  snap: NativeSnapshot,
-  nonStars: NativeBodyState[],
-): number {
-  const transitPrimaryStar = snap.stars[0];
-  return transitPrimaryStar
-    ? starVisibilityFromOcculters(
-        config,
-        transitPrimaryStar,
-        nonStars
-          .filter((oc) => oc.sky.z > transitPrimaryStar.sky.z)
-          .map((oc) => ({ ...oc, opacity: atmosphereOpacityForOcculter(config, oc) })),
-      )
-    : 1;
-}
-
 function visibleFractionWhenOcculted(
   foreground: NativeBodyState,
   background: NativeBodyState,
@@ -483,9 +473,9 @@ export function computeFluxBundle(
   const scattering = computeScatteringComponents(config, snap);
   const refraction = computeRefraction(config, snap);
 
-  // Compute transitFactor from planet/moon transits only (not binary eclipse),
-  // so it reflects the planet transit depth independent of binary stellar eclipses.
-  const transitFactor = computeTransitFactor(config, snap, nonStars);
+  // Flux-weight the non-stellar occultations across every luminous star. This
+  // keeps light from an unocculted companion out of a primary-star transit.
+  const transitFactor = stellar.transitFactor;
   const total =
     stellar.stellarPreTransit * transitFactor +
     additivePlanetary +

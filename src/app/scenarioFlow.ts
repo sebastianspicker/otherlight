@@ -1,4 +1,8 @@
+/**
+ * Owns scenario Flow support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { LessonSimMode, SystemParams } from "../core/types";
+import { getLabSystemByControlValue, getLabSystemById } from "../core/labs";
 import { cloneParams } from "./scenario";
 import { buildBinaryLabParams, DEFAULT_BINARY_LAB_CONFIG_V4 } from "./binaryLab";
 import { getPresetById } from "./presets";
@@ -29,8 +33,8 @@ import type {
 } from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 
-export const BINARY_MODE_VALUE = "binary-lab";
-export const PRESET_MODE_VALUE = "preset-lab";
+export const BINARY_MODE_VALUE = getLabSystemById("binary-stars").controlValue;
+export const PRESET_MODE_VALUE = getLabSystemById("transit-exomoon").controlValue;
 export const LAB_PRODUCT_MODE_VALUE = "lab";
 export const SIMULATION_PRODUCT_MODE_VALUE = "simulation";
 const BINARY_HYPOTHESIS_VALUES: BinaryLabHypothesis[] = [
@@ -136,16 +140,11 @@ function resolveBinaryLabUiStatus(refs: UiRefs, binaryLabState: BinaryLabState):
   };
 }
 
-function syncBinaryLabControls(refs: UiRefs, status: BinaryLabUiStatus): void {
+const syncBinaryLabControls = (refs: UiRefs, status: BinaryLabUiStatus): void => {
   setOptionalHidden(refs.didBinaryControls, !status.active);
   setOptionalDisabled(refs.didHypothesisSelect, !status.active);
   setOptionalDisabled(refs.didRevealSkyBtn, !status.canReveal);
-}
-
-function syncBinaryLabSky(refs: UiRefs, status: BinaryLabUiStatus): void {
-  if (refs.skyBlackboxHint) refs.skyBlackboxHint.hidden = status.skyVisible;
-  refs.skyCanvas.style.visibility = status.skyVisible ? "visible" : "hidden";
-}
+};
 
 function setOptionalHidden(el: HTMLElement | null | undefined, hidden: boolean): void {
   if (el) el.hidden = hidden;
@@ -254,7 +253,7 @@ async function applyBinaryLabScenario(deps: ScenarioFlowDeps): Promise<void> {
   if (refs.realSystemSelect) refs.realSystemSelect.value = "";
   if (refs.realSystemMeta) refs.realSystemMeta.textContent = "";
   if (refs.didHypothesisSelect) refs.didHypothesisSelect.value = "";
-  refs.presetDesc.textContent = "Binary lab (detached eclipsing): black-box flow with hypothesis gating.";
+  refs.presetDesc.textContent = getLabSystemByControlValue(BINARY_MODE_VALUE).description;
   try {
     await applyScenarioParams(deps, state.scenarioDefaults);
   } catch (error) {
@@ -340,4 +339,15 @@ export async function applyActiveScenarioForMode(deps: ScenarioFlowDeps): Promis
   if (refs.realSystemSelect) refs.realSystemSelect.value = "";
   if (refs.realSystemMeta) refs.realSystemMeta.textContent = "";
   await applyPresetById(deps, refs.presetSelect.value);
+}
+
+function syncBinaryLabSky(refs: UiRefs, status: BinaryLabUiStatus): void {
+  if (refs.skyBlackboxHint) refs.skyBlackboxHint.hidden = status.skyVisible;
+  refs.skyCanvas.classList.toggle("skyCanvas--hidden", !status.skyVisible);
+  const skySummary = document.getElementById("skySummary");
+  if (status.active && skySummary) {
+    skySummary.textContent = status.skyVisible
+      ? "Detached-binary sky-plane geometry revealed; the current component positions are shown above."
+      : "Detached-binary sky-plane geometry is hidden until a hypothesis is selected and the learner reveals the sky.";
+  }
 }

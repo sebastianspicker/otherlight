@@ -1,4 +1,4 @@
-// src/photometry/transitLimbDarkened.ts
+/** Numerically integrates limb-darkened circular-occultation transit flux. */
 
 //
 // Generic limb-darkened stellar transit photometry (numerical, robust).

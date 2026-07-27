@@ -1,4 +1,4 @@
-// src/physics/kepler.ts
+/** Solves elliptic Kepler motion in radians with explicit convergence behavior. */
 
 //
 // Elliptic-orbit anomaly utilities (e in [0,1)).
@@ -215,9 +215,8 @@ function throwStrictKeplerNonConvergence(
 }
 
 /**
- * Solve Kepler's equation for elliptic orbits:
- * M = E - e sin(E)
- * via (damped) Newton iterations.
+ * Solves elliptic Kepler's equation M = E - e sin(E) in radians using damped Newton iterations.
+ * Inputs are validated strictly; a non-convergent strict solve throws, while non-strict mode returns its bounded estimate.
  *
  * @param M Mean anomaly [rad] (any real).
  * @param e Eccentricity in [0, 1).

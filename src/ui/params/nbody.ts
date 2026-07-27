@@ -1,3 +1,6 @@
+/**
+ * Owns nbody support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type {
   NBodyPerturberParams,
   NBodyPlanetMoonParams,

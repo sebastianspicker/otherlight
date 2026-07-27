@@ -1,4 +1,4 @@
-// src/core/typesSystem.ts
+/** Defines the canonical star, planet, moon, and binary system parameter contracts. */
 
 //
 // System/scene top-level configuration.

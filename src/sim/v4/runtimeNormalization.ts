@@ -1,3 +1,6 @@
+/**
+ * Owns runtime Normalization support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { collectScientificBrowserOrbitIssues } from "./scientificBrowserDynamicsConfig";
 import { createScientificBrowserRuntimeError, isScientificBrowserRuntimeError } from "./scientificErrors";
 import type { SimulationConfigV4 } from "./types";

@@ -1,3 +1,6 @@
+/**
+ * Owns types support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { InstrumentNoiseSystematicsParams } from "../../core/instrumentNoiseTypes";
 import type {
   Body,

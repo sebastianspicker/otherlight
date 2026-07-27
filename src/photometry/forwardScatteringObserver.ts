@@ -1,3 +1,6 @@
+/**
+ * Owns forward Scattering Observer support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { Vec3 } from "../physics/vec3";
 import { vNormalizeOrThrow } from "../physics/vec3";
 

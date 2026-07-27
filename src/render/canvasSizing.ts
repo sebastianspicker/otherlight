@@ -1,3 +1,6 @@
+/**
+ * Owns canvas Sizing support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import type { SizeInfo } from "./canvasUtil";
 
 export type CanvasSizeCacheEntry = { size: SizeInfo; dirty: boolean };

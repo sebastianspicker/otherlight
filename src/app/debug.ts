@@ -1,4 +1,4 @@
-// src/app/debug.ts
+/** Gates diagnostic logging behind the app debug configuration. */
 //
 // Debug overlay DOM bindings.
 

@@ -1,3 +1,7 @@
+/**
+ * Owns the stateful V4 execution lifecycle, mode switching, and reference
+ * aggregation while keeping numerical state independent of browser controls.
+ */
 import { deepClone } from "../../core/clone";
 import type { SimulationStepV3 } from "../v3";
 import { normalizeScenarioInputToV4 } from "./migrate";
@@ -142,6 +146,10 @@ function aggregateReferenceStep(config: SimulationConfigV4, samples: SimulationS
   };
 }
 
+/**
+ * Creates the validated V4 runtime; time is observed seconds and invalid scientific-browser input fails closed.
+ * The runtime retains its conservation baseline across steps, so callers must create a fresh instance for a new lifecycle.
+ */
 export function createSimulationV4(input: SimulationConfigV4 | unknown): SimulationRuntimeV4 {
   let config: SimulationConfigV4;
   try {

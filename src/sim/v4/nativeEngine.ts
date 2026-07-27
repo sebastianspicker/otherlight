@@ -1,3 +1,6 @@
+/**
+ * Owns native Engine support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type {
   SystemParams,
   StepConservationDiagnostics,
@@ -347,7 +350,6 @@ function nativeRelativitySolverStatus(enabled: boolean): PhysicsDiagnosticsV3["l
 
 function physicsDiagnosticsFromStep(
   config: SimulationConfigV4,
-  mode: RuntimeModeV4,
   conservation: ConservationResult,
 ): PhysicsDiagnosticsV3 {
   const ltteEnabled = Boolean(
@@ -361,8 +363,10 @@ function physicsDiagnosticsFromStep(
     ltteConvergence: nativeRelativitySolverStatus(ltteEnabled),
     shapiroConvergence: nativeRelativitySolverStatus(shapiroEnabled),
     integratorStats: {
-      mode: mode === "reference" ? "adaptive-verlet" : "fixed-verlet",
-      nbodyEnabled: Boolean(config.dynamics?.nbodyPlanetMoon?.enabled),
+      // V4 snapshot construction is Keplerian in both realtime and temporally
+      // supersampled modes. Configuration presence is not solver execution.
+      mode: "kepler",
+      nbodyEnabled: false,
     },
     energyDrift: conservation.physicsEnergyDrift,
     angularMomentumDrift: conservation.physicsAngularMomentumDrift,
@@ -419,7 +423,6 @@ function debugFromStepInputs(
 function buildNativeSimulationStep(args: {
   config: SimulationConfigV4;
   tObsSec: number;
-  mode: RuntimeModeV4;
   snap: NativeSnapshot;
   flux: FluxBundle;
   diag: NativeTimingDiagnostics;
@@ -427,7 +430,7 @@ function buildNativeSimulationStep(args: {
   didactics: SimulationDidacticsV3 | undefined;
   renderSignals: RenderSignalsV3;
 }): SimulationStepV3 {
-  const { config, tObsSec, mode, snap, flux, diag, conservation, didactics, renderSignals } = args;
+  const { config, tObsSec, snap, flux, diag, conservation, didactics, renderSignals } = args;
   const decomposition = fluxDecompositionFromBundle(flux);
 
   return {
@@ -438,7 +441,7 @@ function buildNativeSimulationStep(args: {
     observables: diag.observables,
     conservation: conservation.conservation,
     renderSignals,
-    physicsDiagnostics: physicsDiagnosticsFromStep(config, mode, conservation),
+    physicsDiagnostics: physicsDiagnosticsFromStep(config, conservation),
     didactics,
     debug: debugFromStepInputs(config, flux, diag),
   };
@@ -454,7 +457,7 @@ export function stepNativeSimulationV4(args: {
   step: SimulationStepV3;
   conservationBaseline: ConservationBaseline;
 } {
-  const { config, tObsSec, mode } = args;
+  const { config, tObsSec } = args;
   const snap = buildNativeSnapshot(runtimeConfigForStep(config, args.executionMode), tObsSec);
   const flux = computeFluxBundle(config, snap, tObsSec);
   const diag = computeTimingAndObservables(config, snap, tObsSec);
@@ -466,7 +469,6 @@ export function stepNativeSimulationV4(args: {
     step: buildNativeSimulationStep({
       config,
       tObsSec,
-      mode,
       snap,
       flux,
       diag,

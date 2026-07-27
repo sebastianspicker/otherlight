@@ -1,0 +1,368 @@
+/*
+ * Quiet Observatory — Guided Labs rail phase chrome.
+ * One active phase card, progress, response, evidence, navigation.
+ */
+
+.lab-rail {
+  display: grid;
+  gap: 14px;
+  padding: 14px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--surface) !important;
+}
+
+.lab-rail__header {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.lab-rail__header .eyebrow {
+  margin: 0;
+  color: var(--action-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lab-rail__header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.didactic-intro {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.lab-rail__setup {
+  display: grid;
+  gap: 10px;
+}
+
+.lab-rail__summary {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.lab-rail__meta {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+
+.lab-setup-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.lab-setup-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 10px;
+}
+
+.lab-setup-row .inline {
+  display: grid;
+  min-width: 140px;
+  flex: 1 1 140px;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lab-setup-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.lab-setup-check {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+/* Active phase card */
+.lab-phase {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgb(8 127 115 / 22%);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f2faf9, #eaf6f4);
+}
+
+.lab-phase__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lesson-progress {
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid rgb(8 127 115 / 22%);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--action-ink);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.lab-phase__title,
+#didPhaseTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.lab-phase__prompt,
+#didPhasePrompt {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lab-phase__result,
+.lab-phase__example,
+.lab-phase__observations {
+  margin: 0;
+}
+
+.lab-phase__response,
+#didResponseComposer {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(8 127 115 / 16%);
+  background: transparent;
+  box-shadow: none;
+}
+
+.lab-phase__response .inline {
+  display: grid;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lab-phase__response textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.lab-phase__response textarea:focus {
+  border-color: var(--action);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(8 127 115 / 18%);
+}
+
+/* Navigation */
+.lab-rail__actions {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.lab-nav button {
+  min-height: 34px;
+  font-size: 12.5px;
+}
+
+.lab-nav__primary,
+#didNextBtn {
+  border-color: var(--action);
+  background: var(--action);
+  color: #fff;
+  font-weight: 650;
+}
+
+.lab-nav__primary:hover,
+#didNextBtn:hover {
+  border-color: var(--action-hover);
+  background: var(--action-hover);
+  color: #fff;
+}
+
+#didCheckBtn {
+  border-color: rgb(8 127 115 / 35%);
+  background: var(--action-soft);
+  color: var(--action-ink);
+  font-weight: 650;
+}
+
+.lab-nav--event {
+  padding-top: 4px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.lab-nav--event .inline {
+  display: grid;
+  min-width: 160px;
+  flex: 1 1 160px;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Evidence blocks */
+.lab-rail__evidence {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.lab-rail__status {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+.lab-evidence-block:empty {
+  display: none;
+}
+
+.lab-evidence-block:not(:empty) {
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+#didCheckList:not(:empty) {
+  border-color: rgb(8 127 115 / 22%);
+  background: var(--action-soft);
+  color: var(--action-ink);
+}
+
+#didHintList:not(:empty) {
+  border-color: rgb(196 138 31 / 28%);
+  background: var(--signal-soft);
+  color: #7a4f0a;
+}
+
+#didFormulaList:not(:empty) {
+  font-size: 12px;
+}
+
+/* Compare */
+.lab-rail__compare {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 8px;
+}
+
+.lab-compare > summary {
+  min-height: 36px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lab-compare__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+.lab-compare__row .inline {
+  display: grid;
+  min-width: 120px;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lab-compare__out {
+  margin: 10px 0 0;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  max-height: 200px;
+  overflow: auto;
+  font-size: 12px;
+}
+
+/* Strip residual bare didactic panel chrome when IDs render empty */
+#didLessonStatus,
+#didInterpretation,
+#didLessonSummary,
+#didLessonMeta,
+#didPhaseTitle,
+#didPhasePrompt,
+#didWorkedExample,
+#didObservationList,
+#didHintList,
+#didMisconceptionList,
+#didFocusList,
+#didFormulaList,
+#didCheckList {
+  box-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .lab-phase {
+    background: linear-gradient(180deg, #1a3330, #162a28);
+    border-color: rgb(42 171 156 / 28%);
+  }
+
+  .lesson-progress {
+    background: rgb(8 25 35 / 35%);
+    color: #9ee0d6;
+  }
+
+  #didCheckList:not(:empty) {
+    background: rgb(8 127 115 / 18%);
+    color: #9ee0d6;
+  }
+
+  #didHintList:not(:empty) {
+    background: rgb(196 138 31 / 16%);
+    color: #f0d59a;
+  }
+}

@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Renderer support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { clamp } from "../core/units";
 import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
 import {

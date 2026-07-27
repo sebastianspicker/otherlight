@@ -1,4 +1,4 @@
-// src/render/lightCurvePlot.ts
+/** Composes the light-curve plotting surface from axes, series, and annotations. */
 
 //
 // Light-curve plotter (Canvas2D).
@@ -22,7 +22,7 @@ import {
   pushLightCurveSample,
   setLightCurveCapacity,
 } from "./lightCurvePlotBuffer";
-import type { VisibleTimeDomain, VisibleWindow } from "./lightCurvePlotMath";
+import type { VisibleWindow } from "./lightCurvePlotMath";
 import { drawLightCurvePlot } from "./lightCurvePlotRenderer";
 import type {
   LightCurveBadge,
@@ -35,12 +35,7 @@ import type {
   LightCurveSample,
   ResolvedLightCurvePlotOptions,
 } from "./lightCurvePlotTypes";
-import {
-  getVisibleSampleBounds,
-  getVisibleTimeDomain,
-  getVisibleTimeDomainInfo,
-  getVisibleWindowInfo,
-} from "./lightCurvePlotViewport";
+import { getVisibleWindowInfo } from "./lightCurvePlotViewport";
 
 export type { LightCurvePlotOptions, LightCurveSample } from "./lightCurvePlotTypes";
 
@@ -83,16 +78,9 @@ export class LightCurvePlot {
   private comparisonInset?: LightCurveComparisonInset;
   private detachResizeObserver: () => void;
 
-  private get flux(): number[] {
-    return this.state.flux;
-  }
-  private get t(): number[] {
-    return this.state.t;
-  }
-
   constructor(
     private canvas: HTMLCanvasElement,
-    private capacity = 2000,
+    capacity = 2000,
     opts: LightCurvePlotOptions = {},
   ) {
     this.ctx = getLightCurveContext(canvas);
@@ -210,18 +198,6 @@ export class LightCurvePlot {
 
   private getVisibleWindowInfo(): VisibleWindow {
     return getVisibleWindowInfo(this.state, this.opts);
-  }
-
-  private getVisibleSampleBounds(): { start: number; end: number } {
-    return getVisibleSampleBounds(this.state, this.opts);
-  }
-
-  private getVisibleTimeDomain(start: number, end: number): { tMin: number; tMax: number } | null {
-    return getVisibleTimeDomain(this.state, this.opts, start, end);
-  }
-
-  private getVisibleTimeDomainInfo(start: number, end: number): VisibleTimeDomain | null {
-    return getVisibleTimeDomainInfo(this.state, this.opts, start, end);
   }
 
   draw(): void {

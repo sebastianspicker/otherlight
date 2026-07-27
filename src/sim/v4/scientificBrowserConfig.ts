@@ -1,3 +1,6 @@
+/**
+ * Owns scientific Browser Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { hasExplicitLimbDarkeningBandLaw } from "../../photometry/limbDarkening";
 import {
   isSupportedStellarPassband,
@@ -149,12 +152,38 @@ function assertScientificBrowserDynamicsConfig(config: SimulationConfigV4): void
     modeContext(config),
   );
 
+  if (config.dynamics?.relativity?.enabled) {
+    throw createScientificBrowserRuntimeError({
+      stage: "config",
+      code: "SCB_RELATIVITY_UNAVAILABLE",
+      summary: "scientific-browser V4 does not execute LTTE, Shapiro, or force-level relativistic dynamics",
+      details: [
+        "use the V5 local scientific backend for research timing and relativity",
+        "V4 may not return a scientific result for a configured solver that it does not run",
+      ],
+      context: modeContext(config),
+    });
+  }
+
   throwConfigIssues(
     collectScientificBrowserNBodyIssues(config),
     "SCB_INVALID_NBODY_CONFIG",
     "scientific-browser nbodyPlanetMoon requires explicit physical mass inputs",
     modeContext(config),
   );
+
+  if (config.dynamics?.nbodyPlanetMoon?.enabled) {
+    throw createScientificBrowserRuntimeError({
+      stage: "config",
+      code: "SCB_NBODY_UNAVAILABLE",
+      summary: "scientific-browser V4 builds Kepler snapshots and does not execute nbodyPlanetMoon",
+      details: [
+        "use the V5 local scientific backend for research N-body integration",
+        "V4 may not label configuration presence as executed N-body physics",
+      ],
+      context: modeContext(config),
+    });
+  }
 
   throwConfigIssues(
     collectScientificBrowserOrbitIssues(config),

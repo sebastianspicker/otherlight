@@ -1,0 +1,214 @@
+/*
+ * Quiet Observatory — evidence column: figures, dark plots, readouts.
+ */
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  gap: 12px;
+  align-items: start;
+  margin: 12px 16px 16px;
+  background: var(--shell);
+}
+
+.mainLeft {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.vizStack {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* Figure chrome is white; plot surface is dark */
+.scientific-figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.figure-heading {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-soft);
+}
+
+.figure-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.figure-key {
+  margin-right: auto;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+/* Event emphasis chips — gold only here */
+.figure-heading .chip,
+.runtime-readouts .chip-event,
+.chip-event {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 550;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(196 138 31 / 28%);
+  background: var(--signal-soft);
+  color: #7a4f0a;
+}
+
+.scientific-figure canvas,
+canvas {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--plot);
+  box-shadow: none;
+}
+
+#skyCanvas {
+  min-height: 280px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+#lcCanvas {
+  min-height: 200px;
+  aspect-ratio: 16 / 5;
+  height: auto;
+}
+
+#ocCanvas {
+  min-height: 180px;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  background: var(--plot);
+}
+
+.scientific-figure--compact #ocCanvas {
+  min-height: 150px;
+}
+
+.scientific-figure figcaption {
+  min-height: 20px;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-2);
+  font-size: 12.5px;
+  text-align: left;
+  background: var(--surface);
+  text-wrap: pretty;
+}
+
+.scientific-figure figcaption strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Compact runtime readouts under figures */
+.runtime-readouts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.runtime-readouts > span {
+  display: grid;
+  min-width: 0;
+  min-height: 64px;
+  align-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--border-soft);
+}
+
+.runtime-readouts > span:last-child,
+.runtime-readouts > span:nth-child(4) {
+  border-right: 0;
+}
+
+.runtime-readouts > span:nth-child(n + 5) {
+  min-height: 40px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.runtime-readouts .readout-label {
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.runtime-readouts .mono {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: clamp(14px, 1.4vw, 20px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-warning {
+  min-height: 1.5em;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.lesson-progress {
+  margin: 8px 0 4px;
+  color: var(--action-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  .chip-event {
+    border-color: rgb(211 154 50 / 35%);
+    background: var(--signal-soft);
+    color: #f1cd86;
+  }
+
+  .scientific-figure canvas,
+  canvas,
+  #skyCanvas,
+  #lcCanvas,
+  #ocCanvas {
+    background: var(--plot);
+  }
+}

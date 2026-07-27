@@ -1,3 +1,6 @@
+/**
+ * Owns orbit Sanitizer support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { OrbitElements } from "../../core/types";
 
 const DEFAULT_BINARY_ORBIT: OrbitElements = {

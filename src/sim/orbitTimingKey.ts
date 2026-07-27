@@ -1,3 +1,6 @@
+/**
+ * Owns orbit Timing Key support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { OrbitElements } from "../core/types";
 
 /**

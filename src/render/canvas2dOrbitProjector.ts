@@ -1,3 +1,6 @@
+/**
+ * Owns canvas2d Orbit Projector support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import type { RenderOcculterGeometryV3 } from "../sim/v3/types";
 
 import type { OrbitPathPoint2D } from "./orbitPathCache";

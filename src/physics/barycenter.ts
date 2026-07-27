@@ -1,4 +1,4 @@
-// src/physics/barycenter.ts
+/** Computes mass-weighted barycentres and reflex positions in a common frame. */
 //
 // Barycentric utilities for two-body systems (e.g. planet–moon).
 //

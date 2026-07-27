@@ -1,3 +1,6 @@
+/**
+ * Owns transit Timing support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { StepEventTimingSolveBundle, StepTimingDiagnostics, SystemParams } from "../core/types";
 import { projectToSky } from "../physics/frames";
 import type { Vec3 } from "../physics/vec3";

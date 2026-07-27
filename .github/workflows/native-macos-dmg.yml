@@ -1,0 +1,43 @@
+name: Native macOS DMG
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-dmg:
+    name: Build unsigned macOS DMG
+    runs-on: macos-26
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Verify toolchain
+        run: |
+          source scripts/select-swift-toolchain.sh
+          xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Archive unsigned Universal 2 app
+        run: |
+          xcodebuild archive \
+            -project native-apple/Otherlight.xcodeproj \
+            -scheme Otherlight \
+            -configuration Release \
+            -destination "generic/platform=macOS" \
+            -archivePath "$RUNNER_TEMP/Otherlight.xcarchive" \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+      - name: Package and checksum ephemeral unsigned DMG
+        env:
+          APP_PATH: ${{ runner.temp }}/Otherlight.xcarchive/Products/Applications/Otherlight.app
+          OUTPUT_DIR: ${{ runner.temp }}/dmg
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          hdiutil create -volname "Otherlight" -srcfolder "$APP_PATH" \
+            -ov -format UDZO "$OUTPUT_DIR/Otherlight.dmg"
+          shasum -a 256 "$OUTPUT_DIR/Otherlight.dmg"

@@ -1,3 +1,6 @@
+/**
+ * Owns phase Curve Scaling support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { clamp01, isFiniteNumber } from "../core/units";
 import { vLen } from "../physics/vec3";
 import type { BodyPhaseFluxParams, NormalizedPhaseCurveModel, NormalizedThermalInertia } from "./phaseCurve";

@@ -2,14 +2,16 @@
 
 Light-time (Roemer-like) one-way travel time:
 
-- $\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$ (travel time from body at r to observer at infinity)
+- $\Delta t_{\mathrm{Roemer}} = -\frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$ (relative path-length delay for an observer at infinity in direction $\mathbf{n}_{\mathrm{obs}}$)
 - r is the body position relative to the star (sky origin). Retarded time: $t_{\mathrm{emit}} = t_{\mathrm{obs}} - \Delta t$.
 
 Shapiro delay (point-mass, star at origin):
 
-- $\Delta t_{\mathrm{Shapiro}} = \frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
+- $\Delta t_{\mathrm{Shapiro}} = -\frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
   where $z = \mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}$ and $r = \lVert \mathbf{r} \rVert$.
-- A minimum impact parameter can be used to regularize the log.
+- This is a differential delay with an arbitrary additive reference; it grows
+  toward superior conjunction. A minimum transverse impact parameter can be
+  used to regularize the point-mass singularity.
 
 GR apsidal precession (weak-field, two-body):
 
@@ -17,22 +19,17 @@ GR apsidal precession (weak-field, two-body):
 
 Behavior in this codebase:
 
-- Kepler mode: precession is derived from (a, e, period, c) unless a non-zero
+- Compatibility Kepler mode: precession is derived from (a, e, period, c) unless a non-zero
   per-orbit override is provided.
-- N-body mode: a star-centric 1PN correction is applied; per-orbit overrides
+- Compatibility N-body mode: a star-centric 1PN correction is applied; per-orbit overrides
   are ignored.
-- Enhanced timing mode (`dynamics.relativityLevel="enhanced"`):
+- Compatibility enhanced timing mode (`dynamics.relativityLevel="enhanced"`):
   approximate multi-body Shapiro aggregation is available for observables/timing diagnostics.
-- `scientific-browser` runtime contract:
-  relativity no longer gets silent model/solver defaults once enabled.
-  The V4 scientific-browser config now requires explicit
-  `dynamics.relativityLevel`, `relativity.c`, `relativity.ltteIters`,
-  `relativity.ltteTolSec`, and `relativity.shapiroMinImpact`
-  when the corresponding timing features are enabled.
-  The shared `src/physics/relativity.ts` helpers still keep interactive-safe defaults
-  for the default educational path. That defaulting path is now treated as an
-  educational-runtime concern, not an open blocker on the bounded `S3`
-  scientific-browser contract.
+- V4 browser runtime: relativity is unavailable. A valid enabled request fails
+  with `SCB_RELATIVITY_UNAVAILABLE`; V4 never silently reports a relativity
+  result. `scientific-browser` remains a strict educational validation profile.
+- V5 backend: relativity is not implemented in the current local backend and
+  is excluded from its manifest validity domain.
 - Shared solver metadata:
   `solveLightTimeCorrectedResult(...)` emits convergence/status metadata
   (`converged`, `iterations`, `maxIters`, `tolSec`, Shapiro usage mode, and
@@ -61,29 +58,29 @@ Behavior in this codebase:
 
 - Shared reference checks:
   the shared relativity test suite now includes closed-form constant-velocity LTTE
-  and static LTTE+Shapiro reference cases so the solver is not only policy-labeled
-  but also checked against bounded analytic expectations.
+  evidence plus static LTTE+Shapiro same-model regressions.
   The literature benchmark lane now also checks the canonical approximately 499 second
   one-AU light-time reference directly, so LTTE has a named astronomy-style target
   instead of only synthetic parameter sweeps.
   The literature benchmark lane now also checks the solar-limb one-AU relative
-  Shapiro scale at approximately 113 microseconds, which matches the current
-  helper's documented relative-delay contract rather than a full calibrated radar-delay model.
+  Shapiro convention at approximately 113 microseconds. This preserves the
+  helper's arbitrary-zero relative-delay behavior; it is not an independent
+  absolute observable or a calibrated radar-delay model.
   That same benchmark lane now also checks a five-AU solar-limb relative Shapiro
-  target at approximately 144 microseconds, so the bounded Shapiro evidence is a
-  small distance-scaled reference family rather than only one named point.
-  The benchmark lane also now checks the static enhanced multi-body branch against
-  the direct summed point-mass analytic reference, so the repo-native Shapiro
-  evidence covers both the single-mass and bounded summed-mass timing surfaces.
+  regression at approximately 144 microseconds. The static enhanced multi-body
+  branch is compared with a direct sum of the same production point-mass helper.
+  These checks prevent accidental implementation drift but are explicitly not
+  independent scientific release evidence.
   The literature benchmark lane now also checks Mercury-like weak-field GR
   apsidal precession against the canonical approximately 43 arcsec/century reference band.
-  That same benchmark lane now also carries the bounded constant-velocity LTTE
-  and static LTTE+Shapiro reference cases, so all three primary relativity surfaces
-  have a repo-native benchmark presence instead of living only in unit tests.
+  The constant-velocity LTTE case and Mercury target remain the independent
+  evidence in this compatibility lane; the Shapiro evidence gap stays open.
 
 Learner-visible timing surface:
 
-- The active interactive shell exposes relativity/timing consequences through timing markers, O-C history, epoch ghosts, and compare overlays rather than by showing the shared solver internals directly.
+- The interactive shell can expose timing-oriented markers and overlays, but
+  V4 does not run the shared LTTE/Shapiro solver. These are preview diagnostics,
+  not evidence of an active relativistic propagation correction.
 - That distinction matters:
   - the shared solver metadata is the authoritative place for convergence/status labeling
   - the native V4 browser path may still show timing-oriented visuals while reporting solver convergence as `unavailable`

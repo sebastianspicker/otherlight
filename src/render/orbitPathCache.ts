@@ -1,4 +1,4 @@
-// src/render/orbitPathCache.ts
+/** Caches sampled sky-plane orbit guides so rendering avoids repeated dynamics sampling. */
 //
 // Orbit path caching for the Canvas2D renderer.
 //
@@ -389,6 +389,10 @@ function valueOrDefault<T>(value: T | undefined, fallback: T): T {
   return value ?? fallback;
 }
 
+/**
+ * Caches discretized sky-plane orbit guides by dynamics, observer, and sampling identity.
+ * Entries are rendering-only and must be cleared when a consumer needs an explicit lifecycle reset.
+ */
 export class OrbitPathCache {
   private opts: Required<OrbitPathCacheOptions>;
   private cachedPlanet?: CachedPath;

@@ -1,3 +1,6 @@
+/**
+ * Owns lesson Phases support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { LessonEventTarget, LessonPhaseSpec, LessonWorkedExample } from "../core/types";
 
 function fallbackText(value: string | undefined, defaultValue: string): string {

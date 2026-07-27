@@ -1,6 +1,6 @@
-// src/sim/v4/nativeSnapshot.ts
+/** Materializes native-engine body snapshots in the canonical SI observer frame. */
 //
-// Builds a NativeSnapshot — the positions, velocities, and metadata of every
+// Builds a NativeSnapshot containing the positions, velocities, and metadata of every
 // body in the system at a given observer time. Snapshot construction is pure;
 // it does not compute photometry.
 
@@ -337,6 +337,10 @@ function buildSnapshotResult(ctx: SnapshotBuildContext): NativeSnapshot {
   };
 }
 
+/**
+ * Materializes the native engine's immutable body snapshot at observed seconds in its canonical SI frame.
+ * This boundary keeps hierarchy resolution and observer-frame state consistent for all native calculations.
+ */
 export function buildNativeSnapshot(config: SimulationConfigV4, tObsSec: number): NativeSnapshot {
   const ctx = createSnapshotContext(config, tObsSec);
   addBinaryStarStates(ctx);

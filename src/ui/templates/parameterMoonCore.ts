@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Moon Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderMoonCoreControls(): string {
   return `
         <label

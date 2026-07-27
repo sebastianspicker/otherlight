@@ -1,4 +1,4 @@
-// src/photometry/dayNightVisibility.ts
+/** Provides canonical day-night geometry and phase visibility calculations. */
 
 //
 // Day/Night (terminator) visibility utilities for reflected/emitted light.

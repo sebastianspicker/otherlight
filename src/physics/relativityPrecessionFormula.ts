@@ -1,3 +1,6 @@
+/**
+ * Owns relativity Precession Formula support within the physics layer. Keeps numerical and frame conventions centralized for all consumers.
+ */
 import {
   grPrecessionDenominator,
   hasValidGrPrecessionInputs,

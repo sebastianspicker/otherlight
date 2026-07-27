@@ -1,3 +1,6 @@
+/**
+ * Owns stellar Surface support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { BrightnessPatch, StellarSurfaceParams } from "../core/types";
 
 import type { Vec3 } from "../physics/vec3";

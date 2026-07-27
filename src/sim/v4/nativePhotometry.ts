@@ -1,11 +1,16 @@
+/**
+ * Owns native Photometry support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { clamp01, clamp11 } from "../../core/units";
 import type { CircleOcculter } from "../../photometry/occulterCircle";
 import {
   effectiveCircleAtmosphereOpacity,
   spectralContaminationWeight,
+  totalAtmosphereTransmission,
 } from "../../photometry/atmosphereRT/model";
 import { resolveAndValidateLimbDarkeningForStar } from "../../photometry/limbDarkening";
 import { fluxLimbDarkenedDiskDetailed } from "../../photometry/transitLimbDarkened";
+import { fluxStarWithTransmissiveOcculters } from "../../photometry/transitTransmission";
 import type { SimulationConfigV4, StarBodyV4 } from "./types";
 
 /** Buffer factor for the outer shell boundary in atmosphere ray-tracing; ensures numerical separation from the body surface. */
@@ -39,10 +44,32 @@ type VisibilityOcculter = {
   r: number;
   sky: { x: number; y: number; z: number };
   opacity?: number;
+  transmissionAtRadius?: (rho: number) => number;
 };
 
 const isFinitePositive = (x: unknown): x is number => {
   return typeof x === "number" && Number.isFinite(x) && x > 0;
+};
+
+const sampledAtmosphereTransmission = (
+  bodyRadius: number,
+  outerRadius: number,
+  evaluateShell: (rho: number) => number,
+): ((rho: number) => number) => {
+  const count = 256;
+  const width = outerRadius - bodyRadius;
+  if (!(width > 0)) return (rho) => (rho <= bodyRadius ? 0 : 1);
+  const values = Array.from({ length: count + 1 }, (_, index) =>
+    clamp01(evaluateShell(bodyRadius + (width * index) / count)),
+  );
+  return (rho) => {
+    if (rho <= bodyRadius) return 0;
+    if (rho >= outerRadius) return 1;
+    const coordinate = ((rho - bodyRadius) / width) * count;
+    const lower = Math.floor(coordinate);
+    const fraction = coordinate - lower;
+    return values[lower] * (1 - fraction) + values[lower + 1] * fraction;
+  };
 };
 
 const normalizeLegacyTransmissionGrid = (config: SimulationConfigV4): LegacyTransmissionGrid | null => {
@@ -311,6 +338,93 @@ export function atmosphereOpacityForOcculter(
   return legacyAtmosphereOpacityForTarget(config, body.r, target, bands);
 }
 
+/**
+ * Build the actual radial transmission profile used by the native V4 transit
+ * integrator. The solid body is always opaque; an atmosphere only extends the
+ * occulting cross-section beyond that core.
+ */
+type PhotometricBody = {
+  kind: "star" | "planet" | "moon";
+  r: number;
+  sky: { x: number; y: number; z: number };
+};
+
+const rtPhotometricOcculter = (
+  config: SimulationConfigV4,
+  body: PhotometricBody,
+  target: "planet" | "moon",
+  bands: ReturnType<typeof resolveWeightedPhotometryBands>,
+): VisibilityOcculter | undefined => {
+  const rt = config.photometry?.atmosphereRT;
+  if (!(rt?.enabled && rt.target === target && Array.isArray(rt.layers) && rt.layers.length > 0))
+    return undefined;
+  const validLayers = rt.layers.filter(
+    (layer) =>
+      layer.r0 > 0 && layer.H > 0 && layer.tau0 >= 0 && Number.isFinite(layer.r0 + layer.H + layer.tau0),
+  );
+  if (validLayers.length === 0) return undefined;
+  const outer = Math.max(body.r, ...validLayers.map((layer) => layer.r0 + 6 * layer.H));
+  const profile = { ...rt, layers: validLayers };
+  return {
+    r: outer,
+    sky: body.sky,
+    transmissionAtRadius: sampledAtmosphereTransmission(body.r, outer, (rho) =>
+      bands.reduce(
+        (sum, band) =>
+          sum + band.weight * totalAtmosphereTransmission({ rho, config: profile, lambdaNm: band.lambdaNm }),
+        0,
+      ),
+    ),
+  };
+};
+
+const legacyPhotometricOcculter = (
+  config: SimulationConfigV4,
+  body: PhotometricBody,
+  target: "planet" | "moon",
+  bands: ReturnType<typeof resolveWeightedPhotometryBands>,
+): VisibilityOcculter | undefined => {
+  const legacy = config.photometry?.atmosphereTransmission;
+  if (!(legacy?.enabled && legacy.target === target)) return undefined;
+  const r0 = isFinitePositive(legacy.r0) ? legacy.r0 : body.r;
+  const H = isFinitePositive(legacy.H) ? legacy.H : 0;
+  const outer = Math.max(body.r, r0 + 6 * H);
+  return {
+    r: outer,
+    sky: body.sky,
+    transmissionAtRadius: sampledAtmosphereTransmission(body.r, outer, (rho) =>
+      bands.reduce(
+        (sum, band) =>
+          sum +
+          band.weight *
+            legacyTransmissionAtRadius({
+              rho,
+              bodyRadius: body.r,
+              r0,
+              H,
+              tau0: legacy.tau0 ?? 0,
+              tauScale: band.legacyTauScale,
+              kind: legacy.kind,
+            }),
+        0,
+      ),
+    ),
+  };
+};
+
+export function photometricOcculterForBody(
+  config: SimulationConfigV4,
+  body: PhotometricBody,
+): VisibilityOcculter {
+  const target = atmosphereTargetForBody(body.kind);
+  if (!target) return { r: body.r, sky: body.sky, opacity: 1 };
+  const bands = resolveWeightedPhotometryBands(config);
+  return (
+    rtPhotometricOcculter(config, body, target, bands) ??
+    legacyPhotometricOcculter(config, body, target, bands) ?? { r: body.r, sky: body.sky, opacity: 1 }
+  );
+}
+
 const atmosphereTargetForBody = (kind: "star" | "planet" | "moon"): "planet" | "moon" | undefined => {
   if (kind === "moon") return "moon";
   if (kind === "planet") return "planet";
@@ -392,7 +506,7 @@ export function starVisibilityFromOcculters(
 
   const circles = circleOccultersForStar(star, occulters);
   const opacities = occulters.map(occulterOpacity);
-  const allOpaque = opacities.every((opacity) => opacity >= 1 - 1e-12);
+  const allOpaque = occulters.every((oc, index) => !oc.transmissionAtRadius && opacities[index] >= 1 - 1e-12);
   const ldLaw = resolveStarLimbDarkeningLaw(config, star);
 
   if (ldLaw && allOpaque) {
@@ -404,7 +518,17 @@ export function starVisibilityFromOcculters(
     }).flux;
   }
 
-  return sampleStarTransmission(config, star, occulters, opacities);
+  return fluxStarWithTransmissiveOcculters({
+    rStar: star.r,
+    occulters: occulters.map((oc, index) => ({
+      dx: oc.sky.x - star.sky.x,
+      dy: oc.sky.y - star.sky.y,
+      r0: oc.r,
+      transmission: oc.transmissionAtRadius ?? ((rho) => (rho <= oc.r ? 1 - opacities[index] : 1)),
+    })),
+    limbDarkening: ldLaw,
+    gridRes: config.photometry?.gridRes,
+  });
 }
 
 const circleOccultersForStar = (star: VisibilityStar, occulters: VisibilityOcculter[]): CircleOcculter[] => {
@@ -434,45 +558,4 @@ const resolveStarLimbDarkeningLaw = (config: SimulationConfigV4, star: Visibilit
         }
       : undefined,
   });
-};
-
-const sampleStarTransmission = (
-  config: SimulationConfigV4,
-  star: VisibilityStar,
-  occulters: VisibilityOcculter[],
-  opacities: number[],
-): number => {
-  const gridRes = Math.max(40, Math.min(240, Math.floor(config.photometry?.gridRes ?? 220)));
-  let transmissionSum = 0;
-  let sampleCount = 0;
-  for (let iy = 0; iy < gridRes; iy++) {
-    const y = star.sky.y + (((iy + 0.5) / gridRes) * 2 - 1) * star.r;
-    const dy = y - star.sky.y;
-    for (let ix = 0; ix < gridRes; ix++) {
-      const x = star.sky.x + (((ix + 0.5) / gridRes) * 2 - 1) * star.r;
-      const dx = x - star.sky.x;
-      if (dx * dx + dy * dy > star.r * star.r) continue;
-      transmissionSum += pointTransmission(x, y, occulters, opacities);
-      sampleCount += 1;
-    }
-  }
-  return sampleCount > 0 ? clamp01(transmissionSum / sampleCount) : 1;
-};
-
-const pointTransmission = (
-  x: number,
-  y: number,
-  occulters: VisibilityOcculter[],
-  opacities: number[],
-): number => {
-  let transmission = 1;
-  for (let index = 0; index < occulters.length; index++) {
-    const oc = occulters[index];
-    const odx = x - oc.sky.x;
-    const ody = y - oc.sky.y;
-    if (odx * odx + ody * ody > oc.r * oc.r) continue;
-    transmission *= 1 - opacities[index];
-    if (transmission <= 0) break;
-  }
-  return transmission;
 };

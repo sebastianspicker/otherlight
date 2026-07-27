@@ -1,3 +1,6 @@
+/**
+ * Owns observer Gizmo Inset support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { clamp } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import type { SizeInfo } from "./canvasUtil";

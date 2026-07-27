@@ -1,3 +1,8 @@
+/**
+ * Owns parameter Star Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
+import { MAX_TRANSIT_GRID_RES, MIN_TRANSIT_GRID_RES } from "../../core/transitComputeBudget";
+
 export function renderStarCoreControls(): string {
   return `
         <div class="grid">
@@ -14,7 +19,7 @@ export function renderStarCoreControls(): string {
             data-tooltip="Numerical resolution of the stellar disk integration grid. Higher values improve accuracy at the cost of performance."
           >
             Grid resolution
-            <input id="gridRes" type="number" min="10" max="5000" step="10" value="220" />
+            <input id="gridRes" type="number" min="${MIN_TRANSIT_GRID_RES}" max="${MAX_TRANSIT_GRID_RES}" step="10" value="220" />
           </label>
         </div>
 

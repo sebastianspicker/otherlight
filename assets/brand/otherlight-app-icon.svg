@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Otherlight app icon</title>
+  <desc id="desc">A starlight source partially eclipsed by an Earth-blue world above a teal transit signal.</desc>
+  <rect width="1024" height="1024" fill="#081923"/>
+  <circle cx="400" cy="405" r="224" fill="#D39A32"/>
+  <circle cx="542" cy="459" r="235" fill="#315FBA"/>
+  <path d="M128 700 H309 C363 700 363 839 437 839 H543 C618 839 618 700 671 700 H896" fill="none" stroke="#087F73" stroke-linecap="round" stroke-linejoin="round" stroke-width="64"/>
+</svg>

@@ -1,3 +1,6 @@
+/**
+ * Owns runtime Lifecycle support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import type { RuntimeModeV4 } from "../sim/v4";
 import type { BinaryLabConfigV4 } from "../sim/v4/types";

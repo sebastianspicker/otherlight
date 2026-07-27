@@ -1,3 +1,8 @@
+/**
+ * Owns sidebar Runtime support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
+
+/** Runtime action buttons, speed, calculation mode, and expert view controls. */
 export function renderRuntimeControls(): string {
   return `
       <div class="runtime-actions">
@@ -48,12 +53,15 @@ export function renderRuntimeControls(): string {
   `;
 }
 
+/**
+ * Standalone runtime toolbar (legacy export for imports/tests).
+ * Prefer {@link renderCommandStrip} from commandStrip.ts for Quiet Observatory IA.
+ */
 export function renderRuntimeToolbar(): string {
   return `
     <section class="runtime-toolbar" aria-labelledby="runtimeToolbarTitle">
       <h2 id="runtimeToolbarTitle">Runtime</h2>
       ${renderRuntimeControls()}
-      ${renderReadouts()}
     </section>
   `;
 }

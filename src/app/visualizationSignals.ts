@@ -1,6 +1,6 @@
-// src/app/visualizationSignals.ts
+/** Connects visualization interactions to simulation and UI update signals. */
 //
-// Overlay series builders — functions that produce LightCurveOverlaySeries data
+// Overlay series builders produce LightCurveOverlaySeries data
 // from simulation runtimes, band variants, or sample arrays.
 
 import { cloneParams } from "../core/clone";

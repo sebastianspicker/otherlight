@@ -1,4 +1,4 @@
-// src/render/starDisk.ts
+/** Renders the projected stellar disk and its photometric surface appearance. */
 //
 // Star disk renderer (Canvas2D).
 //
@@ -10,7 +10,7 @@
 // Important:
 // - Visualization only: nothing here feeds back into physics or flux computations.
 // - Canvas blending cannot truly implement multiplicative intensity maps in a physically exact way;
-//   patches are rendered as a qualitative overlay that matches the *intent* of the photometry patches.
+//   patches are rendered as a qualitative overlay that matches the intent of the photometry patches.
 //
 // Dependencies:
 // - core/types.ts defines SystemParams + limb-darkening models. [project-local]
@@ -135,14 +135,26 @@ export class StarDiskCache {
 function parseHexColor(hex: string, fallback: [number, number, number]): [number, number, number] {
   if (typeof hex !== "string") return fallback;
   const s = hex.trim();
-  const m = /^#([0-9a-fA-F]{6})$/.exec(s);
-  if (!m) return fallback;
+  if (!isSixDigitHexColor(s)) return fallback;
 
-  const v = parseInt(m[1], 16);
+  const v = Number.parseInt(s.slice(1), 16);
   const r = (v >> 16) & 255;
   const g = (v >> 8) & 255;
   const b = v & 255;
   return [r, g, b];
+}
+
+function isSixDigitHexColor(value: string): boolean {
+  if (value.length !== 7 || value.charCodeAt(0) !== 35) return false;
+  for (let index = 1; index < value.length; index += 1) {
+    if (!isAsciiHexDigit(value.charCodeAt(index))) return false;
+  }
+  return true;
+}
+
+function isAsciiHexDigit(code: number): boolean {
+  const lowercase = code | 32;
+  return (code >= 48 && code <= 57) || (lowercase >= 97 && lowercase <= 102);
 }
 
 function rgbToCss(rgb: [number, number, number]): string {

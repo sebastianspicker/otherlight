@@ -1,3 +1,6 @@
+/**
+ * Owns compare support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { SystemParams } from "../core/types";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";
 import { displayFluxValueForConfig } from "../sim/v4/binaryBaseline";

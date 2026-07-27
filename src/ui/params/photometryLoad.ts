@@ -1,3 +1,6 @@
+/**
+ * Owns photometry Load support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type {
   BrightnessPatch,
   PhotometryParams,
@@ -7,43 +10,18 @@ import type {
 } from "../../core/types";
 import { sanitizePositive, writeNumberInput } from "../inputs";
 import type { UiRefs } from "../refs";
-import { formatNumberList, formatQuadraticBands, getQuadraticLDFromModel } from "./common";
-
-type DefaultPatchInputs = {
-  p1x: number;
-  p1y: number;
-  p1r: number;
-  p1f: number;
-  p2x: number;
-  p2y: number;
-  p2rx: number;
-  p2ry: number;
-  p2angle: number;
-  p2f: number;
-};
+import {
+  defaultPatchInputs,
+  formatNumberList,
+  formatQuadraticBands,
+  getQuadraticLDFromModel,
+  type DefaultPatchInputs,
+} from "./common";
 
 const EMPTY_PHASE_CURVE: PhaseCurveParams = {};
 const EMPTY_THERMAL_INERTIA: ThermalInertiaParams = {};
 
-const roundPatchLength = (v: number): number => Math.round(v / 1e6) * 1e6;
-
 const valueOr = <T>(value: T | undefined, fallback: T): T => (value === undefined ? fallback : value);
-
-const defaultPatchInputs = (starRadius: number): DefaultPatchInputs => {
-  const rStar = Math.max(1, starRadius);
-  return {
-    p1x: roundPatchLength(-0.28 * rStar),
-    p1y: roundPatchLength(0.22 * rStar),
-    p1r: roundPatchLength(0.16 * rStar),
-    p1f: 0.75,
-    p2x: roundPatchLength(0.33 * rStar),
-    p2y: roundPatchLength(-0.17 * rStar),
-    p2rx: roundPatchLength(0.21 * rStar),
-    p2ry: roundPatchLength(0.09 * rStar),
-    p2angle: 0.6,
-    p2f: 1.12,
-  };
-};
 
 const patchNumber = (
   patch: BrightnessPatch | undefined,

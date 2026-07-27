@@ -1,3 +1,6 @@
+/**
+ * Owns occulters Body Rings support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { isFinitePositive } from "../core/units";
 import type { OcculterShape, RingOcculter } from "../photometry/occulterEllipse";
 import type { BodyOcculterArgs } from "./occulters";

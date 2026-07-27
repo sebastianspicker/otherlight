@@ -1,4 +1,4 @@
-// src/sim/optionalLimbDarkening.ts
+/** Selects optional limb-darkening behavior while retaining robust transit fallbacks. */
 //
 // Optional limb-darkening integrator loader.
 // The public API remains lazy/idempotent for call-site compatibility, but the

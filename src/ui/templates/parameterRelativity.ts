@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Relativity support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderRelativityFieldset(): string {
   return `
       <fieldset data-ui-tier="expert">

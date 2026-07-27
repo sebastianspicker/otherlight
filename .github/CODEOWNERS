@@ -1,7 +1,22 @@
 # Default owner for all files
 * @sebastianspicker
 
-# CI and security-critical paths require explicit review
+# CI, security, science, native, contract, and release-critical paths require explicit review
 .github/ @sebastianspicker
 .npmrc @sebastianspicker
 SECURITY.md @sebastianspicker
+science_backend/ @sebastianspicker
+src/science/ @sebastianspicker
+src/physics/ @sebastianspicker
+src/sim/ @sebastianspicker
+src/photometry/ @sebastianspicker
+native-apple/ @sebastianspicker
+contracts/ @sebastianspicker
+RELEASE_STATUS.md @sebastianspicker
+docs/alpha-release.md @sebastianspicker
+scripts/archive-macos.sh @sebastianspicker
+scripts/build-run-macos.sh @sebastianspicker
+scripts/select-swift-toolchain.sh @sebastianspicker
+scripts/notarize-macos.sh @sebastianspicker
+scripts/package-macos-dmg.sh @sebastianspicker
+scripts/verify-macos-release.sh @sebastianspicker

@@ -1,3 +1,6 @@
+/**
+ * Owns types support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { OrbitElements } from "../../core/types";
 import type { Vec3 } from "../../physics/vec3";
 

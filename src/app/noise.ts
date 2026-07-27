@@ -1,4 +1,4 @@
-// src/app/noise.ts
+/** Owns app-level instrument-noise state construction and reset behavior. */
 //
 // Instrument-noise configuration helpers and state lifecycle.
 

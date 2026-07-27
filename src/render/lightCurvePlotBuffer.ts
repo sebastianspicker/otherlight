@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Buffer support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { isFiniteNumber } from "../core/units";
 
 import type { LightCurveHistoryState, LightCurveSample } from "./lightCurvePlotTypes";

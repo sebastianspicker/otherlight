@@ -1,8 +1,9 @@
 # Full Physical Description and Derivations
 
-This document has two parts:
+This document has two parts and is path-labelled:
 
-- Part A: Implemented model (as in this codebase).
+- Part A: Implemented formulas in the repository. Some belong only to the
+  compatibility kernel and are not executed by V4.
 - Part B: Ideal / complete physical model (not fully implemented here).
 
 Notation:
@@ -13,7 +14,16 @@ Notation:
 - Observer direction $\mathbf{n}_{\mathrm{obs}}$ points from the star toward the observer.
 - Angles are radians in the model.
 
-## PART A. IMPLEMENTED MODEL (CURRENT CODE)
+Execution boundary: V4 executes Kepler snapshots and preview photometry. The
+compatibility `stepSystem` path contains optional Verlet N-body and relative
+LTTE/Shapiro formulas. The local V5 backend currently executes explicit-epoch
+Newtonian DOP853 only. The strict V4 `scientific-browser` validation profile
+rejects enabled N-body or relativity requests. Interactive V4 may retain those
+configuration flags but does not execute the corresponding solvers and marks
+them unavailable/not run. See `model-registry.json` for authoritative status,
+owner, validity, test, and reference metadata.
+
+## Part A. Implemented formulas, labelled by execution path
 
 ### 1. Units and conventions
 
@@ -21,6 +31,19 @@ Notation:
 - Time: seconds.
 - Angle: radians in physics; UI uses degrees then converts.
 - Flux: normalized to a baseline stellar flux near 1.0.
+
+The numerical gravitational constant is the measured CODATA 2022 central
+value,
+
+$$G=6.67430\times10^{-11}\ {\rm m^3\,kg^{-1}\,s^{-2}},$$
+
+not an exact definition. The astronomical unit
+$1\ {\rm au}=149\,597\,870\,700\ {\rm m}$ and IAU nominal solar radius
+$\mathcal R_\odot^{\rm N}=6.957\times10^8\ {\rm m}$ are exact conversion
+constants. The repository's solar, Earth, and Jupiter values in kilograms and
+its mean planetary radii are labelled conventional measured estimates; they
+are not exact IAU nominal masses or equatorial radii. See `src/core/units.ts`
+and the CODATA/IAU entries in `../references.bib`.
 
 ### 2. Coordinate frames and projection
 
@@ -63,6 +86,16 @@ Mean anomaly:
 
 $M(t) = n(t - t_0)$
 
+The period-driven preview position uses the declared $n=2\pi/P$. Whenever a
+Cartesian position-and-velocity state is requested with a gravitational
+parameter, both phase and velocity instead use the same dynamical relation
+
+$$n=\sqrt{\mu/a^3},$$
+
+so a contradictory configured period cannot define the phase while $\mu$
+defines the velocity. The V5 adapter additionally requires the declared period
+to agree with $2\pi/n$ within its documented rounding tolerance.
+
 #### 3.3 Kepler equation (elliptic)
 
 Solve for eccentric anomaly E:
@@ -97,7 +130,38 @@ Then:
 $\mathbf{r}_{\mathrm{planet}} = \mathbf{r}_{\mathrm{bary}} - \left(\frac{m_m}{m_p + m_m}\right)\mathbf{r}_{\mathrm{rel}}$
 $\mathbf{r}_{\mathrm{moon}} = \mathbf{r}_{\mathrm{bary}} + \left(\frac{m_p}{m_p + m_m}\right)\mathbf{r}_{\mathrm{rel}}$
 
-### 5. N-body dynamics (full integration)
+#### 4.1 Hill-sphere and empirical satellite-stability diagnostics
+
+For a hierarchical planet-star pair, the semimajor-axis Hill approximation is
+
+$$R_{H,a}=a_p\left(\frac{m_p}{3M_\star}\right)^{1/3}.$$
+
+The separate moon-apoapsis containment warning uses the smaller value at
+planetary periapsis, $R_{H,p}=(1-e_p)R_{H,a}$. The Domingos, Winter, and
+Yokoyama empirical fits already contain their fitted planet-eccentricity
+dependence, so they use $R_{H,a}$ and must not multiply by $(1-e_p)$ again:
+
+$$
+a_{E,\mathrm{pro}}=0.4895\left(1-1.0305e_p-0.2738e_s\right)R_{H,a},
+$$
+
+$$
+a_{E,\mathrm{retro}}=0.9309\left(1-1.0764e_p-0.9812e_s
++0.9446e_pe_s\right)R_{H,a}.
+$$
+
+The implementation clamps a negative fitted limit to zero. These are warning
+thresholds, not stability proofs: the cited simulations use the restricted
+elliptic three-body problem, planet/star mass ratio $10^{-3}$, planet
+eccentricity through 0.9, satellite eccentricity through 0.5, and finite
+integration horizons. Arbitrary mass ratios, inclinations, resonances, tides,
+and long-term chaos require direct dynamical analysis. Accordingly, the runtime
+does not assert either fitted threshold outside the cited eccentricity bounds
+or outside a 5% rounding band around the sampled mass ratio; it emits
+`HILL_FIT_OUT_OF_DOMAIN` instead. The independent moon-apoapsis/Hill-containment
+warning remains available because it does not use the empirical fitted limit.
+
+### 5. N-body dynamics (compatibility kernel; not V4)
 
 #### 5.1 Newtonian acceleration
 
@@ -155,32 +219,33 @@ $$
 This is a Schwarzschild 1PN correction for a test body around a central mass.
 It is applied in a mass-weighted way between star and body.
 
-### 6. Relativity and timing
+### 6. Relativity and timing (compatibility kernel; unavailable in V4/V5 backend)
 
 #### 6.1 Light-time delay (Roemer-like)
 
 For a body at position r (relative to the star):
 
-$\Delta t_{\mathrm{Roemer}} = \frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$
+$\Delta t_{\mathrm{Roemer}} = -\frac{\mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}}{c}$
 
 #### 6.2 Shapiro delay (point-mass approximation)
 
 For a point mass mu at the origin:
 
-$\Delta t_{\mathrm{Shapiro}} = \frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
+$\Delta t_{\mathrm{Shapiro}} = -\frac{2\mu}{c^3}\,\ln\!\left(\frac{r + z}{r}\right)$
 
 where:
 
 $r = \lVert \mathbf{r} \rVert$
 $z = \mathbf{r} \cdot \mathbf{n}_{\mathrm{obs}}$
 
-A minimum impact parameter can be used to regularize the log.
+A minimum transverse impact parameter can be used to regularize the point-mass
+singularity. The implemented value is differential and has an arbitrary additive reference.
 
 #### 6.3 Retarded time solve
 
 We solve for t_emit with fixed-point iteration:
 
-$t_{\mathrm{emit}} = t_{\mathrm{obs}} + \Delta t_{\mathrm{Roemer}}(\mathbf{r}(t_{\mathrm{emit}})) + \Delta t_{\mathrm{Shapiro}}(\mathbf{r}(t_{\mathrm{emit}}))$
+$t_{\mathrm{emit}} = t_{\mathrm{obs}} - \Delta t_{\mathrm{Roemer}}(\mathbf{r}(t_{\mathrm{emit}})) - \Delta t_{\mathrm{Shapiro}}(\mathbf{r}(t_{\mathrm{emit}}))$
 
 ### 7. GR apsidal precession (Kepler mode)
 
@@ -244,7 +309,7 @@ $r_x = R$
 $r_y = R(1 - \mathrm{oblateness})$
 
 Rings are projected annuli; an original circular ring of radius r becomes
-an ellipse with minor axis $r\cos(\mathrm{inc})$.
+an ellipse with minor semiaxis $r\lvert\cos(\mathrm{inc})\rvert$.
 
 #### 8.6 Transmissive occulters (atmosphere)
 
@@ -322,7 +387,7 @@ $\mathrm{gain} = \frac{1}{\sqrt{1 + x^2}}$
 
 Then the thermal weight is modified by:
 
-$W_{\mathrm{eff}} = r + (1 - r)\,\mathrm{gain}\,W(\alpha + \mathrm{lag})$
+$W_{\mathrm{eff}} = r + (1 - r)\,\mathrm{gain}\,W(\operatorname{clamp}(\alpha - \phi_{\mathrm{off}} - \mathrm{lag}, 0, \pi))$
 
 where $r \in [0,1]$ is a redistribution factor.
 
@@ -336,7 +401,7 @@ or, for eccentric orbits, by true anomaly.
 
 The variability model is:
 
-$f_{\mathrm{var}} = C + A_{\mathrm{beam}}\sin(\phi + \phi_b) + A_{\mathrm{ellip}}\cos\!\left(2(\phi + \phi_e)\right)$
+$f_{\mathrm{var}} = C + A_{\mathrm{beam}}\sin(\phi + \phi_b) - A_{\mathrm{ellip}}\cos\!\left(2(\phi + \phi_e)\right)$
 
 ### 11. Forward scattering (additive)
 
@@ -383,14 +448,15 @@ $N_e = \max\!\left(0,\ F\,\mathrm{throughput}\,\mathrm{electronsPerUnitFlux}\,\m
 
 Poisson noise is sampled from N_e; for large N_e a Gaussian approximation is used.
 
-## PART B. IDEAL / COMPLETE PHYSICAL MODEL (TARGET)
+## Part B. Ideal / complete physical model (target)
 
 This section describes a more complete physical model beyond what the
 current implementation provides. It is a roadmap for scientific completeness.
 
 ### 1. Dynamics
 
-- Full N-body for all planets, moons, and the star (already implemented).
+- Generalize the current star + planet + moon + optional-perturber N-body model
+  to arbitrary numbers and hierarchies of planets and moons.
 - Higher-order GR terms and full post-Newtonian N-body (not implemented).
 - Tides, oblateness-driven precession, and spin-orbit coupling.
 

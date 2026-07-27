@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Planet Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderPlanetCoreControls(): string {
   return `
         <div class="grid">

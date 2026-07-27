@@ -1,4 +1,4 @@
-// src/core/typesResults.ts
+/** Defines simulation result, diagnostic, and observable output contracts. */
 
 //
 // Types for simulation outputs (one step).

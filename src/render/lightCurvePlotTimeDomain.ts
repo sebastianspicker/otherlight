@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Time Domain support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { resolveEarliestFiniteTime, resolveLatestFiniteTime } from "./lightCurvePlotBuffer";
 import type { VisibleTimeDomain } from "./lightCurvePlotMath";
 import type { LightCurveHistoryState, ResolvedLightCurvePlotOptions } from "./lightCurvePlotTypes";

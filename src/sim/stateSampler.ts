@@ -1,3 +1,6 @@
+/**
+ * Owns state Sampler support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { SystemParams } from "../core/types";
 import { G_SI } from "../core/units";
 import { muFromPeriodAndA } from "../physics/kepler";

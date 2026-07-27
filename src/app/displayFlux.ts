@@ -1,3 +1,6 @@
+/**
+ * Owns display Flux support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SimulationConfigV4 } from "../sim/v4";
 import { detachedBinaryBaselineFlux, displayFluxValueForConfig } from "../sim/v4/binaryBaseline";
 

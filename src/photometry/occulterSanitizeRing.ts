@@ -1,3 +1,6 @@
+/**
+ * Owns occulter Sanitize Ring support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { isFinitePositive } from "../core/units";
 import type { RingOcculter } from "./occulterEllipse";
 import { hasFiniteCenter, normalizedRingInnerRadius, overlapsStarByRadius } from "./occulterSanitizeGeometry";

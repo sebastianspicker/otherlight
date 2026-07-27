@@ -2,12 +2,12 @@
  * Annotation and overlay rendering helpers for the light-curve plot.
  *
  * Exports:
- *  - `collectOverlayRange`  — computes the flux extent of visible overlay series.
- *  - `drawOverlaySeries`    — renders a single overlay series onto the plot.
- *  - `drawWindowOverlays`   — renders shaded time-window overlays (e.g. transit windows).
- *  - `drawMarkers`          — renders labelled vertical timing markers.
- *  - `drawLegend`           — renders the overlay series legend and badge row.
- *  - `drawComparisonInset`  — renders the small comparison-model inset panel.
+ *  - `collectOverlayRange`: computes the flux extent of visible overlay series.
+ *  - `drawOverlaySeries`: renders a single overlay series onto the plot.
+ *  - `drawWindowOverlays`: renders shaded time-window overlays (e.g. transit windows).
+ *  - `drawMarkers`: renders labelled vertical timing markers.
+ *  - `drawLegend`: renders the overlay series legend and badge row.
+ *  - `drawComparisonInset`: renders the small comparison-model inset panel.
  */
 
 import type {

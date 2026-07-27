@@ -1,12 +1,43 @@
+/**
+ * Owns header support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
+
+/** Browser file-picker compatibility: the current extension, legacy extension, and plain JSON. */
+export const WORKSPACE_FILE_ACCEPT = ".otherlight,.transitlab,application/json";
+
+/**
+ * Thin identity band: brand, calculation profile, and education mode tabs only.
+ * Workspace open/save and scenario/runtime controls live in the command strip.
+ */
 export function renderHeaderTemplate(): string {
   return `
     <header class="app-header">
       <div class="product-heading">
-        <h1>Transit Light-Curve Lab</h1>
-        <p>Explore how orbital geometry becomes measured light.</p>
+        <div class="brand-lockup">
+          <img class="brand-mark" src="/brand/otherlight-signal-eclipse.svg" alt="" aria-hidden="true" />
+          <div>
+            <h1>Otherlight</h1>
+            <p class="brand-descriptor">Exoplanet learning &amp; scientific modeling</p>
+          </div>
+        </div>
+        <p class="brand-tagline">Exoplanet learning &amp; scientific modeling</p>
       </div>
 
-      <nav class="mode-nav" aria-label="Primary workspace">
+      <nav class="profile-nav" aria-label="Calculation profile">
+        <button id="profileEducationBtn" class="profile-nav__item" type="button" data-profile="education" aria-current="page">
+          Education
+        </button>
+        <button id="profileScientificBtn" class="profile-nav__item" type="button" data-profile="scientific" aria-current="false">
+          Scientific
+        </button>
+        <label class="sr-only" for="productProfileSelect">Calculation profile</label>
+        <select id="productProfileSelect" class="sr-only" aria-hidden="true" tabindex="-1">
+          <option value="education" selected>Education</option>
+          <option value="scientific">Scientific</option>
+        </select>
+      </nav>
+
+      <nav class="mode-nav" aria-label="Education workspace" data-product-profile="education">
         <button id="modeSimulationBtn" class="mode-nav__item" type="button" data-mode="simulation" aria-current="page">
           Simulation
         </button>
@@ -19,39 +50,20 @@ export function renderHeaderTemplate(): string {
             <option value="lab">Guided Labs</option>
         </select>
       </nav>
-
-      <section class="context-toolbar" aria-label="Current context">
-        <label class="inline" for="uiModeSelect" data-product-mode="simulation">
-          Controls
-          <select id="uiModeSelect" aria-label="Control level">
-            <option value="normal" selected>Essential</option>
-            <option value="expert">Advanced</option>
-          </select>
-        </label>
-
-        <label class="inline" for="simModeSelect" data-product-mode="lab">
-          Lab type
-          <select id="simModeSelect" aria-label="Select lab type">
-            <option value="preset-lab" selected>Transit / exomoon lab</option>
-            <option value="binary-lab">Binary eclipse lab</option>
-          </select>
-        </label>
-
-        <label class="inline" for="presetSelect" data-product-mode="simulation">
-          Preset scenario
-          <select id="presetSelect" aria-label="Select preset"></select>
-        </label>
-
-        <label class="inline" for="realSystemSelect" data-product-mode="simulation">
-          Committed real system
-          <select id="realSystemSelect" aria-label="Select real system"></select>
-        </label>
-        <p id="presetDesc" class="context-description" data-product-mode="simulation"></p>
-        <p id="realSystemMeta" class="context-description mono" data-product-mode="simulation"></p>
-        <p class="context-description" data-product-mode="lab">
-          Predict, observe, test a hypothesis, and export your evidence.
-        </p>
-      </section>
     </header>
+  `;
+}
+
+/**
+ * Compact workspace open/save controls.
+ * Placed in the command strip (not the identity band) so the header stays thin.
+ */
+export function renderWorkspaceActions(): string {
+  return `
+      <div class="workspace-actions" data-product-profile="education">
+        <button id="workspaceOpenBtn" type="button" aria-controls="workspaceFileInput">Open workspace</button>
+        <button id="workspaceSaveBtn" type="button">Save workspace</button>
+        <input id="workspaceFileInput" type="file" accept="${WORKSPACE_FILE_ACCEPT}" hidden />
+      </div>
   `;
 }

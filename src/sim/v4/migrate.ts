@@ -1,3 +1,6 @@
+/**
+ * Owns migrate support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { deepClone } from "../../core/clone";
 import type { BinaryStarPhotometryParams, OrbitElements, SystemParams } from "../../core/types";
 import type { HierarchyLinkV4, MoonBodyV4, PlanetBodyV4, SimulationConfigV4, StarBodyV4 } from "./types";

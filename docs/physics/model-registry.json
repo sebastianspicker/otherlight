@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": 1,
+  "statusValues": ["research-validated", "bounded-approximation", "educational", "unavailable"],
+  "models": [
+    {
+      "id": "constants.si.iau",
+      "status": "research-validated",
+      "claim": "The model uses SI base units, the CODATA 2022 measured value of G, exact IAU nominal conversion constants where declared, and explicitly labelled conventional measured mass/radius estimates elsewhere.",
+      "equation": "mu = G M",
+      "units": "G [m^3 kg^-1 s^-2], mu [m^3 s^-2]",
+      "validity": "G is measured and uncertain; the astronomical unit and nominal solar radius are exact definitions. Kilogram mass estimates and mean planetary radii are not IAU nominal constants.",
+      "owners": ["src/core/units.ts"],
+      "tests": ["tests/core/units.test.ts", "tests/core/units-sanitization.test.ts"],
+      "references": ["codata-2022", "iau-2012-b2", "iau-2015-b3"]
+    },
+    {
+      "id": "dynamics.kepler.elliptic",
+      "status": "bounded-approximation",
+      "claim": "Bound elliptic two-body states solve Kepler's equation and transform PQW state vectors into the inertial frame.",
+      "equation": "M = E - e sin(E); r = a(1 - e cos(E))",
+      "units": "a,r [m], M,E [rad], t [s]",
+      "validity": "Osculating two-body ellipse with 0 <= e < 1; no parabolic or hyperbolic branch.",
+      "owners": ["src/physics/kepler.ts", "src/sim/orbits.ts"],
+      "tests": ["tests/physics/kepler-contract.test.ts", "tests/property/numerical-properties.test.ts"],
+      "references": ["murray-dermott-1999"]
+    },
+    {
+      "id": "coordinates.orbit.projection",
+      "status": "bounded-approximation",
+      "claim": "Orbital-plane vectors use the active rotation Rz(Omega) Rx(i) Rz(omega) and an orthonormal sky basis.",
+      "equation": "r_I = Rz(Omega) Rx(i) Rz(omega) r_PQW",
+      "units": "angles [rad], position [m]",
+      "validity": "Right-handed Euclidean inertial coordinates; observer direction must be finite and non-zero.",
+      "owners": ["src/physics/frames.ts", "src/physics/vec3.ts"],
+      "tests": ["tests/physics/frames.test.ts"],
+      "references": ["murray-dermott-1999"]
+    },
+    {
+      "id": "dynamics.barycenter.planet-moon",
+      "status": "bounded-approximation",
+      "claim": "Planet and moon positions split their relative vector about the pair barycentre in inverse proportion to mass.",
+      "equation": "r_p = r_b - m_m r_rel/(m_p+m_m); r_m = r_b + m_p r_rel/(m_p+m_m)",
+      "units": "mass [kg], position [m]",
+      "validity": "Finite positive masses; missing masses deliberately disable the split in the educational compatibility path.",
+      "owners": ["src/physics/barycenter.ts"],
+      "tests": ["tests/physics/barycenter.test.ts"],
+      "references": ["murray-dermott-1999"]
+    },
+    {
+      "id": "dynamics.nbody.newton-plummer",
+      "status": "bounded-approximation",
+      "claim": "The compatibility integrator applies pairwise Newtonian gravity with optional Plummer softening and velocity-Verlet stepping.",
+      "equation": "a_i += mu_j r_ji/(r_ji^2+eps^2)^(3/2); U_ij = -G m_i m_j/sqrt(r_ij^2+eps^2)",
+      "units": "position,eps [m], acceleration [m s^-2], energy [J]",
+      "validity": "Classical weak-field point masses; softened runs do not represent physical finite bodies. Research V5 must use explicit error-controlled integration and zero softening by default.",
+      "owners": [
+        "src/sim/nbody/integrator.ts",
+        "src/sim/nbody/diagnosticsEnergy.ts",
+        "src/sim/nbody/diagnostics.ts"
+      ],
+      "tests": ["tests/physics/nbody-energy.test.ts", "tests/physics/dynamics-adaptive.test.ts"],
+      "references": ["hairer-2003-geometric"]
+    },
+    {
+      "id": "dynamics.satellite.hill-stability",
+      "status": "bounded-approximation",
+      "claim": "Hill radius and empirical prograde/retrograde satellite limits are plausibility diagnostics, not stability proofs.",
+      "equation": "R_H,a = a_p (m_p/(3M_*))^(1/3); a_E,pro = 0.4895(1-1.0305e_p-0.2738e_s)R_H,a; a_E,retro = 0.9309(1-1.0764e_p-0.9812e_s+0.9446e_pe_s)R_H,a",
+      "units": "radius [m], mass [kg]",
+      "validity": "Hierarchical restricted elliptic three-body diagnostic. The cited fit sampled planet/star mass ratio 10^-3, 0 <= e_p <= 0.9 and 0 <= e_s <= 0.5. Runtime fit messages allow only a 5% rounding band around that sampled mass ratio and emit HILL_FIT_OUT_OF_DOMAIN otherwise; do not interpret the fit as a proof for arbitrary masses, inclinations, resonances, or integration times.",
+      "owners": ["src/physics/hillRadius.ts", "src/physics/hill.ts", "src/sim/validation/warnings.ts"],
+      "tests": ["tests/physics/hill-warnings.test.ts"],
+      "references": ["domingos-2006"]
+    },
+    {
+      "id": "timing.exomoon.ttv-tdv",
+      "status": "bounded-approximation",
+      "claim": "Exomoon TTV/TDV diagnostics derive from projected planet-moon barycentric motion and contact geometry.",
+      "equation": "TTV = t_mid - (t_ref + N P); TDV = T_14/T_14,ref",
+      "units": "time [s]",
+      "validity": "Synthetic event-series diagnostic; phenomenological orientation drifts are educational unless produced by integrated dynamics.",
+      "owners": [
+        "src/physics/exomoonTiming.ts",
+        "src/sim/transitTiming.ts",
+        "src/sim/transitTimingSolve.ts",
+        "src/sim/orbitTimingKey.ts"
+      ],
+      "tests": ["tests/physics/exomoonTiming.test.ts", "tests/sim/transit-timing-tracker.test.ts"],
+      "references": ["kipping-2009-ttv", "kipping-2009-tdv"]
+    },
+    {
+      "id": "relativity.precession.schwarzschild-1pn",
+      "status": "bounded-approximation",
+      "claim": "The Kepler path applies the weak-field Schwarzschild apsidal advance per orbit.",
+      "equation": "Delta omega = 6 pi mu/[a(1-e^2)c^2]",
+      "units": "angle [rad orbit^-1]",
+      "validity": "Test particle, weak field, isolated central spherical mass.",
+      "owners": [
+        "src/physics/relativityPrecessionFormula.ts",
+        "src/physics/relativityPrecession.ts",
+        "src/physics/relativityPrecessionInputs.ts",
+        "src/physics/relativityPrecessionResolve.ts"
+      ],
+      "tests": ["tests/physics/relativity.test.ts", "tests/benchmarks/literature-benchmarks.test.ts"],
+      "references": ["will-2014"]
+    },
+    {
+      "id": "relativity.timing.roemer-shapiro",
+      "status": "bounded-approximation",
+      "claim": "The compatibility path solves differential Roemer and weak-field point-mass Shapiro propagation delays at retarded time.",
+      "equation": "Delta_R = -r dot n/c; Delta_S = -2 mu ln[(r+z)/r]/c^3",
+      "units": "delay [s]",
+      "validity": "Observer at infinity for the relative geometry; Shapiro value has an arbitrary additive reference and assumes weak-field point masses.",
+      "owners": [
+        "src/physics/relativityTiming.ts",
+        "src/physics/relativityShapiro.ts",
+        "src/physics/relativity.ts",
+        "src/sim/kinematics.ts",
+        "src/sim/kinematicsHelpers.ts",
+        "src/sim/kinematicsShapiro.ts"
+      ],
+      "tests": [
+        "tests/physics/relativity.test.ts",
+        "tests/physics/relativity-sign.test.ts",
+        "tests/benchmarks/literature-benchmarks.test.ts"
+      ],
+      "references": ["shapiro-1964", "will-2014"]
+    },
+    {
+      "id": "relativity.nbody.star-centric-1pn-preview",
+      "status": "educational",
+      "claim": "The compatibility N-body integrator can add the test-particle Schwarzschild 1PN acceleration relative to the star.",
+      "equation": "a_1PN = mu/(c^2 r^3) { [4mu/r-v^2] r + 4(r dot v)v }",
+      "units": "acceleration [m s^-2]",
+      "validity": "Dominant central spherical mass and weak field. The compatibility Verlet step estimates the end velocity to first order for this velocity-dependent force, and optional softening changes the point-mass expression; this path is not research-grade.",
+      "owners": ["src/sim/nbody/integrator.ts", "src/sim/nbody/config.ts"],
+      "tests": ["tests/physics/nbody-energy.test.ts", "tests/physics/relativity.test.ts"],
+      "references": ["will-2014"]
+    },
+    {
+      "id": "photometry.transit.opaque-disks",
+      "status": "bounded-approximation",
+      "claim": "Opaque circular and mixed-shape transits integrate the union of occulted stellar intensity without double counting overlaps.",
+      "equation": "F = integral I(x,y) V(x,y) dA / integral I(x,y) dA",
+      "units": "relative flux [1]",
+      "validity": "Distant-observer projected geometry; grid tolerances must resolve the smallest structure. Current midpoint integrations do not return an a-posteriori error estimate and therefore are not research-validated.",
+      "owners": [
+        "src/photometry/transitUniform.ts",
+        "src/photometry/transitUniformSpots.ts",
+        "src/photometry/transitLimbDarkened.ts",
+        "src/photometry/transitShapes.ts",
+        "src/photometry/diskMidpoint.ts",
+        "src/photometry/mutualEvents.ts",
+        "src/photometry/occulterCircle.ts",
+        "src/photometry/occulterEllipse.ts",
+        "src/photometry/occulterSanitize.ts",
+        "src/photometry/occulterSanitizeCircle.ts",
+        "src/photometry/occulterSanitizeEllipse.ts",
+        "src/photometry/occulterSanitizeGeometry.ts",
+        "src/photometry/occulterSanitizeRing.ts",
+        "src/photometry/occulterSanitizeShape.ts",
+        "src/photometry/occulterShapeGuards.ts",
+        "src/sim/occulters.ts",
+        "src/sim/occultersBody.ts",
+        "src/sim/occultersBodyRings.ts",
+        "src/sim/occultersBodySilhouette.ts"
+      ],
+      "tests": [
+        "tests/photometry/transitUniform.test.ts",
+        "tests/photometry/limbDarkening.test.ts",
+        "tests/photometry/transitShapes.test.ts"
+      ],
+      "references": ["mandel-agol-2002"]
+    },
+    {
+      "id": "photometry.limb-darkening.claret",
+      "status": "bounded-approximation",
+      "claim": "Quadratic and Claret intensity laws are evaluated exactly for supplied coefficients.",
+      "equation": "I(mu)/I(1) = 1 - sum_k a_k(1-mu^(k/2))",
+      "units": "specific-intensity ratio [1]",
+      "validity": "Research use requires externally sourced passband- and atmosphere-specific coefficients; hand-derived fallbacks are educational.",
+      "owners": [
+        "src/photometry/limbDarkening.ts",
+        "src/photometry/limbDarkeningBands.ts",
+        "src/photometry/limbDarkeningEvaluation.ts",
+        "src/photometry/limbDarkeningLookup.ts",
+        "src/photometry/limbDarkeningLookupCommon.ts",
+        "src/photometry/limbDarkeningLookupDirect.ts",
+        "src/photometry/limbDarkeningLookupNormalized.ts",
+        "src/sim/limbDarkeningBridge.ts",
+        "src/sim/optionalLimbDarkening.ts"
+      ],
+      "tests": ["tests/photometry/limbDarkening.test.ts", "tests/photometry/limb-darkening-derived.test.ts"],
+      "references": ["claret-2000"]
+    },
+    {
+      "id": "photometry.transit.transmissive",
+      "status": "bounded-approximation",
+      "claim": "Transmissive occulters multiply radial transmissions while retaining an opaque physical core.",
+      "equation": "F = integral I product_i T_i(rho_i) dA / integral I dA",
+      "units": "relative flux [1]",
+      "validity": "Transmission profiles are inputs; the TypeScript exponential halo is not a radiative-transfer solution.",
+      "owners": [
+        "src/photometry/transitTransmission.ts",
+        "src/photometry/transitTransmissionPoint.ts",
+        "src/photometry/atmosphereRT/model.ts",
+        "src/photometry/atmosphereRT/gaussianFeatures.ts",
+        "src/photometry/atmosphereRT/numeric.ts",
+        "src/photometry/atmosphereRT/spectralFeatureArrays.ts",
+        "src/sim/transitFlux.ts",
+        "src/sim/v4/nativePhotometry.ts"
+      ],
+      "tests": [
+        "tests/photometry/transitTransmission.test.ts",
+        "tests/photometry/atmosphere-rt-model.test.ts",
+        "tests/sim/v4-native-atmosphere.test.ts"
+      ],
+      "references": ["molliere-2019"]
+    },
+    {
+      "id": "photometry.phase.lambert-thermal",
+      "status": "educational",
+      "claim": "The preview lane supplies Lambert/cosine phase weights and a one-pole thermal-lag surrogate.",
+      "equation": "Phi_L(alpha) = [sin(alpha)+(pi-alpha)cos(alpha)]/pi",
+      "units": "relative flux [1]",
+      "validity": "Phenomenological broadband teaching model; not a temperature-map, energy-balance, or atmospheric emission solution.",
+      "owners": [
+        "src/photometry/dayNightVisibility.ts",
+        "src/photometry/phaseCurve.ts",
+        "src/photometry/phaseCurveGeometry.ts",
+        "src/photometry/phaseCurveScaling.ts",
+        "src/sim/additiveFlux.ts"
+      ],
+      "tests": ["tests/photometry/dayNightVisibility.test.ts", "tests/photometry/phaseCurve.test.ts"],
+      "references": ["sobolev-1975"]
+    },
+    {
+      "id": "photometry.scattering.hg-preview",
+      "status": "educational",
+      "claim": "The preview forward-scattering lane evaluates an HG angular shape or a Gaussian phase surrogate.",
+      "equation": "p(theta) = (1-g^2)/[4 pi (1+g^2-2g cos(theta))^(3/2)]",
+      "units": "phase function [sr^-1]",
+      "validity": "HG is a single-parameter angular approximation; current amplitude and finite-star geometry are not a research radiative-transfer model.",
+      "owners": [
+        "src/photometry/forwardScattering.ts",
+        "src/photometry/forwardScatteringContext.ts",
+        "src/photometry/forwardScatteringGeometry.ts",
+        "src/photometry/forwardScatteringModels.ts",
+        "src/photometry/forwardScatteringObserver.ts"
+      ],
+      "tests": ["tests/photometry/forwardScattering.test.ts"],
+      "references": ["henyey-greenstein-1941"]
+    },
+    {
+      "id": "photometry.stellar.preview",
+      "status": "educational",
+      "claim": "Preview stellar flux, variability, spots, and granulation are bounded relative-flux teaching models.",
+      "equation": "B_lambda(T)=2hc^2/[lambda^5(exp(hc/(lambda kT))-1)]; F_band proportional to R^2 integral B_lambda S(lambda) d lambda / integral S(lambda) d lambda",
+      "units": "relative flux [1]",
+      "validity": "Blackbody/surrogate filters, hand-derived limb coefficients, harmonic variability, and sinusoidal granulation are not atmosphere or PSD synthesis.",
+      "owners": [
+        "src/photometry/stellarBandFlux.ts",
+        "src/photometry/stellarSurface.ts",
+        "src/photometry/stellarVariability.ts",
+        "src/photometry/stellarVariabilityComponents.ts",
+        "src/photometry/patches.ts",
+        "src/photometry/patchFactors.ts",
+        "src/photometry/patchGeometry.ts",
+        "src/photometry/patchTypes.ts"
+      ],
+      "tests": [
+        "tests/photometry/stellar-band-flux.test.ts",
+        "tests/photometry/stellarSurface.test.ts",
+        "tests/photometry/stellarVariability.test.ts"
+      ],
+      "references": ["claret-2000"]
+    },
+    {
+      "id": "measurement.exposure-noise.preview",
+      "status": "bounded-approximation",
+      "claim": "Exposure smearing averages physical flux before seeded detector/observer perturbations are applied.",
+      "equation": "F_exp(t) = Delta t^-1 integral F(tau) d tau",
+      "units": "relative flux or electrons as explicitly configured",
+      "validity": "Preview systematics are synthetic and mutable-state order dependent; they are not calibrated mission pipelines.",
+      "owners": [
+        "src/photometry/smearing.ts",
+        "src/photometry/instrumentNoise.ts",
+        "src/photometry/instrumentNoiseHelpers.ts",
+        "src/photometry/instrumentNoiseRuntime.ts",
+        "src/photometry/random.ts"
+      ],
+      "tests": [
+        "tests/photometry/smearing.test.ts",
+        "tests/photometry/instrumentNoise.test.ts",
+        "tests/photometry/random.test.ts"
+      ],
+      "references": ["howell-2006"]
+    },
+    {
+      "id": "observables.rv-astrometry.preview",
+      "status": "bounded-approximation",
+      "claim": "Preview radial velocity is the barycentric target velocity projected with positive recession, while preview astrometry is a linear sky-plane displacement.",
+      "equation": "v_r = -v dot n; r_sky = r-(r dot n)n",
+      "units": "radial velocity [m s^-1], linear sky offset [m]",
+      "validity": "The observer vector points from system to observer. V4 astrometry is not angular and has no distance/parallax calibration. The V5 backend requires an explicit RV target and projects photocentre offsets onto the sky plane.",
+      "owners": [
+        "src/sim/stateSampler.ts",
+        "src/sim/observables.ts",
+        "src/sim/systemState.ts",
+        "src/sim/v4/nativeEngineTiming.ts",
+        "science_backend/science_backend/forward.py"
+      ],
+      "tests": ["tests/sim/observables.test.ts", "science_backend/tests/test_forward.py"],
+      "references": ["murray-dermott-1999"]
+    },
+    {
+      "id": "runtime.v4.kepler-preview",
+      "status": "educational",
+      "claim": "V4 constructs independently parameterized Kepler snapshots and composes a deterministic preview flux bundle.",
+      "equation": "F_total = F_stellar,visible + F_additive",
+      "units": "state SI; relative flux [1]",
+      "validity": "V4 does not execute configured N-body or shared LTTE/Shapiro solvers and must not label those capabilities available.",
+      "owners": [
+        "src/sim/v4/nativeSnapshot.ts",
+        "src/sim/v4/nativeSnapshotHelpers.ts",
+        "src/sim/v4/nativeModel.ts",
+        "src/sim/v4/nativeEngine.ts",
+        "src/sim/v4/nativeEngineTiming.ts",
+        "src/sim/v4/binaryBaseline.ts",
+        "src/sim/v4/runtime.ts",
+        "src/sim/v4/runtimeAggregation.ts",
+        "src/sim/v4/runtimeNormalization.ts"
+      ],
+      "tests": ["tests/sim/v4-native-parity.test.ts", "tests/sim/v4-runtime.validation-a.test.ts"],
+      "references": ["mandel-agol-2002"]
+    },
+    {
+      "id": "runtime.v5.scientific-forward",
+      "status": "bounded-approximation",
+      "claim": "V5 exposes a strict local contract and advertises error-controlled, provenance-complete Newtonian radial-velocity execution only when SciPy and Arrow IPC capabilities are installed.",
+      "equation": "d^2 r_i/dt^2 = G sum_(j != i) m_j (r_j-r_i)/|r_j-r_i|^3; v_r = -v_target dot n",
+      "units": "Cartesian state SI; epoch [JD TDB]; radial velocity [m s^-1]",
+      "validity": "Barycentric, non-colliding Newtonian point masses with explicit target, numeric JD TDB epoch, finite radii, split absolute tolerances, and recorded provenance. Capability absence fails closed. Relativity, photometry, timing, atmosphere, astrometry artifacts, and inference are unavailable.",
+      "owners": [
+        "src/app/scienceWorkspace.ts",
+        "src/science/scenarioAdapter.ts",
+        "src/science/types.ts",
+        "src/science/validation.ts",
+        "src/science/client.ts",
+        "src/science/index.ts",
+        "science_backend/science_backend/contracts.py",
+        "science_backend/science_backend/forward.py",
+        "science_backend/science_backend/api.py"
+      ],
+      "tests": [
+        "tests/app/science-workspace.test.ts",
+        "tests/science/contracts-client.test.ts",
+        "tests/science/scenario-adapter.test.ts",
+        "science_backend/tests/test_api_contract.py",
+        "science_backend/tests/test_forward.py",
+        "science_backend/tests/test_inference_and_service.py"
+      ],
+      "references": ["wilkinson-2016-fair"]
+    }
+  ]
+}

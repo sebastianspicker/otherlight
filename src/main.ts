@@ -1,3 +1,4 @@
+/** Starts the browser shell and isolates lifecycle-heavy bootstrap from non-DOM imports. */
 import "./style.css";
 import { renderAppShell } from "./ui/appShell";
 import { showFatalAppError } from "./ui/fatalError";

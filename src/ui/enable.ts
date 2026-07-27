@@ -1,4 +1,4 @@
-// src/ui/enable.ts
+/** Enables and disables UI control groups while preserving their accessibility state. */
 //
 // Live enable/disable helpers for UI sections.
 

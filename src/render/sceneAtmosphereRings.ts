@@ -1,3 +1,6 @@
+/**
+ * Owns scene Atmosphere Rings support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import type { SystemParams } from "../core/types";
 import type {
   AtmosphereRTLayer,

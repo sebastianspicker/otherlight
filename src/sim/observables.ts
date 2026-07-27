@@ -1,3 +1,6 @@
+/**
+ * Owns observables support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { BodyKinematics } from "./kinematics";
 import type { StepObservables, SystemParams } from "../core/types";
 import { normalizeRelativityParams } from "../physics/relativity";

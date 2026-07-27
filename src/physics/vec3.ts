@@ -1,4 +1,4 @@
-// src/physics/vec3.ts
+/** Implements finite three-vector algebra used by orbital and frame calculations. */
 //
 // Minimal, dependency-free 3D vector utilities used across physics, photometry,
 // simulation, and render.

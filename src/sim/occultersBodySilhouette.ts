@@ -1,3 +1,6 @@
+/**
+ * Owns occulters Body Silhouette support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { clamp, isFinitePositive } from "../core/units";
 import type { CircleOcculter } from "../photometry/occulterCircle";
 import type { EllipseOcculter, OcculterShape } from "../photometry/occulterEllipse";

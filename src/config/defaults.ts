@@ -1,4 +1,4 @@
-// src/config/defaults.ts
+/** Provides the canonical default system and simulation configuration. */
 //
 // Scenario defaults loaded from the bundled JSON snapshot.
 // Lives in config/ so that both sim/ and ui/ can import without violating layer boundaries.

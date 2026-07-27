@@ -1,3 +1,6 @@
+/**
+ * Owns parameters support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { renderParameterBodiesTemplate } from "./parameterBodies";
 import { renderParameterObserverStarTemplate } from "./parameterObserverStar";
 import { renderQuickControlsTemplate } from "./quickControls";
@@ -42,7 +45,13 @@ function renderParameterActionsTemplate(): string {
 export function renderParametersTemplate(): string {
   return `
     <section class="panel params" id="paramsSection">
-      <h2>Parameters</h2>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Model controls</p>
+          <h2>System parameters</h2>
+        </div>
+        <span class="panel-heading__status mono">V4</span>
+      </div>
       <p id="binaryLabParamNotice" class="help" hidden>
         Binary black-box lab uses a curated detached eclipsing-binary scenario. The generic transit/exomoon
         parameter form is hidden here because its labels do not describe the binary-star contract.
@@ -50,13 +59,17 @@ export function renderParametersTemplate(): string {
 
       <form id="paramForm" autocomplete="off" novalidate>
         ${renderQuickControlsTemplate()}
-        ${renderUiRangesTemplate()}
-
-        <div class="paramCols" data-ui-tier="expert">
-          ${renderParameterObserverStarTemplate()}
-          ${renderParameterBodiesTemplate()}
-          ${renderParameterActionsTemplate()}
-        </div>
+        <details class="advanced-parameter-drawer" data-ui-tier="expert" open>
+          <summary><span>Advanced parameters</span><span class="mono">full model</span></summary>
+          <div class="advanced-parameter-drawer__content">
+            ${renderUiRangesTemplate()}
+            <div class="paramCols" data-ui-tier="expert">
+              ${renderParameterObserverStarTemplate()}
+              ${renderParameterBodiesTemplate()}
+              ${renderParameterActionsTemplate()}
+            </div>
+          </div>
+        </details>
       </form>
       <dialog id="dirtyChangeDialog" aria-labelledby="dirtyChangeTitle" aria-describedby="dirtyChangeDescription">
         <h2 id="dirtyChangeTitle">Load a different context?</h2>

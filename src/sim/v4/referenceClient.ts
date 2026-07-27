@@ -1,3 +1,6 @@
+/**
+ * Owns reference Client support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { createSimulationV4, type SimulationRuntimeV4 } from "./runtime";
 import type { SimulationConfigV4 } from "./types";
 

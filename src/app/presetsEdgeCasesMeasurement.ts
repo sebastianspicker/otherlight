@@ -1,3 +1,6 @@
+/**
+ * Owns presets Edge Cases Measurement support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import { makeEdgeCasePreset, setPlanetImpactParameter, stripToTransitCase } from "./presetEdgeCaseUtils";
 
 export const MEASUREMENT_EDGE_CASE_PRESETS = [

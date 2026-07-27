@@ -1,3 +1,6 @@
+/**
+ * Owns model support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { AtmosphereRTLayer, AtmosphereRTParams } from "../../core/types";
 import { gaussianFeatureStrength } from "./gaussianFeatures";
 import { finiteOr } from "./numeric";

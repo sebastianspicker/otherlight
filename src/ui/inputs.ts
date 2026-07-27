@@ -1,4 +1,4 @@
-// src/ui/inputs.ts
+/** Normalizes and reads scalar form inputs for the UI parameter layer. */
 //
 // UI input helpers + sanitizers.
 

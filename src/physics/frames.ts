@@ -1,4 +1,4 @@
-// src/physics/frames.ts
+/** Defines coordinate-frame and sky-plane transforms shared by physics consumers. */
 
 //
 // Frame and rotation utilities.

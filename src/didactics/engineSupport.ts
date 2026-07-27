@@ -1,3 +1,6 @@
+/**
+ * Owns engine Support support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type {
   AssessmentRubricV2,
   DidacticCheckResult,

@@ -1,3 +1,6 @@
+/**
+ * Owns refs support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export type UiRefs = {
   // Canvas + core controls
   skyCanvas: HTMLCanvasElement;
@@ -19,6 +22,7 @@ export type UiRefs = {
   viewAutoFit: HTMLInputElement | null;
   tVal: HTMLElement;
   fluxVal: HTMLElement;
+  productProfileSelect: HTMLSelectElement;
   productModeSelect: HTMLSelectElement;
   uiModeSelect: HTMLSelectElement;
 

@@ -1,4 +1,4 @@
-// src/physics/exomoonTiming.ts
+/** Computes exomoon timing signals from the system geometry and orbital state. */
 //
 // Exomoon timing/shape diagnostics and lightweight, data-driven orbit-orientation evolution.
 //

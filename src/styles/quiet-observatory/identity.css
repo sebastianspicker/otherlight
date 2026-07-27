@@ -1,0 +1,153 @@
+/*
+ * Quiet Observatory — identity band (ink header, profile, mode).
+ */
+
+.app-header {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.1fr) auto minmax(200px, 1fr);
+  align-items: center;
+  gap: 10px 16px;
+  margin: 0;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: #eef4f8;
+  box-shadow: none;
+}
+
+.product-heading {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+}
+
+.brand-lockup {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 8px;
+}
+
+.app-header h1 {
+  margin: 0;
+  color: #eef4f8;
+  background: none;
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  -webkit-text-fill-color: currentcolor;
+}
+
+.product-heading .brand-descriptor {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #9eb0bb;
+  font-size: 11.5px;
+  font-weight: 450;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-heading .brand-tagline {
+  display: none;
+}
+
+.product-heading p,
+.context-description {
+  max-width: 72ch;
+  margin: 4px 0 0;
+  color: #9eb0bb;
+  font-size: 12.5px;
+}
+
+/* Profile segmented control — pill on ink */
+.profile-nav {
+  display: inline-flex;
+  justify-self: center;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 6%);
+  overflow: hidden;
+}
+
+/* Mode tabs — right-aligned on ink */
+.mode-nav {
+  display: flex;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.mode-nav__item,
+.profile-nav__item {
+  position: relative;
+  min-height: 34px;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #b7c5cf;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.mode-nav__item {
+  border-radius: var(--radius);
+  padding: 7px 12px;
+}
+
+.mode-nav__item:hover,
+.profile-nav__item:hover {
+  border-color: transparent;
+  background: rgb(255 255 255 / 6%);
+  color: #eef4f8;
+}
+
+/* Selection not color-only: filled pill / underline bar + aria-current */
+.profile-nav__item[aria-current="page"],
+.profile-nav__item[aria-current="true"] {
+  border-color: transparent;
+  background: var(--action);
+  color: #fff;
+  box-shadow: none;
+}
+
+.mode-nav__item[aria-current="page"],
+.mode-nav__item[aria-current="true"] {
+  border-color: rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 var(--action);
+}
+
+/* Hidden native selects for profile/mode remain accessible via sr-only */
+.profile-nav select.sr-only,
+.mode-nav select.sr-only {
+  position: absolute !important;
+}

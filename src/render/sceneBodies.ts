@@ -1,3 +1,6 @@
+/**
+ * Owns scene Bodies support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { clamp, toFinitePositiveOr } from "../core/units";
 
 import type { ScratchPoint, ToPxInto } from "./sceneTypes";

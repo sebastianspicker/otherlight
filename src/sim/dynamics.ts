@@ -1,4 +1,4 @@
-// src/sim/dynamics.ts
+/** Resolves and evolves optional planet-moon N-body dynamics with cached states. */
 //
 // N-body dynamics orchestration and snapshot caching for star+planet+moon(+perturbers).
 // Public facade over src/sim/nbody/* modules.
@@ -138,6 +138,10 @@ export function isNBodyEnabled(params: SystemParams): boolean {
   return Boolean(params.dynamics?.nbodyPlanetMoon?.enabled);
 }
 
+/**
+ * Returns the configured planet-moon N-body state at finite simulation seconds, plus its relative barycentre.
+ * Reuses and extends the module cache; disabled dynamics return null, while invalid time throws.
+ */
 export function getNBodyStateAt(params: SystemParams, t: number): { state: NBodyState; rBary: Vec3 } | null {
   assertFiniteNBodyTime(t);
 

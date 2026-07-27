@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Observer Star support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { renderStarFieldset } from "./parameterStar";
 
 function renderObserverFieldset(): string {
@@ -35,8 +38,8 @@ function renderMeasurementFieldset(): string {
           /></label>
           <label
             for="nSubsamples"
-            data-tooltip="Number of sub-exposures averaged per cadence. More sub-samples improve accuracy of the smeared light curve."
-            >N<sub>sub</sub> <input id="nSubsamples" type="number" min="1" max="4096" step="1" value="9"
+            data-tooltip="Number of sub-exposures averaged per cadence. The live solver applies a combined grid, wavelength, and smearing budget to keep the interface responsive."
+            >N<sub>sub</sub> <input id="nSubsamples" type="number" min="1" max="512" step="1" value="9"
           /></label>
         </div>
       </fieldset>

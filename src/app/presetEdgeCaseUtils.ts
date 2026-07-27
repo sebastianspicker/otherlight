@@ -1,3 +1,6 @@
+/**
+ * Owns preset Edge Case Utils support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemDynamicsParams, SystemParams } from "../core/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
 

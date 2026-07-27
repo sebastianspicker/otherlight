@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Types support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 export type LightCurvePlotOptions = {
   xMode?: "index" | "time";
   yScaleMode?: "robust" | "minmax";

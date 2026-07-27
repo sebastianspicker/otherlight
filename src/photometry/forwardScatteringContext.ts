@@ -1,3 +1,6 @@
+/**
+ * Owns forward Scattering Context support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { clamp, isFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vDot } from "../physics/vec3";

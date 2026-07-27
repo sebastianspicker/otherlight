@@ -1,4 +1,4 @@
-// src/core/dom.ts
+/** Provides small DOM mutation primitives shared by app and UI wiring. */
 
 //
 // Small DOM helpers intended for the UI layer.

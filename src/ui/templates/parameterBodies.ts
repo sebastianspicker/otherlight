@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Bodies support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { renderDynamicsFieldsets } from "./parameterDynamics";
 import { renderMoonFieldset } from "./parameterMoon";
 import { renderPlanetFieldset } from "./parameterPlanet";
