@@ -1,3 +1,5 @@
+/** Provides canvas mocks that preserve the DOM contracts used by renderer and UI tests. */
+
 type MockCanvasContextOverrides = Record<string, unknown>;
 
 export function makeMockCanvas(

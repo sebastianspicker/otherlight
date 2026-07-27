@@ -1,3 +1,5 @@
+/** Verifies compare contracts supporting interpretable lesson flows. */
+
 import { describe, expect, it } from "vitest";
 import { buildBinaryLabParams } from "../../src/app/binaryLab";
 import { cloneParams } from "../../src/app/scenario";

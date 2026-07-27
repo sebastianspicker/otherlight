@@ -1,4 +1,4 @@
-// src/core/types.ts
+/** Re-exports the stable public core type surface for application consumers. */
 
 //
 // Core domain types for the simulation.

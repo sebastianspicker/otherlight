@@ -1,3 +1,5 @@
+/** Verifies units contracts in shared app and physics primitives. */
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,6 +11,7 @@ import {
   JULIAN_YEAR_S,
   RAD2DEG,
   SOLAR_MASS_KG,
+  SOLAR_RADIUS_M,
   auToM,
   dayToSec,
   kgToSolarMass,
@@ -42,7 +45,9 @@ describe("SI constants + conversions", () => {
   });
 
   it("exposes expected SI constants", () => {
-    expect(G_SI).toBeGreaterThan(0);
+    expect(G_SI).toBe(6.6743e-11);
+    expect(AU_M).toBe(149_597_870_700);
+    expect(SOLAR_RADIUS_M).toBe(6.957e8);
     expect(EARTH_MASS_KG).toBeGreaterThan(0);
   });
 });

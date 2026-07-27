@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies photometry input bounds controls and views for accessible, consistent interaction. */
 
 import { expect, it } from "vitest";
 

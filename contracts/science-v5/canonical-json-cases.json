@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "canonical-json-cases-v1",
+  "cases": [
+    {
+      "id": "rfc-number-shapes",
+      "value": [333333333.33333329, 1e30, 4.5, 0.002, 1e-27, 0.000001, 1e21, -0.0],
+      "canonical": "[333333333.3333333,1e+30,4.5,0.002,1e-27,0.000001,1e+21,0]"
+    },
+    {
+      "id": "utf16-key-order-and-escapes",
+      "value": {
+        "z": "line\nbreak",
+        "a": "quote\"slash/",
+        "€": "euro",
+        "😀": "face"
+      },
+      "canonical": "{\"a\":\"quote\\\"slash/\",\"z\":\"line\\nbreak\",\"€\":\"euro\",\"😀\":\"face\"}"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+/** Covers baseline energy vectors data and helpers used by physics baseline regression checks. */
+
 import type { Vec3 } from "../../src/physics/vec3";
 import { vLenSq, vSub } from "../../src/physics/vec3";
 import type { NBodyState } from "../../src/sim/nbody/types";

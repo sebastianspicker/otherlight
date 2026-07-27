@@ -1,3 +1,6 @@
+/**
+ * Owns types Photometry Measurement support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ */
 import type { InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
 import type { LimbDarkeningModel } from "./typesLimbDarkening";
 import type {

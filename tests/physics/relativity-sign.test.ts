@@ -1,3 +1,5 @@
+/** Verifies relativity sign calculations in orbital dynamics and numerical integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { lightTimeDelaySec, solveLightTimeCorrectedTime } from "../../src/physics/relativity";

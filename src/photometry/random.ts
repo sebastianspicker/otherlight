@@ -1,4 +1,4 @@
-// src/photometry/random.ts
+/** Provides deterministic pseudo-random sampling for repeatable measurement noise. */
 //
 // Deterministic PRNG + sampling utilities for photometry/instrument-noise layers.
 //
@@ -141,9 +141,9 @@ export function normal(rng: PRNG, mean = 0, sigma = 1): number {
  * - For lambda < 15: Knuth exact algorithm (stable and exact, but linear in lambda).
  * - For lambda >= 15: Normal approximation N(lambda, lambda) rounded with continuity correction, clamped to >=0.
  *
- * The threshold was lowered from 50 to 15 because the Knuth algorithm suffers from
- * floating-point underflow for lambda in the 15-30 range (exp(-lambda) underflows),
- * producing biased results. The normal approximation is accurate for lambda >= 15.
+ * The switch at 15 bounds the expected work of Knuth's O(lambda) loop. The
+ * normal branch is an explicit approximation (especially near the threshold),
+ * not a response to exp(-lambda) underflow, which occurs only at much larger lambda.
  *
  * Returns 0 if lambda is non-finite or <=0.
  */

@@ -1,3 +1,5 @@
+/** Verifies instrument noise calculations in the observable-light and transit model. */
+
 import { expect, it } from "vitest";
 
 import type { InstrumentNoiseSystematicsParams } from "../../src/core/instrumentNoiseTypes";

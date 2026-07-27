@@ -1,3 +1,5 @@
+/** Verifies didactics acceptance contracts supporting interpretable lesson flows. */
+
 import { describe, expect, it } from "vitest";
 
 import {

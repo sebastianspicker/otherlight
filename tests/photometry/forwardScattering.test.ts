@@ -1,3 +1,5 @@
+/** Verifies forward scattering calculations in the observable-light and transit model. */
+
 import { expect, it } from "vitest";
 
 import { computeForwardScatteringFlux } from "../../src/photometry/forwardScattering";

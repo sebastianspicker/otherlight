@@ -1,3 +1,5 @@
+/** Verifies transit history contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

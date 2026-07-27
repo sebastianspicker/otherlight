@@ -1,3 +1,6 @@
+/**
+ * Owns occulter Sanitize Circle support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { isFinitePositive } from "../core/units";
 import type { CircleOcculter } from "./occulterCircle";
 import { hasFiniteCenter, overlapsStarByRadius } from "./occulterSanitizeGeometry";

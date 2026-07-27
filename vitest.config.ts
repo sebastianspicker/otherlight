@@ -1,3 +1,4 @@
+/** Configures deterministic unit-test discovery, coverage, and worker behavior. */
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({

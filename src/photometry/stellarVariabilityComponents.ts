@@ -1,3 +1,6 @@
+/**
+ * Owns stellar Variability Components support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { StellarVariabilityParams } from "../core/types";
 import { isFiniteNumber } from "../core/units";
 

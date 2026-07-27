@@ -1,3 +1,5 @@
+/** Verifies visualization scene contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { buildSceneDidacticOverlay } from "../../src/app/visualizationScene";

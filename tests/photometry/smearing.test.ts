@@ -1,3 +1,5 @@
+/** Verifies smearing calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { boxcarAverageFlux, smearedFluxAt } from "../../src/photometry/smearing";

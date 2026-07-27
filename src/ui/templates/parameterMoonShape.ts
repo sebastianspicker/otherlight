@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Moon Shape support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderMoonThermalInertiaControls(): string {
   return `
         <details data-ui-tier="expert">

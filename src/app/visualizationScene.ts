@@ -1,6 +1,6 @@
-// src/app/visualizationScene.ts
+/** Builds and updates the rendered orbital-scene view from simulation output. */
 //
-// Scene-view didactic overlay builder — constructs geometric annotations
+// Scene-view didactic overlay builder that constructs geometric annotations
 // (chord lines, contact points, badges) for the transit scene canvas.
 
 import type { SystemParams } from "../core/types";

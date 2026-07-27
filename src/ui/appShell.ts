@@ -1,8 +1,23 @@
+/**
+ * Owns app Shell support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { renderHeaderTemplate } from "./templates/header";
-import { renderParametersTemplate } from "./templates/parameters";
+import { renderCommandStrip } from "./templates/commandStrip";
 import { renderSidebarTemplate } from "./templates/sidebar";
 import { renderVisualizationTemplate } from "./templates/visualization";
-import { renderRuntimeToolbar } from "./templates/sidebarRuntime";
+import { renderReadouts } from "./templates/sidebarRuntime";
+import { renderScientificWorkspace } from "./templates/scientificWorkspace";
+
+export { renderCommandStrip } from "./templates/commandStrip";
+export {
+  renderRuntimeControls,
+  renderRuntimeToolbar,
+  renderReadouts,
+  renderPlotControls,
+  renderOcSection,
+} from "./templates/sidebarRuntime";
+export { renderHeaderTemplate, renderWorkspaceActions, WORKSPACE_FILE_ACCEPT } from "./templates/header";
+export { renderSidebarTemplate } from "./templates/sidebar";
 
 export function renderAppShell(root: HTMLElement | null = null): void {
   if (typeof document === "undefined") return;
@@ -16,7 +31,8 @@ export function createAppDocumentHtml(): string {
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="referrer" content="strict-origin-when-cross-origin" />
-      <title>Transit Light-Curve Lab</title>
+      <title>Otherlight: Exoplanet learning &amp; scientific modeling</title>
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     </head>
     <body>
       ${appShellInnerHtml()}
@@ -29,25 +45,24 @@ function appShellInnerHtml(): string {
     <a href="#main" class="skip-link">Skip to main content</a>
     <div id="app" class="app">
       ${renderHeaderTemplate()}
-      <div id="appStatus" class="app-status" role="status" aria-live="polite" aria-atomic="true">
-        <span id="appStatusMessage">Ready. Choose a scenario, then start the simulation or open a guided lab.</span>
-        <button id="appRetryBtn" type="button" hidden>Retry last scenario</button>
-      </div>
+      ${renderCommandStrip()}
       <section id="fatalError" class="fatal-error" role="alert" tabindex="-1" hidden>
-        <h2>Transit Light-Curve Lab could not start</h2>
+        <h2>Otherlight could not start</h2>
         <p id="fatalErrorMessage">The application failed during initialization.</p>
         <p>Your data is not stored by this application. Reload the page to retry from a known state.</p>
         <button id="fatalReloadBtn" type="button">Reload application</button>
       </section>
       <main id="main" class="app-main">
-        ${renderRuntimeToolbar()}
-        <div class="mainGrid">
-          <div class="mainLeft">
-            ${renderVisualizationTemplate()}
-            ${renderParametersTemplate()}
+        <div data-product-profile="education">
+          <div class="mainGrid">
+            <div class="mainLeft">
+              ${renderVisualizationTemplate()}
+              ${renderReadouts()}
+            </div>
+            ${renderSidebarTemplate()}
           </div>
-          ${renderSidebarTemplate()}
         </div>
+        ${renderScientificWorkspace()}
         <noscript><p class="help">JavaScript is required to run the simulation.</p></noscript>
       </main>
     </div>

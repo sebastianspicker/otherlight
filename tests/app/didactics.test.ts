@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies didactics contracts across app startup, controls, and runtime integration. */
 
 import { beforeEach, expect, it, vi } from "vitest";
 import type { DidacticsRuntimeState } from "../../src/app/didactics";

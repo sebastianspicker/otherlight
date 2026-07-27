@@ -1,3 +1,5 @@
+/** Exercises the complete browser workflow across supported desktop engines. */
+
 import { expect, test, type Page } from "@playwright/test";
 
 async function waitForAppReady(page: Page): Promise<void> {
@@ -12,8 +14,15 @@ async function waitForLoadedApp(page: Page): Promise<void> {
     .poll(() => optionCount(page, "#presetSelect"), { message: "preset options are populated" })
     .toBeGreaterThan(1);
   await waitForScenarioIdle(page);
-  await expect.poll(() => canvasHasPaint(page, "#skyCanvas")).toBe(true);
-  await expect.poll(() => canvasHasPaint(page, "#lcCanvas")).toBe(true);
+  await expect
+    .poll(
+      async () => ({
+        sky: await canvasHasPaint(page, "#skyCanvas"),
+        lightCurve: await canvasHasPaint(page, "#lcCanvas"),
+      }),
+      { timeout: 20_000 },
+    )
+    .toEqual({ sky: true, lightCurve: true });
 }
 
 async function waitForScenarioIdle(page: Page): Promise<void> {
@@ -84,6 +93,10 @@ test("keeps Binary Lab black-boxed until the learner commits a hypothesis", asyn
 
   await page.locator("#modeLabBtn").click();
   await waitForScenarioIdle(page);
+  await expect(page.locator("#simModeSelect option")).toHaveText([
+    "Planet and exomoon systems",
+    "Binary-star systems",
+  ]);
   await page.locator("#simModeSelect").selectOption("binary-lab");
   await waitForScenarioIdle(page);
 
@@ -102,7 +115,7 @@ test("keeps Binary Lab black-boxed until the learner commits a hypothesis", asyn
   await expect(page.locator("#skyBlackboxHint")).toBeHidden();
 });
 
-test("rejects invalid advanced scientific input without replacing it", async ({ page }) => {
+test("rejects invalid advanced education input without replacing it", async ({ page }) => {
   await waitForAppReady(page);
   await page.locator("#uiModeSelect").selectOption("expert");
   const radius = page.locator("#planetR");
@@ -113,6 +126,45 @@ test("rejects invalid advanced scientific input without replacing it", async ({ 
   await expect(radius).toHaveAttribute("aria-invalid", "true");
   await expect(page.locator("#paramErrorSummary")).toBeVisible();
   await expect(page.locator("#paramErrorSummary")).toContainText("must be fixed");
+});
+
+test("switches explicitly between education and fail-closed scientific workspaces", async ({ page }) => {
+  await page.route("http://127.0.0.1:8765/v1/capabilities", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({
+        schemaVersion: "v5",
+        serviceVersion: "0.2.0-alpha.1",
+        generatedAt: "2026-07-15T12:00:00Z",
+        supportedJobKinds: [],
+        supportedOutputs: [],
+        supportedSamplers: [],
+        unavailableModelIds: ["radial-velocity"],
+      }),
+    });
+  });
+  await waitForAppReady(page);
+  await page.locator("#btnStart").click();
+  await expect(page.locator("#btnStart")).toHaveText("Pause");
+
+  await page.locator("#profileScientificBtn").click();
+
+  await expect(page.locator("#scientificWorkspace")).toBeVisible();
+  await expect(page.locator('[data-product-profile="education"]').last()).toBeHidden();
+  await expect(page.locator("#btnStart")).toHaveText("Start");
+  await expect(page.locator("#scienceCapabilityStatus")).toHaveText(
+    "Connected, required capability unavailable",
+  );
+  await expect(page.locator("#scienceRunBtn")).toBeDisabled();
+  await expect(page.locator("#profileScientificBtn")).toHaveAttribute("aria-current", "page");
+  await expect(page).toHaveURL(/profile=scientific/);
+
+  await page.locator("#profileEducationBtn").click();
+  await expect(page.locator("#scientificWorkspace")).toBeHidden();
+  await expect(page.locator('[data-product-profile="education"]').last()).toBeVisible();
+  await expect(page.locator("#profileEducationBtn")).toHaveAttribute("aria-current", "page");
+  await expect(page).toHaveURL(/profile=education/);
 });
 
 test("exposes figures and status as semantic non-canvas equivalents", async ({ page }) => {
@@ -149,6 +201,28 @@ test("repairs invalid shared context and reports the fallback", async ({ page })
   await expect(page).toHaveURL(/mode=simulation/);
   await expect(page).toHaveURL(/ui=essential/);
   await expect(page).toHaveURL(/scenario=default/);
+});
+
+test("repairs unknown catalog IDs restored through browser history", async ({ page }) => {
+  await waitForAppReady(page);
+  await page.locator("#presetSelect").selectOption("kepler-planet-only");
+  await waitForScenarioIdle(page);
+
+  await page.evaluate(() => {
+    window.history.pushState(
+      null,
+      "",
+      "/?mode=lab&ui=essential&source=preset&scenario=unknown-scenario&lab=preset&lesson=unknown-lesson&runtime=interactive",
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+
+  await waitForScenarioIdle(page);
+  await expect(page.locator("#presetSelect")).toHaveValue("default");
+  await expect(page.locator("#didLessonSelect")).not.toHaveValue("unknown-lesson");
+  await expect(page.locator("#appStatusMessage")).toContainText("corrections");
+  await expect(page).toHaveURL(/scenario=default/);
+  await expect(page).not.toHaveURL(/unknown-lesson/);
 });
 
 test("moves focus to the phase heading after explicit lab navigation", async ({ page }) => {

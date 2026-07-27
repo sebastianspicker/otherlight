@@ -1,3 +1,5 @@
+/** Verifies transit uniform calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { fluxUniformDisk } from "../../src/photometry/transitUniform";

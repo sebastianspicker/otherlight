@@ -1,4 +1,4 @@
-// src/sim/kinematics.ts
+/** Provides shared orbital kinematics helpers without coupling to stepping orchestration. */
 
 import type { ExomoonTimingShapeParams, OrbitElements, SkyPoint, SystemParams } from "../core/types";
 import { G_SI, isFinitePositive, toFiniteNumber, wrapTo2Pi } from "../core/units";

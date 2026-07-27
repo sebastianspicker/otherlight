@@ -1,3 +1,6 @@
+/**
+ * Owns adapter support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { InstrumentNoiseSystematicsParams } from "../../core/instrumentNoiseTypes";
 import { deepClone } from "../../core/clone";
 import type { DidacticsParams, OrbitElements, PhotometryParams, SystemParams } from "../../core/types";

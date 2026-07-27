@@ -1,3 +1,5 @@
+/** Verifies phase curve calculations in the observable-light and transit model. */
+
 import { expect, it } from "vitest";
 
 import { bodyPhaseFlux } from "../../src/photometry/phaseCurve";

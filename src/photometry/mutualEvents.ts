@@ -1,4 +1,4 @@
-// src/photometry/mutualEvents.ts
+/** Computes mutual overlap of luminous or opaque sky-plane body disks. */
 //
 // Mutual-event utilities for two luminous/opaque disks in the sky plane.
 //

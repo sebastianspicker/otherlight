@@ -1,4 +1,4 @@
-// src/photometry/occulterEllipse.ts
+/** Defines sky-plane elliptical and ring occulters for transit integration. */
 //
 // Elliptical and ring occulters for transit photometry (sky-plane geometry).
 //

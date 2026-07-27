@@ -1,3 +1,5 @@
+/** Provides TypeScript-tree traversal helpers used by documentation hygiene tests. */
+
 import path from "node:path";
 
 const sourceTextByFile = sourceTextMap();

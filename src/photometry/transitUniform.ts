@@ -1,6 +1,6 @@
-// src/photometry/transitUniform.ts
+/** Computes opaque circular transits of a uniformly bright stellar disk. */
 //
-// Uniform-brightness stellar disk transit photometry for *circular* opaque occulters.
+// Uniform-brightness stellar disk transit photometry for circular opaque occulters.
 //
 // Scientific model:
 // - Star: uniformly bright disk of radius rStar in the sky plane.
@@ -10,7 +10,7 @@
 // Numerical approach:
 // - 0 occulters: F = 1
 // - 1 occulter: analytic overlap area of two circles (star disk and occulter disk)
-// - >=2 occulters: deterministic midpoint integration of the *union* silhouette over the stellar disk,
+// - >=2 occulters: deterministic midpoint integration of the union silhouette over the stellar disk,
 //   avoiding double-counting where occulters overlap.
 //
 // Continuity / edge-case policy (must match other integrators):

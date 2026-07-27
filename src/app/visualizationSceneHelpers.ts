@@ -1,3 +1,6 @@
+/**
+ * Owns visualization Scene Helpers support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { BrightnessPatch, SystemParams } from "../core/types";
 import type { LightCurveBadge } from "../render/lightCurvePlotTypes";
 import type { SceneDidacticOverlayState } from "../render/sceneTypes";

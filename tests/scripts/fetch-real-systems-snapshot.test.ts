@@ -1,3 +1,5 @@
+/** Verifies fetch real systems snapshot behavior for reproducible data and migration workflows. */
+
 import { expect, it } from "vitest";
 
 const scriptMod = await import(

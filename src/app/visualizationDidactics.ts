@@ -1,3 +1,6 @@
+/**
+ * Owns visualization Didactics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import type { InstrumentNoiseSystematicsParams } from "../core/instrumentNoiseTypes";
 import { currentAirmass } from "../photometry/instrumentNoiseHelpers";

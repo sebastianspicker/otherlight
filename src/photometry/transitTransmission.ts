@@ -1,4 +1,4 @@
-// src/photometry/transitTransmission.ts
+/** Integrates fuzzy-edge and transmissive occultation across a limb-darkened disk. */
 
 //
 // Transmissive / fuzzy-edge transit photometry for a star disk with one or more occulters.
@@ -26,7 +26,7 @@
 
 import type { BrightnessPatch, LimbDarkeningLaw } from "../core/types";
 import { clamp01, isFiniteNonNegative, isFiniteNumber, isFinitePositive } from "../core/units";
-import { clampGridRes } from "./occulterCircle";
+import { clampGridRes, MAX_TRANSIT_GRID_RES } from "./occulterCircle";
 import { intensityNonNegative } from "./limbDarkening";
 import { patchFactorAt, sanitizeBrightnessPatches, type PatchCombineMode, type PatchPre } from "./patches";
 import { transmissionAtPoint } from "./transitTransmissionPoint";
@@ -103,7 +103,7 @@ type TransmissionFluxContext = {
 function transmissionGrid(params: FluxStarWithTransmissionParams): TransmissionGrid {
   const N = clampGridRes(isFiniteNumber(params.gridRes) ? Math.floor(params.gridRes) : params.gridRes, 256, {
     minRes: 32,
-    maxRes: 4096,
+    maxRes: MAX_TRANSIT_GRID_RES,
   });
   const step = (2 * params.rStar) / N;
   return {

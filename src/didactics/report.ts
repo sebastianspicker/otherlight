@@ -1,5 +1,9 @@
+/**
+ * Owns report support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { DidacticResponseStore, DidacticSignals, LearningState } from "../core/types";
 import type { DidacticComparison } from "./compare";
+import { appendLearnerResponse } from "./reportLearnerResponse";
 
 type ReportChecks = NonNullable<DidacticSignals["checks"]>;
 type ReportFormulas = NonNullable<DidacticSignals["formulas"]>;
@@ -103,8 +107,8 @@ const appendLearnerResponses = (
 
   for (const [key, value] of responseEntries) {
     lines.push(`- ${key}`);
-    if (value.primary) lines.push(`  - Primary: ${value.primary}`);
-    if (value.secondary) lines.push(`  - Secondary: ${value.secondary}`);
+    appendLearnerResponse(lines, "Primary", value.primary);
+    appendLearnerResponse(lines, "Secondary", value.secondary);
   }
 };
 

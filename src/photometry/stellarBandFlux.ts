@@ -1,3 +1,6 @@
+/**
+ * Owns stellar Band Flux support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { PassbandId } from "../core/types";
 
 const PLANCK_H = 6.626_070_15e-34;

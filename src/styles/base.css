@@ -1,9 +1,4 @@
-/* src/style.css
-
-Legacy foundation styles for Transit Light-Curve Lab.
-Scientific instrument aesthetic for astronomy students and educators.
-
-*/
+/* Defines shared design tokens and structural defaults consumed by later style layers. */
 
 :root {
   /* --- Color palette (observatory dark theme) --- */

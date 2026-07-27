@@ -1,3 +1,6 @@
+/**
+ * Owns visualization Accessible support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type { SystemParams } from "../core/types";
 import type { LightCurveAccessibleSnapshot } from "../render/lightCurvePlot";
 import type { SimulationStepV3 } from "../sim/v3";
@@ -45,8 +48,11 @@ export function buildVisualizationAccessibleSnapshot(args: {
   const moonVisible = step.renderSignals.visibilityFractions.moon;
   const occulters = step.debug?.nOcculters ?? 0;
   const moonState = params.moon ? `Moon enabled and ${percent(moonVisible)} visible.` : "Moon disabled.";
+  const sceneGeometry = params.binaryStars
+    ? `At ${timeSec.toFixed(1)} seconds, ${occulters} ${occulters === 1 ? "stellar disc is" : "stellar discs are"} eclipsing in the detached-binary view. The light curve reports combined flux from two stars.`
+    : `At ${timeSec.toFixed(1)} seconds, ${occulters} ${occulters === 1 ? "body is" : "bodies are"} occulting the star. Planet is ${percent(planetVisible)} visible. ${moonState}`;
   return {
-    sceneGeometry: `At ${timeSec.toFixed(1)} seconds, ${occulters} ${occulters === 1 ? "body is" : "bodies are"} occulting the star. Planet is ${percent(planetVisible)} visible. ${moonState}`,
+    sceneGeometry,
     plotRange: rangeText(plot),
     series: `The active light-curve series is ${plotMode === "measured" ? "measured flux" : "physical flux"}.`,
     events:

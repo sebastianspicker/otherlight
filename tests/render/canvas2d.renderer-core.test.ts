@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+/** Verifies canvas2d renderer core rendering behavior and visual interpretation. */
+
 import { expect, it, vi } from "vitest";
 import { Canvas2DRenderer } from "../../src/render/canvas2d";
 import { makeMockCanvas } from "../helpers/mockCanvas";

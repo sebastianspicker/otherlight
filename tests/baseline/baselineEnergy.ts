@@ -1,3 +1,5 @@
+/** Covers baseline energy data and helpers used by physics baseline regression checks. */
+
 import type { SystemParams } from "../../src/core/types";
 import { G_SI } from "../../src/core/units";
 import { getNBodyStateAt } from "../../src/sim/dynamics";

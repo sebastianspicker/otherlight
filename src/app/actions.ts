@@ -1,3 +1,6 @@
+/**
+ * Owns actions support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import { clamp, toFiniteNumber } from "../core/units";
 import { setText } from "../core/dom";
 import type { NoiseState } from "./noise";

@@ -1,3 +1,6 @@
+/**
+ * Owns bootstrap Oc Panel support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { UiRefs } from "../ui/refs";
 import { runWithErrorHandling } from "./runWithErrorHandling";
 import {

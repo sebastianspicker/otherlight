@@ -67,7 +67,10 @@ Important distinction:
 
 - `rendering.didacticMode = "scientific"` is a rendering/debug presentation toggle only.
 - It is not a fail-closed scientific execution mode.
-- The repo now has a separate bounded `scientific-browser` runtime contract, and it must continue to be documented and validated as a separate physics/runtime contract rather than inferred from this rendering flag.
+- `scientific-browser` is a strict V4 compatibility-validation profile. The
+  user-facing Scientific workspace uses the separate V5 contract and
+  loopback backend; neither execution boundary may be inferred from this
+  rendering flag.
 
 For detached-binary lab runs, the plotted flux is a relative light curve
 normalized to the combined stellar baseline from the active V4 runtime. That is

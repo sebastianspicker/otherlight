@@ -1,3 +1,6 @@
+/**
+ * Owns diagnostics Energy support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { G_SI } from "../../core/units";
 import { vCross, vLen, vLenSq, vSub } from "../../physics/vec3";
 import type { buildBodyArrays } from "./integrator";
@@ -37,14 +40,17 @@ export function computeMotionSums({ positions, velocities, mus }: BodyArrays): M
   return { kinetic, lx, ly, lz };
 }
 
-export function computePotentialEnergy({ positions, mus }: BodyArrays): number | null {
+export function computePotentialEnergy({ positions, mus }: BodyArrays, softening = 0): number | null {
+  const eps = Number.isFinite(softening) ? Math.max(0, softening) : 0;
+  const eps2 = eps * eps;
   let potential = 0;
 
   for (let i = 0; i < positions.length; i++) {
     for (let j = i + 1; j < positions.length; j++) {
       const rij = vLen(vSub(positions[j], positions[i]));
-      if (!(Number.isFinite(rij) && rij > 0)) return null;
-      potential += -(mus[i] * mus[j]) / (G_SI * rij);
+      const softenedDistance = Math.sqrt(rij * rij + eps2);
+      if (!(Number.isFinite(softenedDistance) && softenedDistance > 0)) return null;
+      potential += -(mus[i] * mus[j]) / (G_SI * softenedDistance);
     }
   }
 

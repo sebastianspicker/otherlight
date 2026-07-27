@@ -1,4 +1,4 @@
-// src/photometry/forwardScattering.ts
+/** Models additive forward-scattering brightening near transit. */
 
 //
 // Forward-scattering "pre/post transit brightening" toy models.

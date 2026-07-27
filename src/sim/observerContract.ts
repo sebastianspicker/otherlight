@@ -1,3 +1,6 @@
+/**
+ * Owns observer Contract support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { SystemParams } from "../core/types";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../physics/vec3";

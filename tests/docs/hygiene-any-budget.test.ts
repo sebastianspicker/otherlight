@@ -1,3 +1,5 @@
+/** Enforces the documentation any-type budget for reviewable public interfaces. */
+
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";

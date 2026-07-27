@@ -1,3 +1,5 @@
+/** Exercises representative physics scenarios against their performance budgets. */
+
 import { beforeAll, expect, it } from "vitest";
 import { performance } from "node:perf_hooks";
 

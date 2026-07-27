@@ -2,9 +2,9 @@
  * Axis and tick rendering for the light-curve plot.
  *
  * Exports:
- *  - `TimeScaleInfo`  — shared layout descriptor used by axes and annotations.
- *  - `xOfTime`        — converts a time value to a canvas x-coordinate.
- *  - `drawAxes`       — draws the plot border, Y/X grid lines, tick marks and labels.
+ *  - `TimeScaleInfo`: shared layout descriptor used by axes and annotations.
+ *  - `xOfTime`: converts a time value to a canvas x-coordinate.
+ *  - `drawAxes`: draws the plot border, Y/X grid lines, tick marks and labels.
  */
 
 import { computeTickLayout, formatTickValue } from "./lightCurvePlotSeries";

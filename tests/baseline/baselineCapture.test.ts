@@ -1,3 +1,5 @@
+/** Covers baseline capture data and helpers used by physics baseline regression checks. */
+
 import { beforeEach, describe, expect, it } from "vitest";
 import { performance } from "node:perf_hooks";
 

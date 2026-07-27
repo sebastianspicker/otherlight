@@ -1,4 +1,4 @@
-// src/photometry/occulterCircle.ts
+/** Defines canonical circular opaque-occultation geometry and coverage helpers. */
 //
 // Single-source utilities for circular, opaque occulters used by the transit photometry modules.
 //
@@ -24,6 +24,9 @@
 // - Prefer conservative "fail open" behavior for invalid inputs (e.g. return empty list / false).
 
 import { isFiniteNumber, isFinitePositive } from "../core/units";
+import { MAX_TRANSIT_GRID_RES, MIN_TRANSIT_GRID_RES } from "../core/transitComputeBudget";
+
+export { MAX_TRANSIT_GRID_RES };
 
 /** A circular opaque occulter in the sky plane (legacy planet/moon disk). */
 export type CircleOcculter = {
@@ -64,7 +67,8 @@ export function pointInCircleOcculter(x: number, y: number, o: CircleOcculter): 
  *
  * Defaults:
  * - minRes=60 matches common integrator defaults in this codebase.
- * - maxRes=4096 is a safe upper cap for runtime/memory protection.
+ * - maxRes=1024 bounds a single synchronous disk integration to roughly one
+ *   million point evaluations while retaining the normal UI range.
  */
 export function clampGridRes(
   raw: unknown,
@@ -75,8 +79,14 @@ export function clampGridRes(
   const maxResRaw = opts.maxRes;
 
   // Enforce hard floor of 1 to prevent gridRes=0 logic errors.
-  const minRes = isFinitePositive(minResRaw) ? Math.max(1, Math.floor(minResRaw)) : 60;
-  const maxRes = isFinitePositive(maxResRaw) ? Math.max(minRes, Math.floor(maxResRaw)) : 4096;
+  const requestedMinRes = isFinitePositive(minResRaw)
+    ? Math.max(1, Math.floor(minResRaw))
+    : MIN_TRANSIT_GRID_RES;
+  const minRes = Math.min(requestedMinRes, MAX_TRANSIT_GRID_RES);
+  const requestedMaxRes = isFinitePositive(maxResRaw)
+    ? Math.max(minRes, Math.floor(maxResRaw))
+    : MAX_TRANSIT_GRID_RES;
+  const maxRes = Math.min(requestedMaxRes, MAX_TRANSIT_GRID_RES);
 
   // Ensure bounds are sane even if caller provided inverted values.
   const lo = Math.min(minRes, maxRes);

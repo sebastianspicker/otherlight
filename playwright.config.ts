@@ -1,3 +1,4 @@
+/** Defines the served-build browser, tablet, and mobile acceptance matrix. */
 import { defineConfig, devices } from "@playwright/test";
 
 const e2ePort = Number(process.env.E2E_PORT ?? 4174);
@@ -10,7 +11,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 3,
   outputDir: "test-results/e2e",
   reporter: process.env.CI ? [["dot"], ["html", { open: "never" }]] : "list",
   use: {

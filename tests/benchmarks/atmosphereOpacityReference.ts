@@ -1,3 +1,5 @@
+/** Provides independent atmosphere-opacity reference data for calibration comparisons. */
+
 import type { AtmosphereRTParams } from "../../src/core/types";
 import { totalAtmosphereTransmission } from "../../src/photometry/atmosphereRT/model";
 

@@ -1,3 +1,6 @@
+/**
+ * Owns compare Text support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { DidacticComparison } from "./compare";
 
 function finiteOrZero(value: number | undefined): number {

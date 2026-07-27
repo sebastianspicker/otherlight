@@ -1,7 +1,38 @@
 // @vitest-environment jsdom
+/** Verifies light curve plot core rendering behavior and visual interpretation. */
+
 import { expect, it } from "vitest";
 import { LightCurvePlot } from "../../src/render/canvas2d";
+import type {
+  LightCurveHistoryState,
+  ResolvedLightCurvePlotOptions,
+} from "../../src/render/lightCurvePlotTypes";
+import { getVisibleSampleBounds, getVisibleTimeDomain } from "../../src/render/lightCurvePlotViewport";
 import { makeMockCanvas } from "../helpers/mockCanvas";
+
+function plotInternals(plot: LightCurvePlot): {
+  state: LightCurveHistoryState;
+  opts: ResolvedLightCurvePlotOptions;
+} {
+  return plot as unknown as {
+    state: LightCurveHistoryState;
+    opts: ResolvedLightCurvePlotOptions;
+  };
+}
+
+function visibleSampleBounds(plot: LightCurvePlot): { start: number; end: number } {
+  const { state, opts } = plotInternals(plot);
+  return getVisibleSampleBounds(state, opts);
+}
+
+function visibleTimeDomain(
+  plot: LightCurvePlot,
+  start: number,
+  end: number,
+): { tMin: number; tMax: number } | null {
+  const { state, opts } = plotInternals(plot);
+  return getVisibleTimeDomain(state, opts, start, end);
+}
 
 it("is exported as a constructor function", () => {
   expect(typeof LightCurvePlot).toBe("function");
@@ -202,12 +233,12 @@ it("shows full history for fixed and dynamic, and uses a trailing window only in
     livePlot.push(1 - i * 0.001, 10 + i);
   }
 
-  expect((fixedPlot as any).getVisibleSampleBounds()).toEqual({ start: 0, end: 5 });
-  expect((fixedPlot as any).getVisibleTimeDomain(0, 5)).toEqual({ tMin: -2, tMax: 2 });
-  expect((dynamicPlot as any).getVisibleSampleBounds()).toEqual({ start: 0, end: 5 });
-  expect((dynamicPlot as any).getVisibleTimeDomain(0, 5)).toEqual({ tMin: 0, tMax: 4 });
-  expect((livePlot as any).getVisibleSampleBounds()).toEqual({ start: 2, end: 5 });
-  expect((livePlot as any).getVisibleTimeDomain(2, 5)).toEqual({ tMin: 12, tMax: 14 });
+  expect(visibleSampleBounds(fixedPlot)).toEqual({ start: 0, end: 5 });
+  expect(visibleTimeDomain(fixedPlot, 0, 5)).toEqual({ tMin: -2, tMax: 2 });
+  expect(visibleSampleBounds(dynamicPlot)).toEqual({ start: 0, end: 5 });
+  expect(visibleTimeDomain(dynamicPlot, 0, 5)).toEqual({ tMin: 0, tMax: 4 });
+  expect(visibleSampleBounds(livePlot)).toEqual({ start: 2, end: 5 });
+  expect(visibleTimeDomain(livePlot, 2, 5)).toEqual({ tMin: 12, tMax: 14 });
 });
 
 it("retains only the newest capacity window without unbounded history growth", () => {
@@ -221,10 +252,12 @@ it("retains only the newest capacity window without unbounded history growth", (
     plot.push(1 - i * 1e-4, i);
   }
 
-  expect((plot as any).getVisibleSampleBounds()).toEqual({ start: 0, end: 10 });
-  expect((plot as any).getVisibleTimeDomain(0, 10)).toEqual({ tMin: 1490, tMax: 1499 });
-  expect((plot as any).flux.length).toBeLessThanOrEqual(20);
-  expect((plot as any).t.length).toBeLessThanOrEqual(20);
+  expect(visibleSampleBounds(plot)).toEqual({ start: 0, end: 10 });
+  expect(visibleTimeDomain(plot, 0, 10)).toEqual({ tMin: 1490, tMax: 1499 });
+  expect(plot.createHistorySnapshot()).toEqual({
+    flux: Array.from({ length: 10 }, (_, index) => 1 - (1490 + index) * 1e-4),
+    timeSec: Array.from({ length: 10 }, (_, index) => 1490 + index),
+  });
 });
 
 it("draw() stays safe and uses the retained newest window after over-capacity pushes", () => {
@@ -282,7 +315,7 @@ it("draw() stays safe and uses the retained newest window after over-capacity pu
 
   expect(() => plot.draw()).not.toThrow();
   expect(moveToCalls.length).toBeGreaterThan(0);
-  expect((plot as any).getVisibleTimeDomain(0, 12)).toEqual({ tMin: 388, tMax: 399 });
+  expect(visibleTimeDomain(plot, 0, 12)).toEqual({ tMin: 388, tMax: 399 });
 });
 
 it("draws overlay series, markers, badges, gap windows, and a comparison inset without throwing", () => {

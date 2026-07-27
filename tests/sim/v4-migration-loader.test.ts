@@ -1,3 +1,5 @@
+/** Verifies v4 migration loader contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { normalizeScenarioInputToV4 } from "../../src/sim/v4/migrate";

@@ -1,4 +1,4 @@
-// src/physics/hill.ts
+/** Computes Hill-sphere stability diagnostics from orbital and mass parameters. */
 //
 // Hill radius + simple satellite-stability heuristics.
 //
@@ -7,9 +7,6 @@
 // The classical Hill radius for a secondary body of mass m orbiting a primary of mass M at
 // instantaneous separation r is (circular restricted 3-body approximation):
 //
-//   R_H(r) ≈ r * ( m / (3 (M + m)) )^(1/3)
-//
-// Common simplification when m << M:
 //   R_H(r) ≈ r * ( m / (3 M) )^(1/3)
 //
 // This module provides *validation warnings* only; it does not enforce constraints.
@@ -18,7 +15,7 @@ import type { OrbitElements, SystemParams } from "../core/types";
 import {
   hillRadius,
   maxStableProgradeMoonAxisDomingos,
-  maxStableRetrogradeMoonAxisRuleOfThumb,
+  maxStableRetrogradeMoonAxisDomingos,
 } from "./hillRadius";
 
 export type HillRadiusOptions = {
@@ -61,11 +58,19 @@ type HillMassInputs = HillRawInputs & {
 };
 
 type HillStabilityContext = HillMassInputs & {
-  hillR: number;
+  hillRPeriapsis: number;
+  hillRSemimajor: number;
   aMaxSense: number;
   fracOfHill: number;
   retro: boolean;
 };
+
+const DOMINGOS_MAX_PLANET_ECCENTRICITY = 0.9;
+const DOMINGOS_MAX_SATELLITE_ECCENTRICITY = 0.5;
+const DOMINGOS_REFERENCE_MASS_RATIO = 1e-3;
+// The paper samples q = 10^-3. Permit only a narrow rounding band around that
+// reference value before treating the fitted threshold as an extrapolation.
+const DOMINGOS_MASS_RATIO_RELATIVE_TOLERANCE = 0.05;
 
 type HillInputResolution =
   | { kind: "done"; warnings: PhysicsValidationMessage[] }
@@ -205,8 +210,9 @@ function resolveHillMasses(p: SystemParams, inputs: HillRawInputs): HillMassReso
 function buildHillStabilityContext(
   inputs: HillMassInputs,
 ): { kind: "done"; warnings: PhysicsValidationMessage[] } | { kind: "inputs"; inputs: HillStabilityContext } {
-  const hillR = computeHillRadius(inputs);
-  if (!Number.isFinite(hillR)) {
+  const hillRPeriapsis = computeHillRadius(inputs, true);
+  const hillRSemimajor = computeHillRadius(inputs, false);
+  if (!Number.isFinite(hillRPeriapsis) || !Number.isFinite(hillRSemimajor)) {
     return {
       kind: "done",
       warnings: [
@@ -220,41 +226,75 @@ function buildHillStabilityContext(
   }
 
   const retro = inputs.moon.sense === "retrograde";
+  // Domingos, Winter & Yokoyama (2006) define the fit in units of the
+  // semimajor-axis Hill radius and include e_p in the empirical factor. Using
+  // the periapsis radius here would apply (1 - e_p) a second time.
   const aMaxSense = retro
-    ? maxStableRetrogradeMoonAxisRuleOfThumb(hillR)
-    : maxStableProgradeMoonAxisDomingos(hillR, inputs.eP, inputs.eM);
+    ? maxStableRetrogradeMoonAxisDomingos(hillRSemimajor, inputs.eP, inputs.eM)
+    : maxStableProgradeMoonAxisDomingos(hillRSemimajor, inputs.eP, inputs.eM);
 
   return {
     kind: "inputs",
     inputs: {
       ...inputs,
-      hillR,
+      hillRPeriapsis,
+      hillRSemimajor,
       aMaxSense,
       retro,
-      fracOfHill: inputs.aM / hillR,
+      fracOfHill: inputs.aM / hillRPeriapsis,
     },
   };
 }
 
-function computeHillRadius(inputs: HillMassInputs): number {
+const computeHillRadius = (inputs: HillMassInputs, usePeriapsis: boolean): number => {
   try {
-    return hillRadius(inputs.aP, inputs.eP, inputs.mPlanet, inputs.mStar, { usePeriapsis: true });
+    return hillRadius(inputs.aP, inputs.eP, inputs.mPlanet, inputs.mStar, { usePeriapsis });
   } catch {
     return Number.NaN;
   }
-}
+};
 
 function collectHillStabilityWarnings(context: HillStabilityContext): PhysicsValidationMessage[] {
+  const fitDomainWarning = domingosFitDomainWarning(context);
   return [
     ...moonApoapsisWarnings(context),
-    moonStabilityLimitWarning(context),
+    fitDomainWarning ?? moonStabilityLimitWarning(context),
     ...hillMassRatioWarnings(context),
   ];
 }
 
+function domingosFitDomainWarning(context: HillStabilityContext): PhysicsValidationMessage | undefined {
+  const massRatio = context.mPlanet / context.mStar;
+  const massRatioRelativeError = Math.abs(massRatio / DOMINGOS_REFERENCE_MASS_RATIO - 1);
+  const withinDomain =
+    context.eP <= DOMINGOS_MAX_PLANET_ECCENTRICITY &&
+    context.eM <= DOMINGOS_MAX_SATELLITE_ECCENTRICITY &&
+    Number.isFinite(massRatioRelativeError) &&
+    massRatioRelativeError <= DOMINGOS_MASS_RATIO_RELATIVE_TOLERANCE;
+  if (withinDomain) return undefined;
+
+  return {
+    severity: "warn",
+    code: "HILL_FIT_OUT_OF_DOMAIN",
+    message:
+      "The Domingos satellite-stability fit is outside its sampled eccentricity or mass-ratio domain; no fitted stability threshold is asserted.",
+    details: {
+      ePlanet: context.eP,
+      eMoon: context.eM,
+      mPlanet_over_mStar: massRatio,
+      sampledDomain: {
+        ePlanetMax: DOMINGOS_MAX_PLANET_ECCENTRICITY,
+        eMoonMax: DOMINGOS_MAX_SATELLITE_ECCENTRICITY,
+        referenceMassRatio: DOMINGOS_REFERENCE_MASS_RATIO,
+        massRatioRelativeTolerance: DOMINGOS_MASS_RATIO_RELATIVE_TOLERANCE,
+      },
+    },
+  };
+}
+
 function moonApoapsisWarnings(context: HillStabilityContext): PhysicsValidationMessage[] {
   const apoM = context.aM * (1 + context.eM);
-  if (!Number.isFinite(apoM) || apoM <= context.hillR) return [];
+  if (!Number.isFinite(apoM) || apoM <= context.hillRPeriapsis) return [];
 
   return [
     {
@@ -266,7 +306,7 @@ function moonApoapsisWarnings(context: HillStabilityContext): PhysicsValidationM
         aMoon: context.aM,
         eMoon: context.eM,
         apoMoon: apoM,
-        hillR_periapsis: context.hillR,
+        hillR_periapsis: context.hillRPeriapsis,
       },
     },
   ];
@@ -311,7 +351,8 @@ function hillStabilityDetails(
   return {
     aMoon: context.aM,
     ...(includeEccentricity ? { eMoon: context.eM } : {}),
-    hillR_periapsis: context.hillR,
+    hillR_periapsis: context.hillRPeriapsis,
+    hillR_semimajor: context.hillRSemimajor,
     aCrit_sense: context.aMaxSense,
     sense: context.retro ? "retrograde" : "prograde",
     aMoon_over_RH: context.fracOfHill,

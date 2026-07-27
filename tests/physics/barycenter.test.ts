@@ -1,3 +1,5 @@
+/** Verifies barycenter calculations in orbital dynamics and numerical integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { trySplitBarycentricPair } from "../../src/physics/barycenter";

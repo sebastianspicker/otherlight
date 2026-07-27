@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies run with error handling contracts across app startup, controls, and runtime integration. */
 
 import { describe, expect, it, vi } from "vitest";
 import { runWithErrorHandling } from "../../src/app/runWithErrorHandling";

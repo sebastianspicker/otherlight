@@ -1,3 +1,5 @@
+/** Verifies report contracts supporting interpretable lesson flows. */
+
 import { expect, it } from "vitest";
 
 import { buildLessonReportMarkdown } from "../../src/didactics/report";
@@ -117,4 +119,30 @@ it("lists visual compare evidence when present", () => {
   expect(markdown).toContain("Visual overlays: scenario A, scenario B");
   expect(markdown).toContain("Compare inset: A/B delta");
   expect(markdown).toContain("Scene ghosts: scenario A, scenario B");
+});
+
+it("serializes learner responses as inert dynamically fenced code blocks", () => {
+  const primary = [
+    "<img src=x onerror=alert(1)>",
+    "[external link](https://example.test)",
+    "![external image](https://example.test/image.png)",
+    "# Learner-controlled heading",
+    "```markdown",
+    "# nested fenced content",
+    "```",
+  ].join("\n");
+  const secondary = "````\nembedded four-backtick fence\n````";
+  const primaryFence = "`".repeat(4);
+  const secondaryFence = "`".repeat(5);
+
+  const markdown = buildLessonReportMarkdown({
+    courseTitle: "Guided Lab",
+    state: { lessonId: "binary-eclipse-lab", stepIndex: 0, phaseIndex: 0, passedStepIds: [] },
+    responses: {
+      "binary-eclipse-lab:response": { primary, secondary },
+    },
+  });
+
+  expect(markdown).toContain(`Primary:\n${primaryFence}\n${primary}\n${primaryFence}`);
+  expect(markdown).toContain(`Secondary:\n${secondaryFence}\n${secondary}\n${secondaryFence}`);
 });

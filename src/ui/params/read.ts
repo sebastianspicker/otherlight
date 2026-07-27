@@ -1,3 +1,6 @@
+/**
+ * Owns read support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type { SystemDynamicsParams, SystemParams } from "../../core/types";
 import { DEG2RAD, RAD2DEG } from "../../core/units";
 import { cloneParams } from "../../core/clone";

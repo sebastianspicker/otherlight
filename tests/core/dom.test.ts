@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+/** Verifies DOM contracts in shared app and physics primitives. */
+
 import { describe, expect, it } from "vitest";
 
 import { mustGet, mustGetAs, setText, setHidden, setDisabled } from "../../src/core/dom";

@@ -1,3 +1,6 @@
+/**
+ * Owns frame Loop support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { BinaryLabState } from "../didactics/binaryLab";
 import type { SystemParams } from "../core/types";
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
@@ -26,6 +29,17 @@ import type { TransitHistoryState } from "./transitHistory";
 import type { AppSimulationRuntime } from "./v4Runtime";
 
 let visualizationErrorLogged = false;
+
+function reportDynamicVisualizationError(refs: UiRefs, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!visualizationErrorLogged) {
+    visualizationErrorLogged = true;
+    console.warn("[frameLoop] dynamic visualization error, continuing primary frame:", error);
+  }
+  const warning = `Visualization overlay failed: ${message}`;
+  if (refs.warnVal) refs.warnVal.textContent = warning;
+  return warning;
+}
 
 export type FrameLoopState = {
   running: boolean;
@@ -81,14 +95,7 @@ export function createFrameLoopController(deps: FrameLoopDeps): FrameLoopControl
       applyDynamicVisualizationState(args);
       return undefined;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!visualizationErrorLogged) {
-        visualizationErrorLogged = true;
-        console.warn("[frameLoop] dynamic visualization error, continuing primary frame:", error);
-      }
-      const warning = `Visualization overlay failed: ${message}`;
-      if (refs.warnVal) refs.warnVal.textContent = warning;
-      return warning;
+      return reportDynamicVisualizationError(refs, error);
     }
   }
 

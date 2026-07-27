@@ -1,3 +1,5 @@
+/** Verifies v4 runtime scientific browser contracts across app startup, controls, and runtime integration. */
+
 import { expect, it } from "vitest";
 
 import { buildBinaryLabParams } from "../../src/app/binaryLab";

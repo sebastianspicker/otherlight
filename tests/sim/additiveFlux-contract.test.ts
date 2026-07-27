@@ -1,3 +1,5 @@
+/** Verifies additive light sources compose without corrupting multiplicative transit factors. */
+
 import { expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

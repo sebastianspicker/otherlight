@@ -1,0 +1,10 @@
+// Enables the strict Swift 6 language contract; .swift-version and CI select the exact 6.3.3 compiler.
+SWIFT_STRICT_CONCURRENCY = complete
+SWIFT_VERSION = 6.0
+GENERATE_INFOPLIST_FILE = NO
+INFOPLIST_FILE = App/Info.plist
+MACOSX_DEPLOYMENT_TARGET = 14.0
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Otherlight.entitlements
+ENABLE_APP_SANDBOX[sdk=macosx*] = YES
+ALWAYS_SEARCH_USER_PATHS = NO

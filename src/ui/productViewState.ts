@@ -3,13 +3,22 @@
  * Consumers can pass the resulting URLSearchParams to history.pushState or
  * history.replaceState as appropriate for the interaction that changed it.
  */
+import {
+  DEFAULT_LAB_SYSTEM,
+  getLabSystemByControlValue,
+  isLabSystemId,
+  type LabSystemId,
+} from "../core/labs";
+
+export type ProductViewProfile = "education" | "scientific";
 export type ProductViewMode = "simulation" | "lab";
 export type ProductViewUi = "essential" | "advanced";
 export type ProductViewSource = "preset" | "real";
-export type ProductViewLab = "preset" | "binary";
+export type ProductViewLab = LabSystemId;
 export type ProductViewRuntime = "interactive" | "reference";
 
 export type ProductViewState = {
+  profile: ProductViewProfile;
   mode: ProductViewMode;
   ui: ProductViewUi;
   source: ProductViewSource;
@@ -25,11 +34,12 @@ export type ProductViewStateParseResult = {
 };
 
 export const DEFAULT_PRODUCT_VIEW_STATE: ProductViewState = {
+  profile: "education",
   mode: "simulation",
   ui: "essential",
   source: "preset",
   scenario: "default",
-  lab: "preset",
+  lab: DEFAULT_LAB_SYSTEM.id,
   lesson: "kepler-geometry",
   runtime: "interactive",
 };
@@ -75,11 +85,18 @@ function stableIdValue(
 export function parseProductViewState(params: URLSearchParams): ProductViewStateParseResult {
   const corrections: string[] = [];
   const state: ProductViewState = {
+    profile: enumValue(
+      params,
+      "profile",
+      ["education", "scientific"],
+      DEFAULT_PRODUCT_VIEW_STATE.profile,
+      corrections,
+    ),
     mode: enumValue(params, "mode", ["simulation", "lab"], DEFAULT_PRODUCT_VIEW_STATE.mode, corrections),
     ui: enumValue(params, "ui", ["essential", "advanced"], DEFAULT_PRODUCT_VIEW_STATE.ui, corrections),
     source: enumValue(params, "source", ["preset", "real"], DEFAULT_PRODUCT_VIEW_STATE.source, corrections),
     scenario: stableIdValue(params, "scenario", DEFAULT_PRODUCT_VIEW_STATE.scenario, corrections),
-    lab: enumValue(params, "lab", ["preset", "binary"], DEFAULT_PRODUCT_VIEW_STATE.lab, corrections),
+    lab: labSystemValue(params, corrections),
     lesson: stableIdValue(params, "lesson", DEFAULT_PRODUCT_VIEW_STATE.lesson, corrections),
     runtime: enumValue(
       params,
@@ -97,6 +114,7 @@ export function parseProductViewState(params: URLSearchParams): ProductViewState
  * changed, so callers retain campaign tags, anchors, and future query fields.
  */
 export function applyProductViewState(params: URLSearchParams, state: ProductViewState): URLSearchParams {
+  params.set("profile", state.profile);
   params.set("mode", state.mode);
   params.set("ui", state.ui);
   params.set("source", state.source);
@@ -105,6 +123,20 @@ export function applyProductViewState(params: URLSearchParams, state: ProductVie
   params.set("lesson", state.lesson);
   params.set("runtime", state.runtime);
   return params;
+}
+
+function labSystemValue(params: URLSearchParams, corrections: string[]): ProductViewLab {
+  const value = params.get("lab");
+  if (value === null) return DEFAULT_PRODUCT_VIEW_STATE.lab;
+  if (isLabSystemId(value)) return value;
+  // Preserve alpha URLs created before lab systems became catalog entries.
+  if (value === "preset" || value === "binary") {
+    return getLabSystemByControlValue(value === "binary" ? "binary-lab" : "preset-lab").id;
+  }
+  corrections.push(
+    `Unknown lab value ${JSON.stringify(value)}; using ${JSON.stringify(DEFAULT_PRODUCT_VIEW_STATE.lab)}.`,
+  );
+  return DEFAULT_PRODUCT_VIEW_STATE.lab;
 }
 
 /**

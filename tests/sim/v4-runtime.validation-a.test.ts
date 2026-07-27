@@ -1,3 +1,5 @@
+/** Verifies v4 runtime validation a contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SimulationConfigV4 } from "../../src/sim/v4/types";
@@ -292,7 +294,7 @@ describe("sim v4 runtime", () => {
     );
   });
 
-  it("accepts explicit scientific-browser relativity model and solver controls", async () => {
+  it("rejects configured relativity that the V4 native path does not execute", () => {
     const cfg: SimulationConfigV4 = {
       version: "4",
       mode: "detached-binary-lab",
@@ -323,15 +325,9 @@ describe("sim v4 runtime", () => {
       },
     };
 
-    const sim = createSimulationV4(cfg);
-    await sim.prepare();
-    const step = sim.step(0);
-
-    expect(Number.isFinite(step.flux.total)).toBe(true);
-    expect(step.physicsDiagnostics.ltteConvergence.status).toBe("unavailable");
-    expect(step.physicsDiagnostics.shapiroConvergence.status).toBe("unavailable");
-    expect(step.physicsDiagnostics.ltteConvergence.validityFlags).toContain("solver-not-run-native-path");
-    expect(step.physicsDiagnostics.shapiroConvergence.validityFlags).toContain("solver-not-run-native-path");
+    expect(() => createSimulationV4(cfg)).toThrowError(
+      expect.objectContaining({ code: "SCB_RELATIVITY_UNAVAILABLE" }),
+    );
   });
 
   it("does not fabricate TDV reference diagnostics without an explicit timing reference in scientific-browser mode", async () => {

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies scenario flow UI contracts across app startup, controls, and runtime integration. */
 
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +34,7 @@ describe("syncBinaryLabUiState", () => {
       <form id="paramForm"><input id="lockedInput" /></form>
       <section id="binaryLabParamNotice"></section>
       <section id="ocSection"></section>
+      <p id="skySummary"></p>
     `;
     const refs = makeBinaryLabRefs();
     const state = createBinaryLabState({
@@ -47,10 +49,23 @@ describe("syncBinaryLabUiState", () => {
     expect(refs.didHypothesisSelect?.disabled).toBe(false);
     expect(refs.didRevealSkyBtn?.disabled).toBe(true);
     expect(refs.skyBlackboxHint?.hidden).toBe(false);
-    expect(refs.skyCanvas.style.visibility).toBe("hidden");
+    expect(refs.skyCanvas.classList.contains("skyCanvas--hidden")).toBe(true);
     expect((document.getElementById("lockedInput") as HTMLInputElement).disabled).toBe(true);
     expect(document.getElementById("paramForm")?.hidden).toBe(true);
     expect(document.getElementById("binaryLabParamNotice")?.hidden).toBe(false);
     expect(document.getElementById("ocSection")?.hidden).toBe(true);
+    expect(document.getElementById("skySummary")?.textContent).toContain("is hidden until a hypothesis");
+
+    syncBinaryLabUiState(
+      refs,
+      createBinaryLabState({
+        hideSkyUntilReveal: false,
+        requireHypothesis: true,
+        lockParamsUntilHypothesis: true,
+      }),
+    );
+    expect(refs.skyCanvas.classList.contains("skyCanvas--hidden")).toBe(false);
+    expect(refs.skyBlackboxHint?.hidden).toBe(true);
+    expect(document.getElementById("skySummary")?.textContent).toContain("geometry revealed");
   });
 });

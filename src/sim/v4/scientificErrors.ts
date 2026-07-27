@@ -1,3 +1,6 @@
+/**
+ * Owns scientific Errors support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 export type ScientificBrowserFailureStage = "config" | "native-inputs" | "step";
 
 export type ScientificBrowserFailureCode =
@@ -10,10 +13,12 @@ export type ScientificBrowserFailureCode =
   | "SCB_TRANSMISSION_RT_FEATURE_UNSUPPORTED"
   | "SCB_TRANSMISSION_MIXED_SHAPE"
   | "SCB_INVALID_RELATIVITY_CONFIG"
+  | "SCB_RELATIVITY_UNAVAILABLE"
   | "SCB_INVALID_REFERENCE_SUBSTEPS"
   | "SCB_INVALID_TIMING_REFERENCE"
   | "SCB_INVALID_STELLAR_SURFACE"
   | "SCB_INVALID_NBODY_CONFIG"
+  | "SCB_NBODY_UNAVAILABLE"
   | "SCB_INVALID_LEGACY_ORBIT"
   | "SCB_BINARY_IMPLICIT_PASSBAND"
   | "SCB_BINARY_UNSUPPORTED_PASSBAND"

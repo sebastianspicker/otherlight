@@ -1,3 +1,6 @@
+/**
+ * Owns oc Plot Canvas support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { OcBody, OcTrendMode, OcUnit } from "./ocPlot";
 import { drawZeroLine } from "./ocPlotZeroLine";
 

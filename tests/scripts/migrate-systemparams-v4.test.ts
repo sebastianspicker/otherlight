@@ -1,3 +1,5 @@
+/** Verifies migrate systemparams v4 behavior for reproducible data and migration workflows. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

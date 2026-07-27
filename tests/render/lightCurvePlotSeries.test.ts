@@ -1,3 +1,5 @@
+/** Verifies light curve plot series rendering behavior and visual interpretation. */
+
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,332 +1,443 @@
-# Transit Light-Curve Lab
+# Otherlight
 
-![CI](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/ci.yml/badge.svg)
-![Security](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/security.yml/badge.svg)
-![CodeQL](https://github.com/sebastianspicker/exoplanet-exomoon-simulation/actions/workflows/codeql.yml/badge.svg)
+Otherlight is a local exoplanet simulation and teaching workspace. The
+repository contains three related applications:
 
-Browser-only scientific learning and exploration workspace for exoplanet transit photometry, binary eclipses, exomoon scenarios, and timing diagnostics. Simulation and Guided Labs are peer workflows. The core is deterministic and SI-based, with didactic curve/canvas overlays, structured nonvisual summaries, CSV/report exports, and black-box lesson flows.
+- a TypeScript browser application for interactive Education simulations and
+  Guided Labs;
+- an optional Python service for bounded V5 radial-velocity calculations;
+- an experimental SwiftUI Education application for macOS, iPhone, and iPad.
+
+The browser Education runtime is the default. The Scientific workspace uses the
+Python service only after it validates the service capability manifest. It does
+not substitute an Education result when the service or requested capability is
+unavailable.
 
 ## Screenshots
 
-![UI Screenshot](docs/media/github/hero-overview.png)
+The maintained browser tour contains ten frames. The Scientific result frame
+uses the checked-in V5 contract case, not a live service run. See
+[`docs/tour.md`](docs/tour.md) and the adjacent manifest for capture modes,
+hashes, dimensions, and browser versions.
 
-Feature gallery:
+![Education simulation](docs/screenshots/web/01-education-simulation.png)
 
-**Main simulation shell**: sky-plane, light curve, controls, diagnostics, and the fixed-range didactic plot surface.
+![Scientific contract result](docs/screenshots/web/07-scientific-result.png)
 
-![Main Simulation](docs/screenshots/01-main-simulation.png)
+![Education at the documented dark appearance](docs/screenshots/web/10-dark-education.png)
 
-**Light-curve landmarks**: contact markers, component overlays, and teaching badges on the active transit plot.
+## Project purpose and scope
 
-![Light Curve Landmarks](docs/screenshots/02-light-curve-landmarks.png)
+The browser application supports parameter exploration, guided exercises, and
+visual inspection of transit and eclipse signals. It uses SI units internally
+and exposes numerical state through plots, textual summaries, CSV exports, and
+workspace files.
 
-**Scene geometry overlays**: chord/lead-lag style annotations and separated moon geometry on the sky canvas.
+The optional Python service accepts a strict V5 request, performs Newtonian
+barycentric integration with SciPy DOP853, and writes radial-velocity results as
+content-addressed Arrow files. The service binds to loopback and is not a
+multi-user or remote service.
 
-![Scene Geometry](docs/screenshots/03-scene-geometry.png)
+The native Apple application implements a narrower Education subset. It shares
+versioned Education fixtures with the browser code but does not expose the
+browser Scientific workspace, binary photometry, atmosphere models, N-body
+runtime, or relativity runtime.
 
-**A/B compare lab**: overplotted scenarios, delta inset, and scene ghosts for false-positive style comparison work.
+## Current capabilities
 
-![Compare Lab](docs/screenshots/04-compare-lab.png)
+### Browser Education
 
-**Chromatic lane**: weighted broadband band overlays on the measured curve.
+- Simulation and Guided Labs product modes.
+- Planet, exomoon, and detached-binary teaching scenarios.
+- Interactive and deterministic reference runtime modes.
+- Essential and advanced parameter controls.
+- Transit and eclipse photometry, limb darkening, phase curves, atmosphere
+  preview effects, scattering, rings, smearing, and synthetic measurement
+  noise.
+- Timing, radial-velocity, astrometry, conservation, and event diagnostics where
+  the active runtime provides them.
+- Saved `.otherlight` workspaces, shareable route state, CSV export, and lesson
+  report export.
+- A committed real-system catalog derived from a NASA Exoplanet Archive
+  snapshot.
 
-![Chromatic Lane](docs/screenshots/05-chromatic-lane.png)
+### Scientific service
 
-**Observer contamination lane**: measured-vs-physical separation with observer-side contamination cues.
+- Strict V5 forward-job requests.
+- Newtonian point-mass propagation for at most three bodies.
+- Radial-velocity output only.
+- Capability discovery, bounded job submission, polling, cancellation, and
+  structured errors.
+- Arrow IPC result files addressed by SHA-256.
+- Run manifests containing numerical settings and runtime versions.
 
-![Observer Contamination](docs/screenshots/06-observer-contamination.png)
+### Native Apple application
 
-**Timing and dynamics**: timing markers, drift cues, and epoch-aware overlays on the combined visual surface.
+- One SwiftUI target for macOS 14 or later and iOS/iPadOS 17 or later.
+- Education simulation and Guided Labs.
+- Local history, bounded controls, and user-selected workspace and report files.
+- Shared Core, Education, science-contract, and visualization Swift packages.
 
-![Timing Dynamics](docs/screenshots/07-timing-dynamics.png)
+The current cross-platform availability registry is
+[`contracts/capabilities-v1/manifest.json`](contracts/capabilities-v1/manifest.json).
 
-**Binary black-box lab**: guided detached-binary lesson flow with hypothesis gating and reveal.
+## Limitations
 
-![Binary Lab](docs/screenshots/08-binary-lab.png)
+- Browser Education calculations are teaching previews, not calibrated research
+  results.
+- The shipped V4 browser runtime does not execute the maintained compatibility
+  N-body or relativity solvers.
+- The V5 service does not implement photometry, parameter inference, calibrated
+  UTC/TDB or BJD conversion, tides, relativity, collisions, or remote execution.
+- Scientific jobs require SciPy and PyArrow. The service advertises no forward
+  capability when required imports are unavailable.
+- The native Apple application has a smaller parameter and model surface than
+  the browser application.
+- No maintained native Apple screenshot gallery is checked in.
+- Chromium currently reports 8px of horizontal overflow at 200 percent zoom.
+- The local macOS app build currently fails for its `x86_64` slice, while the
+  portable Swift package tests pass.
+- No web deployment, backend hosting, TestFlight upload, App Store submission,
+  or signed macOS release is automated by this repository.
+- Public interfaces and schemas are alpha-level and may change.
 
-## Table of Contents
+See [`RELEASE_STATUS.md`](RELEASE_STATUS.md) for current verification evidence
+and unresolved release checks.
 
-- [Highlights](#highlights)
-- [Screenshots](#screenshots)
-- [Architecture](#architecture)
-- [How it works](#how-it-works)
-- [Application lifecycle](#application-lifecycle)
-- [Quick Start](#quick-start)
-- [Runtime Modes](#runtime-modes)
-- [Real Systems Snapshot](#real-systems-snapshot)
-- [Scripts](#scripts)
-- [Documentation](#documentation)
-- [Project Layout](#project-layout)
-- [Quality Gates](#quality-gates)
-- [Known Limits](#known-limits)
+## Requirements and prerequisites
 
-## Highlights
+### Browser development
 
-- Native V4 runtime path with automatic legacy input migration.
-- Preset and real-system flow as the default teaching entry.
-- Realtime and reference runtime profiles.
-- Transit, limb darkening, atmosphere hooks, phase curves, measurement smearing, and instrument noise.
-- Active learner-facing overlays for event landmarks, timing markers, flux decomposition, compare insets, scene ghosts, and geometry annotations.
-- Physical-vs-measured curve lanes with bounded chromatic overlays, observer contamination badges, and fixed shared-scale comparison support.
-- Forward scattering, ring scattering, and bounded refraction are available on the active V4 runtime path.
-- Detached-binary lab uses a curated detached eclipsing-binary scenario with explicit per-star stellar metadata in V4 configs and stays normalized to the combined stellar baseline.
-- Dynamic diagnostics (timing, conservation, RV, astrometry).
-- Didactics: black-box flow, hypothesis gate, locks, hints, compare labs, rubric scoring.
-- Versioned "real systems" snapshot from NASA Exoplanet Archive with freshness metadata.
+- Node.js 22.13.0 or later.
+- Corepack.
+- pnpm 11.4.0, selected through the `packageManager` field.
 
-## Architecture
+GitHub Actions tests Node.js 22 and 24. The package is private and is not
+published to npm.
 
-```mermaid
-flowchart TD
-  UI["UI Controls and Didactics"] --> Params["SystemParams / Scenario Payload"]
-  Params --> Normalize["normalizeScenarioInputToV4(...)"]
-  Normalize --> Runtime["createSimulationV4(config)"]
-  Runtime --> Mode{"Runtime Mode"}
-  Mode -->|realtime| RT["Fast Integrator + Interactive Rendering"]
-  Mode -->|reference| REF["Deterministic In-Thread Supersampling"]
-  RT --> Physics["Geometry + Photometry + Diagnostics"]
-  REF --> Physics
-  Physics --> Flux["Flux Decomposition and Observables"]
-  Flux --> Render["Canvas Rendering + Plots + Reports"]
-```
+### Scientific service
 
-Didactic progression in Binary Lab:
+- Python 3.14.6 or another Python 3.14 patch accepted by
+  `science_backend/pyproject.toml`.
+- A virtual environment with the required extras.
 
-```mermaid
-stateDiagram-v2
-  [*] --> BlackBox
-  BlackBox --> HypothesisSet: choose hypothesis
-  HypothesisSet --> RevealEnabled: unlock reveal
-  RevealEnabled --> CompareLab: run A/B comparison
-  CompareLab --> Rubric: rubric + hints
-  Rubric --> [*]
-```
+Python 3.15 and earlier Python minor versions are outside the declared package
+range.
 
-## How it works
+### Native Apple development
 
-End-to-end execution flow from page load to the running simulation:
+- macOS.
+- Swift 6.3.3.
+- Xcode 26.6 for the documented project, simulator, archive, and screenshot
+  checks.
+- iOS Simulator 26.5 with the named iPhone 17 Pro and iPad Pro 13-inch (M5)
+  destinations for the full matrix.
 
-```mermaid
-flowchart TD
-  subgraph load [Load]
-    HTML[index.html]
-    Main[main.ts]
-    Shell[renderAppShell]
-    Bootstrap[initApp]
-    Refs[createUiRefs]
-    Sim0[createSimulationRuntimeV4FromParams]
-  end
-  subgraph init [Init]
-    Wire[Wire presets, real systems, handlers]
-    ApplyInit[applyActiveScenarioForMode]
-    Scheduler[Render scheduler]
-  end
-  subgraph loop [Frame loop]
-    Dt[computeFrameDt, readTimeSpeed]
-    Step[simulation.step]
-    Smear[Optional smear and noise]
-    Render[drawFrameV3, plot.draw]
-    Readouts[Update readouts, didactics]
-  end
-  HTML --> Main
-  Main --> Shell
-  Main --> Bootstrap
-  Main --> Refs
-  Main --> Sim0
-  Main --> init
-  Wire --> ApplyInit
-  ApplyInit --> Scheduler
-  Scheduler --> loop
-  Readouts --> Scheduler
-```
+The Xcode project uses Swift 6 language mode. The package manifests require
+Swift tools 6.3.
 
-User actions such as Apply parameters, Reset time, scenario selection, and mode changes update the product state and invalidate the rendered view. Continuous animation frames run only while the simulation is active; paused and hidden states render on meaningful invalidation instead of maintaining an idle redraw loop.
+## Installation
 
-The learner-facing shell now exposes three complementary views of the same step state:
-
-- sky-plane geometry and semantic overlays from `renderSignals`
-- light-curve overlays, markers, compare insets, and contamination windows
-- didactics/lab controls that lock or reveal parts of the interface depending on the active lesson mode
-
-## Application lifecycle
-
-Main application states and transitions:
-
-```mermaid
-stateDiagram-v2
-  [*] --> Loaded
-  Loaded --> Initializing: init
-  Initializing --> Paused: apply initial scenario
-  Paused --> Running: Start
-  Running --> Paused: Pause or hidden
-  Paused --> Paused: Apply parameters / Reset time / Scenario
-  Running --> Running: simulation frame
-```
-
-## Quick Start
-
-Recommended:
+Install the browser toolchain from the repository root:
 
 ```bash
+corepack enable
+corepack install
 pnpm install --frozen-lockfile
+```
+
+For Scientific service development:
+
+```bash
+python3.14 -m venv science_backend/.venv
+source science_backend/.venv/bin/activate
+python -m pip install -e './science_backend[dev]'
+```
+
+The browser dependencies do not install Python or Apple dependencies.
+
+## Configuration
+
+The browser has no required environment file. Application state comes from
+defaults, URL state, imported workspace files, and UI controls.
+
+Repository configuration:
+
+| Path                             | Purpose                                                     |
+| -------------------------------- | ----------------------------------------------------------- |
+| `package.json`                   | Commands, Node requirement, pnpm version, and tool versions |
+| `pnpm-workspace.yaml`            | Dependency overrides and allowed install scripts            |
+| `vite.config.ts`                 | Build output, CSP, and development/preview security headers |
+| `playwright.config.ts`           | Browser test matrix and preview server                      |
+| `vitest.config.ts`               | Unit and integration test configuration                     |
+| `tsconfig.json`                  | Browser source typecheck                                    |
+| `tsconfig.test.json`             | Test typecheck                                              |
+| `science_backend/pyproject.toml` | Python package, extras, lint, type, and test settings       |
+| `native-apple/Config/*.xcconfig` | Apple deployment targets and Swift language mode            |
+| `contracts/`                     | Versioned browser, service, workspace, and parity contracts |
+
+Supported operational environment variables:
+
+| Variable               | Used by                                  | Default                  |
+| ---------------------- | ---------------------------------------- | ------------------------ |
+| `E2E_PORT`             | Playwright preview server                | `4174`                   |
+| `SMOKE_HOST`           | Served browser smoke test                | `127.0.0.1`              |
+| `SMOKE_PORT`           | Served browser smoke test                | `4173`                   |
+| `SCREENSHOT_DIR`       | Browser screenshot capture output        | `docs/screenshots/web`   |
+| `APPLE_SCREENSHOT_DIR` | Apple screenshot capture output          | `docs/screenshots/apple` |
+| `DEVELOPER_DIR`        | Xcode selection                          | System-selected Xcode    |
+| `OTHERLIGHT_BUILD`     | Scientific run-manifest build identifier | Service version          |
+
+Signing and notarization variables are documented in
+[`native-apple/README.md`](native-apple/README.md).
+
+## Usage
+
+### Browser application
+
+Start the development server:
+
+```bash
 pnpm dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open `http://localhost:5173`.
 
-## Runtime Modes
-
-- `Preset / real systems` is the default flow.
-- `Binary lab` remains available as a curated black-box detached-eclipsing-binary lesson path.
-- `Preset / real systems` can be selected at any time.
-- `Runtime mode` supports:
-  - `realtime`: interactive stepping.
-  - `reference`: deterministic in-thread supersampling.
-
-Binary Lab contract:
-
-- Binary Lab is a guided detached-eclipsing-binary lesson surface, not a general editable binary-parameter workbench.
-- The app now hides the generic transit/exomoon parameter form and the planet/moon O-C panel while Binary Lab is active, because those labels describe the other simulation surfaces rather than the detached-binary black-box contract.
-
-Main runtime entry points:
-
-- `src/sim/v4/runtime.ts`
-- `src/app/v4Runtime.ts`
-
-## Real Systems Snapshot
-
-The `Real systems` dropdown uses a versioned snapshot in:
-
-- `src/config/real-systems.snapshot.json`
-
-Manual refresh command:
+Build and serve the production bundle locally:
 
 ```bash
-pnpm data:real-systems:refresh
+pnpm build
+pnpm preview
 ```
 
-CI also checks that the committed snapshot metadata stays fresh enough for review.
+Vite writes the static bundle to `dist/`.
 
-## Scripts
+### Scientific service
 
-- `pnpm dev`: start Vite dev server
-- `pnpm build`: production build
-- `pnpm preview`: preview build
-- `pnpm start`: preview the built app (`vite preview`)
-- `pnpm smoke:served`: build + serve + probe the shipped browser surface
-- `pnpm test:e2e`: Playwright browser E2E tests against the built preview app
-- `pnpm hygiene:public`: reject local, generated, sensitive, or machine-specific files from the public candidate tree
-- `pnpm clean`: remove generated build, coverage, and browser-test output
-- `pnpm lint`: lint and formatting checks
-- `pnpm typecheck`: TypeScript checks
-- `pnpm test`: correctness tests excluding dedicated performance microbenchmarks
-- `pnpm test:coverage`: coverage threshold gate
-- `pnpm ci:verify`: lint + typecheck + test + build
-- `pnpm audit:deps`: dependency hygiene gate
-- `pnpm migrate:v4`: migrate legacy scenario payloads to V4 via stdin/stdout
-- `pnpm literature-benchmarks`: benchmark gate
-- `pnpm scientific-calibration`: scientific calibration gate
-- `pnpm didactics-acceptance`: didactics flow gate
-- `pnpm perf-smoke`: performance smoke gate
-- `pnpm migration-regression`: migration gate
-- `pnpm capture:github-screenshots`: regenerate the GitHub screenshot set from the live app shell
+Activate the prepared Python environment, then start the loopback service:
 
-## Documentation
+```bash
+source science_backend/.venv/bin/activate
+pnpm science:backend:serve
+```
 
-| Topic                     | Path                                               |
-| ------------------------- | -------------------------------------------------- |
-| Docs index                | `docs/README.md`                                   |
-| Product context           | `PRODUCT.md`                                       |
-| Visual system             | `DESIGN.md`                                        |
-| Frontend conventions      | `docs/frontend.md`                                 |
-| Parameters and UI mapping | `docs/params.md`                                   |
-| Physics overview          | `docs/physics/overview.md`                         |
-| Full derivation           | `docs/physics/full-derivation.md`                  |
-| N-body details            | `docs/physics/nbody.md`                            |
-| Orbit model               | `docs/physics/orbits.md`                           |
-| Relativity model          | `docs/physics/relativity.md`                       |
-| Photometry model          | `docs/physics/photometry.md`                       |
-| Visualization contract    | `docs/rendering/physics-visualization-contract.md` |
-| Validation and warnings   | `docs/validation.md`                               |
-| CI model                  | `docs/ci.md`                                       |
-| Runbook                   | `docs/RUNBOOK.md`                                  |
-| Contributing              | `CONTRIBUTING.md`                                  |
-| Security policy           | `SECURITY.md`                                      |
+The service listens on `http://127.0.0.1:8765`. In the browser, select the
+Scientific profile and refresh capabilities before submitting a job.
 
-## Project Layout
+The HTTP surface is:
+
+```text
+GET    /v1/capabilities
+POST   /v1/jobs
+GET    /v1/jobs/{job_id}
+DELETE /v1/jobs/{job_id}
+GET    /v1/jobs/{job_id}/result
+GET    /v1/artifacts/{sha256}
+```
+
+See [`science_backend/README.md`](science_backend/README.md) for request limits,
+extras, failure behavior, and backend checks.
+
+### Native Apple application
+
+Build the unsigned macOS Debug application with the pinned toolchain:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer \
+  bash scripts/build-run-macos.sh build
+```
+
+Use `run` instead of `build` to open the resulting application. See
+[`native-apple/README.md`](native-apple/README.md) for package tests, Xcode
+destinations, signing, packaging, and notarization.
+
+## Repository structure
 
 ```text
 src/
-  main.ts      browser entry: renders the static shell, then starts app/bootstrap
-  app/         scenario selection, runtime builders, didactics wiring
-  config/      defaults and real-systems snapshot
-  core/        shared types and units
-  didactics/   lesson engine, rubric, reports
-  photometry/  transit and additive flux components
-  physics/     kepler, frames, relativity, utility math
-  render/      canvas scene and overlays
-  sim/         runtime orchestration and integrators
-  ui/          DOM references and parameter mapping
+  app/          browser bootstrap, profile switching, frame loop, persistence
+  config/       defaults, scenarios, and the real-system snapshot
+  core/         shared TypeScript types, units, and DOM utilities
+  didactics/    lesson catalog, state, scoring, reports, and comparison logic
+  photometry/   transit, eclipse, atmosphere, scattering, and noise models
+  physics/      orbital, frame, relativity, and vector calculations
+  render/       canvas scene and light-curve rendering
+  science/      V5 browser contracts, validation, adapter, and HTTP client
+  sim/          V4 runtime orchestration and compatibility solvers
+  ui/           browser templates, controls, parameter mapping, and view state
+  workspace/    `.otherlight` document validation and serialization
+science_backend/
+  science_backend/  Python contracts, API, integration, and artifacts
+  tests/            Python contract and numerical tests
+native-apple/
+  App/              SwiftUI application
+  AppTests/         native unit and integration tests
+  AppUITests/       native UI tests
+  Packages/         portable Core and macOS-only Science Swift packages
+contracts/          versioned cross-runtime schemas, cases, and fixtures
+scripts/            verification, migration, capture, and Apple release tools
+tests/              TypeScript unit, integration, browser, contract, and policy tests
+docs/               maintained technical documentation and screenshot evidence
 ```
 
-## Quality Gates
+Browser startup follows `index.html` to `src/main.ts` to
+`src/app/bootstrap.ts`. The Scientific profile then uses
+`src/app/scienceWorkspace.ts`, `src/science/client.ts`, and the loopback Python
+service.
 
-Primary local verification:
+## Development workflow
+
+1. Install from the frozen lockfile.
+2. Run the narrow tests for the changed component.
+3. Run formatting, lint, type, and contract checks.
+4. Run the broad local gate before opening a pull request.
+5. Refresh screenshots only when the visible browser or native surface changes.
+
+Common commands:
 
 ```bash
-./scripts/ci-local.sh          # local release-confidence loop
-CI_AUDIT=1 ./scripts/ci-local.sh # include high-threshold dependency security audit
-pnpm ci:verify                 # hosted CI baseline: lint + typecheck + tests + build
-pnpm hygiene:public            # verify the public/private repository boundary
-pnpm exec playwright install chromium firefox webkit
-pnpm test:e2e                  # browser E2E against production preview
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm ci:verify
+pnpm clean
 ```
 
-The local script is the authoritative full loop. It adds the served browser probe, coverage,
-Playwright E2E, dependency hygiene, literature benchmarks, scientific calibration, didactics,
-performance, physics, and migration gates.
+`pnpm ci:verify` runs public and documentation hygiene, Swift documentation
+checks, ESLint, Prettier, dead-code analysis, duplication analysis, TypeScript 7
+and TypeScript 6 checks, tests, and the Vite build.
 
-`pnpm hygiene:public` evaluates tracked files plus non-ignored additions from the current worktree. It rejects generated outputs, local agent/tool state, secret-bearing filenames, private-key material, and absolute user-home paths. Public configuration remains explicit: `.codacy.yml`, `.github/`, `.impeccable/design.json`, and `playwright.config.ts` are maintained project files; their runtime state stays ignored.
+The broader browser loop is:
 
-Dependency overrides live in `package.json#pnpm`, the configuration surface used by the pinned pnpm 9 toolchain. The package is marked `private` and is not an npm publishing artifact.
+```bash
+./scripts/ci-local.sh
+```
 
-Code quality enforcement:
+It installs browser binaries and also runs E2E, served-bundle smoke, coverage,
+dependency audit, science contract tests, benchmarks, didactics, performance,
+physics, and migration checks. It does not run the Python backend suite or
+native Apple suite.
 
-- `@typescript-eslint/no-explicit-any` enforced as error in `src/`
-- 35 module layering boundary tests (core -> physics -> photometry -> sim -> render/ui -> app)
-- Property-based tests for numerical code (Kepler solver, vector ops, transit flux)
-- Hygiene tests: file size budget (720 lines), `any` budget, no experimental imports
+## Testing
 
-## Known Limits
+| Command                     | Scope                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `pnpm test`                 | Vitest suite excluding dedicated performance tests                              |
+| `pnpm test:coverage`        | V8 coverage run                                                                 |
+| `pnpm test:e2e`             | Build plus Playwright on Chromium, Firefox, WebKit, tablet, and mobile projects |
+| `pnpm typecheck`            | TypeScript 7 source and test projects                                           |
+| `pnpm typecheck:compat`     | TypeScript 6 compatibility                                                      |
+| `pnpm deadcode`             | Knip unused surface analysis                                                    |
+| `pnpm duplicates`           | jscpd scan of `src/`                                                            |
+| `pnpm physics-registry`     | Physics registry and formula-owner validation                                   |
+| `pnpm science:verify`       | TypeScript V5 contract and registry tests                                       |
+| `pnpm science:backend:test` | Python backend tests in the active environment                                  |
+| `pnpm verify:tour`          | Screenshot manifests, images, and documentation links                           |
 
-- The public-alpha browser matrix is Chromium, Firefox, and WebKit desktop plus tablet landscape and a 390px mobile smoke workflow. Browser binaries must be installed locally before the full Playwright matrix can run.
-- The committed real-system snapshot was fetched on 2026-02-19 and currently exceeds the 120-day
-  freshness gate. Refresh it with `pnpm data:real-systems:refresh` before release validation; that
-  command requires network access.
-- Automated semantic and reflow checks do not replace manual VoiceOver and NVDA walkthroughs. A manual screen-reader pass is still required before teaching-production use.
-- The phone layout keeps core workflows readable and operable; it is not a separate high-density Advanced-controls workflow.
-- The public alpha has no authentication, role model, permissions, backend, or persistent user data. Permission-denial testing is therefore not applicable.
+See [`tests/README.md`](tests/README.md) for suite ownership, runner boundaries,
+and the test directory map.
 
-- The repo now has a separate bounded `scientific-browser` runtime contract in the V4 path, but it is not the default shipped UX contract and it is still an incomplete `S1` fail-closed foundation rather than a finished scientific mode.
-- Any existing `scientific` wording in rendering or didactics documents refers to presentation density or lesson/debug detail, not to a validated scientific execution mode.
-- The browser-only `scientific-browser` roadmap currently treats these as explicitly out of scope until re-opened by a later milestone:
-  - full stellar-atmosphere or SED-grid synthesis
-  - full radiative-transfer atmosphere/transmission modeling
-  - scientific support for every current additive toy photometry control
-  - backend-dependent or remote-calibration scientific workflows
-  - solver regimes whose cost cannot be benchmarked reliably in the browser
-- Relativity corrections are modelled with practical approximations for browser execution.
-- Atmospheric and stellar modules expose advanced hooks but are not a full radiative-transfer research solver.
-- Detached-binary mode is a bounded relative-flux model for interactive eclipsing-binary teaching. It preserves per-star stellar metadata and benchmarked unequal-star/passband behaviour on the active Binary Lab path, but it is not a research-grade stellar-atmosphere or passband-synthesis solver.
-- Some high-fidelity effects are intentionally profile-gated to preserve interactive performance.
-- Mixed-shape occulters currently fall back to the non-transmissive solver when atmosphere transmission is enabled; the runtime now warns explicitly when that contract is hit.
-- Guided Labs score the physical transit signal, not the measured/noisy display curve.
+GitHub Actions also run Python formatting, linting, Pyright, backend tests,
+wheel build/install smoke, CodeQL, gitleaks, dependency audit, and conditional
+native Apple jobs. See [`docs/ci.md`](docs/ci.md).
 
-## Contributing and Security
+## Deployment and operation
 
-- Contribution guidelines: `CONTRIBUTING.md`
-- Security reporting: `SECURITY.md`
+### Browser
 
-## License
+`pnpm build` creates a static `dist/` directory. The repository does not contain
+a workflow that publishes it. A hosting environment must preserve the CSP and
+security header policy from `vite.config.ts` and must allow loopback connections
+to port `8765` if the Scientific profile is used.
 
-MIT, see `LICENSE`.
+### Scientific service
+
+The service is designed for one local user and must remain bound to loopback.
+It stores Arrow files under `.science-cache/` by default. The cache is local
+state, not access-controlled storage.
+
+### Native Apple
+
+GitHub Actions test the shared target and can create an unsigned review DMG on
+manual dispatch. Signed macOS archive, DMG packaging, notarization, and final
+verification are separate local commands that require explicit Apple
+credentials. The repository has no upload step.
+
+See [`docs/alpha-release.md`](docs/alpha-release.md) for candidate preparation
+and [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for operational commands.
+
+## Troubleshooting
+
+### `pnpm` is unavailable or has the wrong version
+
+Run `corepack enable` and `corepack install` from the repository root, then
+check `pnpm --version`. The expected version is 11.4.0.
+
+### Scientific capabilities are unavailable
+
+Confirm that the service is running on `127.0.0.1:8765` and that the active
+Python environment includes the `integrator`, `service`, and `artifacts`
+dependencies. Check `GET /v1/capabilities`. The browser will not submit until
+the response advertises `forward` and `radial-velocity`.
+
+### Playwright cannot find browser executables
+
+Install the pinned browsers:
+
+```bash
+pnpm exec playwright install chromium firefox webkit
+```
+
+### Swift reports an unsupported tools version
+
+Run:
+
+```bash
+source scripts/select-swift-toolchain.sh
+```
+
+The script requires exact Swift 6.3.3. Set `DEVELOPER_DIR` when Xcode 26.6 is
+installed beside another selected Xcode.
+
+### Local servers cannot bind to loopback
+
+Use unit and contract tests for local verification. Browser screenshot capture
+also provides `pnpm capture:tour:web:static`, which intercepts built asset
+requests without starting the normal capture server.
+
+Additional diagnostics are in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+
+## Security considerations
+
+- Do not expose the Python service to a LAN or the public internet.
+- Do not treat `.science-cache/` as protected storage.
+- Keep installs locked to `pnpm-lock.yaml` and the Python pins in
+  `science_backend/pyproject.toml`.
+- Do not commit environment files, credentials, signing material, local
+  databases, reports, or build output.
+- The browser client accepts only loopback HTTP URLs for the Scientific service.
+- The native application has no runtime network client and uses user-selected
+  file access.
+
+Report vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md).
+
+## Contribution guidance
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before changing source, contracts,
+physics models, screenshots, or release scripts. Pull requests should state the
+affected runtime, commands run, and any checks that remain unverified.
+
+## Documentation
+
+- [`docs/README.md`](docs/README.md): documentation index
+- [`docs/RUNBOOK.md`](docs/RUNBOOK.md): operation and troubleshooting
+- [`docs/ci.md`](docs/ci.md): local and hosted checks
+- [`docs/params.md`](docs/params.md): UI parameters, units, and model paths
+- [`docs/validation.md`](docs/validation.md): validation and warning behavior
+- [`docs/physics/overview.md`](docs/physics/overview.md): physics documentation map
+- [`docs/rendering/physics-visualization-contract.md`](docs/rendering/physics-visualization-contract.md):
+  visualization data contract
+- [`tests/README.md`](tests/README.md): test ownership, runners, and suite layout
+- [`DESIGN.md`](DESIGN.md): frontend visual and accessibility contract
+- [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md): third-party notices

@@ -1,4 +1,4 @@
-// src/physics/relativity.ts
+/** Solves supported relativistic timing and propagation corrections in SI units. */
 //
 // Lightweight relativity-inspired timing and precession utilities.
 //
@@ -30,25 +30,7 @@ export type NormalizedRelativityParams = {
   shapiroMinImpact: number;
 };
 
-export type LightTimeSolveDiagnostics = {
-  status: "converged" | "max-iters" | "invalid-input" | "nonfinite-delay" | "nonfinite-next";
-  converged: boolean;
-  iterations: number;
-  maxIters: number;
-  tolSec: number;
-  usedShapiro: boolean;
-  usedMultiBodyShapiro: boolean;
-  validityFlags: string[];
-  roemerSec?: number;
-  shapiroSec?: number;
-  delaySec?: number;
-  residualSec?: number;
-};
-
-export type LightTimeSolveResult = {
-  tEmit: number;
-  diagnostics: LightTimeSolveDiagnostics;
-};
+export type { LightTimeSolveDiagnostics, LightTimeSolveResult } from "./relativityTiming";
 
 const DEFAULT_C = 299_792_458;
 const DEFAULT_LTTE_ITERS = 2;

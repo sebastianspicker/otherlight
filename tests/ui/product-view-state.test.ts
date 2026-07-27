@@ -1,3 +1,5 @@
+/** Verifies product view state controls and views for accessible, consistent interaction. */
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,11 +13,12 @@ import {
 } from "../../src/ui/productViewState";
 
 const SHAREABLE_STATE: ProductViewState = {
+  profile: "scientific",
   mode: "lab",
   ui: "advanced",
   source: "real",
   scenario: "k2-3-b",
-  lab: "binary",
+  lab: "binary-stars",
   lesson: "binary-eclipse-lab",
   runtime: "reference",
 };
@@ -26,6 +29,12 @@ describe("product view state query adapter", () => {
 
     expect(parseProductViewState(params)).toEqual({ state: SHAREABLE_STATE, corrections: [] });
     expect(productViewStateSearch(SHAREABLE_STATE)).toContain("mode=lab");
+    expect(productViewStateSearch(SHAREABLE_STATE)).toContain("profile=scientific");
+  });
+
+  it("migrates pre-catalog lab query values without changing their system", () => {
+    expect(parseProductViewState(new URLSearchParams("lab=preset")).state.lab).toBe("transit-exomoon");
+    expect(parseProductViewState(new URLSearchParams("lab=binary")).state.lab).toBe("binary-stars");
   });
 
   it("falls back safely and reports invalid known values", () => {

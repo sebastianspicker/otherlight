@@ -1,3 +1,5 @@
+/** Verifies mutual events calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { circleIntersectionArea, visibleFractionWhenOcculted } from "../../src/photometry/mutualEvents";

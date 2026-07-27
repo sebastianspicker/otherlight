@@ -1,3 +1,6 @@
+/**
+ * Owns limb Darkening Bands support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { PassbandId } from "../core/types";
 
 const BLUE_LIMB_DARKENING_BANDS = new Set<PassbandId>(["u", "b"]);

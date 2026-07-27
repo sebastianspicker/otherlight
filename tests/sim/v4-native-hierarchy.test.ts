@@ -1,3 +1,5 @@
+/** Verifies v4 native hierarchy contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import type { SimulationConfigV4 } from "../../src/sim/v4/types";

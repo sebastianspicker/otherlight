@@ -1,4 +1,4 @@
-// src/photometry/patches.ts
+/** Precomputes stellar spot and facula geometry for deterministic photometry. */
 //
 // Shared helpers for projected brightness patches (spots/faculae).
 //

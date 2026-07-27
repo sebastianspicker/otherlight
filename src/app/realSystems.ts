@@ -1,3 +1,6 @@
+/**
+ * Owns real Systems support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { OrbitElements, SystemParams } from "../core/types";
 import {
   AU_M,

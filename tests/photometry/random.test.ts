@@ -1,3 +1,5 @@
+/** Verifies random calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { createMulberry32, normal, ouStep, poisson, randomWalkStep } from "../../src/photometry/random";

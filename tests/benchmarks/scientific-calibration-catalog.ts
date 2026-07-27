@@ -1,3 +1,5 @@
+/** Covers scientific calibration catalog reference data and literature comparisons for photometry calibration. */
+
 export type ScientificCalibrationSurface =
   | "relativity-timing"
   | "detached-binary-photometry"
@@ -5,7 +7,7 @@ export type ScientificCalibrationSurface =
   | "additive-photometry"
   | "exact-event-timing";
 
-export type ScientificCalibrationReferenceKind =
+type ScientificCalibrationReferenceKind =
   | "canonical-astronomy-target"
   | "analytic-reference"
   | "independent-geometry-reference"
@@ -75,41 +77,40 @@ export const SCIENTIFIC_CALIBRATION_CATALOG: ScientificCalibrationEntry[] = [
     id: "relativity-shapiro-one-au",
     surface: "relativity-timing",
     claim:
-      "Solar-limb one-AU relative Shapiro scale stays near the expected approximately 113 microsecond band.",
-    referenceKind: "canonical-astronomy-target",
-    provenance: "Named relative Shapiro-delay benchmark near 112.643 microseconds.",
+      "The repository's arbitrary-zero relative Shapiro convention stays near its one-AU regression value.",
+    referenceKind: "direct-model-reference",
+    provenance: "Regression value for the declared point-mass relative-delay convention.",
     referenceAnchor:
-      "Solar-limb relative Shapiro-delay reference for the one-AU benchmark geometry: approximately 112.643 microseconds.",
+      "Repository-relative one-AU solar-limb geometry: approximately 112.643 microseconds; not an absolute observable.",
     tolerance: "100 to 130 microseconds with close-to reference at 8 decimals in seconds.",
     owner: "tests/benchmarks/literature-benchmarks.test.ts",
-    releaseEvidence: true,
+    releaseEvidence: false,
   },
   {
     id: "relativity-shapiro-five-au",
     surface: "relativity-timing",
     claim:
-      "Solar-limb five-AU relative Shapiro scale stays near the expected approximately 144 microsecond band.",
-    referenceKind: "canonical-astronomy-target",
-    provenance: "Distance-scaled relative Shapiro-delay benchmark near 144.352 microseconds.",
+      "The repository's arbitrary-zero relative Shapiro convention stays near its five-AU regression value.",
+    referenceKind: "direct-model-reference",
+    provenance: "Regression value for the declared point-mass relative-delay convention.",
     referenceAnchor:
-      "Solar-limb relative Shapiro-delay reference for the five-AU benchmark geometry: approximately 144.352 microseconds.",
+      "Repository-relative five-AU solar-limb geometry: approximately 144.352 microseconds; not an absolute observable.",
     tolerance: "135 to 150 microseconds with close-to reference at 8 decimals in seconds.",
     owner: "tests/benchmarks/literature-benchmarks.test.ts",
-    releaseEvidence: true,
+    releaseEvidence: false,
   },
   {
     id: "relativity-shapiro-multibody",
     surface: "relativity-timing",
-    claim:
-      "Static enhanced multi-body LTTE plus Shapiro stays on the direct summed analytic reference delay.",
-    referenceKind: "analytic-reference",
+    claim: "Static enhanced multi-body LTTE plus Shapiro stays on its direct production-model regression.",
+    referenceKind: "direct-model-reference",
     provenance:
-      "Direct summed point-mass LTTE plus Shapiro analytic reference for a static multi-body geometry.",
+      "Direct sum of the same production LTTE and Shapiro helpers for a static multi-body geometry.",
     referenceAnchor:
-      "Direct summed point-mass LTTE plus Shapiro delay over the static benchmark-body geometry, independent of the runtime solver.",
+      "Same-model point-mass LTTE plus Shapiro sum over the static benchmark-body geometry; regression-only evidence.",
     tolerance: "Residual <= 1e-12 seconds and tEmit close to analytic reference at 10 decimals.",
     owner: "tests/benchmarks/literature-benchmarks.test.ts",
-    releaseEvidence: true,
+    releaseEvidence: false,
   },
   {
     id: "binary-photometry-analytic-overlap",
@@ -153,7 +154,7 @@ export const SCIENTIFIC_CALIBRATION_CATALOG: ScientificCalibrationEntry[] = [
     tolerance:
       "All covered additive channels close to direct model reference at 12 decimals on sampled configuration.",
     owner: "tests/benchmarks/literature-benchmarks.test.ts",
-    releaseEvidence: true,
+    releaseEvidence: false,
   },
   {
     id: "timing-eccentric-contact-reference",

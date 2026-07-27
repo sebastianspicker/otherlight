@@ -1,3 +1,6 @@
+/**
+ * Owns patch Factors support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { pointInPatch } from "./patchGeometry";
 import type { PatchPre } from "./patchTypes";
 

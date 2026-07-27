@@ -1,4 +1,4 @@
-// src/sim/didacticsHook.ts
+/** Maps simulation events into didactic progress signals without affecting physics. */
 //
 // Optional didactics computation hooks.
 // This decouples the sim/ layer from the didactics/ layer by using a callback pattern.

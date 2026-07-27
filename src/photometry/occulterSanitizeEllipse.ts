@@ -1,3 +1,6 @@
+/**
+ * Owns occulter Sanitize Ellipse support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import { isFinitePositive } from "../core/units";
 import type { EllipseOcculter } from "./occulterEllipse";
 import { hasFiniteCenter, overlapsStarByRadius } from "./occulterSanitizeGeometry";

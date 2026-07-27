@@ -1,3 +1,5 @@
+/** Verifies presets edge cases contracts across app startup, controls, and runtime integration. */
+
 import { expect, it } from "vitest";
 
 import { PRESETS, getPresetById } from "../../src/app/presets";

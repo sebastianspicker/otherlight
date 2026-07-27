@@ -1,3 +1,6 @@
+/**
+ * Owns didactics Wiring support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import { compareScenariosAtTime, interpretDidacticComparison } from "../didactics";
 import { revealSky, setHypothesis, type BinaryLabState } from "../didactics/binaryLab";

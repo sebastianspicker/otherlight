@@ -1,3 +1,5 @@
+/** Verifies v4 runtime reference aggregation contracts across system state, transit observables, and V4 integration. */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNativeState = vi.hoisted(() => ({

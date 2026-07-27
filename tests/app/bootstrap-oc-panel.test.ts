@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies bootstrap O-C panel contracts across app startup, controls, and runtime integration. */
 
 import { beforeEach, describe, expect, it } from "vitest";
 

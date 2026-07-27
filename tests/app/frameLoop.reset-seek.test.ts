@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies frame loop reset seek contracts across app startup, controls, and runtime integration. */
 
 import { expect, it, vi } from "vitest";
 
@@ -194,6 +195,76 @@ it("adds at least one visible sample on reset outside fixed mode", () => {
   controller.resetSimTimeAndLC({ resetNoise: true });
 
   expect(pushes).toEqual([{ flux: 1, t: 0 }]);
+});
+
+it("does not reuse a previous runtime step when the reset step fails", () => {
+  installPlotDom("dynamic");
+
+  const onSampleStep = vi.fn();
+  const state = {
+    running: false,
+    t: 40,
+    last: 0,
+    lastPlottedT: 40,
+    lastPlotMode: "physical",
+    lastPlotTrackingMode: "dynamic",
+    lastFluxForPlot: 0.42,
+    lastStepV3: makeStep(40, 0.42),
+    displayFluxScale: 1,
+    displayFluxTitle: "Flux (stellar units)",
+    noise: { noiseSeed: 1, noiseState: { seed: 1, rng: () => 0 } },
+    transitHistory: { planet: [], moon: [] },
+  } as unknown as FrameLoopState;
+  const controller = createFrameLoopController({
+    refs: {
+      btnStart: document.createElement("button"),
+      timeSpeed: document.getElementById("timeSpeed") as HTMLInputElement,
+      timeSpeedVal: document.createElement("span"),
+      timeSpeedMultiplier: null,
+      tVal: document.createElement("span"),
+      fluxVal: document.createElement("span"),
+      timingHistoryVal: document.createElement("span"),
+      warnVal: document.createElement("span"),
+      plotMode: document.getElementById("plotMode") as HTMLSelectElement,
+      plotTrackingMode: document.getElementById("plotTrackingMode") as HTMLSelectElement,
+      clampSmearedFlux: document.getElementById("clampSmearedFlux") as HTMLInputElement,
+      plotModeVal: document.createElement("span"),
+    } as any,
+    renderer: { invalidateSceneScale: vi.fn(), drawFrameV3: vi.fn() } as any,
+    plot: {
+      clear: vi.fn(),
+      setOptions: vi.fn(),
+      push: vi.fn(),
+      draw: vi.fn(),
+    } as any,
+    state,
+    getSimulation: () =>
+      ({
+        step: () => {
+          throw new Error("new runtime failed");
+        },
+      }) as any,
+    getParams: () => ({ star: { photometry: undefined }, dynamics: {} }) as any,
+    getBinaryLabState: () => ({ skyVisible: true }) as any,
+    isBinaryModeActive: () => false,
+    uiWarningText: () => undefined,
+    onSampleStep,
+    renderOcPanel: () => {},
+  });
+
+  controller.resetSimTimeAndLC({ resetNoise: true });
+
+  expect(state.lastStepV3).toBeNull();
+  expect(onSampleStep).toHaveBeenCalledWith(
+    expect.objectContaining({
+      tObsSec: 0,
+      flux: expect.objectContaining({ total: 1 }),
+      renderSignals: expect.objectContaining({
+        uncertaintyFlags: expect.arrayContaining(["fallback-step-used"]),
+      }),
+    }),
+    0,
+  );
 });
 
 it("locks the fixed preview y-range across resets for preset comparison", () => {

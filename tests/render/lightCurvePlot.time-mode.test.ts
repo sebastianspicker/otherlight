@@ -1,7 +1,38 @@
 // @vitest-environment jsdom
+/** Verifies light curve plot time mode rendering behavior and visual interpretation. */
+
 import { expect, it } from "vitest";
 import { LightCurvePlot } from "../../src/render/canvas2d";
+import type {
+  LightCurveHistoryState,
+  ResolvedLightCurvePlotOptions,
+} from "../../src/render/lightCurvePlotTypes";
+import { getVisibleSampleBounds, getVisibleTimeDomain } from "../../src/render/lightCurvePlotViewport";
 import { makeMockCanvas } from "../helpers/mockCanvas";
+
+function plotInternals(plot: LightCurvePlot): {
+  state: LightCurveHistoryState;
+  opts: ResolvedLightCurvePlotOptions;
+} {
+  return plot as unknown as {
+    state: LightCurveHistoryState;
+    opts: ResolvedLightCurvePlotOptions;
+  };
+}
+
+function visibleSampleBounds(plot: LightCurvePlot): { start: number; end: number } {
+  const { state, opts } = plotInternals(plot);
+  return getVisibleSampleBounds(state, opts);
+}
+
+function visibleTimeDomain(
+  plot: LightCurvePlot,
+  start: number,
+  end: number,
+): { tMin: number; tMax: number } | null {
+  const { state, opts } = plotInternals(plot);
+  return getVisibleTimeDomain(state, opts, start, end);
+}
 
 it("draw() keeps the plotted curve readable under robust scaling with a large outlier", () => {
   const canvas = makeMockCanvas(300, 150);
@@ -134,7 +165,7 @@ it("draw() still renders the mean line from the retained visible window when ena
 
   expect(() => plot.draw()).not.toThrow();
   expect(meanLineSegments).toBeGreaterThan(0);
-  expect((plot as any).getVisibleTimeDomain(0, 12)).toEqual({ tMin: 28, tMax: 39 });
+  expect(visibleTimeDomain(plot, 0, 12)).toEqual({ tMin: 28, tMax: 39 });
 });
 
 it("draw() still renders in time mode when some visible samples have no finite time", () => {
@@ -193,7 +224,7 @@ it("draw() still renders in time mode when some visible samples have no finite t
 
   expect(() => plot.draw()).not.toThrow();
   expect(lineToCalls.length).toBeGreaterThan(0);
-  expect((plot as any).getVisibleTimeDomain(0, 4)).toEqual({ tMin: 0, tMax: 3 });
+  expect(visibleTimeDomain(plot, 0, 4)).toEqual({ tMin: 0, tMax: 3 });
 });
 
 it("draw() still renders time-axis labels in time mode", () => {
@@ -337,9 +368,9 @@ it("live time mode falls back safely when the last cached finite time is trimmed
     plot.push(1 - i * 1e-3);
   }
 
-  const bounds = (plot as any).getVisibleSampleBounds();
+  const bounds = visibleSampleBounds(plot);
   expect(bounds.end - bounds.start).toBe(4);
-  expect((plot as any).getVisibleTimeDomain(bounds.start, bounds.end)).toBeNull();
+  expect(visibleTimeDomain(plot, bounds.start, bounds.end)).toBeNull();
   expect(() => plot.draw()).not.toThrow();
 });
 
@@ -356,8 +387,8 @@ it("dynamic time mode falls back safely when the earliest cached finite time is 
     plot.push(0.998 - i * 1e-3);
   }
 
-  const bounds = (plot as any).getVisibleSampleBounds();
+  const bounds = visibleSampleBounds(plot);
   expect(bounds.end - bounds.start).toBe(10);
-  expect((plot as any).getVisibleTimeDomain(bounds.start, bounds.end)).toBeNull();
+  expect(visibleTimeDomain(plot, bounds.start, bounds.end)).toBeNull();
   expect(() => plot.draw()).not.toThrow();
 });

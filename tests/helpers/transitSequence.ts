@@ -1,3 +1,5 @@
+/** Provides transit-sequence fixtures that preserve simulation timing contracts used by tests. */
+
 import type { SystemParams } from "../../src/core/types";
 import { projectToSky } from "../../src/physics/frames";
 import { computeBodyKinematics } from "../../src/sim/kinematics";
@@ -8,7 +10,7 @@ import { estimateTransitEvent, type TransitEventEstimate } from "../../src/sim/t
 
 export type TransitBodyId = "planet" | "moon";
 
-export type TransitSequenceEvent = {
+type TransitSequenceEvent = {
   epoch: number;
   predictedCenterSec: number;
   observedCenterSec?: number;

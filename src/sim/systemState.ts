@@ -1,3 +1,6 @@
+/**
+ * Owns system State support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { ExomoonTimingShapeParams, OrbitElements, SkyPoint, SystemParams } from "../core/types";
 import { G_SI, isFinitePositive, normalizeFiniteDiffDtSec } from "../core/units";
 import type { Vec3 } from "../physics/vec3";

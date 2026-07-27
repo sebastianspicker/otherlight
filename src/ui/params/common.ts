@@ -1,3 +1,6 @@
+/**
+ * Owns common support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type {
   LimbDarkeningLaw,
   LimbDarkeningLawQuadratic,
@@ -50,6 +53,37 @@ const OBLA_MAX = 0.95;
 const RING_INC_MAX_DEG = 90;
 export const RADIUS_MIN = 1e3;
 export const RADIUS_MAX = 1e12;
+
+export type DefaultPatchInputs = {
+  p1x: number;
+  p1y: number;
+  p1r: number;
+  p1f: number;
+  p2x: number;
+  p2y: number;
+  p2rx: number;
+  p2ry: number;
+  p2angle: number;
+  p2f: number;
+};
+
+export const roundPatchLength = (value: number): number => Math.round(value / 1e6) * 1e6;
+
+export const defaultPatchInputs = (starRadius: number): DefaultPatchInputs => {
+  const rStar = Math.max(1, starRadius);
+  return {
+    p1x: roundPatchLength(-0.28 * rStar),
+    p1y: roundPatchLength(0.22 * rStar),
+    p1r: roundPatchLength(0.16 * rStar),
+    p1f: 0.75,
+    p2x: roundPatchLength(0.33 * rStar),
+    p2y: roundPatchLength(-0.17 * rStar),
+    p2rx: roundPatchLength(0.21 * rStar),
+    p2ry: roundPatchLength(0.09 * rStar),
+    p2angle: 0.6,
+    p2f: 1.12,
+  };
+};
 
 function clampFreeformInput(text: string): string {
   return text.slice(0, MAX_FREEFORM_INPUT_CHARS);

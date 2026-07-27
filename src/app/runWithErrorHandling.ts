@@ -1,4 +1,4 @@
-// src/app/runWithErrorHandling.ts
+/** Runs app actions through the shared fatal-error reporting boundary. */
 //
 // Shared UI error-handling: run a sync or async handler, set a status element on success or error.
 

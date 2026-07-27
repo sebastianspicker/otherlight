@@ -1,6 +1,11 @@
+/**
+ * Owns param Validation support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type { SystemParams } from "../core/types";
+import { maxSmearingSubsamplesForGrid, maxSmearingSubsamplesForParams } from "../core/transitComputeBudget";
 import type { UiRefs } from "./refs";
 import { readUIIntoParams } from "./params/read";
+import { scenarioNormalRange } from "./scenarioControlRanges";
 
 export type ParamUiMeta = {
   id: string;
@@ -106,13 +111,14 @@ const inputHelp = (input: HTMLInputElement): string | undefined => {
 
 export const getParamUiMeta = (input: HTMLInputElement): ParamUiMeta => {
   const rawLabel = labelTextForInput(input);
+  const scenarioRange = scenarioNormalRange(input.id);
   return {
     id: input.id,
     label: rawLabel,
     group: inputGroup(input),
     unit: inputUnit(rawLabel),
-    min: finiteAttribute(input, "min"),
-    max: finiteAttribute(input, "max"),
+    min: scenarioRange?.min ?? finiteAttribute(input, "min"),
+    max: scenarioRange?.max ?? finiteAttribute(input, "max"),
     help: inputHelp(input),
   };
 };
@@ -137,8 +143,9 @@ function inputError(input: HTMLInputElement, overrideRanges: boolean): ParamVali
   if (input.id === "nSubsamples" && !Number.isInteger(value)) {
     return createError((label) => `${label} must be a whole number.`);
   }
-  const min = finiteAttribute(input, "min");
-  const max = finiteAttribute(input, "max");
+  const scenarioRange = scenarioNormalRange(input.id);
+  const min = scenarioRange?.min ?? finiteAttribute(input, "min");
+  const max = scenarioRange?.max ?? finiteAttribute(input, "max");
   if (!overrideRanges && min !== undefined && value < min) {
     return createError((label) => `${label} must be at least ${min}.`);
   }
@@ -148,7 +155,7 @@ function inputError(input: HTMLInputElement, overrideRanges: boolean): ParamVali
   return undefined;
 }
 
-function compatibilityErrors(form: HTMLFormElement): ParamValidationError[] {
+function compatibilityErrors(form: HTMLFormElement, candidateParams?: SystemParams): ParamValidationError[] {
   const errors: ParamValidationError[] = [];
   const number = (id: string) => (form.elements.namedItem(id) as HTMLInputElement | null)?.valueAsNumber;
   const checked = (id: string) => Boolean((form.elements.namedItem(id) as HTMLInputElement | null)?.checked);
@@ -167,6 +174,27 @@ function compatibilityErrors(form: HTMLFormElement): ParamValidationError[] {
   addOuterError("planetRingsEnabled", "planetRingInner", "planetRingOuter", "Planet");
   addOuterError("moonRingsEnabled", "moonRingInner", "moonRingOuter", "Moon");
 
+  const gridRes = number("gridRes");
+  const nSubsamples = number("nSubsamples");
+  if (
+    checked("smearEnabled") &&
+    Number.isFinite(gridRes) &&
+    Number.isFinite(nSubsamples) &&
+    (nSubsamples as number) >
+      (candidateParams
+        ? maxSmearingSubsamplesForParams(candidateParams)
+        : maxSmearingSubsamplesForGrid(gridRes))
+  ) {
+    const maxSubsamples = candidateParams
+      ? maxSmearingSubsamplesForParams(candidateParams)
+      : maxSmearingSubsamplesForGrid(gridRes);
+    errors.push({
+      fieldId: "nSubsamples",
+      label: "Measurement sub-samples",
+      message: `Measurement sub-samples must be no more than ${maxSubsamples} at grid resolution ${gridRes} to keep the live simulation responsive.`,
+    });
+  }
+
   const uiMode = (document.getElementById("uiModeSelect") as HTMLSelectElement | null)?.value;
   if (uiMode === "expert") {
     const x = number("observerX");
@@ -183,7 +211,10 @@ function compatibilityErrors(form: HTMLFormElement): ParamValidationError[] {
   return errors;
 }
 
-export function validateParamForm(form: HTMLFormElement): ParamValidationError[] {
+export function validateParamForm(
+  form: HTMLFormElement,
+  candidateParams?: SystemParams,
+): ParamValidationError[] {
   const overrideRanges = Boolean(
     (form.elements.namedItem("overrideMode") as HTMLInputElement | null)?.checked,
   );
@@ -193,7 +224,7 @@ export function validateParamForm(form: HTMLFormElement): ParamValidationError[]
       const error = inputError(input, overrideRanges);
       return error ? [error] : [];
     });
-  return [...errors, ...compatibilityErrors(form)];
+  return [...errors, ...compatibilityErrors(form, candidateParams)];
 }
 
 export function readValidatedUIIntoParams(
@@ -202,9 +233,10 @@ export function readValidatedUIIntoParams(
   scenarioDefaults: SystemParams,
   form: HTMLFormElement,
 ): ParamReadResult {
-  const errors = validateParamForm(form);
+  const params = readUIIntoParams(current, refs, scenarioDefaults);
+  const errors = validateParamForm(form, params);
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, params: readUIIntoParams(current, refs, scenarioDefaults) };
+  return { ok: true, params };
 }
 
 export function clearParamValidationUi(form: HTMLFormElement, summary: HTMLElement | null): void {

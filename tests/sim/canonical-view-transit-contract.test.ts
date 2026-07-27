@@ -1,3 +1,5 @@
+/** Verifies canonical observer geometry produces consistent transit-state interpretation. */
+
 import { describe, expect, it } from "vitest";
 
 import { getPresetById } from "../../src/app/presets";

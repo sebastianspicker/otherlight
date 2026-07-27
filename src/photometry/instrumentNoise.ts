@@ -1,4 +1,4 @@
-// src/photometry/instrumentNoise.ts
+/** Applies stateful instrument noise and systematics to normalized flux samples. */
 
 //
 // Instrument noise + systematics measurement layer.
@@ -117,8 +117,8 @@ export function resetInstrumentNoiseState(
 }
 
 /**
- * Apply instrument noise + systematics to a (smeared or instantaneous) flux sample.
- * This mutates `state` to keep time correlation and random walks continuous.
+ * Applies instrument noise and systematics to a flux sample in normalized stellar units.
+ * Mutates `state` to preserve correlated-noise continuity; disabled configuration is a strict, mutation-free no-op.
  */
 export function applyInstrumentNoiseAndSystematics(args: {
   flux: number; // physical/smeared flux in stellar units

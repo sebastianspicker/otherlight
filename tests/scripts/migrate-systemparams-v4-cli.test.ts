@@ -1,4 +1,7 @@
+/** Verifies migrate systemparams v4 CLI behavior for reproducible data and migration workflows. */
+
 import { execFileSync, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
@@ -15,6 +18,22 @@ function runCliOnJson(input: unknown): unknown {
     input: `${JSON.stringify(input, null, 2)}\n`,
   });
   return JSON.parse(stdout) as unknown;
+}
+
+const MAX_STDIN_BYTES = 10 * 1024 * 1024;
+
+function jsonAtByteLength(bytes: number): string {
+  const prefix = '{"padding":"';
+  const suffix = '"}';
+  return `${prefix}${"x".repeat(bytes - Buffer.byteLength(prefix) - Buffer.byteLength(suffix))}${suffix}`;
+}
+
+function resolvePath(root: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((value, segment) => {
+    return value !== null && typeof value === "object"
+      ? (value as Record<string, unknown>)[segment]
+      : undefined;
+  }, root);
 }
 
 describe("migrate-systemparams-v4 CLI", () => {
@@ -99,6 +118,27 @@ describe("migrate-systemparams-v4 CLI", () => {
     );
   });
 
+  it("rewrites legacy UI control paths to the V4 defaults they label", () => {
+    const scenario = JSON.parse(readFileSync("src/config/scenario.default.json", "utf8")) as unknown;
+
+    const migrated = runCliOnJson(scenario) as {
+      meta?: { schema?: string };
+      defaults: unknown;
+      ui?: { controls?: Array<{ path?: string }> };
+    };
+
+    expect(migrated.meta?.schema).toBe("SystemParamsV4+Controls/v4");
+    const paths = migrated.ui?.controls?.map((control) => control.path) ?? [];
+    expect(paths).toContain("bodies.stars.0.r");
+    expect(paths).toContain("photometry.baselineFlux");
+    expect(paths).toContain("bodies.planets.0.orbit.period");
+    expect(paths).toContain("bodies.moons.0.orbit.a");
+    for (const path of paths) {
+      expect(typeof path).toBe("string");
+      expect(resolvePath(migrated.defaults, path as string)).not.toBeUndefined();
+    }
+  });
+
   it("rejects path arguments so user input cannot drive filesystem access", () => {
     const result = spawnSync(
       process.execPath,
@@ -113,5 +153,28 @@ describe("migrate-systemparams-v4 CLI", () => {
     expect(result.stderr).toContain(
       "Usage: node scripts/migrate-systemparams-v4.mjs < input.json > output.json",
     );
+  });
+
+  it("accepts stdin exactly at the documented byte ceiling", () => {
+    const result = spawnSync(process.execPath, ["scripts/migrate-systemparams-v4.mjs"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      input: jsonAtByteLength(MAX_STDIN_BYTES),
+    });
+
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ version: "4" });
+  });
+
+  it("rejects stdin over the byte ceiling before JSON parsing", () => {
+    const result = spawnSync(process.execPath, ["scripts/migrate-systemparams-v4.mjs"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      input: `${jsonAtByteLength(MAX_STDIN_BYTES)}x`,
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(`Input exceeds ${MAX_STDIN_BYTES} bytes.`);
+    expect(result.stderr).not.toContain("Unexpected token");
   });
 });

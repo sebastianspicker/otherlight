@@ -1,3 +1,6 @@
+/**
+ * Owns scientific Browser Photometry Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { PhotometryParams } from "../../core/types";
 import type { SimulationConfigV4 } from "./types";
 

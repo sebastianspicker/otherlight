@@ -1,3 +1,6 @@
+/**
+ * Owns limb Darkening Evaluation support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { LimbDarkeningConstraints, LimbDarkeningLaw } from "../core/types";
 import { clamp01, toFiniteNumber } from "../core/units";
 

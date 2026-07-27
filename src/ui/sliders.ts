@@ -1,10 +1,11 @@
-// src/ui/sliders.ts
+/** Synchronizes range controls, numeric displays, and value-change callbacks. */
 //
 // Optional: slider mirroring for number inputs.
 
 import { clamp, toFiniteNumber } from "../core/units";
 import type { UiRefs } from "./refs";
 import { getParamUiMeta } from "./paramValidation";
+import { applyScenarioNormalRanges, scenarioNormalRange } from "./scenarioControlRanges";
 
 type WireParamSlidersOptions = {
   signal?: AbortSignal;
@@ -22,45 +23,36 @@ type NumericBounds = {
   max: number;
 };
 
-function listenerOptions(signal: AbortSignal | undefined): AddEventListenerOptions | undefined {
-  return signal ? { signal } : undefined;
-}
-
-function numberInputsInParamForm(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
-}
-
 function numericBounds(input: HTMLInputElement): NumericBounds | undefined {
-  const minAttr = input.getAttribute("min");
-  const maxAttr = input.getAttribute("max");
-  if (minAttr === null || maxAttr === null) return undefined;
-
-  const min = Number(minAttr);
-  const max = Number(maxAttr);
-  if (!Number.isFinite(min) || !Number.isFinite(max) || !(max > min)) return undefined;
+  const min = finiteNumberAttribute(input, "min");
+  const max = finiteNumberAttribute(input, "max");
+  if (min === undefined) return undefined;
+  if (max === undefined) return undefined;
+  if (max <= min) return undefined;
 
   return { min, max };
 }
 
 function numericStep(input: HTMLInputElement, bounds: NumericBounds): number {
-  const stepAttr = input.getAttribute("step");
   const fallbackStep = (bounds.max - bounds.min) / 500;
-  const step = stepAttr ? Number(stepAttr) : fallbackStep;
-
-  return Number.isFinite(step) && step > 0 ? step : fallbackStep;
+  const step = finiteNumberAttribute(input, "step");
+  if (step === undefined) return fallbackStep;
+  if (step <= 0) return fallbackStep;
+  return step;
 }
 
 function numericInputRange(input: HTMLInputElement): NumericInputRange | undefined {
   if (!input.id) return undefined;
 
-  const bounds = numericBounds(input);
+  const normalRange = scenarioNormalRange(input.id);
+  const bounds = normalRange ?? numericBounds(input);
   if (!bounds) return undefined;
 
   return {
     input,
     min: bounds.min,
     max: bounds.max,
-    step: numericStep(input, bounds),
+    step: normalRange?.step ?? numericStep(input, bounds),
   };
 }
 
@@ -162,15 +154,14 @@ function clampInputsToRanges(ranges: NumericInputRange[]): void {
 export function wireParamSliders(r: UiRefs, options: WireParamSlidersOptions = {}): void {
   if (!r.sliderRootEl) return;
 
-  const eventOptions = listenerOptions(options.signal);
+  applyScenarioNormalRanges();
+  const eventOptions = options.signal ? { signal: options.signal } : undefined;
   const isOverrideOn = () => Boolean(r.overrideModeEl?.checked);
   const ranges = numberInputsInParamForm().flatMap((input) => {
     const range = numericInputRange(input);
     return range ? [range] : [];
   });
 
-  // Keep slider root visible; override changes only clamp policy.
-  r.sliderRootEl.style.display = "";
   r.sliderRootEl.replaceChildren();
 
   for (const range of ranges) {
@@ -186,4 +177,18 @@ export function wireParamSliders(r: UiRefs, options: WireParamSlidersOptions = {
     },
     eventOptions,
   );
+}
+
+function numberInputsInParamForm(): HTMLInputElement[] {
+  return Array.from(document.querySelectorAll("#paramForm input[type='number']")) as HTMLInputElement[];
+}
+
+function finiteNumberAttribute(
+  input: HTMLInputElement,
+  attribute: "min" | "max" | "step",
+): number | undefined {
+  const rawValue = input.getAttribute(attribute);
+  if (rawValue === null) return undefined;
+  const value = Number(rawValue);
+  return Number.isFinite(value) ? value : undefined;
 }

@@ -1,3 +1,6 @@
+/**
+ * Owns presets Edge Cases Dynamics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemDynamicsParams } from "../core/types";
 import { AU_M, EARTH_MASS_KG, G_SI, JUPITER_MASS_KG, SOLAR_MASS_KG } from "../core/units";
 import {

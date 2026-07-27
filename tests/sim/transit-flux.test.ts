@@ -1,3 +1,5 @@
+/** Verifies transit flux contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
@@ -86,7 +88,7 @@ it("throws when star radius is NaN", () => {
 
 it("fails open to 1.0 when LD module errors out", () => {
   const params = defaults();
-  // LD model configured but no module loaded — should fall through gracefully
+  // LD model configured but no module loaded, so this should fall through gracefully
   params.star.photometry = {
     ...params.star.photometry,
     limbDarkeningModel: {

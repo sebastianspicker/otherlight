@@ -1,3 +1,6 @@
+/**
+ * Owns bootstrap Dirty Guard support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 type BootstrapDirtyGuardDeps = {
   form: HTMLFormElement | null;
   uiModeSelect: HTMLSelectElement;

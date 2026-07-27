@@ -1,3 +1,5 @@
+/** Verifies N-body config calculations in orbital dynamics and numerical integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";

@@ -1,3 +1,5 @@
+/** Verifies real systems snapshot freshness behavior for reproducible data and migration workflows. */
+
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 

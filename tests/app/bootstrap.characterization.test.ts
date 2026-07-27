@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies bootstrap lifecycle, cleanup, and normal-mode defaults across app initialization. */
 
 import { beforeEach, expect, it, vi } from "vitest";
 import { installAppShellDocument } from "../helpers/appShell";
@@ -272,6 +273,50 @@ it("restores the canonical observer view when returning to normal mode", async (
   expect(observerX.value).toBe("0");
   expect(observerY.value).toBe("0");
   expect(observerZ.value).toBe("1");
+});
+
+it("guards unapplied expert edits before returning to normal mode", async () => {
+  installDom();
+  const dialog = document.getElementById("dirtyChangeDialog") as HTMLDialogElement;
+  const showModal = vi.fn(() => dialog.setAttribute("open", ""));
+  const close = vi.fn(() => dialog.removeAttribute("open"));
+  dialog.showModal = showModal;
+  dialog.close = close;
+
+  const { initApp } = await import("../../src/app/bootstrap");
+  await initApp();
+  await flushAsync();
+
+  const uiModeSelect = document.getElementById("uiModeSelect") as HTMLSelectElement;
+  const planetR = document.getElementById("planetR") as HTMLInputElement;
+  const keepEditing = document.getElementById("dirtyKeepEditingBtn") as HTMLButtonElement;
+  const discard = document.getElementById("dirtyDiscardBtn") as HTMLButtonElement;
+
+  uiModeSelect.value = "expert";
+  uiModeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  await flushAsync();
+
+  planetR.value = "71000000";
+  planetR.dispatchEvent(new Event("input", { bubbles: true }));
+  uiModeSelect.value = "normal";
+  uiModeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+  expect(showModal).toHaveBeenCalledTimes(1);
+  expect(uiModeSelect.value).toBe("expert");
+  expect(planetR.value).toBe("71000000");
+
+  keepEditing.click();
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(uiModeSelect.value).toBe("expert");
+  expect(planetR.value).toBe("71000000");
+
+  uiModeSelect.value = "normal";
+  uiModeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  discard.click();
+  await flushAsync();
+
+  expect(uiModeSelect.value).toBe("normal");
+  expect(planetR.value).not.toBe("71000000");
 });
 
 it("reloads the visible form when Reset params is clicked", async () => {

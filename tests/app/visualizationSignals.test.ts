@@ -1,3 +1,5 @@
+/** Verifies visualization signals contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SimulationStepV3 } from "../../src/sim/v3/types";
@@ -8,7 +10,7 @@ import {
   sampleSeriesFromRuntime,
 } from "../../src/app/visualizationSignals";
 
-// Minimal step factory — only fills in the fields used by visualizationSignals
+// Minimal step factory that only fills in fields used by visualizationSignals
 function makeStep(
   t: number,
   overrides: Partial<SimulationStepV3["renderSignals"]["fluxComponents"]> = {},

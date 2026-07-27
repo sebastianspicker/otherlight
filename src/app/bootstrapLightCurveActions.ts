@@ -1,3 +1,6 @@
+/**
+ * Owns bootstrap Light Curve Actions support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { LightCurvePlot } from "../render/lightCurvePlot";
 
 type LightCurveActionState = {

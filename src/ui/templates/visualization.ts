@@ -1,3 +1,6 @@
+/**
+ * Owns visualization support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderVisualizationTemplate(): string {
   return `
     <section class="panel vizStack" aria-label="Scientific figures">
@@ -43,6 +46,7 @@ export function renderVisualizationTemplate(): string {
       <figure class="scientific-figure">
         <div class="figure-heading">
           <h2>Light curve</h2>
+          <span class="figure-key">Flux vs time</span>
           <button id="lcExportBtn" type="button">Export light-curve CSV</button>
         </div>
         <canvas id="lcCanvas" width="960" height="240" role="img" aria-label="Light curve plot" aria-describedby="lcSummary"></canvas>

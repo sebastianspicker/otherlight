@@ -1,3 +1,6 @@
+/**
+ * Owns load support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type { SystemParams } from "../../core/types";
 import { RAD2DEG } from "../../core/units";
 import { writeNumberInput } from "../inputs";

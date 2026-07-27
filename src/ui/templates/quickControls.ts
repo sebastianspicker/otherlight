@@ -1,6 +1,9 @@
+/**
+ * Owns quick Controls support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderQuickControlsTemplate(): string {
   return `
-        <fieldset id="quickControlsFieldset" data-ui-tier="normal">
+        <fieldset id="quickControlsFieldset" data-ui-tier="normal expert">
           <legend>Teaching controls</legend>
           <p class="help">
             Essential controls keep the teaching surface focused. These sliders update the model and figures directly.

@@ -1,3 +1,5 @@
+/** Verifies orbits strict contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { posFromResolvedElements } from "../../src/sim/orbits";

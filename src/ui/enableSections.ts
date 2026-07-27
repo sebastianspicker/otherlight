@@ -1,3 +1,6 @@
+/**
+ * Owns enable Sections support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { setDisabled } from "../core/dom";
 import type { UiRefs } from "./refs";
 

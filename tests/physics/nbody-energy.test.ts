@@ -1,7 +1,11 @@
+/** Verifies N-body energy calculations in orbital dynamics and numerical integration. */
+
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
 import { integrateToTimeWithConfig } from "../../src/sim/nbody/integrator";
+import { computePotentialEnergy } from "../../src/sim/nbody/diagnosticsEnergy";
+import { G_SI } from "../../src/core/units";
 import type { NBodyState, ResolvedNBodyConfig } from "../../src/sim/nbody/types";
 import { getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
 
@@ -67,6 +71,22 @@ function totalEnergyAssumingG1(params: { state: NBodyState; mus: number[] }): nu
 }
 
 describe("N-body (energy drift sanity)", () => {
+  it("uses the same Plummer-softened potential as the integrated force law", () => {
+    const arrays = {
+      positions: [
+        { x: 0, y: 0, z: 0 },
+        { x: 3, y: 0, z: 0 },
+      ],
+      velocities: [
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+      ],
+      mus: [2, 5],
+    } as any;
+
+    expect(computePotentialEnergy(arrays, 4)).toBeCloseTo(-(2 * 5) / (G_SI * 5), 12);
+  });
+
   it("keeps total mechanical energy approximately conserved for a stable 3-body configuration", () => {
     const muStar = 1;
     const muPlanet = 1e-3;

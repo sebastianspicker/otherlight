@@ -1,4 +1,4 @@
-// src/render/canvasUtil.ts
+/** Provides reusable Canvas 2D drawing and coordinate utilities. */
 //
 // Canvas 2D utilities for HiDPI (devicePixelRatio) sizing and stable coordinate transforms.
 //

@@ -1,4 +1,4 @@
-// src/sim/occulters.ts
+/** Builds the transit occulter set from the current simulated body geometry. */
 
 import type { SkyPoint, SystemParams } from "../core/types";
 import { isFinitePositive } from "../core/units";

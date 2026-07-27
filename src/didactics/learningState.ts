@@ -1,3 +1,6 @@
+/**
+ * Owns learning State support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { LearningState, SystemParams } from "../core/types";
 import { clampIndex, currentStepPhases } from "./engineSupport";
 import { DEFAULT_LESSON_ID, getLessonById } from "./lessons";

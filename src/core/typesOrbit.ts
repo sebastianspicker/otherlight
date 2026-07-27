@@ -1,4 +1,4 @@
-// src/core/typesOrbit.ts
+/** Defines orbital-element contracts used across physics and simulation layers. */
 
 //
 // Orbit-related core domain types.

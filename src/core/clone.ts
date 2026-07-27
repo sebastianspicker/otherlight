@@ -1,4 +1,4 @@
-// src/core/clone.ts
+/** Clones simulation-facing values without sharing mutable nested state. */
 //
 // Plain-data deep clone for JSON-serializable values only.
 

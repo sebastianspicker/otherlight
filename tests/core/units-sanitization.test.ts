@@ -1,3 +1,5 @@
+/** Verifies units sanitization contracts in shared app and physics primitives. */
+
 import { describe, expect, it } from "vitest";
 
 import { clamp, toFiniteNonNeg, toFiniteNumber, toFinitePos, toFinitePositiveOr } from "../../src/core/units";

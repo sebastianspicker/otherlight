@@ -1,3 +1,5 @@
+/** Verifies v4 runtime atmosphere contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { ScientificBrowserRuntimeError } from "../../src/sim/v4";

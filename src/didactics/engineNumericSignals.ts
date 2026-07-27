@@ -1,3 +1,6 @@
+/**
+ * Owns engine Numeric Signals support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { StepResult, SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";
 

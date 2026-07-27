@@ -1,3 +1,6 @@
+/**
+ * Owns integrator support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { Vec3 } from "../../physics/vec3";
 import { VEC3ZERO, vAdd, vDot, vIsFinite, vLenSq, vScale, vSub } from "../../physics/vec3";
 import type { NBodyState, ResolvedNBodyConfig } from "./types";
@@ -377,7 +380,7 @@ function advancePositions(positions: Vec3[], velocities: Vec3[], accelerations: 
 }
 
 function estimateEndVelocities(velocities: Vec3[], accelerations: Vec3[], dt: number): Vec3[] {
-  // NOTE: Known O(dt) approximation — the GR correction is velocity-dependent,
+  // NOTE: Known O(dt) approximation. The GR correction is velocity-dependent,
   // but we use an Euler-extrapolated velocity (v + a0*dt) rather than the
   // true velocity at time t+dt.  This introduces a first-order error in the
   // GR velocity-dependent terms.  The correction itself is small (post-
@@ -549,7 +552,7 @@ function shouldShrinkAdaptiveStep(err: number, settings: AdaptiveSettings, canSh
 }
 
 function warnIfAcceptedAtDtMin(err: number, settings: AdaptiveSettings, canShrink: boolean): void {
-  // Accepted at dtMin with error above tolerance — the integrator cannot
+  // Accepted at dtMin with error above tolerance because the integrator cannot
   // refine further.  Log a warning so the caller can diagnose stiff or
   // pathological configurations.
   if (!canShrink && Number.isFinite(err) && err > settings.tol) {

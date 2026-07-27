@@ -1,4 +1,4 @@
-// src/sim/additiveFlux.ts
+/** Aggregates non-occultation flux contributions into the normalized observation. */
 
 import type {
   AtmosphereRTParams,

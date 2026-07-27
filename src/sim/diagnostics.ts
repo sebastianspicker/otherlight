@@ -1,4 +1,4 @@
-// src/sim/diagnostics.ts
+/** Derives simulation diagnostics separately from physical state evolution. */
 
 import type { SkyPoint, SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";

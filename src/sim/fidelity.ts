@@ -1,3 +1,6 @@
+/**
+ * Owns fidelity support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { FidelityProfile, PhysicsFeatureFlags, SystemParams } from "../core/types";
 
 function resolveFidelityProfile(system: SystemParams): FidelityProfile {

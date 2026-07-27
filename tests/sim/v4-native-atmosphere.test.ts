@@ -1,3 +1,5 @@
+/** Verifies v4 native atmosphere contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import type { SimulationConfigV4 } from "../../src/sim/v4/types";
@@ -76,7 +78,7 @@ function baseMoonCfg(): SimulationConfigV4 {
   };
 }
 
-it("reduces effective blocking for low-opacity RT layers", async () => {
+it("keeps the solid core opaque and adds weak atmospheric blocking for low-opacity RT layers", async () => {
   const opaque = baseCfg();
   const rt = baseCfg();
   rt.photometry = {
@@ -96,7 +98,7 @@ it("reduces effective blocking for low-opacity RT layers", async () => {
   const fOpaque = simOpaque.step(0).flux.total;
   const fRt = simRt.step(0).flux.total;
 
-  expect(fRt).toBeGreaterThanOrEqual(fOpaque);
+  expect(fRt).toBeLessThanOrEqual(fOpaque);
 });
 
 it("applies supported gray layer cloud opacity on the scientific-browser native RT path", async () => {
@@ -213,7 +215,7 @@ it("applies supported moon-target gray RT layers on the scientific-browser nativ
   const fOpaque = simOpaque.step(0).flux.total;
   const fRtMoon = simRtMoon.step(0).flux.total;
 
-  expect(fRtMoon).toBeGreaterThanOrEqual(fOpaque);
+  expect(fRtMoon).toBeLessThanOrEqual(fOpaque);
 });
 
 it("stacks supported gray RT layers on the scientific-browser native path", async () => {

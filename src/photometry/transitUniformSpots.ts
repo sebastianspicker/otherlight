@@ -1,4 +1,4 @@
-// src/photometry/transitUniformSpots.ts
+/** Computes uniform-disk transits with projected stellar spot and facula effects. */
 //
 // Uniform-brightness stellar disk transit photometry with stellar spots/faculae,
 // using deterministic midpoint integration over the stellar disk.

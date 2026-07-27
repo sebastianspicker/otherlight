@@ -1,44 +1,65 @@
-# Documentation Index
+# Documentation
 
-This folder contains the maintained architecture, physics, frontend, validation, and operations documentation for Transit Light-Curve Lab.
+Start with the root [`README.md`](../README.md) for purpose, installation,
+configuration, usage, repository structure, and common commands.
 
-## Reading paths
+## Development and operation
 
-- New contributor: start with `../README.md`, then `RUNBOOK.md`, then `params.md`
-- Frontend/product work: `../PRODUCT.md` -> `../DESIGN.md` -> `frontend.md`
-- Runtime/data flow: `../README.md` architecture diagrams, then `src/main.ts` -> `src/app/bootstrap.ts` -> `src/app/v4Runtime.ts`
-- Physics deep dive: `physics/overview.md` -> `physics/full-derivation.md`
-- CI and release checks: `ci.md`, `validation.md`
-- Didactics flow: start with the Binary Lab section in `../README.md` and the visualization contract in `rendering/physics-visualization-contract.md`
-- GitHub screenshot capture command: `pnpm capture:github-screenshots`
-- Public/private repository boundary: `pnpm hygiene:public`
+| Document                                   | Contents                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| [`RUNBOOK.md`](RUNBOOK.md)                 | Browser, Scientific service, and native Apple operation and troubleshooting |
+| [`ci.md`](ci.md)                           | Local checks, GitHub Actions jobs, and conditional platform gates           |
+| [`alpha-release.md`](alpha-release.md)     | Candidate preparation and distribution boundaries                           |
+| [`tour.md`](tour.md)                       | Browser screenshot evidence and native capture requirements                 |
+| [`frontend.md`](frontend.md)               | Browser shell, state, accessibility, and responsive behavior                |
+| [`../tests/README.md`](../tests/README.md) | Test ownership, runner boundaries, and suite layout                         |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Development setup and pull-request expectations                             |
+| [`../SECURITY.md`](../SECURITY.md)         | Trust boundaries and private vulnerability reporting                        |
 
-## Map
+## Models and data
 
-```mermaid
-flowchart LR
-  Root["README.md"] --> Params["params.md"]
-  Root --> Product["PRODUCT.md / DESIGN.md"]
-  Product --> Frontend["frontend.md"]
-  Root --> Runbook["RUNBOOK.md"]
-  Root --> Validation["validation.md"]
-  Root --> CI["ci.md"]
-  Root --> Physics["physics/overview.md"]
-  Physics --> Derivation["physics/full-derivation.md"]
-  Physics --> NBody["physics/nbody.md"]
-  Physics --> Relativity["physics/relativity.md"]
-  Physics --> Photometry["physics/photometry.md"]
-  Root --> Rendering["rendering/physics-visualization-contract.md"]
+| Document                                                                                     | Contents                                         |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [`params.md`](params.md)                                                                     | UI controls, units, defaults, and model paths    |
+| [`validation.md`](validation.md)                                                             | Input validation, warnings, and failure behavior |
+| [`ADDING_BODY.md`](ADDING_BODY.md)                                                           | Adding a body to the browser model               |
+| [`physics/overview.md`](physics/overview.md)                                                 | Physics documentation and implementation map     |
+| [`physics/model-status.md`](physics/model-status.md)                                         | Model availability and evidence status           |
+| [`physics/full-derivation.md`](physics/full-derivation.md)                                   | Formula derivations and assumptions              |
+| [`physics/v5-scientific-contract.md`](physics/v5-scientific-contract.md)                     | Scientific request and numerical contract        |
+| [`rendering/physics-visualization-contract.md`](rendering/physics-visualization-contract.md) | Simulation-to-visualization data contract        |
+| [`references.bib`](references.bib)                                                           | Bibliographic references                         |
+
+## Platform documentation
+
+| Document                                                                           | Contents                                                           |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [`../science_backend/README.md`](../science_backend/README.md)                     | Python package, HTTP service, limits, and tests                    |
+| [`../native-apple/README.md`](../native-apple/README.md)                           | Swift packages, application targets, tests, and macOS distribution |
+| [`../native-apple/PRIVACY.md`](../native-apple/PRIVACY.md)                         | Native application data handling                                   |
+| [`../contracts/capabilities-v1/README.md`](../contracts/capabilities-v1/README.md) | Cross-platform capability registry                                 |
+| [`../contracts/education-v4/README.md`](../contracts/education-v4/README.md)       | Browser/native Education parity fixture                            |
+| [`../contracts/workspace-v1/README.md`](../contracts/workspace-v1/README.md)       | Saved workspace schema                                             |
+
+## Design
+
+[`../DESIGN.md`](../DESIGN.md) is the maintained visual and accessibility
+contract. [`frontend.md`](frontend.md) explains how that contract maps to the
+browser shell. The token registry is
+[`design/quiet-observatory.tokens.json`](design/quiet-observatory.tokens.json).
+
+## Documentation checks
+
+Run these commands from the repository root:
+
+```bash
+pnpm hygiene:public
+pnpm hygiene:docs
+pnpm hygiene:swift-docs
+pnpm verify:tour
+pnpm exec vitest run tests/docs/readme-links.test.ts
 ```
 
-Ephemeral local inspection notes should stay outside the maintained docs set (see `.gitignore`).
-Generated maps, one-off verification baselines, audit ledgers, status snapshots, and superseded
-planning packets are local-only material by default.
-
-Generated build, coverage, browser-report, and tool-runtime directories are also local-only. Run
-`pnpm clean` to remove generated verification output and `pnpm hygiene:public` before preparing a
-public change.
-
-Completed or superseded plan/status/ledger artifacts belong under ignored `docs/archive/` content
-for handoff traceability. They are not part of the maintained reading path and should not be
-included in routine commits unless a reviewer explicitly asks for the historical packet.
+`pnpm hygiene:public` also checks non-ignored untracked files. Build output,
+reports, local caches, credentials, and private maintenance material do not
+belong in the public documentation tree.

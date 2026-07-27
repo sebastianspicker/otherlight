@@ -1,3 +1,5 @@
+/** Enforces documentation boundaries against experimental implementation imports. */
+
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";

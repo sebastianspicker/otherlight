@@ -1,3 +1,6 @@
+/**
+ * Owns adapter support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { deepClone } from "../../core/clone";
 import type { OrbitElements, PhotometryParams, SystemParams } from "../../core/types";
 import { cloneParams } from "../../core/clone";

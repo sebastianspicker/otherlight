@@ -1,3 +1,5 @@
+/** Verifies dynamics adaptive calculations in orbital dynamics and numerical integration. */
+
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

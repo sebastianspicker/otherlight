@@ -1,3 +1,5 @@
+/** Verifies v4 atmosphere effects contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
@@ -81,6 +83,8 @@ it("legacy atmosphereTransmission changes the native V4 transit depth", async ()
   expect(Math.abs(haloStep.flux.transitFactor - baseStep.flux.transitFactor)).toBeGreaterThan(1e-5);
 });
 
+// These dense spectral scans remain bounded but cross Vitest's 5 s default
+// under V8 coverage instrumentation on slower runners.
 it("band weighting changes the V4 atmosphereRT transit signal when molecular features are present", async () => {
   const featureWeighted = cloneParams(SCENARIO_DEFAULTS);
   delete featureWeighted.moon;
@@ -145,7 +149,7 @@ it("band weighting changes the V4 atmosphereRT transit signal when molecular fea
   const continuumStep = continuumRuntime.step(center.tSec);
 
   expect(Math.abs(featureStep.flux.transitFactor - continuumStep.flux.transitFactor)).toBeGreaterThan(1e-5);
-});
+}, 30_000);
 
 it("adds the configured atmosphereRT refraction term into the V4 plotted total flux", async () => {
   const refractive = cloneParams(SCENARIO_DEFAULTS);
@@ -212,4 +216,4 @@ it("adds the configured atmosphereRT refraction term into the V4 plotted total f
   expect(refractiveStep.flux.refraction).toBeGreaterThan(0);
   expect(refractiveStep.flux.decomposition?.refraction).toBe(refractiveStep.flux.refraction);
   expect(refractiveStep.flux.total).toBeGreaterThan(baselineStep.flux.total);
-});
+}, 30_000);

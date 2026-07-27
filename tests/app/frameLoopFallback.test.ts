@@ -1,3 +1,5 @@
+/** Verifies frame loop fallback contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import {

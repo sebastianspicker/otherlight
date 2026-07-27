@@ -1,3 +1,5 @@
+/** Verifies validation orbit angles contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { assertOrbit } from "../../src/sim/validation";

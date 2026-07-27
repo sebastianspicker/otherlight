@@ -1,3 +1,5 @@
+/** Verifies system state exomoon timing contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";

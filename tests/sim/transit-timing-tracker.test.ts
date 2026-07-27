@@ -1,3 +1,5 @@
+/** Verifies transit timing tracker contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { cloneParams } from "../../src/app/scenario";

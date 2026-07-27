@@ -1,3 +1,6 @@
+/**
+ * Owns spectral Feature Arrays support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { SpectralGaussianFeatureParams } from "../../core/typesPhotometryAtmosphere";
 
 export function spectralFeatureArray(values: number[] | undefined): number[] {

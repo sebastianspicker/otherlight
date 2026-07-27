@@ -1,4 +1,4 @@
-// src/app/presets.ts
+/** Applies named simulation presets and keeps their UI-facing metadata together. */
 //
 // Curated, didactic presets for the UI.
 //
@@ -42,7 +42,7 @@ export const PRESETS: ScenarioPreset[] = [
     id: "default",
     label: "Default (didactic transit model)",
     description:
-      "Didaktisch ueberzeichnetes Planet-Mond-Transitmodell aus `src/config/scenario.default.json` mit vergroesserten Koerpern und engen Bahnen fuer eine gut lesbare Canvas- und Flux-Darstellung.",
+      "Didactically exaggerated planet-moon transit model from `src/config/scenario.default.json`, with enlarged bodies and compact orbits for readable canvas geometry and flux changes.",
     params: base(),
   },
   (() => {
@@ -68,7 +68,7 @@ export const PRESETS: ScenarioPreset[] = [
       id: "kepler-planet-only",
       label: "Kepler: planet-only transit",
       description:
-        "Reiner Planetentransit (kein Mond), keine additiven Flux-Komponenten: ideal, um Impact-Parameter/LD zu erklären.",
+        "Pure planet transit with no moon or additive flux components, ideal for teaching impact parameter and limb darkening.",
       params: p,
     } satisfies ScenarioPreset;
   })(),
@@ -96,7 +96,7 @@ export const PRESETS: ScenarioPreset[] = [
       id: "limb-darkening-variation",
       label: "Limb darkening: multi-band variation",
       description:
-        "Stärkeres quadratisches Limb Darkening + Beispiel für Multi-band-Koeffizienten (bandpass/bands).",
+        "Stronger quadratic limb darkening with example multi-band coefficients through the bandpass and bands controls.",
       params: p,
     } satisfies ScenarioPreset;
   })(),
@@ -143,7 +143,7 @@ export const PRESETS: ScenarioPreset[] = [
       id: "nbody-with-perturber",
       label: "N-body: perturber + star reflex",
       description:
-        "N-body (Velocity-Verlet) mit star reflex motion und einem äußeren Perturber: zeigt dynamische TTV/TDV-Effekte.",
+        "Velocity-Verlet N-body scenario with stellar reflex motion and an outer perturber, showing dynamic TTV and TDV effects.",
       params: p,
     } satisfies ScenarioPreset;
   })(),

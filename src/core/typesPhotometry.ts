@@ -1,3 +1,6 @@
+/**
+ * Owns types Photometry support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ */
 export type {
   AtmosphereRTLayer,
   AtmosphereRTParams,

@@ -1,3 +1,5 @@
+/** Covers literature benchmarks reference data and literature comparisons for photometry calibration. */
+
 import { expect, it } from "vitest";
 
 import { AU_M, SOLAR_RADIUS_M } from "../../src/core/units";
@@ -230,7 +232,7 @@ function directScientificBrowserAdditiveReference(config: SimulationConfigV4, tS
   };
 }
 
-it("keeps the scientific calibration catalog complete for the active scientific surfaces", () => {
+it("classifies calibration evidence without promoting same-model regressions", () => {
   const ids = new Set<string>();
   const seenSurfaces = new Set<string>();
   const releaseEvidenceSurfaces = new Set<string>();
@@ -254,7 +256,10 @@ it("keeps the scientific calibration catalog complete for the active scientific 
   }
 
   expect([...seenSurfaces].sort()).toEqual([...ACTIVE_SCIENTIFIC_CALIBRATION_SURFACES].sort());
-  expect([...releaseEvidenceSurfaces].sort()).toEqual([...ACTIVE_SCIENTIFIC_CALIBRATION_SURFACES].sort());
+  expect(releaseEvidenceSurfaces.size).toBeGreaterThan(0);
+  for (const entry of SCIENTIFIC_CALIBRATION_CATALOG.filter((item) => item.releaseEvidence)) {
+    expect(["direct-model-reference", "local-perf-budget"]).not.toContain(entry.referenceKind);
+  }
   expect(anchoredReleaseEvidenceEntries.size).toBe(
     SCIENTIFIC_CALIBRATION_CATALOG.filter((entry) => entry.releaseEvidence).length,
   );
@@ -368,35 +373,31 @@ it("keeps one-AU light time near the canonical approximately 499 second referenc
   expect(delaySec).toBeCloseTo(499.00478, 3);
 });
 
-it("keeps the solar-limb one-AU relative Shapiro scale near the expected approximately 113 microsecond band", () => {
+it("keeps the one-AU arbitrary-zero relative Shapiro convention on its regression value", () => {
   const delaySec = shapiroDelaySec({
     r: { x: SOLAR_RADIUS_M, y: 0, z: -AU_M },
     observerDir: { x: 0, y: 0, z: 1 },
     mu: 1.3271244e20,
     c: 299_792_458,
   });
-  const magnitudeSec = Math.abs(delaySec);
-
-  expect(magnitudeSec).toBeGreaterThan(100e-6);
-  expect(magnitudeSec).toBeLessThan(130e-6);
-  expect(magnitudeSec).toBeCloseTo(112.643e-6, 8);
+  expect(delaySec).toBeGreaterThan(100e-6);
+  expect(delaySec).toBeLessThan(130e-6);
+  expect(delaySec).toBeCloseTo(112.643e-6, 8);
 });
 
-it("keeps the solar-limb five-AU relative Shapiro scale near the expected approximately 144 microsecond band", () => {
+it("keeps the five-AU arbitrary-zero relative Shapiro convention on its regression value", () => {
   const delaySec = shapiroDelaySec({
     r: { x: SOLAR_RADIUS_M, y: 0, z: -5 * AU_M },
     observerDir: { x: 0, y: 0, z: 1 },
     mu: 1.3271244e20,
     c: 299_792_458,
   });
-  const magnitudeSec = Math.abs(delaySec);
-
-  expect(magnitudeSec).toBeGreaterThan(135e-6);
-  expect(magnitudeSec).toBeLessThan(150e-6);
-  expect(magnitudeSec).toBeCloseTo(144.352e-6, 8);
+  expect(delaySec).toBeGreaterThan(135e-6);
+  expect(delaySec).toBeLessThan(150e-6);
+  expect(delaySec).toBeCloseTo(144.352e-6, 8);
 });
 
-it("keeps the static LTTE plus enhanced multi-body Shapiro branch on the direct summed analytic reference delay", () => {
+it("keeps the static LTTE plus enhanced multi-body Shapiro branch on its same-model regression", () => {
   const tObs = 10_000;
   const r = { x: 0, y: 0, z: 1.5e11 };
   const observerDir = { x: 0, y: 0, z: 1 };
@@ -438,7 +439,7 @@ it("keeps the static LTTE plus enhanced multi-body Shapiro branch on the direct 
   expect(out.tEmit).toBeCloseTo(expected, 10);
 });
 
-it("keeps the static LTTE plus Shapiro branch on the direct analytic reference delay", () => {
+it("keeps the static LTTE plus Shapiro branch on its same-model regression", () => {
   const tObs = 10_000;
   const r = { x: 0, y: 0, z: 1.5e11 };
   const observerDir = { x: 0, y: 0, z: 1 };

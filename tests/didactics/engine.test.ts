@@ -1,3 +1,5 @@
+/** Verifies engine contracts supporting interpretable lesson flows. */
+
 import { expect, it } from "vitest";
 import { buildBinaryLabParams } from "../../src/app/binaryLab";
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";

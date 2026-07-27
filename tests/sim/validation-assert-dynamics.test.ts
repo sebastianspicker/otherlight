@@ -1,3 +1,5 @@
+/** Verifies validation assert dynamics contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
@@ -31,7 +33,7 @@ function withNbody(params: SystemParams): SystemParams {
   };
 }
 
-describe("assertDynamicsInputs — nbody validation", () => {
+describe("assertDynamicsInputs: nbody validation", () => {
   it("passes for valid nbody config", () => {
     expect(() => assertDynamicsInputs(withNbody(baseParams()))).not.toThrow();
   });
@@ -137,7 +139,7 @@ describe("assertDynamicsInputs — nbody validation", () => {
   });
 });
 
-describe("assertDynamicsInputs — integrator validation", () => {
+describe("assertDynamicsInputs: integrator validation", () => {
   it("throws for invalid integrator.mode", () => {
     const p = baseParams();
     (p as any).dynamics = { integrator: { mode: "runge-kutta" } };
@@ -193,7 +195,7 @@ describe("assertDynamicsInputs — integrator validation", () => {
   });
 });
 
-describe("assertDynamicsInputs — relativity validation", () => {
+describe("assertDynamicsInputs: relativity validation", () => {
   function withRelativity(params: SystemParams): SystemParams {
     return {
       ...params,
@@ -264,7 +266,7 @@ describe("assertDynamicsInputs — relativity validation", () => {
   });
 });
 
-describe("assertDynamicsInputs — timekeeping validation", () => {
+describe("assertDynamicsInputs: timekeeping validation", () => {
   function withTimekeeping(params: SystemParams): SystemParams {
     return {
       ...params,

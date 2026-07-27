@@ -1,3 +1,5 @@
+/** Verifies v4 native binary photometry contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/app/binaryLab";

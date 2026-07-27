@@ -1,3 +1,6 @@
+/**
+ * Owns engine support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { DidacticSignals, LearningState, StepResult, SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";
 import { DEFAULT_LESSON_ID, getLessonById } from "./lessons";

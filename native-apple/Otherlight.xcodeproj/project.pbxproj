@@ -1,0 +1,132 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* OtherlightApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* OtherlightApp.swift */; };
+		A10000000000000000000002 /* PresentationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* PresentationModels.swift */; };
+		A10000000000000000000003 /* EducationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* EducationSession.swift */; };
+		A10000000000000000000004 /* SimulationRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* SimulationRuntime.swift */; };
+		A10000000000000000000005 /* ExportDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* ExportDocument.swift */; };
+		A10000000000000000000006 /* PlatformActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* PlatformActivityBridge.swift */; };
+		A10000000000000000000007 /* WorkspaceCommandTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* WorkspaceCommandTarget.swift */; };
+		A10000000000000000000008 /* OtherlightWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* OtherlightWorkspace.swift */; };
+		A10000000000000000000009 /* ParameterInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* ParameterInspector.swift */; };
+		A1000000000000000000000A /* SimulationCanvases.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* SimulationCanvases.swift */; };
+		A10000000000000000000010 /* BundledRealSystems.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* BundledRealSystems.swift */; };
+		A10000000000000000000013 /* OtherlightWorkspaceDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* OtherlightWorkspaceDocument.swift */; };
+		A10000000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Assets.xcassets */; };
+		A10000000000000000000012 /* real-systems.snapshot.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* real-systems.snapshot.json */; };
+		A1000000000000000000000B /* OtherlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* OtherlightTests.swift */; };
+		A1000000000000000000000C /* OtherlightUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* OtherlightUITests.swift */; };
+		A1000000000000000000000D /* TransitCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000001 /* TransitCore */; };
+		A1000000000000000000000E /* TransitEducation in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* TransitEducation */; };
+		A1000000000000000000000F /* TransitVisualization in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000003 /* TransitVisualization */; };
+		A10000000000000000000014 /* TransitScienceContracts in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000004 /* TransitScienceContracts */; };
+		A10000000000000000000015 /* SimulationHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* SimulationHistory.swift */; };
+		A10000000000000000000016 /* SimulationHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* SimulationHistoryTests.swift */; };
+		A10000000000000000000017 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* OtherlightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherlightApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* PresentationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/PresentationModels.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* EducationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/EducationSession.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* SimulationRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runtime/SimulationRuntime.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* ExportDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/ExportDocument.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* PlatformActivityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/PlatformActivityBridge.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* WorkspaceCommandTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/WorkspaceCommandTarget.swift; sourceTree = "<group>"; };
+		A20000000000000000000008 /* OtherlightWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/OtherlightWorkspace.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* ParameterInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ParameterInspector.swift; sourceTree = "<group>"; };
+		A2000000000000000000000A /* SimulationCanvases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SimulationCanvases.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* BundledRealSystems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/BundledRealSystems.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* OtherlightWorkspaceDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/OtherlightWorkspaceDocument.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 /* SimulationHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/SimulationHistory.swift; sourceTree = "<group>"; };
+		A20000000000000000000015 /* SimulationHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationHistoryTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000016 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A20000000000000000000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000012 /* real-systems.snapshot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../src/config/real-systems.snapshot.json; sourceTree = SOURCE_ROOT; };
+		A2000000000000000000000B /* OtherlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherlightTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000000C /* OtherlightUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherlightUITests.swift; sourceTree = "<group>"; };
+		A2000000000000000000000D /* Otherlight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Otherlight.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000000000000000000000E /* OtherlightTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = OtherlightTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000000000000000000000F /* OtherlightUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = OtherlightUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A82000000000000000000001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A82000000000000000000002 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Release.xcconfig; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000D /* TransitCore in Frameworks */, A1000000000000000000000E /* TransitEducation in Frameworks */, A1000000000000000000000F /* TransitVisualization in Frameworks */, A10000000000000000000014 /* TransitScienceContracts in Frameworks */); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000001 = {isa = PBXGroup; children = (A40000000000000000000002 /* App */, A40000000000000000000003 /* AppTests */, A40000000000000000000004 /* AppUITests */, A40000000000000000000005 /* Products */); sourceTree = "<group>"; };
+		A40000000000000000000002 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003, A20000000000000000000004, A20000000000000000000005, A20000000000000000000006, A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A2000000000000000000000A, A20000000000000000000010, A20000000000000000000011, A20000000000000000000012, A20000000000000000000013, A20000000000000000000014, A20000000000000000000016); };
+		A40000000000000000000003 /* AppTests */ = {isa = PBXGroup; path = AppTests; sourceTree = "<group>"; children = (A2000000000000000000000B, A20000000000000000000015); };
+		A40000000000000000000004 /* AppUITests */ = {isa = PBXGroup; path = AppUITests; sourceTree = "<group>"; children = (A2000000000000000000000C); };
+		A40000000000000000000005 /* Products */ = {isa = PBXGroup; children = (A2000000000000000000000D, A2000000000000000000000E, A2000000000000000000000F); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* Otherlight */ = {isa = PBXNativeTarget; buildConfigurationList = A80000000000000000000001 /* Build configuration list for PBXNativeTarget "Otherlight" */; buildPhases = (A30000000000000000000001 /* Frameworks */, A60000000000000000000001 /* Sources */, A70000000000000000000001 /* Resources */); buildRules = (); dependencies = (); name = Otherlight; packageProductDependencies = (A90000000000000000000001 /* TransitCore */, A90000000000000000000002 /* TransitEducation */, A90000000000000000000003 /* TransitVisualization */, A90000000000000000000004 /* TransitScienceContracts */); productName = Otherlight; productReference = A2000000000000000000000D /* Otherlight.app */; productType = "com.apple.product-type.application"; };
+		A50000000000000000000002 /* OtherlightTests */ = {isa = PBXNativeTarget; buildConfigurationList = A80000000000000000000002 /* Build configuration list for PBXNativeTarget "OtherlightTests" */; buildPhases = (A30000000000000000000002 /* Frameworks */, A60000000000000000000002 /* Sources */, A70000000000000000000002 /* Resources */); buildRules = (); dependencies = (AA0000000000000000000001 /* PBXTargetDependency */); name = OtherlightTests; productName = OtherlightTests; productReference = A2000000000000000000000E /* OtherlightTests.xctest */; productType = "com.apple.product-type.bundle.unit-test"; };
+		A50000000000000000000003 /* OtherlightUITests */ = {isa = PBXNativeTarget; buildConfigurationList = A80000000000000000000003 /* Build configuration list for PBXNativeTarget "OtherlightUITests" */; buildPhases = (A30000000000000000000003 /* Frameworks */, A60000000000000000000003 /* Sources */, A70000000000000000000003 /* Resources */); buildRules = (); dependencies = (AA0000000000000000000002 /* PBXTargetDependency */); name = OtherlightUITests; productName = OtherlightUITests; productReference = A2000000000000000000000F /* OtherlightUITests.xctest */; productType = "com.apple.product-type.bundle.ui-testing"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A50000000000000000000000 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2600; LastUpgradeCheck = 2600; TargetAttributes = { A50000000000000000000001 = { CreatedOnToolsVersion = 26.0; }; A50000000000000000000002 = { CreatedOnToolsVersion = 26.0; TestTargetID = A50000000000000000000001; }; A50000000000000000000003 = { CreatedOnToolsVersion = 26.0; TestTargetID = A50000000000000000000001; }; }; }; buildConfigurationList = A80000000000000000000000 /* Build configuration list for PBXProject "Otherlight" */; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A40000000000000000000001; packageReferences = (AB0000000000000000000001 /* OtherlightCore */); productRefGroup = A40000000000000000000005 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000001 /* Otherlight */, A50000000000000000000002 /* OtherlightTests */, A50000000000000000000003 /* OtherlightUITests */); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000011 /* Assets.xcassets in Resources */, A10000000000000000000012 /* real-systems.snapshot.json in Resources */, A10000000000000000000017 /* PrivacyInfo.xcprivacy in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		A70000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A70000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A60000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000A, A10000000000000000000010, A10000000000000000000013, A10000000000000000000015); runOnlyForDeploymentPostprocessing = 0; };
+		A60000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B, A10000000000000000000016); runOnlyForDeploymentPostprocessing = 0; };
+		A60000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000C); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A50000000000000000000001 /* Otherlight */; };
+		AA0000000000000000000002 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A50000000000000000000001 /* Otherlight */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A81000000000000000000000 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A82000000000000000000001; buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 17.0; MACOSX_DEPLOYMENT_TARGET = 14.0; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx"; }; name = Debug; };
+		A81000000000000000000001 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A82000000000000000000002; buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 17.0; MACOSX_DEPLOYMENT_TARGET = 14.0; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx"; }; name = Release; };
+		A81100000000000000000000 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A82000000000000000000001; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; "ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES; ENABLE_TESTABILITY = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Otherlight"; "INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.education"; INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; MARKETING_VERSION = 0.3.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.Otherlight; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		A81100000000000000000001 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A82000000000000000000002; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; "ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Otherlight"; "INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.education"; INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; MARKETING_VERSION = 0.3.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.Otherlight; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		A81200000000000000000000 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightTests; PRODUCT_MODULE_NAME = OtherlightTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Otherlight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Otherlight"; }; name = Debug; };
+		A81200000000000000000001 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightTests; PRODUCT_MODULE_NAME = OtherlightTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Otherlight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Otherlight"; }; name = Release; };
+		A81300000000000000000000 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightUITests; PRODUCT_MODULE_NAME = OtherlightUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = Otherlight; }; name = Debug; };
+		A81300000000000000000001 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightUITests; PRODUCT_MODULE_NAME = OtherlightUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = Otherlight; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000000000000000000000 /* Build configuration list for PBXProject "Otherlight" */ = {isa = XCConfigurationList; buildConfigurations = (A81000000000000000000000, A81000000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A80000000000000000000001 /* Build configuration list for PBXNativeTarget "Otherlight" */ = {isa = XCConfigurationList; buildConfigurations = (A81100000000000000000000, A81100000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A80000000000000000000002 /* Build configuration list for PBXNativeTarget "OtherlightTests" */ = {isa = XCConfigurationList; buildConfigurations = (A81200000000000000000000, A81200000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A80000000000000000000003 /* Build configuration list for PBXNativeTarget "OtherlightUITests" */ = {isa = XCConfigurationList; buildConfigurations = (A81300000000000000000000, A81300000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AB0000000000000000000001 /* OtherlightCore */ = {isa = XCLocalSwiftPackageReference; relativePath = Packages/OtherlightCore; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A90000000000000000000001 /* TransitCore */ = {isa = XCSwiftPackageProductDependency; package = AB0000000000000000000001 /* OtherlightCore */; productName = TransitCore; };
+		A90000000000000000000002 /* TransitEducation */ = {isa = XCSwiftPackageProductDependency; package = AB0000000000000000000001 /* OtherlightCore */; productName = TransitEducation; };
+		A90000000000000000000003 /* TransitVisualization */ = {isa = XCSwiftPackageProductDependency; package = AB0000000000000000000001 /* OtherlightCore */; productName = TransitVisualization; };
+		A90000000000000000000004 /* TransitScienceContracts */ = {isa = XCSwiftPackageProductDependency; package = AB0000000000000000000001 /* OtherlightCore */; productName = TransitScienceContracts; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A50000000000000000000000 /* Project object */;
+}

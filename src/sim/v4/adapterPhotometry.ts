@@ -1,3 +1,6 @@
+/**
+ * Owns adapter Photometry support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { BinaryStarPhotometryParams, PhotometryParams, SystemParams } from "../../core/types";
 import type { StarBodyV4 } from "./types";
 

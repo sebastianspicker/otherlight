@@ -1,3 +1,5 @@
+/** Verifies fail-open policies keep application failures visible and recoverable. */
+
 import { describe, expect, it } from "vitest";
 
 import { computeTransitFlux } from "../../src/sim/transitFlux";

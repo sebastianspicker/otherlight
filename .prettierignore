@@ -1,4 +1,7 @@
 dist
 node_modules
+pnpm-lock.yaml
+.npmrc
+native-apple/Packages/*/.build
 *.sarif
 *.sarif.zip

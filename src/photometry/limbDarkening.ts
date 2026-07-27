@@ -1,4 +1,4 @@
-// src/photometry/limbDarkening.ts
+/** Evaluates limb-darkening laws and validates their photometric admissibility. */
 
 //
 // Limb darkening laws, passband resolution, and optional physical admissibility checks.

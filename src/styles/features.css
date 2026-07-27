@@ -1,3 +1,5 @@
+/* Adds responsive and accessibility behavior that spans multiple application features. */
+
 @media (max-width: 760px) {
   .app-header > div.help {
     gap: 12px;
@@ -316,6 +318,14 @@ fieldset > .help:first-of-type {
   margin-top: 0;
   margin-bottom: var(--space-sm);
   font-style: italic;
+}
+
+.help--compact {
+  margin-bottom: 6px;
+}
+
+#skyCanvas.skyCanvas--hidden {
+  visibility: hidden;
 }
 
 /* ---------------------------------

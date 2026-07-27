@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+/** Verifies frame loop measured display contracts across app startup, controls, and runtime integration. */
 
 import { expect, it, vi } from "vitest";
 
 import { createFrameLoopController, type FrameLoopState } from "../../src/app/frameLoop";
+import { sampleFluxForPlotForContext } from "../../src/app/frameLoopControllerLogic";
 import type { SimulationStepV3 } from "../../src/sim/v3";
 
 function installPlotDom(trackingMode: "fixed" | "dynamic" | "live" = "fixed", plotMode = "physical"): void {
@@ -75,6 +77,36 @@ function makeStep(tObsSec: number, flux = 1): SimulationStepV3 {
     },
   };
 }
+
+it("reuses the instantaneous measured flux when the grid already consumes the frame budget", () => {
+  const clampSmearedFlux = inputWithValue("clampSmearedFlux", "checkbox", "");
+  const step = vi.fn((tSec: number) => makeStep(tSec, 0.9));
+  const params = {
+    star: { photometry: { gridRes: 1024, cadenceSec: 60, nSubsamples: 512 } },
+    planet: { r: 0.1 },
+    dynamics: {},
+  } as any;
+
+  const flux = sampleFluxForPlotForContext(
+    {
+      refs: { clampSmearedFlux },
+      state: {
+        displayFluxScale: 1,
+        noise: { noiseState: { seed: 1, rng: () => 0 } },
+      },
+    } as any,
+    { step } as any,
+    params,
+    "measured",
+    0,
+    1,
+    undefined,
+    makeStep(0, 0.9),
+  );
+
+  expect(flux).toBe(0.9);
+  expect(step).not.toHaveBeenCalled();
+});
 
 it("prefers the shared display-flux diagnostic over local rescaling on direct physical paths", () => {
   installPlotDom("dynamic", "physical");

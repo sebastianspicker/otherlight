@@ -1,3 +1,6 @@
+/**
+ * Owns v4Runtime support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { BinaryStarPhotometryParams, SystemParams } from "../core/types";
 import { cloneParams } from "../core/clone";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";

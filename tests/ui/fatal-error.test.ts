@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies fatal error controls and views for accessible, consistent interaction. */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

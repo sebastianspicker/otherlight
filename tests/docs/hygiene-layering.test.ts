@@ -1,9 +1,11 @@
+/** Enforces source-layer import boundaries and related documentation hygiene budgets. */
+
 import path from "node:path";
 import { expect, it } from "vitest";
 import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 /**
- * Architectural boundary tests — enforce the module layering:
+ * Architectural boundary tests enforce the module layering:
  *
  *   core/        → imports NOTHING from other src/ modules (type-only from itself OK)
  *   physics/     → imports only from core/

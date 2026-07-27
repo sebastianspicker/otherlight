@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies quick-control behavior and accessible synchronization with detailed inputs. */
 
 import { beforeEach, expect, it, vi } from "vitest";
 import { installAppShellDocument } from "../helpers/appShell";
@@ -23,8 +24,9 @@ it("shows the curated quick panel in normal mode and hides the raw parameter gri
   expect(bodyText).toContain("These sliders update the model and figures directly.");
 
   syncUiModeVisibility("expert");
-  expect((document.getElementById("quickControlsFieldset") as HTMLElement).hidden).toBe(true);
+  expect((document.getElementById("quickControlsFieldset") as HTMLElement).hidden).toBe(false);
   expect((document.querySelector(".paramCols") as HTMLElement).hidden).toBe(false);
+  expect((document.querySelector(".advanced-parameter-drawer") as HTMLDetailsElement).open).toBe(true);
 });
 
 it("keeps orbit period consistent when a normal-mode orbit-size slider changes semi-major axis", async () => {

@@ -1,3 +1,6 @@
+/**
+ * Owns lessons Binary Catalog support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { LessonSpec } from "../core/types";
 import {
   BINARY_EXAMPLE,

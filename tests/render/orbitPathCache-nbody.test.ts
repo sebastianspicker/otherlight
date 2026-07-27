@@ -1,3 +1,5 @@
+/** Verifies orbit path cache N-body rendering behavior and visual interpretation. */
+
 import { beforeEach, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

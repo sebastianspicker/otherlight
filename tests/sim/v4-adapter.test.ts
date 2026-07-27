@@ -1,3 +1,5 @@
+/** Verifies v4 adapter contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import { toSystemParamsV2FromV4 } from "../../src/sim/v4/adapter";

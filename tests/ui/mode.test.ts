@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies mode controls and views for accessible, consistent interaction. */
 
 import { describe, expect, it } from "vitest";
 

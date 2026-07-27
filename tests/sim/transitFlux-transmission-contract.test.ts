@@ -1,3 +1,5 @@
+/** Verifies transmission spectra remain consistent across transit-flux and V4 boundaries. */
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

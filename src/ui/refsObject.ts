@@ -1,3 +1,6 @@
+/**
+ * Owns refs Object support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { mustGetAs } from "../core/dom";
 import type { UiRefs } from "./refs";
 
@@ -27,6 +30,7 @@ function coreControlRefs() {
 
 function modeAndPresetRefs() {
   return {
+    productProfileSelect: mustGetAs("productProfileSelect", HTMLSelectElement),
     productModeSelect: mustGetAs("productModeSelect", HTMLSelectElement),
     uiModeSelect: mustGetAs("uiModeSelect", HTMLSelectElement),
     simModeSelect: document.getElementById("simModeSelect") as HTMLSelectElement | null,

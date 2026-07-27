@@ -1,3 +1,5 @@
+/** Verifies validation assert photometry contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
@@ -18,7 +20,7 @@ function withPhot(params: SystemParams, phot: Record<string, unknown>): SystemPa
   return { ...params, star: { ...params.star, photometry: phot } } as SystemParams;
 }
 
-describe("assertPhotometryInputs — basic field validation", () => {
+describe("assertPhotometryInputs: basic field validation", () => {
   it("passes for params without photometry", () => {
     expect(() => assertPhotometryInputs(baseParams())).not.toThrow();
   });
@@ -50,7 +52,7 @@ describe("assertPhotometryInputs — basic field validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — thermalInertia validation", () => {
+describe("assertPhotometryInputs: thermalInertia validation", () => {
   it("throws for phaseCurve thermalInertia albedo out of range", () => {
     expect(() =>
       assertPhotometryInputs(
@@ -102,7 +104,7 @@ describe("assertPhotometryInputs — thermalInertia validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — spotEvolution validation", () => {
+describe("assertPhotometryInputs: spotEvolution validation", () => {
   it("throws when spotEvolution enabled without rotationPeriodSec", () => {
     expect(() =>
       assertPhotometryInputs(withPhot(baseParams(), { spotEvolution: { enabled: true } })),
@@ -154,7 +156,7 @@ describe("assertPhotometryInputs — spotEvolution validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — stellarSurface validation", () => {
+describe("assertPhotometryInputs: stellarSurface validation", () => {
   it("throws for differentialRotationK out of range", () => {
     expect(() =>
       assertPhotometryInputs(
@@ -172,7 +174,7 @@ describe("assertPhotometryInputs — stellarSurface validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — spectralBandpass validation", () => {
+describe("assertPhotometryInputs: spectralBandpass validation", () => {
   it("throws for non-positive lambda entry", () => {
     expect(() =>
       assertPhotometryInputs(
@@ -210,7 +212,7 @@ describe("assertPhotometryInputs — spectralBandpass validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — atmosphereRT validation", () => {
+describe("assertPhotometryInputs: atmosphereRT validation", () => {
   it("throws for non-positive lambdaRefNm", () => {
     expect(() =>
       assertPhotometryInputs(withPhot(baseParams(), { atmosphereRT: { enabled: true, lambdaRefNm: 0 } })),
@@ -258,7 +260,7 @@ describe("assertPhotometryInputs — atmosphereRT validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — thermalModelAdvanced validation", () => {
+describe("assertPhotometryInputs: thermalModelAdvanced validation", () => {
   it("throws for negative equilibriumScale", () => {
     expect(() =>
       assertPhotometryInputs(
@@ -282,7 +284,7 @@ describe("assertPhotometryInputs — thermalModelAdvanced validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — ringScattering validation", () => {
+describe("assertPhotometryInputs: ringScattering validation", () => {
   it("throws for negative amp", () => {
     expect(() =>
       assertPhotometryInputs(withPhot(baseParams(), { ringScattering: { enabled: true, amp: -1 } })),
@@ -298,7 +300,7 @@ describe("assertPhotometryInputs — ringScattering validation", () => {
   });
 });
 
-describe("assertPhotometryInputs — higher-fidelity additive composition", () => {
+describe("assertPhotometryInputs: higher-fidelity additive composition", () => {
   function accurateParams(): SystemParams {
     return withPhot(baseParams(), {
       phaseCurve: { enabled: true, reflAmp: 0.1 },

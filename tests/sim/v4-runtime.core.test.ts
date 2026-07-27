@@ -1,3 +1,5 @@
+/** Verifies v4 runtime core contracts across system state, transit observables, and V4 integration. */
+
 import { expect, it } from "vitest";
 
 import type { SimulationConfigV4 } from "../../src/sim/v4/types";
@@ -37,7 +39,7 @@ it("steps in realtime and reference modes with finite flux", async () => {
   expect(Number.isFinite(reference.flux.total)).toBe(true);
 });
 
-it("reports N-body enablement from the V4 config", async () => {
+it("reports the Kepler solver V4 actually executes even when N-body is configured", async () => {
   const baseCfg: SimulationConfigV4 = {
     version: "4",
     mode: "detached-binary-lab",
@@ -69,7 +71,9 @@ it("reports N-body enablement from the V4 config", async () => {
     },
   });
   await simEnabled.prepare();
-  expect(simEnabled.step(0).physicsDiagnostics?.integratorStats?.nbodyEnabled).toBe(true);
+  const diagnostics = simEnabled.step(0).physicsDiagnostics?.integratorStats;
+  expect(diagnostics?.mode).toBe("kepler");
+  expect(diagnostics?.nbodyEnabled).toBe(false);
 });
 
 it("invalidates exact transit reference epochs when V4 orbit geometry changes on the same config object", async () => {

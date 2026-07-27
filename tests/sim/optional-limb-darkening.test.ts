@@ -1,3 +1,5 @@
+/** Verifies optional limb darkening contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { getLdIntegrators, preloadOptionalLimbDarkening } from "../../src/sim/optionalLimbDarkening";

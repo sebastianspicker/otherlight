@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies O-C plot contracts across app startup, controls, and runtime integration. */
 
 import { describe, expect, it, vi } from "vitest";
 

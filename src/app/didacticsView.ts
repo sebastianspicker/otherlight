@@ -1,3 +1,6 @@
+/**
+ * Owns didactics View support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type {
   DidacticResponseStore,
   DidacticSignals,

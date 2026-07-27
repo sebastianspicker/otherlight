@@ -1,3 +1,6 @@
+/**
+ * Owns config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { SystemParams } from "../../core/types";
 import { G_SI, isFinitePositive } from "../../core/units";
 import { normalizeRelativityParams } from "../../physics/relativity";

@@ -1,3 +1,6 @@
+/**
+ * Owns patch Types support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 export type PatchPreCircle = {
   kind: "circle";
   x: number;

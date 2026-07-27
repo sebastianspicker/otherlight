@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /* global AbortController, TextDecoder, TextEncoder, clearTimeout, fetch, process, setTimeout */
 
+/**
+ * Refreshes a bounded, deterministic real-system snapshot from NASA TAP while
+ * preserving reproducible ranking and strict response-size limits.
+ */
+
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -73,6 +78,7 @@ function slugifyName(label) {
     .replace(/(^-|-$)/g, "");
 }
 
+/** Convert one transit row into the finite subset the Education UI can model. */
 export function normalizeNasaRow(row) {
   if (!isTransitObject(row)) return null;
   const identity = rowIdentity(row);
@@ -136,6 +142,7 @@ function requiredPlanetRadiusFields(row) {
   return { planetRadiusJupiter, planetRadiusEarth };
 }
 
+/** Rank completeness deterministically; label length only breaks otherwise equal scores. */
 export function scoreSnapshotEntry(entry) {
   if (!entry) return Number.NEGATIVE_INFINITY;
 
@@ -154,6 +161,7 @@ export function scoreSnapshotEntry(entry) {
   return score;
 }
 
+/** Deduplicate by stable ID, retain the most complete row, and apply deterministic ordering. */
 export function selectTopSystems(rows, limit = DEFAULT_LIMIT) {
   const max = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_LIMIT;
   const byId = new Map();
@@ -184,6 +192,7 @@ function compareSnapshotEntries(a, b) {
   return String(a.label).localeCompare(String(b.label));
 }
 
+/** Build the checked-in envelope and record the selection policy as provenance. */
 export function buildSnapshotFromRows(rows, opts = {}) {
   const fetchedAt = typeof opts.fetchedAt === "string" ? opts.fetchedAt : new Date().toISOString();
   const limit = Number.isFinite(opts.limit) ? opts.limit : DEFAULT_LIMIT;
@@ -200,6 +209,7 @@ export function buildSnapshotFromRows(rows, opts = {}) {
   };
 }
 
+/** Stream the response through a hard byte ceiling to avoid unbounded refresh memory. */
 async function readResponseTextWithinLimit(response, maxBytes, signal) {
   const limit = Number.isFinite(maxBytes) && maxBytes > 0 ? Math.floor(maxBytes) : MAX_NASA_RESPONSE_BYTES;
   const contentLength = response.headers?.get?.("content-length");
@@ -242,6 +252,7 @@ async function readResponseTextWithinLimit(response, maxBytes, signal) {
   return text;
 }
 
+/** Fetch transit rows with caller-injectable transport, timeout, abort, and size bounds. */
 export async function fetchNasaTransitRows(fetchImpl = fetch, opts = {}) {
   const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : DEFAULT_FETCH_TIMEOUT_MS;
   const maxBytes = Number.isFinite(opts.maxBytes) ? opts.maxBytes : MAX_NASA_RESPONSE_BYTES;
@@ -253,7 +264,7 @@ export async function fetchNasaTransitRows(fetchImpl = fetch, opts = {}) {
       signal: timeout.signal,
       headers: {
         accept: "application/json",
-        "user-agent": "exoplanet-exomoon-simulation/real-systems-refresh",
+        "user-agent": "otherlight/real-systems-refresh",
       },
     });
 

@@ -1,4 +1,4 @@
-// src/sim/sampling.ts
+/** Controls temporal sampling and exposure aggregation for simulation outputs. */
 //
 // Orbit sampling helpers for visualization (sky-plane paths).
 //

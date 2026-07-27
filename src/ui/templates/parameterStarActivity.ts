@@ -1,3 +1,6 @@
+/**
+ * Owns parameter Star Activity support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 export function renderBrightnessPatchControls(): string {
   return `
         <label class="inline" for="patchesEnabled"

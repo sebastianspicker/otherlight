@@ -1,3 +1,5 @@
+/** Verifies v4 reference client contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { buildBinaryLabParams } from "../../src/app/binaryLab";

@@ -1,4 +1,4 @@
-// src/render/overlays.ts
+/** Renders non-physical scene overlays separately from celestial-body drawing. */
 //
 // Canvas2D overlay helpers (debug HUD, observer gizmo, marker).
 //

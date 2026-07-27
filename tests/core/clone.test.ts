@@ -1,3 +1,5 @@
+/** Verifies clone contracts in shared app and physics primitives. */
+
 import { describe, expect, it } from "vitest";
 
 import { deepClone } from "../../src/core/clone";

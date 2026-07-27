@@ -1,3 +1,6 @@
+/**
+ * Owns orbit Elements Key support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import type { OrbitElements } from "../core/types";
 
 type OrbitElementsKeyEntry = {
@@ -52,7 +55,7 @@ export function orbitElementsKey(el: OrbitElements): string {
   }
 
   // Compute a compact numeric hash key for this orbit configuration.
-  // hashOrbitElements uses Math.imul bit-mixing — much cheaper than
+  // hashOrbitElements uses Math.imul bit-mixing, which is much cheaper than
   // toFixed(12).join('|') for the cache-miss path.
   const key = hashOrbitElements(el);
   orbitElementsKeyCache.set(el, {
