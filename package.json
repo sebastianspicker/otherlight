@@ -91,7 +91,7 @@
     "@vitest/coverage-v8": "^4.1.1",
     "eslint": "10.1.0",
     "jsdom": "29.1.1",
-    "prettier": "3.4.2",
+    "prettier": "3.9.6",
     "@typescript/native": "npm:typescript@7.0.2",
     "jscpd": "5.0.12",
     "knip": "6.27.0",
