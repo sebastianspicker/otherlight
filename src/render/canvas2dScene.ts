@@ -1,3 +1,6 @@
+/**
+ * Owns canvas2d Scene support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 export { drawStarGeometry } from "./sceneStars";
 export {
   resolveOcculterGeometry,

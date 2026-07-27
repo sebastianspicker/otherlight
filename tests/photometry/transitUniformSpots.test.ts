@@ -1,3 +1,5 @@
+/** Verifies transit uniform spots calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import type { BrightnessPatch } from "../../src/core/types";

@@ -1,4 +1,4 @@
-// src/sim/transitFlux.ts
+/** Combines stellar occultation and photometric terms into normalized transit flux. */
 //
 // Compute multiplicative stellar transit attenuation factor F_transit in [0,1].
 //
@@ -31,8 +31,35 @@ import { spectralContaminationWeight, totalAtmosphereTransmission } from "../pho
 import type { BodyKinematics } from "./kinematics";
 import { getLdIntegrators } from "./optionalLimbDarkening";
 import { isPhysicsFeatureEnabled } from "./fidelity";
+import { MAX_SPECTRAL_SAMPLES, maxSpectralSamplesForGrid } from "../core/transitComputeBudget";
 
-export const MAX_SPECTRAL_SAMPLES = 256;
+export { MAX_SPECTRAL_SAMPLES } from "../core/transitComputeBudget";
+
+type StarPhotometry = SystemParams["star"]["photometry"];
+type AtmosphereTransmissionConfig = NonNullable<NonNullable<StarPhotometry>["atmosphereTransmission"]>;
+type AtmosphereRTConfig = NonNullable<NonNullable<StarPhotometry>["atmosphereRT"]>;
+type AtmosphereRTLayerConfig = NonNullable<NonNullable<AtmosphereRTConfig["layers"]>[number]>;
+type BodySky = { x: number; y: number; z: number };
+type BodyProjection = { dx: number; dy: number; r0: number };
+type TransmissionBuildContext = {
+  atm: AtmosphereTransmissionConfig | undefined;
+  rt: AtmosphereRTConfig | undefined;
+  rStar: number;
+  tauScale: number;
+  lambdaNm: number | undefined;
+  target: string;
+};
+type LambdaGrid = { lambdaNm: number[]; keepIdx: number[]; rawLength: number };
+type SpectralGrid = { lambdaNm: number[]; weights: number[]; tauScale: number[] };
+type TransitFluxInputs = {
+  rStar: number;
+  phot: StarPhotometry;
+  patches: BrightnessPatch[] | undefined;
+  gridRes: number | undefined;
+  frontVisibleOcculters: OcculterShape[];
+  allCircles: boolean;
+  circleOcculters: CircleOcculter[];
+};
 
 function sameOcculterCenter(
   shape: OcculterShape,
@@ -70,170 +97,500 @@ function resolveLimbDarkeningLaw(
   return law && typeof law.kind === "string" ? law : undefined;
 }
 
+function safeTauScale(value: number | undefined): number {
+  return isFiniteNonNegative(value) ? value : 1;
+}
+
+function safeLambdaNm(value: number | undefined): number | undefined {
+  return isFinitePositive(value) ? value : undefined;
+}
+
+function activeAtmosphereTransmission(params: SystemParams, phot: StarPhotometry): boolean {
+  if (phot?.atmosphereTransmission?.enabled) return true;
+  return isPhysicsFeatureEnabled(params, "atmosphereRT") && Boolean(phot?.atmosphereRT?.enabled);
+}
+
+function transmissionTarget(
+  atm: AtmosphereTransmissionConfig | undefined,
+  rt: AtmosphereRTConfig | undefined,
+): string {
+  if (rt?.enabled) return rt.target ?? "planet";
+  return atm?.target ?? "planet";
+}
+
+function makeTransmissionBuildContext(
+  params: SystemParams,
+  opts?: { tauScale?: number; lambdaNm?: number },
+): TransmissionBuildContext | undefined {
+  const phot = params.star.photometry;
+  const atm = phot?.atmosphereTransmission;
+  const rt = phot?.atmosphereRT;
+  if (!atm?.enabled && !rt?.enabled) return undefined;
+
+  const rStar = params.star?.r;
+  if (!isFinitePositive(rStar)) return undefined;
+
+  return {
+    atm,
+    rt,
+    rStar,
+    tauScale: safeTauScale(opts?.tauScale),
+    lambdaNm: safeLambdaNm(opts?.lambdaNm),
+    target: transmissionTarget(atm, rt),
+  };
+}
+
+function bodyProjection(
+  body: { r: number },
+  sky: BodySky | undefined,
+  rStar: number,
+): BodyProjection | undefined {
+  if (!sky) return undefined;
+  if (!(sky.z > 0)) return undefined;
+  if (!isFinitePositive(body.r)) return undefined;
+
+  const r0 = body.r;
+  const overlapsStar = Math.hypot(sky.x, sky.y) < rStar + r0;
+  if (!overlapsStar) return undefined;
+  return { dx: sky.x, dy: sky.y, r0 };
+}
+
+function validRtLayers(rt: AtmosphereRTConfig | undefined): AtmosphereRTLayerConfig[] {
+  if (!rt?.enabled || !Array.isArray(rt.layers) || rt.layers.length === 0) return [];
+  return rt.layers.filter(
+    (layer): layer is AtmosphereRTLayerConfig =>
+      Boolean(layer) &&
+      isFinitePositive(layer.r0) &&
+      isFinitePositive(layer.H) &&
+      isFiniteNonNegative(layer.tau0),
+  );
+}
+
+function rtTransmissionOcculter(
+  projection: BodyProjection,
+  rt: AtmosphereRTConfig,
+  lambdaNm: number | undefined,
+): TransmissionOcculter {
+  const layers = validRtLayers(rt);
+  if (layers.length === 0) return projection;
+
+  return {
+    ...projection,
+    transmission: (rho: number): number => {
+      if (!Number.isFinite(rho) || rho < 0) return 1;
+      if (rho <= projection.r0) return 0;
+      return totalAtmosphereTransmission({
+        rho,
+        config: { ...rt, layers },
+        lambdaNm,
+      });
+    },
+  };
+}
+
+function legacyAtmosphereCore(
+  projection: BodyProjection,
+  atm: AtmosphereTransmissionConfig | undefined,
+  isTarget: boolean,
+): number {
+  if (isTarget && isFinitePositive(atm?.r0)) return atm.r0;
+  return projection.r0;
+}
+
+function legacyTransmissionFunction(
+  atm: AtmosphereTransmissionConfig | undefined,
+  core: number,
+  tauScale: number,
+): TransmissionOcculter["transmission"] {
+  const kind = atm?.kind ?? "hard";
+  const H = isFinitePositive(atm?.H) ? atm.H : 0;
+  const tau0 = isFiniteNonNegative(atm?.tau0) ? atm.tau0 : 0;
+  const tau0Scaled = tau0 * tauScale;
+  if (kind !== "exponential-halo" || H <= 0 || tau0Scaled <= 0) return undefined;
+
+  return (rho: number): number => {
+    if (!Number.isFinite(rho) || rho < 0) return 1;
+    if (rho <= core) return 0;
+    const tau = tau0Scaled * Math.exp(-(rho - core) / H);
+    return Math.exp(-Math.max(0, tau));
+  };
+}
+
+function legacyTransmissionOcculter(
+  projection: BodyProjection,
+  atm: AtmosphereTransmissionConfig | undefined,
+  isTarget: boolean,
+  tauScale: number,
+): TransmissionOcculter {
+  const core = legacyAtmosphereCore(projection, atm, isTarget);
+  return {
+    dx: projection.dx,
+    dy: projection.dy,
+    r0: core,
+    transmission: legacyTransmissionFunction(atm, core, tauScale),
+  };
+}
+
+function transmissionOcculterForBody(
+  ctx: TransmissionBuildContext,
+  body: { r: number },
+  sky: BodySky | undefined,
+  isTarget: boolean,
+): TransmissionOcculter | undefined {
+  const projection = bodyProjection(body, sky, ctx.rStar);
+  if (!projection) return undefined;
+  if (!isTarget) return projection;
+  if (ctx.rt?.enabled) return rtTransmissionOcculter(projection, ctx.rt, ctx.lambdaNm);
+  return legacyTransmissionOcculter(projection, ctx.atm, isTarget, ctx.tauScale);
+}
+
+function appendTransmissionOcculter(
+  occulters: TransmissionOcculter[],
+  ctx: TransmissionBuildContext,
+  body: { r: number },
+  sky: BodySky | undefined,
+  isTarget: boolean,
+): void {
+  const occulter = transmissionOcculterForBody(ctx, body, sky, isTarget);
+  if (occulter) occulters.push(occulter);
+}
+
 function buildTransmissionOcculters(
   params: SystemParams,
   kin: BodyKinematics,
   opts?: { tauScale?: number; lambdaNm?: number },
 ): TransmissionOcculter[] {
-  const phot = params.star.photometry;
-  const atm = phot?.atmosphereTransmission;
-  const rt = phot?.atmosphereRT;
-  if (!atm?.enabled && !rt?.enabled) return [];
-  const rStar = params.star?.r;
-  if (!isFinitePositive(rStar)) return [];
-  const tauScaleSafe = isFiniteNonNegative(opts?.tauScale) ? (opts!.tauScale as number) : 1;
-  const lambdaNm = isFinitePositive(opts?.lambdaNm) ? (opts!.lambdaNm as number) : undefined;
-
+  const ctx = makeTransmissionBuildContext(params, opts);
+  if (!ctx) return [];
   const occulters: TransmissionOcculter[] = [];
 
-  const addBody = (
-    body: { r: number },
-    sky: { x: number; y: number; z: number } | undefined,
-    isTarget: boolean,
-  ): void => {
-    if (!sky) return;
-    if (!(sky.z > 0)) return;
-    if (!isFinitePositive(body.r)) return;
-
-    const r0 = body.r;
-    const overlapSky = Math.hypot(sky.x, sky.y) < rStar + r0;
-    if (!overlapSky) return;
-    if (!isTarget) {
-      occulters.push({ dx: sky.x, dy: sky.y, r0 });
-      return;
-    }
-
-    if (rt?.enabled && Array.isArray(rt.layers) && rt.layers.length > 0) {
-      const layers = rt.layers.filter(
-        (ly) => ly && isFinitePositive(ly.r0) && isFinitePositive(ly.H) && isFiniteNonNegative(ly.tau0),
-      );
-      if (layers.length === 0) {
-        occulters.push({ dx: sky.x, dy: sky.y, r0 });
-        return;
-      }
-      occulters.push({
-        dx: sky.x,
-        dy: sky.y,
-        r0,
-        transmission: (rho: number): number => {
-          if (!Number.isFinite(rho) || rho < 0) return 1;
-          if (rho <= r0) return 0;
-          return totalAtmosphereTransmission({
-            rho,
-            config: {
-              ...rt,
-              layers,
-            },
-            lambdaNm,
-          });
-        },
-      });
-      return;
-    }
-
-    const kind = atm?.kind ?? "hard";
-    const r0Override = isTarget && isFinitePositive(atm?.r0) ? (atm!.r0 as number) : undefined;
-    const H = isFinitePositive(atm?.H) ? (atm!.H as number) : 0;
-    const tau0 = isFiniteNonNegative(atm?.tau0) ? (atm!.tau0 as number) : 0;
-    const tau0Scaled = tau0 * tauScaleSafe;
-    const core = r0Override ?? r0;
-    const transmission =
-      kind === "exponential-halo" && H > 0 && tau0Scaled > 0
-        ? (rho: number): number => {
-            if (!Number.isFinite(rho) || rho < 0) return 1;
-            if (rho <= core) return 0;
-            const tau = tau0Scaled * Math.exp(-(rho - core) / H);
-            return Math.exp(-Math.max(0, tau));
-          }
-        : undefined;
-    occulters.push({ dx: sky.x, dy: sky.y, r0: core, transmission });
-  };
-
-  const target = rt?.enabled ? (rt.target ?? "planet") : (atm?.target ?? "planet");
-  addBody(params.planet, kin.planetSky, target === "planet");
-  if (params.moon && kin.moonSky) addBody(params.moon, kin.moonSky, target === "moon");
+  appendTransmissionOcculter(occulters, ctx, params.planet, kin.planetSky, ctx.target === "planet");
+  if (params.moon && kin.moonSky) {
+    appendTransmissionOcculter(occulters, ctx, params.moon, kin.moonSky, ctx.target === "moon");
+  }
 
   return occulters;
 }
 
-function normalizeLegacySpectralGrid(
-  atm:
-    | {
-        lambdaNm?: number[];
-        tauScale?: number[];
-      }
-    | undefined,
-): { lambdaNm: number[]; tauScale: number[] } | null {
-  const lambdaRaw = Array.isArray(atm?.lambdaNm) ? atm!.lambdaNm : [];
-  const keepIdx: number[] = [];
-  const lambdaNm: number[] = [];
+function evenlySpacedIndices(indices: number[], limit: number): number[] {
+  if (indices.length <= limit) return indices;
+  if (limit === 1) return [indices[Math.floor((indices.length - 1) / 2)]];
+
+  return Array.from({ length: limit }, (_, index) => {
+    const sourceIndex = Math.round((index * (indices.length - 1)) / (limit - 1));
+    return indices[sourceIndex];
+  });
+}
+
+function positiveLambdaGrid(lambdaRaw: unknown, limit = MAX_SPECTRAL_SAMPLES): LambdaGrid | null {
+  if (!Array.isArray(lambdaRaw)) return null;
+
+  const validIndices: number[] = [];
   for (let i = 0; i < lambdaRaw.length; i++) {
     const x = lambdaRaw[i];
     if (isFinitePositive(x)) {
-      keepIdx.push(i);
-      lambdaNm.push(x);
-      if (lambdaNm.length >= MAX_SPECTRAL_SAMPLES) break;
+      validIndices.push(i);
+      if (validIndices.length >= MAX_SPECTRAL_SAMPLES) break;
     }
   }
-  if (lambdaNm.length === 0) return null;
+  if (validIndices.length === 0) return null;
 
-  const tauRaw = Array.isArray(atm?.tauScale) ? atm!.tauScale : [];
-  const tauScale =
-    tauRaw.length === 1 && Number.isFinite(tauRaw[0])
-      ? lambdaNm.map(() => Math.max(0, tauRaw[0]))
-      : tauRaw.length === lambdaRaw.length
-        ? keepIdx.map((idx) => {
-            const v = tauRaw[idx];
-            return Number.isFinite(v) ? Math.max(0, v) : 1;
-          })
-        : tauRaw.length === lambdaNm.length
-          ? tauRaw.map((v) => (Number.isFinite(v) ? Math.max(0, v) : 1))
-          : lambdaNm.map(() => 1);
-
-  return { lambdaNm, tauScale };
+  const keepIdx = evenlySpacedIndices(validIndices, Math.max(1, Math.floor(limit)));
+  const lambdaNm = keepIdx.map((index) => lambdaRaw[index] as number);
+  return { lambdaNm, keepIdx, rawLength: lambdaRaw.length };
 }
 
-function normalizeBandpassGrid(phot: SystemParams["star"]["photometry"] | undefined): {
-  lambdaNm: number[];
-  weights: number[];
-  tauScale: number[];
-} | null {
+function sanitizedTauScale(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
+  return Math.max(0, value);
+}
+
+function legacyTauScale(lambdaGrid: LambdaGrid, tauRaw: number[] | undefined): number[] {
+  if (!Array.isArray(tauRaw)) return lambdaGrid.lambdaNm.map(() => 1);
+
+  if (tauRaw.length === 1 && Number.isFinite(tauRaw[0])) {
+    return lambdaGrid.lambdaNm.map(() => Math.max(0, tauRaw[0]));
+  }
+
+  if (tauRaw.length === lambdaGrid.rawLength) {
+    return lambdaGrid.keepIdx.map((idx) => sanitizedTauScale(tauRaw[idx]));
+  }
+
+  if (tauRaw.length === lambdaGrid.lambdaNm.length) {
+    return tauRaw.map((value) => sanitizedTauScale(value));
+  }
+
+  return lambdaGrid.lambdaNm.map(() => 1);
+}
+
+function normalizeLegacySpectralGrid(
+  atm: AtmosphereTransmissionConfig | undefined,
+  sampleLimit: number,
+): SpectralGrid | null {
+  const lambdaGrid = positiveLambdaGrid(atm?.lambdaNm, sampleLimit);
+  if (!lambdaGrid) return null;
+
+  const tauScale = legacyTauScale(lambdaGrid, atm?.tauScale);
+  const weights = lambdaGrid.lambdaNm.map(() => 1 / lambdaGrid.lambdaNm.length);
+  return { lambdaNm: lambdaGrid.lambdaNm, weights, tauScale };
+}
+
+function sanitizedPositiveWeights(weights: number[], lambdaGrid: LambdaGrid): number[] {
+  if (weights.length === lambdaGrid.rawLength) {
+    return lambdaGrid.keepIdx.map((index) => {
+      const weight = weights[index];
+      return Number.isFinite(weight) && weight > 0 ? weight : 0;
+    });
+  }
+
+  if (weights.length === lambdaGrid.lambdaNm.length) {
+    return weights.map((weight) => (Number.isFinite(weight) && weight > 0 ? weight : 0));
+  }
+
+  return lambdaGrid.lambdaNm.map(() => 1);
+}
+
+function contaminatedWeights(lambdaNm: number[], weights: number[], phot: StarPhotometry): number[] {
+  return weights.map(
+    (weight, index) =>
+      weight * spectralContaminationWeight({ lambdaNm: lambdaNm[index], config: phot?.atmosphereRT }),
+  );
+}
+
+function normalizedWeights(lambdaNm: number[], weights: number[]): number[] {
+  const sumW = weights.reduce((a, b) => a + b, 0);
+  if (sumW > 0) return weights.map((weight) => weight / sumW);
+  return lambdaNm.map(() => 1 / lambdaNm.length);
+}
+
+function normalizeBandpassSpectralGrid(phot: StarPhotometry, sampleLimit: number): SpectralGrid | null {
   const bp = phot?.spectralBandpass;
-  if (bp?.enabled && Array.isArray(bp.lambdaNm)) {
-    const keepIdx: number[] = [];
-    const lambdaNm: number[] = [];
-    for (let index = 0; index < bp.lambdaNm.length && lambdaNm.length < MAX_SPECTRAL_SAMPLES; index++) {
-      const value = bp.lambdaNm[index];
-      if (!isFinitePositive(value)) continue;
-      keepIdx.push(index);
-      lambdaNm.push(value);
-    }
-    if (lambdaNm.length > 0) {
-      const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
-      const weightsRaw =
-        rawWeights.length === bp.lambdaNm.length
-          ? keepIdx.map((index) => {
-              const weight = rawWeights[index];
-              return Number.isFinite(weight) && weight > 0 ? weight : 0;
-            })
-          : rawWeights.length === lambdaNm.length
-            ? rawWeights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0))
-            : lambdaNm.map(() => 1);
-      const contaminated = weightsRaw.map(
-        (w, i) => w * spectralContaminationWeight({ lambdaNm: lambdaNm[i], config: phot?.atmosphereRT }),
-      );
-      const sumW = contaminated.reduce((a, b) => a + b, 0);
-      const normWeights =
-        sumW > 0 ? contaminated.map((w) => w / sumW) : lambdaNm.map(() => 1 / lambdaNm.length);
-      return { lambdaNm, weights: normWeights, tauScale: lambdaNm.map(() => 1) };
-    }
+  if (!bp?.enabled) return null;
+
+  const lambdaGrid = positiveLambdaGrid(bp.lambdaNm, sampleLimit);
+  if (!lambdaGrid) return null;
+
+  const rawWeights = Array.isArray(bp.weights) ? bp.weights : [];
+  const weightsRaw = sanitizedPositiveWeights(rawWeights, lambdaGrid);
+  const weights = normalizedWeights(
+    lambdaGrid.lambdaNm,
+    contaminatedWeights(lambdaGrid.lambdaNm, weightsRaw, phot),
+  );
+  return { lambdaNm: lambdaGrid.lambdaNm, weights, tauScale: lambdaGrid.lambdaNm.map(() => 1) };
+}
+
+function normalizeBandpassGrid(phot: StarPhotometry, gridRes: number | undefined): SpectralGrid | null {
+  const sampleLimit = maxSpectralSamplesForGrid(gridRes, 256);
+  return (
+    normalizeBandpassSpectralGrid(phot, sampleLimit) ??
+    normalizeLegacySpectralGrid(phot?.atmosphereTransmission, sampleLimit)
+  );
+}
+
+function assertStarRadius(params: SystemParams): number {
+  const rStar = params.star?.r;
+  if (!isFinitePositive(rStar)) {
+    throw new Error("computeTransitFlux: params.star.r must be a positive finite number.");
+  }
+  return rStar;
+}
+
+function transitFluxInputs(
+  params: SystemParams,
+  occulters: OcculterShape[],
+  kin: BodyKinematics,
+  opts?: { brightnessPatchesOverride?: BrightnessPatch[] },
+): TransitFluxInputs {
+  const rStar = assertStarRadius(params);
+  const phot = params.star.photometry;
+  const patches = opts?.brightnessPatchesOverride ?? phot?.brightnessPatches;
+  const frontVisibleOcculters = filterFrontVisibleOcculters(occulters, kin);
+  const allCircles = frontVisibleOcculters.every(isCircleOcculter);
+  return {
+    rStar,
+    phot,
+    patches,
+    gridRes: phot?.gridRes,
+    frontVisibleOcculters,
+    allCircles,
+    circleOcculters: allCircles ? (frontVisibleOcculters as CircleOcculter[]) : [],
+  };
+}
+
+function finiteClampedFlux(value: number): number {
+  return clamp01(Number.isFinite(value) ? value : 1.0);
+}
+
+function hasBrightnessPatches(patches: BrightnessPatch[] | undefined): patches is BrightnessPatch[] {
+  return Array.isArray(patches) && patches.length > 0;
+}
+
+function transmissionBandFlux(
+  params: SystemParams,
+  kin: BodyKinematics,
+  inputs: TransitFluxInputs,
+  opts: { tauScale?: number; lambdaNm?: number; bandpass?: unknown },
+): number {
+  const occTrans = buildTransmissionOcculters(params, kin, opts);
+  if (occTrans.length === 0) return 1.0;
+
+  const ldLaw = resolveLimbDarkeningLaw(inputs.phot, opts.bandpass);
+  return fluxStarWithTransmissiveOcculters({
+    rStar: inputs.rStar,
+    occulters: occTrans,
+    limbDarkening: ldLaw,
+    brightnessPatches: inputs.patches,
+    gridRes: inputs.gridRes,
+    clamp01: true,
+  });
+}
+
+function computeSpectralTransmissionFlux(
+  params: SystemParams,
+  kin: BodyKinematics,
+  inputs: TransitFluxInputs,
+  spectral: SpectralGrid,
+): number {
+  let sum = 0;
+  let wSum = 0;
+
+  for (let i = 0; i < spectral.lambdaNm.length; i++) {
+    const lambdaNm = spectral.lambdaNm[i];
+    const flux = transmissionBandFlux(params, kin, inputs, {
+      tauScale: spectral.tauScale[i],
+      lambdaNm,
+      bandpass: String(lambdaNm),
+    });
+    if (!Number.isFinite(flux)) continue;
+
+    const weight = spectral.weights[i];
+    sum += flux * weight;
+    wSum += weight;
   }
 
-  const legacy = normalizeLegacySpectralGrid(phot?.atmosphereTransmission);
-  if (!legacy) return null;
-  const weights = legacy.lambdaNm.map(() => 1 / legacy.lambdaNm.length);
-  return { lambdaNm: legacy.lambdaNm, weights, tauScale: legacy.tauScale };
+  return wSum > 0 ? clamp01(sum / wSum) : 1.0;
 }
+
+const computeSingleTransmissionFlux = (
+  params: SystemParams,
+  kin: BodyKinematics,
+  inputs: TransitFluxInputs,
+): number => {
+  return finiteClampedFlux(transmissionBandFlux(params, kin, inputs, {}));
+};
+
+const computeTransmissionFlux = (
+  params: SystemParams,
+  kin: BodyKinematics,
+  inputs: TransitFluxInputs,
+): number | undefined => {
+  if (!activeAtmosphereTransmission(params, inputs.phot)) return undefined;
+  if (!inputs.allCircles) return undefined;
+
+  const spectral = normalizeBandpassGrid(inputs.phot, inputs.gridRes);
+  if (spectral) return computeSpectralTransmissionFlux(params, kin, inputs, spectral);
+  return computeSingleTransmissionFlux(params, kin, inputs);
+};
+
+const warnUnsupportedTransmission = (params: SystemParams, inputs: TransitFluxInputs): void => {
+  if (!activeAtmosphereTransmission(params, inputs.phot)) return;
+  if (inputs.allCircles) return;
+
+  console.warn(
+    "[computeTransitFlux] atmosphere transmission currently applies only to circular occulters; falling back to the non-transmissive mixed-shape solver.",
+  );
+};
+
+const computeOptionalCircleLdFlux = (inputs: TransitFluxInputs): number | undefined => {
+  const ldModel = inputs.phot?.limbDarkeningModel;
+  const ld = getLdIntegrators();
+  if (!ldModel || !ld) return undefined;
+
+  try {
+    const ldLaw = ld.resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
+    if (!ldLaw) return undefined;
+    return finiteClampedFlux(
+      ld.fluxLimbDarkenedDisk({
+        rStar: inputs.rStar,
+        rOcculters: inputs.circleOcculters,
+        limbDarkeningLaw: ldLaw,
+        constraints: ldModel.constraints,
+        brightnessPatches: inputs.patches,
+        gridRes: inputs.gridRes,
+      }),
+    );
+  } catch {
+    // LD module error; fall through to uniform-disk path (deliberate fail-open).
+    return undefined;
+  }
+};
+
+const computeCircleFlux = (inputs: TransitFluxInputs): number => {
+  const ldFlux = computeOptionalCircleLdFlux(inputs);
+  if (ldFlux !== undefined) return ldFlux;
+
+  if (hasBrightnessPatches(inputs.patches)) {
+    return finiteClampedFlux(
+      fluxUniformDiskWithPatches({
+        rStar: inputs.rStar,
+        rOcculters: inputs.circleOcculters,
+        brightnessPatches: inputs.patches,
+        gridRes: inputs.gridRes,
+      }),
+    );
+  }
+
+  return finiteClampedFlux(
+    fluxUniformDisk({ rStar: inputs.rStar, rOcculters: inputs.circleOcculters, gridRes: inputs.gridRes }),
+  );
+};
+
+const computeOptionalMixedLdFlux = (inputs: TransitFluxInputs): number | undefined => {
+  const ldModel = inputs.phot?.limbDarkeningModel;
+  if (!ldModel) return undefined;
+
+  try {
+    const ldLaw = resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
+    if (!ldLaw) return undefined;
+    return finiteClampedFlux(
+      fluxLimbDarkenedDiskShapes({
+        rStar: inputs.rStar,
+        occulters: inputs.frontVisibleOcculters,
+        limbDarkeningLaw: ldLaw,
+        constraints: ldModel.constraints,
+        brightnessPatches: inputs.patches,
+        gridRes: inputs.gridRes,
+      }),
+    );
+  } catch {
+    // LD module error; fall through to uniform-disk path for mixed shapes (deliberate fail-open).
+    return undefined;
+  }
+};
+
+const computeMixedShapeFlux = (inputs: TransitFluxInputs): number => {
+  const ldFlux = computeOptionalMixedLdFlux(inputs);
+  if (ldFlux !== undefined) return ldFlux;
+
+  if (hasBrightnessPatches(inputs.patches)) {
+    return finiteClampedFlux(
+      fluxUniformDiskWithPatchesShapes({
+        rStar: inputs.rStar,
+        occulters: inputs.frontVisibleOcculters,
+        brightnessPatches: inputs.patches,
+        gridRes: inputs.gridRes,
+      }),
+    );
+  }
+
+  return finiteClampedFlux(
+    fluxUniformDiskShapes({
+      rStar: inputs.rStar,
+      occulters: inputs.frontVisibleOcculters,
+      gridRes: inputs.gridRes,
+    }),
+  );
+};
 
 /**
  * Compute the multiplicative stellar transit attenuation factor F_transit in [0, 1].
@@ -258,166 +615,10 @@ export function computeTransitFlux(
   kin: BodyKinematics,
   opts?: { brightnessPatchesOverride?: BrightnessPatch[] },
 ): number {
-  const rStar = params.star?.r;
-  if (!isFinitePositive(rStar)) {
-    throw new Error("computeTransitFlux: params.star.r must be a positive finite number.");
-  }
+  const inputs = transitFluxInputs(params, occulters, kin, opts);
+  const transmissionFlux = computeTransmissionFlux(params, kin, inputs);
+  if (transmissionFlux !== undefined) return transmissionFlux;
 
-  const phot = params.star.photometry;
-  const patches = opts?.brightnessPatchesOverride ?? phot?.brightnessPatches;
-  const gridRes = phot?.gridRes;
-  const frontVisibleOcculters = filterFrontVisibleOcculters(occulters, kin);
-  const allCircles = frontVisibleOcculters.every(isCircleOcculter);
-  const circleOcculters = allCircles ? (frontVisibleOcculters as CircleOcculter[]) : [];
-
-  // Atmosphere transmission: use transmissive integrator when enabled.
-  // Transmission integrator only supports circular occulters for now.
-  if (
-    (phot?.atmosphereTransmission?.enabled ||
-      (isPhysicsFeatureEnabled(params, "atmosphereRT") && phot?.atmosphereRT?.enabled)) &&
-    allCircles
-  ) {
-    const spectral = normalizeBandpassGrid(phot);
-
-    if (spectral) {
-      let sum = 0;
-      let wSum = 0;
-
-      for (let i = 0; i < spectral.lambdaNm.length; i++) {
-        const occTrans = buildTransmissionOcculters(params, kin, {
-          tauScale: spectral.tauScale[i],
-          lambdaNm: spectral.lambdaNm[i],
-        });
-        if (occTrans.length === 0) {
-          // No occulters for this band: flux = 1.0 (no dimming), but continue
-          // accumulating the weighted average instead of short-circuiting.
-          const w = spectral.weights[i];
-          sum += 1.0 * w;
-          wSum += w;
-          continue;
-        }
-
-        const ldLaw = resolveLimbDarkeningLaw(phot, String(spectral.lambdaNm[i]));
-        const f = fluxStarWithTransmissiveOcculters({
-          rStar,
-          occulters: occTrans,
-          limbDarkening: ldLaw,
-          brightnessPatches: patches,
-          gridRes,
-          clamp01: true,
-        });
-
-        if (Number.isFinite(f)) {
-          const w = spectral.weights[i];
-          sum += f * w;
-          wSum += w;
-        }
-      }
-
-      return wSum > 0 ? clamp01(sum / wSum) : 1.0;
-    }
-
-    const occTrans = buildTransmissionOcculters(params, kin, {});
-    if (occTrans.length === 0) return 1.0;
-
-    const ldLaw = resolveLimbDarkeningLaw(phot);
-    const f = fluxStarWithTransmissiveOcculters({
-      rStar,
-      occulters: occTrans,
-      limbDarkening: ldLaw,
-      brightnessPatches: patches,
-      gridRes,
-      clamp01: true,
-    });
-
-    return clamp01(Number.isFinite(f) ? f : 1.0);
-  }
-
-  if (
-    (phot?.atmosphereTransmission?.enabled ||
-      (isPhysicsFeatureEnabled(params, "atmosphereRT") && phot?.atmosphereRT?.enabled)) &&
-    !allCircles
-  ) {
-    console.warn(
-      "[computeTransitFlux] atmosphere transmission currently applies only to circular occulters; falling back to the non-transmissive mixed-shape solver.",
-    );
-  }
-
-  // Policy: limbDarkeningModel (optional) => use LD integrator if available;
-  // otherwise uniform disk, optionally with patches.
-  const ldModel = phot?.limbDarkeningModel;
-  const ld = getLdIntegrators();
-
-  if (ldModel && ld && allCircles) {
-    try {
-      // Keep this permissive: limb-darkening model schema is intentionally flexible.
-      const ldLaw = ld.resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
-
-      if (ldLaw) {
-        const f = ld.fluxLimbDarkenedDisk({
-          rStar,
-          rOcculters: circleOcculters,
-          limbDarkeningLaw: ldLaw,
-          constraints: ldModel.constraints,
-          brightnessPatches: patches,
-          gridRes,
-        });
-        return clamp01(Number.isFinite(f) ? f : 1.0);
-      }
-      // If law resolution fails, fall through to non-LD paths.
-    } catch {
-      // LD module error; fall through to uniform-disk path (deliberate fail-open).
-    }
-  }
-
-  const hasPatches = Array.isArray(patches) && patches.length > 0;
-
-  if (allCircles) {
-    if (hasPatches) {
-      const f = fluxUniformDiskWithPatches({
-        rStar,
-        rOcculters: circleOcculters,
-        brightnessPatches: patches,
-        gridRes,
-      });
-      return clamp01(Number.isFinite(f) ? f : 1.0);
-    }
-
-    const f = fluxUniformDisk({ rStar, rOcculters: circleOcculters, gridRes });
-    return clamp01(Number.isFinite(f) ? f : 1.0);
-  }
-
-  // Mixed-shape occulters: fall back to generic numerical integrators.
-  if (ldModel) {
-    try {
-      const ldLaw = resolveLimbDarkeningForBand(ldModel, ldModel.bandpass);
-
-      if (ldLaw) {
-        const f = fluxLimbDarkenedDiskShapes({
-          rStar,
-          occulters: frontVisibleOcculters,
-          limbDarkeningLaw: ldLaw,
-          constraints: ldModel.constraints,
-          brightnessPatches: patches,
-          gridRes,
-        });
-        return clamp01(Number.isFinite(f) ? f : 1.0);
-      }
-    } catch {
-      // LD module error; fall through to uniform-disk path for mixed shapes (deliberate fail-open).
-    }
-  }
-
-  if (hasPatches) {
-    const f = fluxUniformDiskWithPatchesShapes({
-      rStar,
-      occulters: frontVisibleOcculters,
-      brightnessPatches: patches,
-      gridRes,
-    });
-    return clamp01(Number.isFinite(f) ? f : 1.0);
-  }
-
-  const f = fluxUniformDiskShapes({ rStar, occulters: frontVisibleOcculters, gridRes });
-  return clamp01(Number.isFinite(f) ? f : 1.0);
+  warnUnsupportedTransmission(params, inputs);
+  return inputs.allCircles ? computeCircleFlux(inputs) : computeMixedShapeFlux(inputs);
 }

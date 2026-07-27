@@ -1,7 +1,10 @@
+/**
+ * Owns refs Object support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { mustGetAs } from "../core/dom";
 import type { UiRefs } from "./refs";
 
-export function createUiRefs(): UiRefs {
+function coreControlRefs() {
   return {
     skyCanvas: mustGetAs("skyCanvas", HTMLCanvasElement),
     lcCanvas: mustGetAs("lcCanvas", HTMLCanvasElement),
@@ -22,6 +25,12 @@ export function createUiRefs(): UiRefs {
     viewAutoFit: document.getElementById("viewAutoFit") as HTMLInputElement | null,
     tVal: mustGetAs("tVal", HTMLElement),
     fluxVal: mustGetAs("fluxVal", HTMLElement),
+  };
+}
+
+function modeAndPresetRefs() {
+  return {
+    productProfileSelect: mustGetAs("productProfileSelect", HTMLSelectElement),
     productModeSelect: mustGetAs("productModeSelect", HTMLSelectElement),
     uiModeSelect: mustGetAs("uiModeSelect", HTMLSelectElement),
     simModeSelect: document.getElementById("simModeSelect") as HTMLSelectElement | null,
@@ -37,6 +46,11 @@ export function createUiRefs(): UiRefs {
     vPlanetVal: document.getElementById("vPlanetVal") as HTMLSpanElement | null,
     vMoonVal: document.getElementById("vMoonVal") as HTMLSpanElement | null,
     timingHistoryVal: document.getElementById("timingHistoryVal") as HTMLSpanElement | null,
+  };
+}
+
+function didacticContentRefs() {
+  return {
     didLessonStatus: document.getElementById("didLessonStatus"),
     didLessonSummary: document.getElementById("didLessonSummary"),
     didLessonMeta: document.getElementById("didLessonMeta"),
@@ -59,6 +73,11 @@ export function createUiRefs(): UiRefs {
     didCheckList: document.getElementById("didCheckList"),
     didFormulaList: document.getElementById("didFormulaList"),
     didCompareOut: document.getElementById("didCompareOut"),
+  };
+}
+
+function ocRefs() {
+  return {
     ocCanvas: document.getElementById("ocCanvas") as HTMLCanvasElement | null,
     ocBodySelect: document.getElementById("ocBodySelect") as HTMLSelectElement | null,
     ocUnitSelect: document.getElementById("ocUnitSelect") as HTMLSelectElement | null,
@@ -67,6 +86,11 @@ export function createUiRefs(): UiRefs {
     ocClearBtn: document.getElementById("ocClearBtn") as HTMLButtonElement | null,
     ocStatsVal: document.getElementById("ocStatsVal"),
     ocFitVal: document.getElementById("ocFitVal"),
+  };
+}
+
+function didacticControlRefs() {
+  return {
     didLessonSelect: document.getElementById("didLessonSelect") as HTMLSelectElement | null,
     didPrevBtn: document.getElementById("didPrevBtn") as HTMLButtonElement | null,
     didHintLevelSelect: document.getElementById("didHintLevelSelect") as HTMLSelectElement | null,
@@ -84,11 +108,13 @@ export function createUiRefs(): UiRefs {
     didHypothesisSelect: document.getElementById("didHypothesisSelect") as HTMLSelectElement | null,
     didRevealSkyBtn: document.getElementById("didRevealSkyBtn") as HTMLButtonElement | null,
     didBinaryControls: document.getElementById("didBinaryControls"),
+  };
+}
+
+function paramActionAndQuickRefs() {
+  return {
     btnApplyParams: mustGetAs("btnApplyParams", HTMLButtonElement),
     btnResetParams: mustGetAs("btnResetParams", HTMLButtonElement),
-    observerX: mustGetAs("observerX", HTMLInputElement),
-    observerY: mustGetAs("observerY", HTMLInputElement),
-    observerZ: mustGetAs("observerZ", HTMLInputElement),
     overrideModeEl: document.getElementById("overrideMode") as HTMLInputElement | null,
     sliderRootEl: document.getElementById("sliderRoot") as HTMLElement | null,
     quickControlsRootEl: document.getElementById("quickControlsRoot") as HTMLElement | null,
@@ -106,6 +132,14 @@ export function createUiRefs(): UiRefs {
     quickMoonInc: mustGetAs("quickMoonInc", HTMLInputElement),
     quickMoonIncVal: mustGetAs("quickMoonIncVal", HTMLElement),
     quickReflectedLight: mustGetAs("quickReflectedLight", HTMLInputElement),
+  };
+}
+
+function starRefs() {
+  return {
+    observerX: mustGetAs("observerX", HTMLInputElement),
+    observerY: mustGetAs("observerY", HTMLInputElement),
+    observerZ: mustGetAs("observerZ", HTMLInputElement),
     starR: mustGetAs("starR", HTMLInputElement),
     baselineFlux: mustGetAs("baselineFlux", HTMLInputElement),
     gridRes: mustGetAs("gridRes", HTMLInputElement),
@@ -130,6 +164,11 @@ export function createUiRefs(): UiRefs {
     p2ry: mustGetAs("p2ry", HTMLInputElement),
     p2angle: mustGetAs("p2angle", HTMLInputElement),
     p2f: mustGetAs("p2f", HTMLInputElement),
+  };
+}
+
+function planetRefs() {
+  return {
     planetR: mustGetAs("planetR", HTMLInputElement),
     planetA: mustGetAs("planetA", HTMLInputElement),
     planetE: mustGetAs("planetE", HTMLInputElement),
@@ -168,6 +207,11 @@ export function createUiRefs(): UiRefs {
     atmTau0: mustGetAs("atmTau0", HTMLInputElement),
     atmLambdaNm: mustGetAs("atmLambdaNm", HTMLInputElement),
     atmTauScale: mustGetAs("atmTauScale", HTMLInputElement),
+  };
+}
+
+function moonRefs() {
+  return {
     moonEnabled: mustGetAs("moonEnabled", HTMLInputElement),
     moonR: mustGetAs("moonR", HTMLInputElement),
     moonA: mustGetAs("moonA", HTMLInputElement),
@@ -191,6 +235,11 @@ export function createUiRefs(): UiRefs {
     moonRingOuter: mustGetAs("moonRingOuter", HTMLInputElement),
     moonRingInc: mustGetAs("moonRingInc", HTMLInputElement),
     moonRingAngle: mustGetAs("moonRingAngle", HTMLInputElement),
+  };
+}
+
+function measurementAndDynamicsRefs() {
+  return {
     smearEnabled: mustGetAs("smearEnabled", HTMLInputElement),
     cadenceSec: mustGetAs("cadenceSec", HTMLInputElement),
     nSubsamples: mustGetAs("nSubsamples", HTMLInputElement),
@@ -236,6 +285,21 @@ export function createUiRefs(): UiRefs {
     relC: mustGetAs("relC", HTMLInputElement),
     relPlanetPrec: mustGetAs("relPlanetPrec", HTMLInputElement),
     relMoonPrec: mustGetAs("relMoonPrec", HTMLInputElement),
+  };
+}
+
+export function createUiRefs(): UiRefs {
+  return {
+    ...coreControlRefs(),
+    ...modeAndPresetRefs(),
+    ...didacticContentRefs(),
+    ...ocRefs(),
+    ...didacticControlRefs(),
+    ...paramActionAndQuickRefs(),
+    ...starRefs(),
+    ...planetRefs(),
+    ...moonRefs(),
+    ...measurementAndDynamicsRefs(),
   };
 }
 

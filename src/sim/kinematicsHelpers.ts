@@ -1,4 +1,4 @@
-// src/sim/kinematics.ts
+/** Provides shared orbital kinematics helpers without coupling to stepping orchestration. */
 
 import type { ExomoonTimingShapeParams, OrbitElements, SkyPoint, SystemParams } from "../core/types";
 import { G_SI, isFinitePositive, toFiniteNumber, wrapTo2Pi } from "../core/units";
@@ -41,6 +41,34 @@ export type MoonStateAt = {
   driftY: number;
 };
 
+type J2Inputs = {
+  J2?: number;
+  centralRadius?: number;
+  mu?: number;
+};
+
+type TidalEvolutionInputs = {
+  tides?: { enabled?: boolean; k2?: number; Q?: number; daDt?: number; deDt?: number };
+  centralRadius?: number;
+  mu?: number;
+};
+
+type TidalDrift = {
+  daDt: number;
+  deDt: number;
+};
+
+type TidalOrbitUpdate = {
+  a: number;
+  e: number;
+};
+
+type MoonParams = NonNullable<SystemParams["moon"]>;
+type MoonAbsolutePositions = {
+  rPlanetAbs: Vec3;
+  rMoonAbsBase: Vec3;
+};
+
 export function getExomoonConfig(params: SystemParams): ExomoonTimingShapeParams | undefined {
   return params.dynamics?.exomoonTimingShape;
 }
@@ -57,26 +85,11 @@ function computeMoonSkyDriftY(exo: ExomoonTimingShapeParams | undefined, t: numb
   return (t - tRef) * yDot;
 }
 
-function applyJ2SecularPrecession(
-  el: OrbitElements,
-  dtSec: number,
-  params: { J2?: number; centralRadius?: number; mu?: number },
-): OrbitElements {
+function applyJ2SecularPrecession(el: OrbitElements, dtSec: number, params: J2Inputs): OrbitElements {
   const { J2, centralRadius: R, mu } = params;
-  if (!isFinitePositive(mu)) return el;
-  if (!isFinitePositive(R)) return el;
-  if (!(Number.isFinite(J2) && J2 !== 0)) return el;
-  if (!(Number.isFinite(el.a) && el.a > 0)) return el;
-  if (!(Number.isFinite(el.e) && el.e >= 0 && el.e < 1)) return el;
-  if (!(Number.isFinite(el.inc) && el.inc >= 0 && el.inc <= Math.PI)) return el;
+  if (!hasValidJ2Inputs(el, params)) return el;
 
-  const a = el.a;
-  const e = el.e;
-  const i = el.inc;
-  const n = Math.sqrt(mu / (a * a * a));
-  const fac = (R * R) / (a * a * Math.pow(1 - e * e, 2));
-  const OmegaDot = -1.5 * J2! * n * fac * Math.cos(i);
-  const omegaDot = 0.75 * J2! * n * fac * (5 * Math.cos(i) * Math.cos(i) - 1);
+  const { OmegaDot, omegaDot } = j2PrecessionRates(el, J2 as number, R as number, mu as number);
 
   return {
     ...el,
@@ -85,100 +98,195 @@ function applyJ2SecularPrecession(
   };
 }
 
+function hasValidJ2Inputs(el: OrbitElements, params: J2Inputs): boolean {
+  return hasValidJ2Shape(params) && hasValidJ2Orbit(el);
+}
+
+function hasValidJ2Shape(params: J2Inputs): boolean {
+  return (
+    isFinitePositive(params.mu) &&
+    isFinitePositive(params.centralRadius) &&
+    Number.isFinite(params.J2) &&
+    params.J2 !== 0
+  );
+}
+
+function hasValidJ2Orbit(el: OrbitElements): boolean {
+  return (
+    isFinitePositive(el.a) &&
+    Number.isFinite(el.e) &&
+    el.e >= 0 &&
+    el.e < 1 &&
+    Number.isFinite(el.inc) &&
+    el.inc >= 0 &&
+    el.inc <= Math.PI
+  );
+}
+
+function j2PrecessionRates(
+  el: OrbitElements,
+  J2: number,
+  R: number,
+  mu: number,
+): { OmegaDot: number; omegaDot: number } {
+  const n = Math.sqrt(mu / (el.a * el.a * el.a));
+  const fac = (R * R) / (el.a * el.a * Math.pow(1 - el.e * el.e, 2));
+  const cosInc = Math.cos(el.inc);
+
+  return {
+    OmegaDot: -1.5 * J2 * n * fac * cosInc,
+    omegaDot: 0.75 * J2 * n * fac * (5 * cosInc * cosInc - 1),
+  };
+}
+
 function applyTidalSecularEvolution(
   el: OrbitElements,
   dtSec: number,
-  params: {
-    tides?: { enabled?: boolean; k2?: number; Q?: number; daDt?: number; deDt?: number };
-    centralRadius?: number;
-    mu?: number;
-  },
+  params: TidalEvolutionInputs,
 ): OrbitElements {
   const tides = params.tides;
-  if (!tides?.enabled) return el;
-  if (!Number.isFinite(dtSec) || dtSec === 0) return el;
+  if (!canApplyTidalEvolution(tides, dtSec)) return el;
 
-  let daDt = Number.isFinite(tides.daDt) ? tides.daDt! : 0;
-  let deDt = Number.isFinite(tides.deDt) ? tides.deDt! : 0;
+  const drift = sanitizeTidalDrift(resolveTidalDrift(el, params));
+  if (drift.daDt === 0 && drift.deDt === 0) return el;
 
-  const { k2, Q } = tides;
-  const { centralRadius: R, mu } = params;
-  if (daDt === 0 && deDt === 0 && isFinitePositive(k2) && isFinitePositive(Q)) {
-    if (
-      isFinitePositive(R) &&
-      isFinitePositive(mu) &&
-      Number.isFinite(el.a) &&
-      el.a > 0 &&
-      Number.isFinite(el.e) &&
-      el.e >= 0 &&
-      el.e < 1
-    ) {
-      const n = Math.sqrt(mu / (el.a * el.a * el.a));
-      // Goldreich & Soter (1966) prefactors: 21/2 for both da/dt and de/dt.
-      // da/dt = -(21) * (k2/Q) * (R/a)^5 * n * a * e^2
-      // de/dt = -(21/2) * (k2/Q) * (R/a)^5 * n * e
-      const s = (k2 / Q) * Math.pow(R / el.a, 5) * n;
-      deDt = -(21 / 2) * s * el.e;
-      daDt = -21 * s * el.a * el.e * el.e;
-    }
-  }
+  const updated = clampTidalStep(el, dtSec, applyTidalDrift(el, dtSec, drift));
+  warnLargeTidalChange(el, updated);
 
-  if (!Number.isFinite(daDt)) daDt = 0;
-  if (!Number.isFinite(deDt)) deDt = 0;
-  if (daDt === 0 && deDt === 0) return el;
-
-  let a = Math.max(1e-6, el.a + daDt * dtSec);
-  let e = Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e + deDt * dtSec));
-
-  // Clamp: if the relative change exceeds 50%, the Euler step has grown
-  // unboundedly and the result is physically meaningless.  Clamp to +/-50%
-  // of the original value and warn.
-  const MAX_REL_CHANGE = 0.5;
-  const relDaRaw = Math.abs(a - el.a) / Math.max(el.a, 1e-15);
-  const relDeRaw = el.e > 1e-12 ? Math.abs(e - el.e) / el.e : Math.abs(e - el.e);
-
-  if (relDaRaw > MAX_REL_CHANGE) {
-    const sign = a >= el.a ? 1 : -1;
-    a = Math.max(1e-6, el.a * (1 + sign * MAX_REL_CHANGE));
-    console.warn(
-      `applyTidalSecularEvolution: clamped da/a from ${relDaRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
-        `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
-    );
-  }
-  if (relDeRaw > MAX_REL_CHANGE && el.e > 1e-12) {
-    const sign = e >= el.e ? 1 : -1;
-    e = Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e * (1 + sign * MAX_REL_CHANGE)));
-    console.warn(
-      `applyTidalSecularEvolution: clamped de/e from ${relDeRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
-        `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
-    );
-  }
-
-  // Warn if secular changes are large relative to the orbit (> 10% per step),
-  // which may indicate an excessively large time step or pathological tidal parameters.
-  const relDa = Math.abs(a - el.a) / Math.max(el.a, 1e-15);
-  const relDe = el.e > 1e-12 ? Math.abs(e - el.e) / el.e : Math.abs(e - el.e);
-  if (relDa > 0.1 || relDe > 0.1) {
-    console.warn(
-      `applyTidalSecularEvolution: large secular change detected (da/a=${relDa.toFixed(4)}, de/e=${relDe.toFixed(4)}). ` +
-        `Consider reducing the time step or clamping tidal parameters.`,
-    );
-  }
-
-  // Always recompute period from the new semi-major axis via Kepler's third law.
-  // When mu is available, use it directly; otherwise derive mu from the original
-  // period and semi-major axis to ensure consistency between a and period.
-  let muEff: number | undefined = mu;
-  if (!isFinitePositive(muEff)) {
-    // Derive mu from original orbit elements (period and a).
-    if (Number.isFinite(el.period) && el.period > 0 && Number.isFinite(el.a) && el.a > 0) {
-      const n0 = (2 * Math.PI) / el.period;
-      muEff = n0 * n0 * el.a * el.a * el.a;
-    }
-  }
-  const period = isFinitePositive(muEff) ? 2 * Math.PI * Math.sqrt((a * a * a) / muEff!) : el.period;
+  const period = resolveTidalPeriod(el, updated.a, params.mu);
+  const { a, e } = updated;
   return { ...el, a, e, period: Number.isFinite(period) && period > 0 ? period : el.period };
 }
+
+function canApplyTidalEvolution(tides: TidalEvolutionInputs["tides"], dtSec: number): boolean {
+  return Boolean(tides?.enabled) && Number.isFinite(dtSec) && dtSec !== 0;
+}
+
+function resolveTidalDrift(el: OrbitElements, params: TidalEvolutionInputs): TidalDrift {
+  const explicit = explicitTidalDrift(params.tides);
+  if (explicit.daDt !== 0 || explicit.deDt !== 0) return explicit;
+  return derivedTidalDrift(el, params);
+}
+
+function explicitTidalDrift(tides: TidalEvolutionInputs["tides"]): TidalDrift {
+  return {
+    daDt: Number.isFinite(tides?.daDt) ? tides!.daDt! : 0,
+    deDt: Number.isFinite(tides?.deDt) ? tides!.deDt! : 0,
+  };
+}
+
+function sanitizeTidalDrift(drift: TidalDrift): TidalDrift {
+  return {
+    daDt: Number.isFinite(drift.daDt) ? drift.daDt : 0,
+    deDt: Number.isFinite(drift.deDt) ? drift.deDt : 0,
+  };
+}
+
+function derivedTidalDrift(el: OrbitElements, params: TidalEvolutionInputs): TidalDrift {
+  const { k2, Q } = params.tides ?? {};
+  const { centralRadius: R, mu } = params;
+  if (!hasDerivedTidalInputs(el, R, mu, k2, Q)) return { daDt: 0, deDt: 0 };
+
+  const n = Math.sqrt((mu as number) / (el.a * el.a * el.a));
+  // Goldreich & Soter (1966) prefactors: 21/2 for both da/dt and de/dt.
+  // da/dt = -(21) * (k2/Q) * (R/a)^5 * n * a * e^2
+  // de/dt = -(21/2) * (k2/Q) * (R/a)^5 * n * e
+  const s = ((k2 as number) / (Q as number)) * Math.pow((R as number) / el.a, 5) * n;
+
+  return {
+    deDt: -(21 / 2) * s * el.e,
+    daDt: -21 * s * el.a * el.e * el.e,
+  };
+}
+
+function hasDerivedTidalInputs(
+  el: OrbitElements,
+  R: number | undefined,
+  mu: number | undefined,
+  k2: number | undefined,
+  Q: number | undefined,
+): boolean {
+  return hasValidTidalCoefficients(k2, Q) && hasValidTidalCentralInputs(R, mu) && hasValidTidalOrbit(el);
+}
+
+function hasValidTidalCoefficients(k2: number | undefined, Q: number | undefined): boolean {
+  return isFinitePositive(k2) && isFinitePositive(Q);
+}
+
+function hasValidTidalCentralInputs(R: number | undefined, mu: number | undefined): boolean {
+  return isFinitePositive(R) && isFinitePositive(mu);
+}
+
+function hasValidTidalOrbit(el: OrbitElements): boolean {
+  return isFinitePositive(el.a) && Number.isFinite(el.e) && el.e >= 0 && el.e < 1;
+}
+
+function applyTidalDrift(el: OrbitElements, dtSec: number, drift: TidalDrift): TidalOrbitUpdate {
+  return {
+    a: Math.max(1e-6, el.a + drift.daDt * dtSec),
+    e: Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e + drift.deDt * dtSec)),
+  };
+}
+
+const clampTidalStep = (el: OrbitElements, dtSec: number, update: TidalOrbitUpdate): TidalOrbitUpdate => {
+  return {
+    a: clampTidalAxis(el, dtSec, update.a),
+    e: clampTidalEccentricity(el, dtSec, update.e),
+  };
+};
+
+const clampTidalAxis = (el: OrbitElements, dtSec: number, a: number): number => {
+  const MAX_REL_CHANGE = 0.5;
+  const relDaRaw = Math.abs(a - el.a) / Math.max(el.a, 1e-15);
+  if (relDaRaw <= MAX_REL_CHANGE) return a;
+
+  const sign = a >= el.a ? 1 : -1;
+  console.warn(
+    `applyTidalSecularEvolution: clamped da/a from ${relDaRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
+      `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
+  );
+  return Math.max(1e-6, el.a * (1 + sign * MAX_REL_CHANGE));
+};
+
+const clampTidalEccentricity = (el: OrbitElements, dtSec: number, e: number): number => {
+  const MAX_REL_CHANGE = 0.5;
+  const relDeRaw = relativeEccentricityChange(el, e);
+  if (relDeRaw <= MAX_REL_CHANGE || el.e <= 1e-12) return e;
+
+  const sign = e >= el.e ? 1 : -1;
+  console.warn(
+    `applyTidalSecularEvolution: clamped de/e from ${relDeRaw.toFixed(4)} to ${MAX_REL_CHANGE}. ` +
+      `dtSec=${dtSec.toExponential(3)} is too large for stable tidal evolution.`,
+  );
+  return Math.min(MAX_ECC_NEAR_PARABOLIC, Math.max(0, el.e * (1 + sign * MAX_REL_CHANGE)));
+};
+
+const warnLargeTidalChange = (el: OrbitElements, update: TidalOrbitUpdate): void => {
+  const relDa = Math.abs(update.a - el.a) / Math.max(el.a, 1e-15);
+  const relDe = relativeEccentricityChange(el, update.e);
+  if (relDa <= 0.1 && relDe <= 0.1) return;
+
+  console.warn(
+    `applyTidalSecularEvolution: large secular change detected (da/a=${relDa.toFixed(4)}, de/e=${relDe.toFixed(4)}). ` +
+      `Consider reducing the time step or clamping tidal parameters.`,
+  );
+};
+
+const relativeEccentricityChange = (el: OrbitElements, e: number): number => {
+  return el.e > 1e-12 ? Math.abs(e - el.e) / el.e : Math.abs(e - el.e);
+};
+
+const resolveTidalPeriod = (el: OrbitElements, a: number, mu: number | undefined): number => {
+  const muEff = isFinitePositive(mu) ? mu : deriveMuFromOrbit(el);
+  return isFinitePositive(muEff) ? 2 * Math.PI * Math.sqrt((a * a * a) / muEff) : el.period;
+};
+
+const deriveMuFromOrbit = (el: OrbitElements): number | undefined => {
+  if (!(Number.isFinite(el.period) && el.period > 0 && Number.isFinite(el.a) && el.a > 0)) return undefined;
+
+  const n0 = (2 * Math.PI) / el.period;
+  return n0 * n0 * el.a * el.a * el.a;
+};
 
 function applySecularPlanetOrbit(params: SystemParams, t: number, el: OrbitElements): OrbitElements {
   const sec = params.dynamics?.secular;
@@ -282,71 +390,113 @@ export function getMoonStateAt(
   rBaryOverride?: Vec3,
   relativity?: NormalizedRelativityParams,
 ): MoonStateAt | undefined {
-  if (!params.moon) return undefined;
-  if (!Number.isFinite(t)) throw new Error("getMoonStateAt: t must be finite.");
-  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0)
-    throw new Error("getMoonStateAt: moon.r must be > 0.");
+  const moon = resolveMoonForState(params, t);
+  if (!moon) return undefined;
 
   const exo = getExomoonConfig(params);
-  const exoEnabled = Boolean(exo?.enabled);
-  const tRef = toFiniteNumber(exo?.tRef, 0);
   const driftY = computeMoonSkyDriftY(exo, t);
+  const rBary = moonBarycenterPosition(params, t, rBaryOverride);
+  const moonOrbitRel = moonOrbitForState(params, t, exo, relativity);
+  if (!moonOrbitRel) return undefined;
 
+  const rMoonRel = posFromResolvedElements(moonOrbitRel, t, "moon.orbitAroundPlanet");
+  const { rPlanetAbs, rMoonAbsBase } = moonAbsolutePositions(params, moon, rBary, rMoonRel);
+  const rMoonAbs = applyMoonSkyDrift(rMoonAbsBase, observerDir, driftY);
+  const moonSky = projectToSky(rMoonAbs, observerDir);
+
+  return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
+}
+
+function resolveMoonForState(params: SystemParams, t: number): MoonParams | undefined {
+  if (!params.moon) return undefined;
+  if (!Number.isFinite(t)) throw new Error("getMoonStateAt: t must be finite.");
+  if (!Number.isFinite(params.moon.r) || params.moon.r <= 0) {
+    throw new Error("getMoonStateAt: moon.r must be > 0.");
+  }
+  return params.moon;
+}
+
+function moonBarycenterPosition(params: SystemParams, t: number, rBaryOverride: Vec3 | undefined): Vec3 {
   // Planet "orbit" is interpreted as barycenter orbit if a valid planet+moon mass pair exists.
   // Otherwise it is treated as the planet orbit directly, and the moon is placed relative to it.
   // OPTIMIZATION: Use rBaryOverride if provided to avoid re-calculating Kepler orbit.
-  const rBary =
+  return (
     rBaryOverride ??
-    posFromResolvedElements(resolvePlanetOrbitForKinematics(params, t, "planet.orbit"), t, "planet.orbit");
+    posFromResolvedElements(resolvePlanetOrbitForKinematics(params, t, "planet.orbit"), t, "planet.orbit")
+  );
+}
 
+function moonOrbitForState(
+  params: SystemParams,
+  t: number,
+  exo: ExomoonTimingShapeParams | undefined,
+  relativity: NormalizedRelativityParams | undefined,
+): OrbitElements | undefined {
   const moonOrbitBaseEl = resolveMoonOrbitForKinematics(params, t, "moon.orbitAroundPlanet");
   if (!moonOrbitBaseEl) return undefined;
-  const moonOrbitEvolvedEl = exoEnabled
-    ? applyOrientationEvolution(moonOrbitBaseEl, t, {
-        enabled: true,
-        tRef,
-        OmegaDot: exo?.moonOmegaDot,
-        incDot: exo?.moonIncDot,
-        omegaDot: exo?.moonOmegaSmallDot,
-        Omega0: exo?.moonOmega0,
-        inc0: exo?.moonInc0,
-        omega0: exo?.moonOmegaSmall0,
-        wrapAngles: "2pi",
-        clampInc01Pi: true,
-      })
-    : moonOrbitBaseEl;
 
-  const grOn = Boolean(relativity?.enabled && relativity?.grPrecession);
-  const moonPrec = grOn
-    ? resolveGrPrecessionPerOrbit({
-        orbit: moonOrbitEvolvedEl,
-        c: relativity!.c,
-        override: relativity!.moonPrecessionPerOrbit,
-      })
-    : 0;
-  const moonOrbitRel = grOn ? applyApsidalPrecession(moonOrbitEvolvedEl, t, moonPrec) : moonOrbitEvolvedEl;
+  return applyMoonRelativityPrecession(applyMoonOrientationEvolution(moonOrbitBaseEl, t, exo), t, relativity);
+}
 
-  const rMoonRel = posFromResolvedElements(moonOrbitRel, t, "moon.orbitAroundPlanet");
+function applyMoonOrientationEvolution(
+  moonOrbitBaseEl: OrbitElements,
+  t: number,
+  exo: ExomoonTimingShapeParams | undefined,
+): OrbitElements {
+  if (!exo?.enabled) return moonOrbitBaseEl;
 
+  return applyOrientationEvolution(moonOrbitBaseEl, t, {
+    enabled: true,
+    tRef: toFiniteNumber(exo.tRef, 0),
+    OmegaDot: exo.moonOmegaDot,
+    incDot: exo.moonIncDot,
+    omegaDot: exo.moonOmegaSmallDot,
+    Omega0: exo.moonOmega0,
+    inc0: exo.moonInc0,
+    omega0: exo.moonOmegaSmall0,
+    wrapAngles: "2pi",
+    clampInc01Pi: true,
+  });
+}
+
+function applyMoonRelativityPrecession(
+  moonOrbitEvolvedEl: OrbitElements,
+  t: number,
+  relativity: NormalizedRelativityParams | undefined,
+): OrbitElements {
+  if (!relativity?.enabled || !relativity.grPrecession) return moonOrbitEvolvedEl;
+
+  const moonPrec = resolveGrPrecessionPerOrbit({
+    orbit: moonOrbitEvolvedEl,
+    c: relativity.c,
+    override: relativity.moonPrecessionPerOrbit,
+  });
+
+  return applyApsidalPrecession(moonOrbitEvolvedEl, t, moonPrec);
+}
+
+function moonAbsolutePositions(
+  params: SystemParams,
+  moon: MoonParams,
+  rBary: Vec3,
+  rMoonRel: Vec3,
+): MoonAbsolutePositions {
   const split = trySplitBarycentricPair({
     rBary,
     rRel: rMoonRel, // vector from planet -> moon
     mPrimary: params.planet.m,
-    mSecondary: params.moon.m,
+    mSecondary: moon.m,
   });
 
-  const rPlanetAbs = split ? split.rPrimary : rBary;
-  const rMoonAbsBase = split ? split.rSecondary : vAdd(rBary, rMoonRel);
+  return {
+    rPlanetAbs: split ? split.rPrimary : rBary,
+    rMoonAbsBase: split ? split.rSecondary : vAdd(rBary, rMoonRel),
+  };
+}
 
-  // Apply optional sky-plane drift to the inertial position so phase-curve geometry matches.
-  let rMoonAbs = rMoonAbsBase;
-  if (driftY !== 0) {
-    const { ey } = buildSkyBasis(observerDir);
-    rMoonAbs = vAddScaled(rMoonAbsBase, ey, driftY);
-  }
+function applyMoonSkyDrift(rMoonAbsBase: Vec3, observerDir: Vec3, driftY: number): Vec3 {
+  if (driftY === 0) return rMoonAbsBase;
 
-  const ms = projectToSky(rMoonAbs, observerDir);
-  const moonSky = ms;
-
-  return { rBary, rPlanetAbs, rMoonAbs, rMoonRel, moonSky, driftY };
+  const { ey } = buildSkyBasis(observerDir);
+  return vAddScaled(rMoonAbsBase, ey, driftY);
 }

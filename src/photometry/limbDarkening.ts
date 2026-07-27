@@ -1,4 +1,4 @@
-// src/photometry/limbDarkening.ts
+/** Evaluates limb-darkening laws and validates their photometric admissibility. */
 
 //
 // Limb darkening laws, passband resolution, and optional physical admissibility checks.
@@ -27,7 +27,7 @@
 // - Validation is designed to be called rarely (e.g. at config/preset updates), not per pixel.
 // - Transit integrators clamp intensity to >=0 for robustness; validation is optional.
 
-import { clamp01, toFiniteNumber } from "../core/units";
+import { toFiniteNumber } from "../core/units";
 import type {
   LimbDarkeningConstraints,
   LimbDarkeningLaw,
@@ -35,7 +35,11 @@ import type {
   PassbandId,
   StellarLimbDarkeningParams,
 } from "../core/types";
+import { limbDarkeningBandShift } from "./limbDarkeningBands";
+import { validateLimbDarkeningLaw } from "./limbDarkeningEvaluation";
+import { findBandLaw, isLawObject, normalizeBandpassId } from "./limbDarkeningLookup";
 export type { LimbDarkeningConstraints, LimbDarkeningLaw } from "../core/types";
+export { intensityNonNegative, validateLimbDarkeningLaw } from "./limbDarkeningEvaluation";
 
 export type StellarLdParams = StellarLimbDarkeningParams & { bandpass?: PassbandId };
 
@@ -53,21 +57,16 @@ export function hasExplicitLimbDarkeningBandLaw(
 export function deriveQuadraticLimbDarkeningFromStellarParams(
   params: StellarLdParams,
 ): Extract<LimbDarkeningLaw, { kind: "quadratic" }> {
-  const teff = Number.isFinite(params.teffK) ? (params.teffK as number) : 5772;
-  const logg = Number.isFinite(params.loggCgs) ? (params.loggCgs as number) : 4.44;
-  const feh = Number.isFinite(params.metallicityDex) ? (params.metallicityDex as number) : 0;
+  const teff = toFiniteNumber(params.teffK, 5772);
+  const logg = toFiniteNumber(params.loggCgs, 4.44);
+  const feh = toFiniteNumber(params.metallicityDex, 0);
   const band = normalizeBandpassId(params.bandpass ?? "v") ?? "v";
 
   // Smoothly varying toy coefficients around solar values.
   const tNorm = Math.max(-1, Math.min(1, (teff - 5772) / 4000));
   const gNorm = Math.max(-1, Math.min(1, (logg - 4.44) / 1.5));
   const zNorm = Math.max(-1, Math.min(1, feh / 1.0));
-  const bandShift =
-    band === "u" || band === "b"
-      ? 0.06
-      : band === "r" || band === "i" || band === "z" || band === "y"
-        ? -0.05
-        : 0;
+  const bandShift = limbDarkeningBandShift(band);
 
   let u1 = 0.42 - 0.14 * tNorm + 0.05 * gNorm + 0.03 * zNorm + bandShift;
   let u2 = 0.24 - 0.08 * tNorm + 0.03 * gNorm - 0.02 * zNorm + 0.5 * bandShift;
@@ -84,194 +83,6 @@ export function deriveQuadraticLimbDarkeningFromStellarParams(
 
 /** Validation behavior for limb-darkening plausibility checks. */
 export type LimbDarkeningValidationMode = "none" | "warn" | "throw";
-
-function emitValidation(mode: LimbDarkeningValidationMode, msg: string): void {
-  if (mode === "none") return;
-  if (mode === "throw") throw new Error(msg);
-  // mode === "warn"
-  console.warn(msg);
-}
-
-function isFiniteLaw(law: LimbDarkeningLaw): boolean {
-  switch (law.kind) {
-    case "quadratic":
-      return Number.isFinite(law.u1) && Number.isFinite(law.u2);
-    case "three-parameter":
-      return Number.isFinite(law.a1) && Number.isFinite(law.a2) && Number.isFinite(law.a3);
-    case "four-parameter":
-      return (
-        Number.isFinite(law.a1) &&
-        Number.isFinite(law.a2) &&
-        Number.isFinite(law.a3) &&
-        Number.isFinite(law.a4)
-      );
-    default: {
-      const _never: never = law;
-      return _never;
-    }
-  }
-}
-
-function normalizeBandpassId(id: unknown): PassbandId | undefined {
-  if (id === undefined || id === null) return undefined;
-  const s = String(id).trim();
-  if (!s) return undefined;
-  return s.toLowerCase();
-}
-
-function isLawObject(candidate: unknown): candidate is LimbDarkeningLaw {
-  return Boolean(
-    candidate && typeof candidate === "object" && "kind" in candidate && typeof candidate.kind === "string",
-  );
-}
-
-function findBandLaw(
-  bands: Record<PassbandId, LimbDarkeningLaw> | undefined,
-  bandpass: unknown,
-): LimbDarkeningLaw | undefined {
-  if (!bands) return undefined;
-
-  const raw = bandpass === undefined || bandpass === null ? "" : String(bandpass);
-  if (raw && Object.prototype.hasOwnProperty.call(bands, raw)) {
-    const candidate = bands[raw as PassbandId];
-    if (isLawObject(candidate)) return candidate;
-  }
-
-  const norm = normalizeBandpassId(raw);
-  if (!norm) return undefined;
-
-  if (Object.prototype.hasOwnProperty.call(bands, norm)) {
-    const candidate = bands[norm as PassbandId];
-    if (isLawObject(candidate)) return candidate;
-  }
-
-  for (const key of Object.keys(bands)) {
-    if (normalizeBandpassId(key) === norm) {
-      const candidate = bands[key as PassbandId];
-      if (isLawObject(candidate)) return candidate;
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Evaluate normalized specific intensity I(mu)/I(1) for the given limb-darkening law.
- *
- * Robustness:
- * - mu is clamped to [0,1].
- * - If coefficients are non-finite, the result may be non-finite (caller may validate/sanitize).
- */
-function evaluateLimbDarkeningIntensity(mu: number, law: LimbDarkeningLaw): number {
-  const m = clamp01(mu);
-
-  switch (law.kind) {
-    case "quadratic": {
-      const oneMinus = 1 - m;
-      return 1 - law.u1 * oneMinus - law.u2 * oneMinus * oneMinus;
-    }
-    case "three-parameter": {
-      const s = Math.sqrt(m); // mu^(1/2)
-      const m32 = m * s; // mu^(3/2)
-      return 1 - law.a1 * (1 - s) - law.a2 * (1 - m) - law.a3 * (1 - m32);
-    }
-    case "four-parameter": {
-      const s = Math.sqrt(m); // mu^(1/2)
-      const m32 = m * s; // mu^(3/2)
-      const m2 = m * m; // mu^2
-      return 1 - law.a1 * (1 - s) - law.a2 * (1 - m) - law.a3 * (1 - m32) - law.a4 * (1 - m2);
-    }
-    default: {
-      const _never: never = law;
-      return _never;
-    }
-  }
-}
-
-/**
- * Convenience helper used by integrators:
- * - clamps mu to [0,1] (via evaluate)
- * - clamps intensity to >= 0
- * - returns 0 for non-finite results
- */
-export function intensityNonNegative(mu: number, law: LimbDarkeningLaw): number {
-  const I = evaluateLimbDarkeningIntensity(mu, law);
-  if (!Number.isFinite(I)) return 0;
-  return Math.max(0, I);
-}
-
-/**
- * Validate a limb-darkening law against configurable plausibility constraints.
- *
- * NOTE:
- * - Intended to be called rarely (e.g. at config updates), not per sample point.
- */
-export function validateLimbDarkeningLaw(
-  law: LimbDarkeningLaw,
-  constraints?: LimbDarkeningConstraints,
-): void {
-  const mode: LimbDarkeningValidationMode = constraints?.mode ?? "none";
-  if (mode === "none") return;
-
-  if (!isFiniteLaw(law)) {
-    emitValidation(mode, `Limb darkening coefficients must be finite (law=${law.kind}).`);
-    return;
-  }
-
-  const muSamples = Math.max(8, Math.floor(toFiniteNumber(constraints?.muSamples, 64)));
-  const eps = Math.max(0, toFiniteNumber(constraints?.eps, 1e-12));
-  const requireNonNeg = constraints?.nonNegativeIntensity ?? true;
-  const requireMono = constraints?.monotoneIncreasingWithMu ?? false;
-  const maxI = toFiniteNumber(constraints?.maxIntensity, Number.POSITIVE_INFINITY);
-
-  const I1 = evaluateLimbDarkeningIntensity(1, law);
-  if (!(Number.isFinite(I1) && Math.abs(I1 - 1) <= 1e-10)) {
-    emitValidation(mode, `Limb darkening law ${law.kind} does not satisfy I(1)=1 (got ${I1}).`);
-  }
-
-  let prevI: number | undefined;
-
-  for (let i = 0; i <= muSamples; i++) {
-    const mu = i / muSamples;
-    const I = evaluateLimbDarkeningIntensity(mu, law);
-
-    if (!Number.isFinite(I)) {
-      emitValidation(mode, `Limb darkening produced non-finite intensity at mu=${mu} (law=${law.kind}).`);
-      break;
-    }
-
-    if (requireNonNeg && I < -eps) {
-      emitValidation(
-        mode,
-        `Limb darkening violates non-negative intensity: I(mu) < 0 at mu=${mu.toFixed(
-          6,
-        )} (I=${I}) (law=${law.kind}).`,
-      );
-      break;
-    }
-
-    if (I > maxI + eps) {
-      emitValidation(
-        mode,
-        `Limb darkening exceeds maxIntensity at mu=${mu.toFixed(6)} (I=${I}, max=${maxI}) (law=${law.kind}).`,
-      );
-      break;
-    }
-
-    if (requireMono && prevI !== undefined) {
-      if (I + eps < prevI) {
-        emitValidation(
-          mode,
-          `Limb darkening violates monotonicity at mu=${mu.toFixed(
-            6,
-          )} (I=${I} < prev=${prevI}) (law=${law.kind}).`,
-        );
-        break;
-      }
-    }
-    prevI = I;
-  }
-}
 
 /**
  * Select a limb-darkening law for a given passband, with deterministic fallback.
@@ -304,12 +115,8 @@ export function resolveLimbDarkeningForBand(
   if (isLawObject(def)) return def;
 
   const stellar = model.stellar;
-  if (stellar && typeof stellar === "object") {
-    return deriveQuadraticLimbDarkeningFromStellarParams({
-      ...stellar,
-      bandpass: bandpass ?? model.bandpass,
-    });
-  }
+  const derived = deriveFromStellarParams(stellar, bandpass ?? model.bandpass);
+  if (derived) return derived;
 
   return undefined;
 }
@@ -347,40 +154,48 @@ export function resolveAndValidateLimbDarkeningForStar(params: {
   const bandpass = star?.bandpass ?? model.bandpass;
 
   const byExplicitBand = findBandLaw(model.bands, bandpass);
-  if (byExplicitBand) {
-    validateLimbDarkeningLaw(byExplicitBand, model.constraints);
-    return byExplicitBand;
-  }
+  if (byExplicitBand) return validateResolvedLaw(byExplicitBand, model.constraints);
 
   const mergedStellar: StellarLdParams = {
     ...model.stellar,
     ...star,
     bandpass,
   };
-  const hasStarSpecificInputs =
-    Number.isFinite(mergedStellar.teffK) ||
-    Number.isFinite(mergedStellar.loggCgs) ||
-    Number.isFinite(mergedStellar.metallicityDex);
-  if (hasStarSpecificInputs) {
+  if (hasStellarDerivationInputs(mergedStellar)) {
     const derived = deriveQuadraticLimbDarkeningFromStellarParams(mergedStellar);
-    validateLimbDarkeningLaw(derived, model.constraints);
-    return derived;
+    return validateResolvedLaw(derived, model.constraints);
   }
 
   const def = model.default;
-  if (isLawObject(def)) {
-    validateLimbDarkeningLaw(def, model.constraints);
-    return def;
-  }
+  if (isLawObject(def)) return validateResolvedLaw(def, model.constraints);
 
-  if (model.stellar && typeof model.stellar === "object") {
-    const derived = deriveQuadraticLimbDarkeningFromStellarParams({
-      ...model.stellar,
-      bandpass,
-    });
-    validateLimbDarkeningLaw(derived, model.constraints);
-    return derived;
-  }
+  const derived = deriveFromStellarParams(model.stellar, bandpass);
+  return derived ? validateResolvedLaw(derived, model.constraints) : undefined;
+}
 
-  return undefined;
+function validateResolvedLaw(
+  law: LimbDarkeningLaw,
+  constraints: LimbDarkeningConstraints | undefined,
+): LimbDarkeningLaw {
+  validateLimbDarkeningLaw(law, constraints);
+  return law;
+}
+
+function deriveFromStellarParams(
+  stellar: StellarLimbDarkeningParams | undefined,
+  bandpass: PassbandId | undefined,
+): LimbDarkeningLaw | undefined {
+  if (!stellar || typeof stellar !== "object") return undefined;
+  return deriveQuadraticLimbDarkeningFromStellarParams({
+    ...stellar,
+    bandpass,
+  });
+}
+
+function hasStellarDerivationInputs(stellar: StellarLimbDarkeningParams): boolean {
+  return (
+    Number.isFinite(stellar.teffK) ||
+    Number.isFinite(stellar.loggCgs) ||
+    Number.isFinite(stellar.metallicityDex)
+  );
 }

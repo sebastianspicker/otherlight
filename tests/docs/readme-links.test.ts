@@ -1,3 +1,5 @@
+/** Verifies README links resolve across the public documentation surface. */
+
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";

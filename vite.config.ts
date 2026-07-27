@@ -1,14 +1,17 @@
+/** Configures production bundling and CSP headers, including the explicit loopback V5 boundary. */
 import { defineConfig, type HtmlTagDescriptor } from "vite";
 
 type AppCspMode = "serve" | "build";
 
-const SECURITY_HEADERS = {
+const SCIENCE_LOOPBACK_SOURCES = "http://127.0.0.1:8765 http://localhost:8765";
+
+const BASE_SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
-export function appCspForMode(mode: AppCspMode): string {
+function appCspDirectives(mode: AppCspMode): string[] {
   if (mode === "serve") {
     return [
       "default-src 'self'",
@@ -16,13 +19,12 @@ export function appCspForMode(mode: AppCspMode): string {
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "img-src 'self' data: blob:",
-      "connect-src 'self' ws: wss:",
+      `connect-src 'self' ${SCIENCE_LOOPBACK_SOURCES} ws: wss:`,
       "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'",
-    ].join("; ");
+    ];
   }
 
   return [
@@ -31,13 +33,29 @@ export function appCspForMode(mode: AppCspMode): string {
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob:",
-    "connect-src 'self'",
+    `connect-src 'self' ${SCIENCE_LOOPBACK_SOURCES}`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
-  ].join("; ");
+  ];
+}
+
+export function appCspForMode(mode: AppCspMode): string {
+  return [...appCspDirectives(mode), "frame-ancestors 'none'"].join("; ");
+}
+
+export function appCspMetaForMode(mode: AppCspMode): string {
+  // `frame-ancestors` is ignored in CSP meta elements, so only advertise it
+  // through the real response header below.
+  return appCspDirectives(mode).join("; ");
+}
+
+export function appSecurityHeadersForMode(mode: AppCspMode): Record<string, string> {
+  return {
+    ...BASE_SECURITY_HEADERS,
+    "Content-Security-Policy": appCspForMode(mode),
+  };
 }
 
 function appCspMetaTag(mode: AppCspMode): HtmlTagDescriptor {
@@ -45,7 +63,7 @@ function appCspMetaTag(mode: AppCspMode): HtmlTagDescriptor {
     tag: "meta",
     attrs: {
       "http-equiv": "Content-Security-Policy",
-      content: appCspForMode(mode),
+      content: appCspMetaForMode(mode),
     },
     injectTo: "head",
   };
@@ -70,10 +88,10 @@ export default defineConfig(({ command }) => {
       sourcemap: false,
     },
     server: {
-      headers: SECURITY_HEADERS,
+      headers: appSecurityHeadersForMode("serve"),
     },
     preview: {
-      headers: SECURITY_HEADERS,
+      headers: appSecurityHeadersForMode("build"),
     },
   };
 });

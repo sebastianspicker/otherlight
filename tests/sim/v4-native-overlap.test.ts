@@ -1,3 +1,5 @@
+/** Verifies v4 native overlap contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { computeFluxBundle } from "../../src/sim/v4/nativeModel";
@@ -39,7 +41,7 @@ function makePlanet(id: string) {
   } as const;
 }
 
-function makeSnapshot(planets: Array<ReturnType<typeof makePlanet>>) {
+function makeSnapshot(planets: Array<ReturnType<typeof makePlanet>>, secondaryLuminosity = 0) {
   const star = {
     id: "star-a",
     kind: "star",
@@ -52,14 +54,23 @@ function makeSnapshot(planets: Array<ReturnType<typeof makePlanet>>) {
     vAbs: { x: 0, y: 0, z: 0 },
     source: { id: "star-a", r: 1, m: 1, luminosityScale: 1 },
   } as const;
+  const secondary = {
+    ...star,
+    id: "star-b",
+    luminosity: secondaryLuminosity,
+    sky: { x: 3, y: 0, z: 0 },
+    source: { id: "star-b", r: 1, m: 1, luminosityScale: secondaryLuminosity },
+  } as const;
+  const stars = secondaryLuminosity > 0 ? [star, secondary] : [star];
   const byIdEntries: Array<[string, unknown]> = [
     [star.id, star],
+    ...(secondaryLuminosity > 0 ? [[secondary.id, secondary] as [string, unknown]] : []),
     ...planets.map((planet) => [planet.id, planet] as [string, unknown]),
   ];
   return {
     observerDir: { x: 0, y: 0, z: 1 },
-    bodies: [star, ...planets],
-    stars: [star],
+    bodies: [...stars, ...planets],
+    stars,
     planets,
     moons: [],
     byId: new Map<string, unknown>(byIdEntries),
@@ -78,5 +89,16 @@ describe("v4 native overlap handling", () => {
 
     expect(overlapping.transitFactor).toBeCloseTo(single.transitFactor, 6);
     expect(overlapping.total).toBeCloseTo(single.total, 6);
+  });
+
+  it("does not dim an unocculted luminous companion during a primary-star transit", () => {
+    const config = makeConfig();
+    config.bodies.stars[1].luminosityScale = 0.5;
+    const flux = computeFluxBundle(config, makeSnapshot([makePlanet("planet-a")], 0.5), 0);
+
+    expect(flux.stellarA).toBeLessThan(1);
+    expect(flux.stellarB).toBeCloseTo(0.5, 12);
+    expect(flux.total).toBeCloseTo(flux.stellarA + flux.stellarB, 12);
+    expect(flux.transitFactor).toBeCloseTo((flux.stellarA + 0.5) / 1.5, 12);
   });
 });

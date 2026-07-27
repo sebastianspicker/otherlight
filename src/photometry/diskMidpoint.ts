@@ -1,4 +1,4 @@
-// src/photometry/diskMidpoint.ts
+/** Shares deterministic projected-disk midpoint integration across transit models. */
 
 //
 // Generic deterministic midpoint integrator over a projected stellar disk,
@@ -36,6 +36,7 @@
 import { clamp, isFiniteNonNegative, isFinitePositive } from "../core/units";
 import { clampGridRes, type CircleOcculter } from "./occulterCircle";
 import {
+  type OcculterPre as ShapeOcculterPre,
   type OcculterShape,
   pointOccultedFraction,
   precomputeOcculterShapes,
@@ -121,6 +122,29 @@ type OcculterRowGate = {
   r2: number;
 };
 
+type DiskMidpointSetup = {
+  rStar: number;
+  rStar2: number;
+  ny: number;
+  nx: number;
+  dy: number;
+  earlyExitFluxEps: number;
+};
+
+type DiskRow = {
+  y: number;
+  y2: number;
+  xMaxStar: number;
+  dxCell: number;
+  cellArea: number;
+};
+
+type DiskSums = {
+  total: number;
+  blocked: number;
+  earlyExit: boolean;
+};
+
 function safeIntensity(v: unknown): number {
   // Defensive: treat NaN, infinities, and negative values as 0 contribution.
   const n = typeof v === "number" ? v : Number(v);
@@ -128,7 +152,7 @@ function safeIntensity(v: unknown): number {
   return n;
 }
 
-function precomputeOcculters(occulters: CircleOcculter[]): OcculterPre[] {
+const precomputeOcculters = (occulters: CircleOcculter[]): OcculterPre[] => {
   if (!Array.isArray(occulters) || occulters.length === 0) return [];
   const out: OcculterPre[] = [];
   for (const o of occulters) {
@@ -137,7 +161,122 @@ function precomputeOcculters(occulters: CircleOcculter[]): OcculterPre[] {
     out.push({ dx: o.dx, dy: o.dy, r: o.r, r2: o.r * o.r });
   }
   return out;
-}
+};
+
+const requireDiskMidpointInputs = (rStar: number, intensityAt: IntensityAtFn, caller: string): void => {
+  if (!isFinitePositive(rStar)) {
+    throw new Error(`${caller}: rStar must be a positive finite number.`);
+  }
+  if (typeof intensityAt !== "function") {
+    throw new Error(`${caller}: intensityAt must be a function.`);
+  }
+};
+
+const diskMidpointSetup = (params: {
+  rStar: number;
+  gridRes: number;
+  earlyExitFluxEps?: number;
+}): DiskMidpointSetup => {
+  const ny = clampGridRes(params.gridRes, 60);
+  return {
+    rStar: params.rStar,
+    rStar2: params.rStar * params.rStar,
+    ny,
+    nx: ny,
+    dy: (2 * params.rStar) / ny,
+    earlyExitFluxEps: isFiniteNonNegative(params.earlyExitFluxEps) ? params.earlyExitFluxEps : 0,
+  };
+};
+
+const diskRowAt = (setup: DiskMidpointSetup, iy: number): DiskRow | undefined => {
+  const y = -setup.rStar + (iy + 0.5) * setup.dy;
+  const y2 = y * y;
+  const xMaxStar = Math.sqrt(Math.max(0, setup.rStar2 - y2));
+  if (!(xMaxStar > 0)) return undefined;
+  const dxCell = (2 * xMaxStar) / setup.nx;
+  return { y, y2, xMaxStar, dxCell, cellArea: dxCell * setup.dy };
+};
+
+const cleanDiskSums = (sums: DiskSums): IntegrateDiskMidpointResult => {
+  const total = Number.isFinite(sums.total) && sums.total >= 0 ? sums.total : 0;
+  const blockedRaw = Number.isFinite(sums.blocked) && sums.blocked >= 0 ? sums.blocked : 0;
+  const blocked = clamp(blockedRaw, 0, total);
+  return sums.earlyExit ? { total, blocked, earlyExit: true } : { total, blocked };
+};
+
+const rowOcculterGates = (y: number, occ: OcculterPre[]): OcculterRowGate[] | null => {
+  const row: OcculterRowGate[] = [];
+  for (const o of occ) {
+    const dyo = y - o.dy;
+    if (Math.abs(dyo) > o.r) continue;
+    const xHalf = Math.sqrt(Math.max(0, o.r2 - dyo * dyo));
+    row.push({ xMin: o.dx - xHalf, xMax: o.dx + xHalf, dx: o.dx, dy: o.dy, r2: o.r2 });
+  }
+  return row.length > 0 ? row : null;
+};
+
+const pointBlockedByRowGates = (x: number, y: number, row: OcculterRowGate[] | null): boolean => {
+  if (!row) return false;
+  for (const o of row) {
+    if (x < o.xMin || x > o.xMax) continue;
+    const dxo = x - o.dx;
+    const dyo = y - o.dy;
+    if (dxo * dxo + dyo * dyo < o.r2) return true;
+  }
+  return false;
+};
+
+const shouldEarlyExit = (sums: DiskSums, earlyExitFluxEps: number): boolean => {
+  if (!(earlyExitFluxEps > 0 && sums.total > 0)) return false;
+  return (sums.total - sums.blocked) / sums.total <= earlyExitFluxEps;
+};
+
+const diskCellContribution = (
+  setup: DiskMidpointSetup,
+  row: DiskRow,
+  x: number,
+  intensityAt: IntensityAtFn,
+): number => {
+  const rho2 = x * x + row.y2;
+  const mu = Math.sqrt(Math.max(0, 1 - rho2 / setup.rStar2));
+  const intensity = safeIntensity(intensityAt({ x, y: row.y, mu }));
+  return intensity * row.cellArea;
+};
+
+const integrateCircularDiskRow = (
+  setup: DiskMidpointSetup,
+  row: DiskRow,
+  gates: OcculterRowGate[] | null,
+  intensityAt: IntensityAtFn,
+  sums: DiskSums,
+): void => {
+  for (let ix = 0; ix < setup.nx; ix++) {
+    const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
+    const dI = diskCellContribution(setup, row, x, intensityAt);
+    if (dI === 0) continue;
+    sums.total += dI;
+    if (pointBlockedByRowGates(x, row.y, gates)) sums.blocked += dI;
+  }
+};
+
+const integrateShapeDiskRow = (
+  setup: DiskMidpointSetup,
+  row: DiskRow,
+  occ: ShapeOcculterPre[],
+  intensityAt: IntensityAtFn,
+  sums: DiskSums,
+): void => {
+  for (let ix = 0; ix < setup.nx; ix++) {
+    const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
+    const dI = diskCellContribution(setup, row, x, intensityAt);
+    if (dI === 0) continue;
+    sums.total += dI;
+    const frac = occ.length > 0 ? pointOccultedFraction(x, row.y, occ) : 0;
+    if (frac > 0) sums.blocked += dI * frac;
+    if (shouldEarlyExit(sums, setup.earlyExitFluxEps)) sums.earlyExit = true;
+    if (sums.earlyExit) break;
+  }
+};
 
 /**
  * Deterministic midpoint integration over the stellar disk.
@@ -149,107 +288,27 @@ function precomputeOcculters(occulters: CircleOcculter[]): OcculterPre[] {
 export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): IntegrateDiskMidpointResult {
   const { intensityAt } = params;
   const rStar = params.rStar;
-
-  if (!isFinitePositive(rStar)) {
-    throw new Error("integrateDiskMidpoint: rStar must be a positive finite number.");
-  }
-
-  if (typeof intensityAt !== "function") {
-    throw new Error("integrateDiskMidpoint: intensityAt must be a function.");
-  }
-
-  // Unified minimum-grid policy: clampGridRes already enforces a minimum.
-  const ny = clampGridRes(params.gridRes, 60);
-  const nx = ny;
-
-  const rStar2 = rStar * rStar;
-  const dy = (2 * rStar) / ny;
-
+  requireDiskMidpointInputs(rStar, intensityAt, "integrateDiskMidpoint");
+  const setup = diskMidpointSetup(params);
   const occ = precomputeOcculters(params.occulters);
   const hasOcculters = occ.length > 0;
-  const earlyExitFluxEps = isFiniteNonNegative(params.earlyExitFluxEps) ? params.earlyExitFluxEps : 0;
+  const sums: DiskSums = { total: 0, blocked: 0, earlyExit: false };
 
-  let total = 0;
-  let blocked = 0;
-  let earlyExit = false;
+  for (let iy = 0; iy < setup.ny; iy++) {
+    const row = diskRowAt(setup, iy);
+    if (!row) continue;
+    integrateCircularDiskRow(
+      setup,
+      row,
+      hasOcculters ? rowOcculterGates(row.y, occ) : null,
+      intensityAt,
+      sums,
+    );
+    sums.earlyExit ||= shouldEarlyExit(sums, setup.earlyExitFluxEps);
+    if (sums.earlyExit) break;
+  }
 
-  for (let iy = 0; iy < ny; iy++) {
-    const y = -rStar + (iy + 0.5) * dy;
-    const y2 = y * y;
-
-    // Chord half-length inside star.
-    const xMaxStar = Math.sqrt(Math.max(0, rStar2 - y2));
-    if (!(xMaxStar > 0)) continue;
-
-    const dxCell = (2 * xMaxStar) / nx;
-    const cellArea = dxCell * dy;
-
-    // Build per-row occulter gating: only occulters intersecting this y, with x-range culling.
-    let occRow: OcculterRowGate[] | null = null;
-
-    if (hasOcculters) {
-      const row: OcculterRowGate[] = [];
-      for (const o of occ) {
-        const dyo = y - o.dy;
-        if (Math.abs(dyo) > o.r) continue; // this y-row does not intersect occulter disk
-
-        const xHalf = Math.sqrt(Math.max(0, o.r2 - dyo * dyo));
-        row.push({ xMin: o.dx - xHalf, xMax: o.dx + xHalf, dx: o.dx, dy: o.dy, r2: o.r2 });
-      }
-      occRow = row.length > 0 ? row : null;
-    }
-
-    for (let ix = 0; ix < nx; ix++) {
-      const x = -xMaxStar + (ix + 0.5) * dxCell;
-      const rho2 = x * x + y2;
-
-      // mu for points on the disk, clamped to [0,1] for numeric safety.
-      const mu = Math.sqrt(Math.max(0, 1 - rho2 / rStar2));
-
-      const I = safeIntensity(intensityAt({ x, y, mu }));
-      if (I === 0) continue;
-
-      const dI = I * cellArea;
-      total += dI;
-
-      if (!occRow) continue;
-
-      // Union-of-occulters mask.
-      let isBlocked = false;
-      for (const o of occRow) {
-        // Cheap x-range gate.
-        if (x < o.xMin || x > o.xMax) continue;
-
-        const dxo = x - o.dx;
-        const dyo = y - o.dy;
-
-        // Tangency is measure-zero; treat boundary as NOT blocked to avoid edge flicker.
-        if (dxo * dxo + dyo * dyo < o.r2) {
-          isBlocked = true;
-          break;
-        }
-      }
-
-      if (isBlocked) blocked += dI;
-    } // end for ix
-
-    // Optional early exit for deep eclipses (approximation).
-    if (earlyExitFluxEps > 0 && total > 0) {
-      const remainingFrac = (total - blocked) / total;
-      if (remainingFrac <= earlyExitFluxEps) {
-        earlyExit = true;
-      }
-    }
-
-    if (earlyExit) break;
-  } // end for iy
-
-  // Numerical hygiene.
-  if (!Number.isFinite(total) || total < 0) total = 0;
-  if (!Number.isFinite(blocked) || blocked < 0) blocked = 0;
-  blocked = clamp(blocked, 0, total);
-
-  return earlyExit ? { total, blocked, earlyExit } : { total, blocked };
+  return cleanDiskSums(sums);
 }
 
 /**
@@ -261,72 +320,17 @@ export function integrateDiskMidpointShapes(
 ): IntegrateDiskMidpointResult {
   const { intensityAt } = params;
   const rStar = params.rStar;
-
-  if (!isFinitePositive(rStar)) {
-    throw new Error("integrateDiskMidpointShapes: rStar must be a positive finite number.");
-  }
-
-  if (typeof intensityAt !== "function") {
-    throw new Error("integrateDiskMidpointShapes: intensityAt must be a function.");
-  }
-
-  const ny = clampGridRes(params.gridRes, 60);
-  const nx = ny;
-
-  const rStar2 = rStar * rStar;
-  const dy = (2 * rStar) / ny;
-
+  requireDiskMidpointInputs(rStar, intensityAt, "integrateDiskMidpointShapes");
+  const setup = diskMidpointSetup(params);
   const occ = precomputeOcculterShapes(sanitizeOcculterShapes(rStar, params.occulters));
-  const hasOcculters = occ.length > 0;
-  const earlyExitFluxEps = isFiniteNonNegative(params.earlyExitFluxEps) ? params.earlyExitFluxEps : 0;
+  const sums: DiskSums = { total: 0, blocked: 0, earlyExit: false };
 
-  let total = 0;
-  let blocked = 0;
-  let earlyExit = false;
-
-  for (let iy = 0; iy < ny; iy++) {
-    const y = -rStar + (iy + 0.5) * dy;
-    const y2 = y * y;
-
-    const xMaxStar = Math.sqrt(Math.max(0, rStar2 - y2));
-    if (!(xMaxStar > 0)) continue;
-
-    const dxCell = (2 * xMaxStar) / nx;
-    const cellArea = dxCell * dy;
-
-    for (let ix = 0; ix < nx; ix++) {
-      const x = -xMaxStar + (ix + 0.5) * dxCell;
-      const rho2 = x * x + y2;
-      const mu = Math.sqrt(Math.max(0, 1 - rho2 / rStar2));
-
-      const I = safeIntensity(intensityAt({ x, y, mu }));
-      if (I === 0) continue;
-
-      const dI = I * cellArea;
-      total += dI;
-
-      if (hasOcculters) {
-        const frac = pointOccultedFraction(x, y, occ);
-        if (frac > 0) {
-          blocked += dI * frac;
-        }
-      }
-
-      if (earlyExitFluxEps > 0 && total > 0) {
-        const remainingFrac = (total - blocked) / total;
-        if (remainingFrac <= earlyExitFluxEps) {
-          earlyExit = true;
-          break;
-        }
-      }
-    }
-
-    if (earlyExit) break;
+  for (let iy = 0; iy < setup.ny; iy++) {
+    const row = diskRowAt(setup, iy);
+    if (!row) continue;
+    integrateShapeDiskRow(setup, row, occ, intensityAt, sums);
+    if (sums.earlyExit) break;
   }
 
-  if (!Number.isFinite(total) || total < 0) total = 0;
-  if (!Number.isFinite(blocked) || blocked < 0) blocked = 0;
-  blocked = clamp(blocked, 0, total);
-
-  return earlyExit ? { total, blocked, earlyExit } : { total, blocked };
+  return cleanDiskSums(sums);
 }

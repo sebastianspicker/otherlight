@@ -1,3 +1,6 @@
+/**
+ * Owns common support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import type {
   LimbDarkeningLaw,
   LimbDarkeningLawQuadratic,
@@ -51,25 +54,59 @@ const RING_INC_MAX_DEG = 90;
 export const RADIUS_MIN = 1e3;
 export const RADIUS_MAX = 1e12;
 
+export type DefaultPatchInputs = {
+  p1x: number;
+  p1y: number;
+  p1r: number;
+  p1f: number;
+  p2x: number;
+  p2y: number;
+  p2rx: number;
+  p2ry: number;
+  p2angle: number;
+  p2f: number;
+};
+
+export const roundPatchLength = (value: number): number => Math.round(value / 1e6) * 1e6;
+
+export const defaultPatchInputs = (starRadius: number): DefaultPatchInputs => {
+  const rStar = Math.max(1, starRadius);
+  return {
+    p1x: roundPatchLength(-0.28 * rStar),
+    p1y: roundPatchLength(0.22 * rStar),
+    p1r: roundPatchLength(0.16 * rStar),
+    p1f: 0.75,
+    p2x: roundPatchLength(0.33 * rStar),
+    p2y: roundPatchLength(-0.17 * rStar),
+    p2rx: roundPatchLength(0.21 * rStar),
+    p2ry: roundPatchLength(0.09 * rStar),
+    p2angle: 0.6,
+    p2f: 1.12,
+  };
+};
+
 function clampFreeformInput(text: string): string {
   return text.slice(0, MAX_FREEFORM_INPUT_CHARS);
+}
+
+function selectedLimbDarkeningLaw(model: LimbDarkeningModel): LimbDarkeningLaw | undefined {
+  const band = model.bandpass;
+  if (!band || !model.bands) return model.default;
+  return model.bands[band] ?? model.default;
+}
+
+function quadraticCoefficients(law: LimbDarkeningLaw | undefined): { u1: number; u2: number } | undefined {
+  if (!law || law.kind !== "quadratic") return undefined;
+  const { u1, u2 } = law;
+  if (!Number.isFinite(u1) || !Number.isFinite(u2)) return undefined;
+  return { u1, u2 };
 }
 
 export function getQuadraticLDFromModel(
   model: LimbDarkeningModel | undefined,
 ): { u1: number; u2: number } | undefined {
   if (!model) return undefined;
-  const band = model.bandpass;
-  const bands = model.bands;
-  const law = band && bands && bands[band] ? bands[band] : model.default;
-
-  if (!law || law.kind !== "quadratic") return undefined;
-
-  const u1 = law.u1;
-  const u2 = law.u2;
-  if (!Number.isFinite(u1) || !Number.isFinite(u2)) return undefined;
-
-  return { u1, u2 };
+  return quadraticCoefficients(selectedLimbDarkeningLaw(model));
 }
 
 export function ensurePhotometry(p: SystemParams): PhotometryParams {

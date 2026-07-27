@@ -1,3 +1,6 @@
+/**
+ * Owns scene Types support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 export type ScratchPoint = { x: number; y: number };
 export type ToPxInto = (x: number, y: number, out: ScratchPoint) => ScratchPoint;
 

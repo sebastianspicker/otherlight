@@ -1,7 +1,11 @@
+/**
+ * Owns compare support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ */
 import type { SystemParams } from "../core/types";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";
 import { displayFluxValueForConfig } from "../sim/v4/binaryBaseline";
 import type { SimulationStepV3 } from "../sim/v3";
+import { appendScalarDeltas, dynamicsNote, interpretationLine } from "./compareText";
 
 type ComparisonCurvePoint = {
   t: number;
@@ -41,6 +45,8 @@ type ComparisonGhostGeometry = {
   geometry: SimulationStepV3["renderSignals"]["occulterGeometry"];
 };
 
+type SimulationRuntimeV4 = ReturnType<typeof createSimulationV4>;
+
 /**
  * A/B scenario comparison result computed at a single simulation time `tSec`.
  * Captures scalar flux and RV deltas, plus optional visual overlays for the lesson UI.
@@ -64,25 +70,36 @@ function deriveComparisonWindow(
   stepA: SimulationStepV3,
   stepB: SimulationStepV3,
 ): { startSec: number; endSec: number } {
-  const durationSec = Math.max(
-    Math.abs(stepA.timing?.planetTransitDurationSec ?? 0),
-    Math.abs(stepB.timing?.planetTransitDurationSec ?? 0),
-    Math.abs(stepA.timing?.moonTransitDurationSec ?? 0),
-    Math.abs(stepB.timing?.moonTransitDurationSec ?? 0),
-    1800,
-  );
-  const extentSec = Math.max(
-    Math.abs(stepA.timing?.planetIngressSec ?? 0),
-    Math.abs(stepA.timing?.planetEgressSec ?? 0),
-    Math.abs(stepA.timing?.moonIngressSec ?? 0),
-    Math.abs(stepA.timing?.moonEgressSec ?? 0),
-    Math.abs(stepB.timing?.planetIngressSec ?? 0),
-    Math.abs(stepB.timing?.planetEgressSec ?? 0),
-    Math.abs(stepB.timing?.moonIngressSec ?? 0),
-    Math.abs(stepB.timing?.moonEgressSec ?? 0),
-  );
+  const durationSec = Math.max(...durationCandidates(stepA, stepB), 1800);
+  const extentSec = Math.max(...extentCandidates(stepA, stepB));
   const halfWindowSec = Math.max(3600, durationSec * 3, extentSec + durationSec);
   return { startSec: -halfWindowSec, endSec: halfWindowSec };
+}
+
+function absTimingValue(value: number | undefined): number {
+  return Math.abs(value ?? 0);
+}
+
+function durationCandidates(stepA: SimulationStepV3, stepB: SimulationStepV3): number[] {
+  return [
+    absTimingValue(stepA.timing?.planetTransitDurationSec),
+    absTimingValue(stepB.timing?.planetTransitDurationSec),
+    absTimingValue(stepA.timing?.moonTransitDurationSec),
+    absTimingValue(stepB.timing?.moonTransitDurationSec),
+  ];
+}
+
+function extentCandidates(stepA: SimulationStepV3, stepB: SimulationStepV3): number[] {
+  return [
+    absTimingValue(stepA.timing?.planetIngressSec),
+    absTimingValue(stepA.timing?.planetEgressSec),
+    absTimingValue(stepA.timing?.moonIngressSec),
+    absTimingValue(stepA.timing?.moonEgressSec),
+    absTimingValue(stepB.timing?.planetIngressSec),
+    absTimingValue(stepB.timing?.planetEgressSec),
+    absTimingValue(stepB.timing?.moonIngressSec),
+    absTimingValue(stepB.timing?.moonEgressSec),
+  ];
 }
 
 function createGhost(label: string, step: SimulationStepV3, color: string): ComparisonGhostGeometry {
@@ -108,6 +125,110 @@ function buildComparisonInset(
   };
 }
 
+function displayFluxForStep(step: SimulationStepV3): number {
+  return Number.isFinite(step.debug?.displayFluxValue)
+    ? (step.debug?.displayFluxValue as number)
+    : step.flux.total;
+}
+
+function sampleComparisonCurves(
+  runtimeA: SimulationRuntimeV4,
+  runtimeB: SimulationRuntimeV4,
+  startSec: number,
+  endSec: number,
+): { aSamples: ComparisonCurvePoint[]; bSamples: ComparisonCurvePoint[] } {
+  const sampleCount: number = 96;
+  const aSamples: ComparisonCurvePoint[] = [];
+  const bSamples: ComparisonCurvePoint[] = [];
+
+  for (let i = 0; i < sampleCount; i++) {
+    const frac = sampleCount === 1 ? 0 : i / (sampleCount - 1);
+    const tSample = startSec + frac * (endSec - startSec);
+    aSamples.push({ t: tSample, flux: displayFluxForStep(runtimeA.step(tSample)) });
+    bSamples.push({ t: tSample, flux: displayFluxForStep(runtimeB.step(tSample)) });
+  }
+
+  return { aSamples, bSamples };
+}
+
+function comparisonCurveSeries(
+  aSamples: ComparisonCurvePoint[],
+  bSamples: ComparisonCurvePoint[],
+): ComparisonCurveSeries[] {
+  return [
+    {
+      id: "compare-a",
+      label: "scenario A",
+      color: "#8ecae6",
+      style: "solid",
+      alpha: 0.85,
+      samples: aSamples,
+    },
+    {
+      id: "compare-b",
+      label: "scenario B",
+      color: "#f28482",
+      style: "dashed",
+      alpha: 0.9,
+      samples: bSamples,
+    },
+  ];
+}
+
+function comparisonBadges(tSec: number, displayDelta: number): ComparisonBadge[] {
+  return [
+    { label: `compare @ ${tSec.toFixed(0)} s`, color: "#ffb703" },
+    { label: `Δdisplay ${displayDelta.toExponential(1)}`, color: "#f4a261" },
+  ];
+}
+
+function buildComparisonVisual(args: {
+  tSec: number;
+  displayDelta: number;
+  sa: SimulationStepV3;
+  sb: SimulationStepV3;
+  aSamples: ComparisonCurvePoint[];
+  bSamples: ComparisonCurvePoint[];
+}): DidacticComparison["visual"] {
+  return {
+    curveSeries: comparisonCurveSeries(args.aSamples, args.bSamples),
+    comparisonInset: buildComparisonInset(args.aSamples, args.bSamples),
+    sceneGhosts: [
+      createGhost("scenario A", args.sa, "rgba(142, 202, 230, 0.45)"),
+      createGhost("scenario B", args.sb, "rgba(242, 132, 130, 0.42)"),
+    ],
+    badges: comparisonBadges(args.tSec, args.displayDelta),
+  };
+}
+
+function finiteOrZero(value: number | undefined): number {
+  return value ?? 0;
+}
+
+function fluxTransitDelta(sa: SimulationStepV3, sb: SimulationStepV3): number {
+  return finiteOrZero(sb.flux.transitFactor) - finiteOrZero(sa.flux.transitFactor);
+}
+
+function rvStarDelta(sa: SimulationStepV3, sb: SimulationStepV3): number {
+  return finiteOrZero(sb.observables?.rvStar) - finiteOrZero(sa.observables?.rvStar);
+}
+
+function rvPlanetDelta(sa: SimulationStepV3, sb: SimulationStepV3): number {
+  return finiteOrZero(sb.observables?.rvPlanet) - finiteOrZero(sa.observables?.rvPlanet);
+}
+
+function comparisonFluxDisplayDelta(args: {
+  configA: ReturnType<typeof migrateSystemParamsToV4>;
+  configB: ReturnType<typeof migrateSystemParamsToV4>;
+  sa: SimulationStepV3;
+  sb: SimulationStepV3;
+}): number {
+  return (
+    displayFluxValueForConfig(args.configB, args.sb.flux.total) -
+    displayFluxValueForConfig(args.configA, args.sa.flux.total)
+  );
+}
+
 /**
  * Run both scenarios at `tSec`, sample a comparison window centred on any transits,
  * and return a {@link DidacticComparison} with scalar deltas, curve series, and scene ghosts.
@@ -120,68 +241,17 @@ export function compareScenariosAtTime(a: SystemParams, b: SystemParams, tSec: n
   const sa = runtimeA.step(tSec);
   const sb = runtimeB.step(tSec);
   const { startSec, endSec } = deriveComparisonWindow(sa, sb);
-  const sampleCount: number = 96;
-  const aSamples: ComparisonCurvePoint[] = [];
-  const bSamples: ComparisonCurvePoint[] = [];
-  for (let i = 0; i < sampleCount; i++) {
-    const frac = sampleCount === 1 ? 0 : i / (sampleCount - 1);
-    const tSample = startSec + frac * (endSec - startSec);
-    const stepA = runtimeA.step(tSample);
-    const stepB = runtimeB.step(tSample);
-    aSamples.push({
-      t: tSample,
-      flux: Number.isFinite(stepA.debug?.displayFluxValue)
-        ? (stepA.debug?.displayFluxValue as number)
-        : stepA.flux.total,
-    });
-    bSamples.push({
-      t: tSample,
-      flux: Number.isFinite(stepB.debug?.displayFluxValue)
-        ? (stepB.debug?.displayFluxValue as number)
-        : stepB.flux.total,
-    });
-  }
+  const { aSamples, bSamples } = sampleComparisonCurves(runtimeA, runtimeB, startSec, endSec);
+  const fluxDisplayDelta = comparisonFluxDisplayDelta({ configA, configB, sa, sb });
 
   return {
     tSec,
     fluxTotalDelta: sb.flux.total - sa.flux.total,
-    fluxDisplayDelta:
-      displayFluxValueForConfig(configB, sb.flux.total) - displayFluxValueForConfig(configA, sa.flux.total),
-    fluxTransitDelta: (sb.flux.transitFactor ?? 1) - (sa.flux.transitFactor ?? 1),
-    rvStarDelta: (sb.observables?.rvStar ?? 0) - (sa.observables?.rvStar ?? 0),
-    rvPlanetDelta: (sb.observables?.rvPlanet ?? 0) - (sa.observables?.rvPlanet ?? 0),
-    visual: {
-      curveSeries: [
-        {
-          id: "compare-a",
-          label: "scenario A",
-          color: "#8ecae6",
-          style: "solid",
-          alpha: 0.85,
-          samples: aSamples,
-        },
-        {
-          id: "compare-b",
-          label: "scenario B",
-          color: "#f28482",
-          style: "dashed",
-          alpha: 0.9,
-          samples: bSamples,
-        },
-      ],
-      comparisonInset: buildComparisonInset(aSamples, bSamples),
-      sceneGhosts: [
-        createGhost("scenario A", sa, "rgba(142, 202, 230, 0.45)"),
-        createGhost("scenario B", sb, "rgba(242, 132, 130, 0.42)"),
-      ],
-      badges: [
-        { label: `compare @ ${tSec.toFixed(0)} s`, color: "#ffb703" },
-        {
-          label: `Δdisplay ${(displayFluxValueForConfig(configB, sb.flux.total) - displayFluxValueForConfig(configA, sa.flux.total)).toExponential(1)}`,
-          color: "#f4a261",
-        },
-      ],
-    },
+    fluxDisplayDelta,
+    fluxTransitDelta: fluxTransitDelta(sa, sb),
+    rvStarDelta: rvStarDelta(sa, sb),
+    rvPlanetDelta: rvPlanetDelta(sa, sb),
+    visual: buildComparisonVisual({ tSec, displayDelta: fluxDisplayDelta, sa, sb, aSamples, bSamples }),
   };
 }
 
@@ -194,57 +264,11 @@ export function interpretDidacticComparison(
   context?: { lessonId?: string; comparisonPrompt?: string },
 ): string {
   const lines: string[] = [];
-  lines.push(`ΔfluxTotal=${cmp.fluxTotalDelta.toExponential(3)}`);
-  if (typeof cmp.fluxDisplayDelta === "number" && Number.isFinite(cmp.fluxDisplayDelta)) {
-    lines.push(`ΔfluxDisplay=${cmp.fluxDisplayDelta.toExponential(3)}`);
-  }
-  lines.push(`ΔfluxTransit=${cmp.fluxTransitDelta.toExponential(3)}`);
-  lines.push(`ΔrvStar=${(cmp.rvStarDelta ?? 0).toExponential(3)}`);
-  lines.push(`ΔrvPlanet=${(cmp.rvPlanetDelta ?? 0).toExponential(3)}`);
-  lines.push("");
-
-  const absTransit = Math.abs(cmp.fluxTransitDelta);
-  const absTotal = Math.abs(cmp.fluxTotalDelta);
-  const absDisplay = Math.abs(cmp.fluxDisplayDelta ?? cmp.fluxTotalDelta);
-  const absRvStar = Math.abs(cmp.rvStarDelta ?? 0);
-  const absRvPlanet = Math.abs(cmp.rvPlanetDelta ?? 0);
+  appendScalarDeltas(lines, cmp);
 
   const lessonId = context?.lessonId;
-  if (lessonId === "exomoon-transit-lab") {
-    if (absTransit > 1e-4) {
-      lines.push(
-        "Interpretation: The moon or planet transit timing/geometry changed enough to alter the visible transit morphology.",
-      );
-    } else {
-      lines.push(
-        "Interpretation: The moon contribution remains subtle; compare lead/lag and moon visibility.",
-      );
-    }
-  } else if (lessonId === "binary-eclipse-lab") {
-    if (absDisplay > 1e-4) {
-      lines.push(
-        "Interpretation: The displayed binary eclipse depth changed, so the stellar flux balance or eclipse chord is different.",
-      );
-    } else {
-      lines.push("Interpretation: The two binary cases are photometrically similar near this event.");
-    }
-  } else if (absTransit > 1e-4) {
-    lines.push(
-      "Interpretation: Transit geometry changed significantly (impact parameter / radius / inclination).",
-    );
-  } else if (absTotal > 1e-4) {
-    lines.push(
-      "Interpretation: Additive photometry dominates the change (reflection / emission / stellar variability).",
-    );
-  } else {
-    lines.push("Interpretation: Only minor photometric differences; the two scenarios are similar.");
-  }
-
-  if (absRvStar > 1e-3 || absRvPlanet > 1e-3) {
-    lines.push("Dynamics note: RV deltas indicate changed mass or orbital dynamics.");
-  } else {
-    lines.push("Dynamics note: No significant radial-velocity shift.");
-  }
+  lines.push(interpretationLine(cmp, lessonId));
+  lines.push(dynamicsNote(cmp));
 
   if (context?.comparisonPrompt) {
     lines.push("");

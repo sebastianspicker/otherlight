@@ -1,4 +1,4 @@
-// src/render/overlays.ts
+/** Renders non-physical scene overlays separately from celestial-body drawing. */
 //
 // Canvas2D overlay helpers (debug HUD, observer gizmo, marker).
 //
@@ -12,6 +12,7 @@ import { clamp, toFinitePositiveOr } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../physics/vec3";
 import type { SizeInfo } from "./canvasUtil";
+import { drawObserverGizmoInsetResolved } from "./observerGizmoInset";
 
 export type DebugOverlayToggles = {
   enabled?: boolean;
@@ -97,6 +98,15 @@ export type DebugOverlayDataV3 = {
   fluxTotal?: number;
 };
 
+type ObserverMarkerLayout = {
+  cx: number;
+  cy: number;
+  ox: number;
+  oy: number;
+};
+
+type DebugLineWriter = (s: string) => void;
+
 const DEFAULT_THEME: OverlayTheme = {
   textColor: "rgba(255,255,255,0.78)",
   panelFill: "rgba(0,0,0,0.55)",
@@ -122,14 +132,18 @@ export function defaultDebugOverlayToggles(): RequiredDebugOverlayToggles {
 export function resolveDebugOverlayToggles(t?: DebugOverlayToggles): RequiredDebugOverlayToggles {
   const d = defaultDebugOverlayToggles();
   return {
-    enabled: t?.enabled ?? d.enabled,
-    showObserverDir: t?.showObserverDir ?? d.showObserverDir,
-    showObserverMarker: t?.showObserverMarker ?? d.showObserverMarker,
-    showOcculters: t?.showOcculters ?? d.showOcculters,
-    showImpactParams: t?.showImpactParams ?? d.showImpactParams,
-    showTDV: t?.showTDV ?? d.showTDV,
-    showFluxDecomposition: t?.showFluxDecomposition ?? d.showFluxDecomposition,
+    enabled: overlayDefault(t?.enabled, d.enabled),
+    showObserverDir: overlayDefault(t?.showObserverDir, d.showObserverDir),
+    showObserverMarker: overlayDefault(t?.showObserverMarker, d.showObserverMarker),
+    showOcculters: overlayDefault(t?.showOcculters, d.showOcculters),
+    showImpactParams: overlayDefault(t?.showImpactParams, d.showImpactParams),
+    showTDV: overlayDefault(t?.showTDV, d.showTDV),
+    showFluxDecomposition: overlayDefault(t?.showFluxDecomposition, d.showFluxDecomposition),
   };
+}
+
+function overlayDefault<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
 }
 
 export function normalizeObserverDirSafe(dir: Vec3 | undefined): Vec3 {
@@ -154,34 +168,6 @@ function canvasSizeValid(size: SizeInfo): boolean {
   return Number.isFinite(size.cssW) && Number.isFinite(size.cssH) && size.cssW >= 1 && size.cssH >= 1;
 }
 
-/** Cross-browser rounded rectangle path helper. */
-function pathRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  const rr = Math.max(0, Math.min(r, Math.min(w, h) * 0.5));
-  if ("roundRect" in ctx && typeof ctx.roundRect === "function") {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, rr);
-    return;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.lineTo(x + w - rr, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
-  ctx.lineTo(x + w, y + h - rr);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-  ctx.lineTo(x + rr, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
-  ctx.lineTo(x, y + rr);
-  ctx.quadraticCurveTo(x, y, x + rr, y);
-}
-
 /**
  * Draw a didactic observer marker in the main view (purely visual).
  * The marker placement uses the azimuth in the inertial x/y plane (atan2(y,x)),
@@ -193,157 +179,79 @@ export function drawObserverMarkerMainView(
   observerDirRaw: Vec3,
   opts: ObserverMarkerOptions = {},
 ): void {
-  if (!canvasSizeValid(size) || size.cssW < 40 || size.cssH < 40) return;
+  const layout = observerMarkerLayout(size, observerDirRaw, opts);
+  if (!layout) return;
+  const theme = themeResolved();
+  drawObserverMarkerLine(ctx, layout);
+  drawObserverMarkerDot(ctx, layout, opts, theme);
+}
+
+function observerMarkerLayout(
+  size: SizeInfo,
+  observerDirRaw: Vec3,
+  opts: ObserverMarkerOptions,
+): ObserverMarkerLayout | null {
+  if (!observerMarkerSizeValid(size)) return null;
 
   const observerDir = normalizeObserverDirSafe(observerDirRaw);
-
   const cx = size.cssW * 0.5;
   const cy = size.cssH * 0.5;
+  const ang = Math.atan2(finiteOrZero(observerDir.y), finiteOrZero(observerDir.x));
+  const radius = observerMarkerRadius(size, opts);
 
-  const dx = Number.isFinite(observerDir.x) ? observerDir.x : 0;
-  const dy = Number.isFinite(observerDir.y) ? observerDir.y : 0;
-  const ang = Math.atan2(dy, dx);
+  return {
+    cx,
+    cy,
+    ox: cx + Math.cos(ang) * radius,
+    oy: cy - Math.sin(ang) * radius,
+  };
+}
 
+function observerMarkerSizeValid(size: SizeInfo): boolean {
+  return canvasSizeValid(size) && size.cssW >= 40 && size.cssH >= 40;
+}
+
+function observerMarkerRadius(size: SizeInfo, opts: ObserverMarkerOptions): number {
   const radiusMinPx = toFinitePositiveOr(opts.radiusMinPx, 30);
-  const radiusFactor = clamp(typeof opts.radiusFactor === "number" ? opts.radiusFactor : 0.48, 0.05, 0.95);
-  const radius = Math.max(radiusMinPx, Math.min(size.cssW, size.cssH) * radiusFactor);
+  const rawFactor = typeof opts.radiusFactor === "number" ? opts.radiusFactor : 0.48;
+  const radiusFactor = clamp(rawFactor, 0.05, 0.95);
+  return Math.max(radiusMinPx, Math.min(size.cssW, size.cssH) * radiusFactor);
+}
 
-  const ox = cx + Math.cos(ang) * radius;
-  const oy = cy - Math.sin(ang) * radius; // canvas y down
+function finiteOrZero(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
 
-  const theme = themeResolved();
-
-  // line of sight (dashed)
+function drawObserverMarkerLine(ctx: CanvasRenderingContext2D, layout: ObserverMarkerLayout): void {
   ctx.save();
   ctx.setLineDash([6, 6]);
   ctx.strokeStyle = "rgba(255,255,255,0.28)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(ox, oy);
-  ctx.lineTo(cx, cy);
+  ctx.moveTo(layout.ox, layout.oy);
+  ctx.lineTo(layout.cx, layout.cy);
   ctx.stroke();
   ctx.restore();
+}
 
-  // marker
+function drawObserverMarkerDot(
+  ctx: CanvasRenderingContext2D,
+  layout: ObserverMarkerLayout,
+  opts: ObserverMarkerOptions,
+  theme: OverlayTheme,
+): void {
   ctx.save();
   ctx.fillStyle = opts.markerFill ?? theme.accent;
   ctx.strokeStyle = opts.markerStroke ?? "rgba(0,0,0,0.45)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+  ctx.arc(layout.ox, layout.oy, 6, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = DEFAULT_THEME.font;
-  ctx.fillText(opts.label ?? "Observer", ox + 10, oy - 10);
-  ctx.restore();
-}
-
-/**
- * Draw an inset observer-direction gizmo (panel with eye + sphere marker).
- * This is a visualization aid only and does not influence physics. [file:119]
- */
-function drawObserverGizmoInsetResolved(
-  ctx: CanvasRenderingContext2D,
-  size: SizeInfo,
-  observerDir: Vec3,
-  th: OverlayTheme,
-): void {
-  if (!canvasSizeValid(size) || size.cssW < 40 || size.cssH < 40) return;
-
-  const pad = 12;
-  const boxW = Math.max(160, Math.min(250, size.cssW - 2 * pad));
-  const boxH = Math.max(64, Math.min(84, size.cssH - 2 * pad));
-  const x0 = Math.max(pad, size.cssW - pad - boxW);
-  const y0 = pad;
-
-  // Normalize for angles.
-  const dx = Number.isFinite(observerDir.x) ? observerDir.x : 0;
-  const dyWorld = Number.isFinite(observerDir.y) ? observerDir.y : 0;
-  const dz = Number.isFinite(observerDir.z) ? observerDir.z : 1;
-  const r3 = Math.hypot(dx, dyWorld, dz) || 1;
-  const xN = dx / r3;
-  const yN = dyWorld / r3;
-  const zN = dz / r3;
-
-  // azimuth in xy plane and tilt from +z
-  const phiDeg = (Math.atan2(yN, xN) * 180) / Math.PI;
-  const thetaDeg = (Math.acos(clamp(zN, -1, 1)) * 180) / Math.PI;
-
-  ctx.save();
-  ctx.translate(x0, y0);
-
-  // panel background
-  pathRoundRect(ctx, 0, 0, boxW, boxH, 10);
-  ctx.fillStyle = th.panelFill;
-  ctx.fill();
-  ctx.strokeStyle = th.panelStroke;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Eye (left)
-  const eyeCx = 30;
-  const eyeCy = boxH * 0.5;
-  ctx.save();
-  ctx.translate(eyeCx, eyeCy);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,255,255,0.80)";
-  ctx.lineWidth = 1.6;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
-  ctx.fillStyle = th.accent;
-  ctx.fill();
-  ctx.restore();
-
-  // Sphere widget (right): indicates direction; zN<0 is marked with an X.
-  const sphCx = boxW - 70;
-  const sphCy = eyeCy;
-  const sphR = 22;
-
-  ctx.beginPath();
-  ctx.arc(sphCx, sphCy, sphR, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.font = th.fontSmall;
-  ctx.fillText("+x", sphCx + sphR + 4, sphCy + 3);
-  ctx.fillText("-x", sphCx - sphR - 20, sphCy + 3);
-  ctx.fillText("+y", sphCx - 7, sphCy - sphR - 4);
-  ctx.fillText("-y", sphCx - 7, sphCy + sphR + 12);
-
-  const px = sphCx + xN * sphR;
-  const py = sphCy + -yN * sphR; // canvas y down
-
-  if (zN >= 0) {
-    ctx.beginPath();
-    ctx.arc(px, py, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = th.accent;
-    ctx.fill();
-  } else {
-    ctx.strokeStyle = th.warn;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px - 4, py - 4);
-    ctx.lineTo(px + 4, py + 4);
-    ctx.moveTo(px + 4, py - 4);
-    ctx.lineTo(px - 4, py + 4);
-    ctx.stroke();
-  }
-
-  // Labels
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
-  ctx.font = th.font;
-  ctx.fillText("Viewing direction", 56, 18);
-  ctx.font = th.fontSmall;
-  ctx.fillText("line of sight: star → observer", 56, boxH - 36);
-  ctx.fillText(`azimuth φ = ${phiDeg.toFixed(0)}°`, 56, boxH - 22);
-  ctx.fillText(`tilt θ = ${thetaDeg.toFixed(0)}°`, 56, boxH - 8);
-
+  ctx.fillText(opts.label ?? "Observer", layout.ox + 10, layout.oy - 10);
   ctx.restore();
 }
 
@@ -356,76 +264,125 @@ export function drawDebugOverlayV3(
   opts: DebugOverlayOptions = {},
 ): void {
   const dbg = resolveDebugOverlayToggles(toggles);
-  if (!dbg.enabled) return;
-  if (!canvasSizeValid(size)) return;
+  if (!debugOverlayReady(dbg, size)) return;
 
   const th = themeResolved(opts.theme);
-  const observerDir = opts.observerDirNormalized ? observerDirRaw : normalizeObserverDirSafe(observerDirRaw);
+  const observerDir = resolvedOverlayObserverDir(observerDirRaw, opts);
+  drawObserverGizmoIfEnabled(ctx, size, observerDir, th, dbg);
+  drawDebugTextBlock({ ctx, data, observerDir, dbg, theme: th, opts });
+}
 
-  // Optional inset gizmo first (top-right).
-  if (dbg.showObserverDir) {
-    drawObserverGizmoInsetResolved(ctx, size, observerDir, th);
-  }
+function debugOverlayReady(dbg: RequiredDebugOverlayToggles, size: SizeInfo): boolean {
+  return dbg.enabled && canvasSizeValid(size);
+}
 
-  const x0 = typeof opts.textX === "number" ? opts.textX : 10;
-  const yStart = typeof opts.textY0 === "number" ? opts.textY0 : 18;
-  const lineH = toFinitePositiveOr(opts.lineHeight, 16);
+function resolvedOverlayObserverDir(observerDirRaw: Vec3, opts: DebugOverlayOptions): Vec3 {
+  return opts.observerDirNormalized ? observerDirRaw : normalizeObserverDirSafe(observerDirRaw);
+}
 
+function drawObserverGizmoIfEnabled(
+  ctx: CanvasRenderingContext2D,
+  size: SizeInfo,
+  observerDir: Vec3,
+  th: OverlayTheme,
+  dbg: RequiredDebugOverlayToggles,
+): void {
+  if (dbg.showObserverDir) drawObserverGizmoInsetResolved(ctx, size, observerDir, th);
+}
+
+function drawDebugTextBlock(args: {
+  ctx: CanvasRenderingContext2D;
+  data: DebugOverlayDataV3;
+  observerDir: Vec3;
+  dbg: RequiredDebugOverlayToggles;
+  theme: OverlayTheme;
+  opts: DebugOverlayOptions;
+}): void {
+  const { ctx, data, observerDir, dbg, theme, opts } = args;
   ctx.save();
-  ctx.fillStyle = th.textColor;
-  ctx.font = th.font;
+  ctx.fillStyle = theme.textColor;
+  ctx.font = theme.font;
+  const line = debugLineWriter(ctx, opts);
+  writeObserverDirectionLine(dbg, observerDir, line);
+  writeOcculterLine(dbg, data, line);
+  writeImpactParamLines(dbg, data, line);
+  writeTdvLines(dbg, data, line);
+  writeFluxDecompositionLines(dbg, data, line);
+  ctx.restore();
+}
 
-  let y = yStart;
-  const line = (s: string) => {
+function debugLineWriter(ctx: CanvasRenderingContext2D, opts: DebugOverlayOptions): DebugLineWriter {
+  const x0 = typeof opts.textX === "number" ? opts.textX : 10;
+  const lineH = toFinitePositiveOr(opts.lineHeight, 16);
+  let y = typeof opts.textY0 === "number" ? opts.textY0 : 18;
+  return (s: string) => {
     ctx.fillText(s, x0, y);
     y += lineH;
   };
+}
 
-  if (dbg.showObserverDir) {
-    line(
-      `Observer dir = (${observerDir.x.toFixed(2)}, ${observerDir.y.toFixed(2)}, ${observerDir.z.toFixed(2)})`,
-    );
-  }
+function writeObserverDirectionLine(
+  dbg: RequiredDebugOverlayToggles,
+  observerDir: Vec3,
+  line: DebugLineWriter,
+): void {
+  if (!dbg.showObserverDir) return;
+  line(
+    `Observer dir = (${observerDir.x.toFixed(2)}, ${observerDir.y.toFixed(2)}, ${observerDir.z.toFixed(2)})`,
+  );
+}
 
-  if (dbg.showOcculters) {
-    const nOcc = data.nOcculters;
-    if (typeof nOcc === "number" && Number.isFinite(nOcc)) line(`Occulters = ${nOcc}`);
-  }
+function writeOcculterLine(
+  dbg: RequiredDebugOverlayToggles,
+  data: DebugOverlayDataV3,
+  line: DebugLineWriter,
+): void {
+  if (!dbg.showOcculters) return;
+  writeFiniteDebugNumber(data.nOcculters, line, (nOcc) => `Occulters = ${nOcc}`);
+}
 
-  if (dbg.showImpactParams) {
-    const bP = data.bPlanet;
-    const bM = data.bMoon;
-    if (typeof bP === "number" && Number.isFinite(bP)) line(`b_planet(front) = ${bP.toFixed(3)}`);
-    if (typeof bM === "number" && Number.isFinite(bM)) line(`b_moon(front)   = ${bM.toFixed(3)}`);
-  }
+function writeImpactParamLines(
+  dbg: RequiredDebugOverlayToggles,
+  data: DebugOverlayDataV3,
+  line: DebugLineWriter,
+): void {
+  if (!dbg.showImpactParams) return;
+  writeFiniteDebugNumber(data.bPlanet, line, (bP) => `b_planet(front) = ${bP.toFixed(3)}`);
+  writeFiniteDebugNumber(data.bMoon, line, (bM) => `b_moon(front)   = ${bM.toFixed(3)}`);
+}
 
-  if (dbg.showTDV) {
-    const tdv = data.tdvRatio;
-    const vSky = data.vPlanetSky;
-    const vRef = data.vPlanetSkyRef;
-    if (typeof tdv === "number" && Number.isFinite(tdv)) line(`TDV ratio = ${tdv.toFixed(4)}`);
-    if (typeof vSky === "number" && Number.isFinite(vSky)) line(`v_sky(t)   = ${vSky.toFixed(6)}`);
-    if (typeof vRef === "number" && Number.isFinite(vRef)) line(`v_sky(ref) = ${vRef.toFixed(6)}`);
-  }
+function writeTdvLines(
+  dbg: RequiredDebugOverlayToggles,
+  data: DebugOverlayDataV3,
+  line: DebugLineWriter,
+): void {
+  if (!dbg.showTDV) return;
+  writeFiniteDebugNumber(data.tdvRatio, line, (tdv) => `TDV ratio = ${tdv.toFixed(4)}`);
+  writeFiniteDebugNumber(data.vPlanetSky, line, (vSky) => `v_sky(t)   = ${vSky.toFixed(6)}`);
+  writeFiniteDebugNumber(data.vPlanetSkyRef, line, (vRef) => `v_sky(ref) = ${vRef.toFixed(6)}`);
+}
 
-  if (dbg.showFluxDecomposition) {
-    const baseline = data.baselineFluxUsed;
-    const svar = data.stellarVariabilityFlux;
+function writeFluxDecompositionLines(
+  dbg: RequiredDebugOverlayToggles,
+  data: DebugOverlayDataV3,
+  line: DebugLineWriter,
+): void {
+  if (!dbg.showFluxDecomposition) return;
+  writeFiniteDebugNumber(data.baselineFluxUsed, line, (baseline) => `baselineFlux = ${baseline.toFixed(6)}`);
+  writeFiniteDebugNumber(
+    data.stellarVariabilityFlux,
+    line,
+    (svar) => `stellarVar   = ${svar.toExponential(3)}`,
+  );
+  writeFiniteDebugNumber(data.fluxTransitFactor, line, (ft) => `F_transit    = ${ft.toFixed(6)}`);
+  writeFiniteDebugNumber(data.fluxTotal, line, (f) => `F_total      = ${f.toFixed(6)}`);
+  writeFiniteDebugNumber(data.displayFluxValue, line, (fDisplay) => `F_display    = ${fDisplay.toFixed(6)}`);
+}
 
-    if (typeof baseline === "number" && Number.isFinite(baseline))
-      line(`baselineFlux = ${baseline.toFixed(6)}`);
-    if (typeof svar === "number" && Number.isFinite(svar)) line(`stellarVar   = ${svar.toExponential(3)}`);
-
-    const ft = data.fluxTransitFactor;
-    if (typeof ft === "number" && Number.isFinite(ft)) line(`F_transit    = ${ft.toFixed(6)}`);
-
-    const f = data.fluxTotal;
-    if (typeof f === "number" && Number.isFinite(f)) line(`F_total      = ${f.toFixed(6)}`);
-
-    const fDisplay = data.displayFluxValue;
-    if (typeof fDisplay === "number" && Number.isFinite(fDisplay))
-      line(`F_display    = ${fDisplay.toFixed(6)}`);
-  }
-
-  ctx.restore();
+function writeFiniteDebugNumber(
+  value: number | undefined,
+  line: DebugLineWriter,
+  format: (value: number) => string,
+): void {
+  if (typeof value === "number" && Number.isFinite(value)) line(format(value));
 }

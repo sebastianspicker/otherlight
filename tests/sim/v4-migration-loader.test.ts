@@ -1,6 +1,9 @@
+/** Verifies v4 migration loader contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { normalizeScenarioInputToV4 } from "../../src/sim/v4/migrate";
+import { buildNativeSnapshot } from "../../src/sim/v4/nativeSnapshot";
 
 describe("v4 runtime migration loader", () => {
   it("auto-migrates legacy v2-like payload to v4", () => {
@@ -58,6 +61,7 @@ describe("v4 runtime migration loader", () => {
 
   it("accepts an explicit scientific-browser execution mode in valid V4 configs", () => {
     const legacy = {
+      observer: { dir: { x: 0, y: 0, z: 1 } },
       star: { r: 6.957e8, m: 1.98847e30 },
       planet: {
         r: 6.371e6,
@@ -76,5 +80,28 @@ describe("v4 runtime migration loader", () => {
     });
 
     expect(out.runtime?.executionMode).toBe("scientific-browser");
+    expect(() => buildNativeSnapshot(out, 0)).not.toThrow();
+  });
+
+  it("keeps migrated general-lab secondary star dynamically inert", () => {
+    const migrated = normalizeScenarioInputToV4({
+      star: { r: 1, m: 1 },
+      planet: {
+        r: 0.1,
+        m: 0,
+        orbit: { a: 10, e: 0, inc: Math.PI / 2, Omega: 0, omega: 0, period: 100, t0: 0 },
+      },
+      observer: { dir: { x: 0, y: 0, z: 1 } },
+    });
+
+    const snapshot = buildNativeSnapshot(migrated, 25);
+    const primary = snapshot.byId.get("star-a");
+    const secondary = snapshot.byId.get("star-b");
+
+    expect(secondary?.m).toBe(0);
+    expect(primary?.rAbs.x).toBeCloseTo(0, 12);
+    expect(primary?.rAbs.y).toBeCloseTo(0, 12);
+    expect(primary?.vAbs.x).toBeCloseTo(0, 12);
+    expect(primary?.vAbs.y).toBeCloseTo(0, 12);
   });
 });

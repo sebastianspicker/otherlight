@@ -1,13 +1,16 @@
+/** Verifies visualization signals contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SimulationStepV3 } from "../../src/sim/v3/types";
 import {
   buildComparisonInset,
+  buildBandVariantSystems,
   componentOverlaySeriesFromSamples,
   sampleSeriesFromRuntime,
 } from "../../src/app/visualizationSignals";
 
-// Minimal step factory — only fills in the fields used by visualizationSignals
+// Minimal step factory that only fills in fields used by visualizationSignals
 function makeStep(
   t: number,
   overrides: Partial<SimulationStepV3["renderSignals"]["fluxComponents"]> = {},
@@ -130,7 +133,7 @@ describe("componentOverlaySeriesFromSamples", () => {
   });
 });
 
-describe("buildComparisonInset", () => {
+describe("buildComparisonInset empty and basic cases", () => {
   it("returns undefined when both series are undefined", () => {
     expect(buildComparisonInset({ a: undefined, b: undefined })).toBeUndefined();
   });
@@ -176,7 +179,9 @@ describe("buildComparisonInset", () => {
       expect(pt.flux).toBeCloseTo(0.02, 8);
     }
   });
+});
 
+describe("buildComparisonInset finite aligned samples", () => {
   it("skips sample pairs with non-finite flux values", () => {
     const a = {
       id: "a",
@@ -200,6 +205,53 @@ describe("buildComparisonInset", () => {
     };
     const inset = buildComparisonInset({ a, b });
     expect(inset!.series[0].samples).toHaveLength(1);
+  });
+
+  it("skips sample pairs with mismatched timestamps", () => {
+    const a = {
+      id: "a",
+      label: "A",
+      color: "#aaa",
+      style: "solid" as const,
+      samples: [
+        { t: 0, flux: 0.97 },
+        { t: 1, flux: 0.96 },
+      ],
+    };
+    const b = {
+      id: "b",
+      label: "B",
+      color: "#bbb",
+      style: "solid" as const,
+      samples: [
+        { t: 0, flux: 0.99 },
+        { t: 2, flux: 0.98 },
+      ],
+    };
+
+    const inset = buildComparisonInset({ a, b });
+    expect(inset!.series[0].samples).toHaveLength(1);
+    expect(inset!.series[0].samples[0].t).toBe(0);
+    expect(inset!.series[0].samples[0].flux).toBeCloseTo(0.02, 8);
+  });
+
+  it("returns undefined when no aligned finite delta samples remain", () => {
+    const a = {
+      id: "a",
+      label: "A",
+      color: "#aaa",
+      style: "solid" as const,
+      samples: [{ t: 1, flux: Number.NaN }],
+    };
+    const b = {
+      id: "b",
+      label: "B",
+      color: "#bbb",
+      style: "solid" as const,
+      samples: [{ t: 2, flux: 0.98 }],
+    };
+
+    expect(buildComparisonInset({ a, b })).toBeUndefined();
   });
 });
 
@@ -244,5 +296,35 @@ describe("sampleSeriesFromRuntime", () => {
     const runtime = { step: (t: number) => makeStep(t).step };
     const series = sampleSeriesFromRuntime(runtime, times, "x", "#000", (s) => s.flux.total);
     expect(series.samples.map((p) => p.t)).toEqual(times);
+  });
+});
+
+describe("buildBandVariantSystems", () => {
+  it("builds explicit single-band spectral variants from valid weighted bands", () => {
+    const system = {
+      observer: { dir: { x: 0, y: 0, z: 1 } },
+      star: {
+        r: 1,
+        photometry: {
+          spectralBandpass: {
+            enabled: true,
+            lambdaNm: [500, 700],
+            weights: [0.25, 0.75],
+          },
+        },
+      },
+      planet: {
+        r: 0.1,
+        orbit: { a: 5, e: 0, inc: Math.PI / 2, Omega: 0, omega: 0, period: 1000, t0: 0 },
+      },
+    };
+
+    const variants = buildBandVariantSystems(system as never);
+
+    expect(variants).toHaveLength(2);
+    expect(variants[0].system.star.photometry?.spectralBandpass?.lambdaNm).toEqual([500]);
+    expect(variants[0].system.star.photometry?.spectralBandpass?.weights).toEqual([1]);
+    expect(variants[1].system.star.photometry?.spectralBandpass?.lambdaNm).toEqual([700]);
+    expect(variants[1].system.star.photometry?.spectralBandpass?.weights).toEqual([1]);
   });
 });

@@ -1,3 +1,6 @@
+/**
+ * Owns visualization Didactics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import type { InstrumentNoiseSystematicsParams } from "../core/instrumentNoiseTypes";
 import { currentAirmass } from "../photometry/instrumentNoiseHelpers";
@@ -9,6 +12,14 @@ import type {
   LightCurveWindowOverlay,
 } from "../render/lightCurvePlotTypes";
 import { getInstrumentCfgFromPhotometry } from "./noise";
+
+type ObserverConfig = InstrumentNoiseSystematicsParams["observer"];
+type DataGapsConfig = NonNullable<NonNullable<ObserverConfig>["dataGaps"]>;
+type DataGapWindowConfig = NonNullable<DataGapsConfig["windowsSec"]>[number];
+type PeriodicGapConfig = NonNullable<DataGapsConfig["periodic"]>;
+type InstrumentConfig = InstrumentNoiseSystematicsParams;
+type ObserverAtmosphereConfig = NonNullable<NonNullable<ObserverConfig>["atmosphere"]>;
+type ScintillationConfig = NonNullable<ObserverAtmosphereConfig["scintillation"]>;
 
 export function pushCappedOverlayPoint(
   history: LightCurveOverlayPoint[],
@@ -81,92 +92,198 @@ export function buildGapWindowOverlays(
   if (!cfg?.enabled) return [];
   const gaps = cfg.dataGaps;
   if (!gaps?.enabled) return [];
-  const overlays: LightCurveWindowOverlay[] = [];
+  return [...explicitGapWindowOverlays(gaps), ...periodicGapWindowOverlays(gaps.periodic, range)];
+}
 
+function finiteWindow(window: DataGapWindowConfig): { startSec: number; endSec: number } | undefined {
+  const startSec = window.startSec;
+  const endSec = window.endSec;
+  if (!(Number.isFinite(startSec) && Number.isFinite(endSec) && (endSec as number) > (startSec as number))) {
+    return undefined;
+  }
+  return { startSec: startSec as number, endSec: endSec as number };
+}
+
+function explicitGapWindowOverlays(gaps: DataGapsConfig): LightCurveWindowOverlay[] {
+  const overlays: LightCurveWindowOverlay[] = [];
   for (const [index, window] of (gaps.windowsSec ?? []).entries()) {
-    const startSec = window.startSec;
-    const endSec = window.endSec;
-    if (
-      !(Number.isFinite(startSec) && Number.isFinite(endSec) && (endSec as number) > (startSec as number))
-    ) {
-      continue;
-    }
+    const finite = finiteWindow(window);
+    if (!finite) continue;
     overlays.push({
       id: `gap-window-${index}`,
-      startSec: startSec as number,
-      endSec: endSec as number,
+      startSec: finite.startSec,
+      endSec: finite.endSec,
       color: "rgba(239, 71, 111, 1)",
       alpha: 0.16,
       label: "gap",
     });
   }
-
-  const periodic = gaps.periodic;
-  if (
-    range &&
-    periodic?.enabled &&
-    Number.isFinite(periodic.periodSec) &&
-    (periodic.periodSec as number) > 0 &&
-    Number.isFinite(periodic.gapDurationSec) &&
-    (periodic.gapDurationSec as number) > 0
-  ) {
-    const periodSec = periodic.periodSec as number;
-    const durationSec = periodic.gapDurationSec as number;
-    const phaseSec = Number.isFinite(periodic.phaseSec) ? (periodic.phaseSec as number) : 0;
-    let n = Math.floor((range.startSec - phaseSec) / periodSec) - 1;
-    while (true) {
-      const startSec = phaseSec + n * periodSec;
-      const endSec = startSec + durationSec;
-      if (startSec > range.endSec + periodSec) break;
-      if (endSec >= range.startSec && startSec <= range.endSec) {
-        overlays.push({
-          id: `gap-periodic-${n}`,
-          startSec,
-          endSec,
-          color: "rgba(239, 71, 111, 1)",
-          alpha: 0.12,
-          label: "periodic gap",
-        });
-      }
-      n += 1;
-    }
-  }
-
   return overlays;
 }
+
+function finitePeriodicGap(
+  periodic: PeriodicGapConfig | undefined,
+): { periodSec: number; durationSec: number; phaseSec: number } | undefined {
+  if (!periodic?.enabled) return undefined;
+  if (!(Number.isFinite(periodic.periodSec) && (periodic.periodSec as number) > 0)) return undefined;
+  if (!(Number.isFinite(periodic.gapDurationSec) && (periodic.gapDurationSec as number) > 0))
+    return undefined;
+  return {
+    periodSec: periodic.periodSec as number,
+    durationSec: periodic.gapDurationSec as number,
+    phaseSec: Number.isFinite(periodic.phaseSec) ? (periodic.phaseSec as number) : 0,
+  };
+}
+
+function periodicGapWindowOverlays(
+  periodic: PeriodicGapConfig | undefined,
+  range?: { startSec: number; endSec: number },
+): LightCurveWindowOverlay[] {
+  const config = finitePeriodicGap(periodic);
+  if (!range || !config) return [];
+
+  const overlays: LightCurveWindowOverlay[] = [];
+  let n = Math.floor((range.startSec - config.phaseSec) / config.periodSec) - 1;
+  while (true) {
+    const startSec = config.phaseSec + n * config.periodSec;
+    const endSec = startSec + config.durationSec;
+    if (startSec > range.endSec + config.periodSec) break;
+    if (endSec >= range.startSec && startSec <= range.endSec) {
+      overlays.push(periodicGapOverlay(n, startSec, endSec));
+    }
+    n += 1;
+  }
+  return overlays;
+}
+
+const periodicGapOverlay = (n: number, startSec: number, endSec: number): LightCurveWindowOverlay => {
+  return {
+    id: `gap-periodic-${n}`,
+    startSec,
+    endSec,
+    color: "rgba(239, 71, 111, 1)",
+    alpha: 0.12,
+    label: "periodic gap",
+  };
+};
+
+const correlatedNoiseVariance = (inst: InstrumentConfig): number => {
+  if (!inst.correlatedNoise?.enabled || !Number.isFinite(inst.correlatedNoise.sigmaFlux)) return 0;
+  return (inst.correlatedNoise.sigmaFlux as number) ** 2;
+};
+
+const readNoiseDenominator = (inst: InstrumentConfig): number => {
+  return Math.max(
+    1e-9,
+    (inst.throughput ?? 1) * (inst.electronsPerUnitFlux ?? 1e6) * Math.max(1, inst.exposureSec ?? 1),
+  );
+};
+
+const readNoiseVariance = (inst: InstrumentConfig): number => {
+  if (!inst.readNoise?.enabled || !Number.isFinite(inst.readNoise.sigmaElectrons)) return 0;
+  return ((inst.readNoise.sigmaElectrons as number) / readNoiseDenominator(inst)) ** 2;
+};
+
+const observerAtmosphere = (inst: InstrumentConfig): ObserverAtmosphereConfig | undefined => {
+  return inst.observer?.enabled ? inst.observer.atmosphere : undefined;
+};
+
+const activeScintillationConfig = (
+  atmosphere: ObserverAtmosphereConfig | undefined,
+): ScintillationConfig | undefined => {
+  if (!atmosphere?.enabled) return undefined;
+  return atmosphere.scintillation?.enabled ? atmosphere.scintillation : undefined;
+};
+
+const finiteScintillationSigma = (scintillation: ScintillationConfig | undefined): number | undefined => {
+  return Number.isFinite(scintillation?.sigmaFlux) ? (scintillation?.sigmaFlux as number) : undefined;
+};
+
+const scintillationScale = (
+  atmosphere: ObserverAtmosphereConfig,
+  inst: InstrumentConfig,
+  tSec: number,
+): number => {
+  const scintillation = atmosphere.scintillation;
+  const airmass = currentAirmass(atmosphere, tSec);
+  const exposureSec = Math.max(1, inst.exposureSec ?? 1);
+  const airmassExponent = Math.max(0, scintillation?.airmassExponent ?? 1.5);
+  const exposureExponent = Math.max(0, scintillation?.exposureExponent ?? 0.5);
+  return Math.max(1, airmass ** airmassExponent) / Math.max(1, exposureSec ** exposureExponent);
+};
+
+const scintillationVariance = (inst: InstrumentConfig, tSec: number): number => {
+  const atmosphere = observerAtmosphere(inst);
+  const sigmaFlux = finiteScintillationSigma(activeScintillationConfig(atmosphere));
+  if (!atmosphere || sigmaFlux === undefined) return 0;
+
+  const sigma = sigmaFlux * scintillationScale(atmosphere, inst, tSec);
+  return sigma * sigma;
+};
 
 export function estimateMeasurementSigma(system: SystemParams, tSec: number): number | undefined {
   const inst = getInstrumentCfgFromPhotometry(system.star.photometry);
   if (!inst?.enabled) return undefined;
 
-  let sigma2 = 0;
-  if (inst.correlatedNoise?.enabled && Number.isFinite(inst.correlatedNoise.sigmaFlux)) {
-    sigma2 += (inst.correlatedNoise.sigmaFlux as number) ** 2;
-  }
-  if (inst.readNoise?.enabled && Number.isFinite(inst.readNoise.sigmaElectrons)) {
-    const denom = Math.max(
-      1e-9,
-      (inst.throughput ?? 1) * (inst.electronsPerUnitFlux ?? 1e6) * Math.max(1, inst.exposureSec ?? 1),
-    );
-    sigma2 += ((inst.readNoise.sigmaElectrons as number) / denom) ** 2;
-  }
-  const atmosphere = inst.observer?.enabled ? inst.observer.atmosphere : undefined;
-  if (
-    atmosphere?.enabled &&
-    atmosphere.scintillation?.enabled &&
-    Number.isFinite(atmosphere.scintillation.sigmaFlux)
-  ) {
-    const airmass = currentAirmass(atmosphere, tSec);
-    const exposureSec = Math.max(1, inst.exposureSec ?? 1);
-    const airmassExponent = Math.max(0, atmosphere.scintillation.airmassExponent ?? 1.5);
-    const exposureExponent = Math.max(0, atmosphere.scintillation.exposureExponent ?? 0.5);
-    const sigma =
-      ((atmosphere.scintillation.sigmaFlux as number) * Math.max(1, airmass ** airmassExponent)) /
-      Math.max(1, exposureSec ** exposureExponent);
-    sigma2 += sigma * sigma;
-  }
+  const sigma2 = correlatedNoiseVariance(inst) + readNoiseVariance(inst) + scintillationVariance(inst, tSec);
   return sigma2 > 0 ? Math.sqrt(sigma2) : undefined;
 }
+
+const hasPlanetSideAtmosphere = (system: SystemParams): boolean => {
+  return Boolean(
+    system.star.photometry?.atmosphereTransmission?.enabled || system.star.photometry?.atmosphereRT?.enabled,
+  );
+};
+
+const pushInstrumentBadges = (
+  badges: LightCurveBadge[],
+  system: SystemParams,
+  inst: InstrumentConfig,
+): void => {
+  if (hasPlanetSideAtmosphere(system)) badges.push({ label: "planet-side atmosphere", color: "#cdb4db" });
+  if (inst.observer?.dataGaps?.enabled) badges.push({ label: "observer gaps", color: "#ef476f" });
+  if (inst.postprocess?.enabled && inst.postprocess.detrend?.enabled) {
+    badges.push({ label: "detrending active", color: "#ffd166" });
+  }
+};
+
+const pushAirmassBadge = (
+  badges: LightCurveBadge[],
+  atmosphere: ObserverAtmosphereConfig,
+  tSec: number,
+): void => {
+  const air = currentAirmass(atmosphere, tSec);
+  if (Number.isFinite(air) && air > 1.02) {
+    badges.push({ label: `airmass ${air.toFixed(2)}`, color: "#f4a261" });
+  }
+};
+
+const pushAtmosphereBadges = (
+  badges: LightCurveBadge[],
+  atmosphere: ObserverAtmosphereConfig | undefined,
+  tSec: number,
+): void => {
+  if (!atmosphere?.enabled) return;
+  badges.push({ label: "observer-side contamination", color: "#ef476f" });
+  pushAirmassBadge(badges, atmosphere, tSec);
+  if (atmosphere.clouds?.enabled) badges.push({ label: "cloud extinction", color: "#f28482" });
+  if (atmosphere.tellurics?.enabled) badges.push({ label: "telluric bias", color: "#ffb703" });
+  if (atmosphere.scintillation?.enabled) badges.push({ label: "scintillation", color: "#8ecae6" });
+  if (atmosphere.skyBackground?.enabled) badges.push({ label: "sky residuals", color: "#90be6d" });
+};
+
+const pushNoiseBadge = (badges: LightCurveBadge[], system: SystemParams, tSec: number): void => {
+  const sigma = estimateMeasurementSigma(system, tSec);
+  if (Number.isFinite(sigma) && (sigma as number) > 0) {
+    badges.push({ label: `noise rms ~ ${(sigma as number).toExponential(1)}`, color: "#adb5bd" });
+  }
+};
+
+const pushRefractionBadge = (badges: LightCurveBadge[], step: SimulationStepV3): void => {
+  if (Number.isFinite(step.flux.refraction) && (step.flux.refraction as number) > 0) {
+    badges.push({ label: "refraction shoulder", color: "#cdb4db" });
+  }
+};
 
 export function buildMeasurementBadges(
   system: SystemParams,
@@ -175,33 +292,11 @@ export function buildMeasurementBadges(
 ): LightCurveBadge[] {
   const badges: LightCurveBadge[] = [];
   const inst = getInstrumentCfgFromPhotometry(system.star.photometry);
-  const hasPlanetSideAtmosphere = Boolean(
-    system.star.photometry?.atmosphereTransmission?.enabled || system.star.photometry?.atmosphereRT?.enabled,
-  );
   if (!inst?.enabled) return badges;
-  const atmosphere = inst.observer?.enabled ? inst.observer.atmosphere : undefined;
-  if (hasPlanetSideAtmosphere) badges.push({ label: "planet-side atmosphere", color: "#cdb4db" });
-  if (inst.observer?.dataGaps?.enabled) badges.push({ label: "observer gaps", color: "#ef476f" });
-  if (inst.postprocess?.enabled && inst.postprocess.detrend?.enabled) {
-    badges.push({ label: "detrending active", color: "#ffd166" });
-  }
-  if (atmosphere?.enabled) {
-    badges.push({ label: "observer-side contamination", color: "#ef476f" });
-    const air = currentAirmass(atmosphere, tSec);
-    if (Number.isFinite(air) && air > 1.02)
-      badges.push({ label: `airmass ${air.toFixed(2)}`, color: "#f4a261" });
-    if (atmosphere.clouds?.enabled) badges.push({ label: "cloud extinction", color: "#f28482" });
-    if (atmosphere.tellurics?.enabled) badges.push({ label: "telluric bias", color: "#ffb703" });
-    if (atmosphere.scintillation?.enabled) badges.push({ label: "scintillation", color: "#8ecae6" });
-    if (atmosphere.skyBackground?.enabled) badges.push({ label: "sky residuals", color: "#90be6d" });
-  }
-  const sigma = estimateMeasurementSigma(system, tSec);
-  if (Number.isFinite(sigma) && (sigma as number) > 0) {
-    badges.push({ label: `noise rms ~ ${(sigma as number).toExponential(1)}`, color: "#adb5bd" });
-  }
-  if (Number.isFinite(step.flux.refraction) && (step.flux.refraction as number) > 0) {
-    badges.push({ label: "refraction shoulder", color: "#cdb4db" });
-  }
+  pushInstrumentBadges(badges, system, inst);
+  pushAtmosphereBadges(badges, observerAtmosphere(inst), tSec);
+  pushNoiseBadge(badges, system, tSec);
+  pushRefractionBadge(badges, step);
   return badges;
 }
 

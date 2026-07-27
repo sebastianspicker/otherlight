@@ -1,4 +1,4 @@
-// src/render/orbitPathCache.ts
+/** Caches sampled sky-plane orbit guides so rendering avoids repeated dynamics sampling. */
 //
 // Orbit path caching for the Canvas2D renderer.
 //
@@ -21,6 +21,7 @@ import { vSub } from "../physics/vec3";
 import { projectToSky } from "../physics/frames";
 import { sampleMoonOrbitSkyAbsolute, sampleOrbitSky } from "../sim/sim";
 import { getNBodyStateAt, isNBodyEnabled } from "../sim/dynamics";
+import { orbitElementsKey } from "./orbitElementsKey";
 
 export type OrbitPathPoint2D = { x: number; y: number };
 
@@ -71,17 +72,6 @@ type CachedPath = {
   pts: OrbitPathPoint2D[];
 };
 
-type OrbitElementsKeyEntry = {
-  a: number;
-  e: number;
-  inc: number;
-  Omega: number;
-  omega: number;
-  period: number;
-  t0: number;
-  key: string;
-};
-
 type ObserverDirKeyEntry = {
   x: number;
   y: number;
@@ -90,41 +80,13 @@ type ObserverDirKeyEntry = {
   key: string;
 };
 
+type NBodySnapshot = NonNullable<ReturnType<typeof getNBodyStateAt>>;
+type NBodyVectorSelector = (snapshot: NBodySnapshot) => Vec3;
+type OrbitPathSampling = { sampleCount: number; close: boolean };
+
 function clampInt(n: number, lo: number, hi: number): number {
   const nn = Math.floor(n);
   return Math.max(lo, Math.min(hi, nn));
-}
-
-/**
- * Mix a float value into a 32-bit hash seed using xorshift-style bit mixing.
- * Quantizes to a stable integer at ~9 decimal places of precision, which is
- * more than sufficient for orbit-path cache discrimination.
- */
-function mixFloat(seed: number, v: number): number {
-  const bits = Number.isFinite(v) ? Math.round(v * 1e9) | 0 : 0x7fffffff;
-  let h = Math.imul(seed ^ bits, 0x9e3779b9);
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
-  return h ^ (h >>> 16);
-}
-
-/**
- * Compute a compact, collision-resistant string key for an OrbitElements object.
- * Uses two independent 32-bit hashes (64-bit combined) with Math.imul bit mixing.
- * Much cheaper than the previous toFixed(12).join('|') approach:
- * - 7 multiply+mix operations instead of 7 toFixed(12) calls and a string join.
- * - Output is a ~22-char "h1:h2" string instead of ~100-char toFixed string.
- */
-function hashOrbitElements(el: OrbitElements): string {
-  let h1 = 0x9e3779b9;
-  let h2 = 0x6c62272e;
-  h1 = mixFloat(h1, el.a);
-  h1 = mixFloat(h1, el.e);
-  h1 = mixFloat(h1, el.inc);
-  h1 = mixFloat(h1, el.Omega);
-  h2 = mixFloat(h2, el.omega);
-  h2 = mixFloat(h2, el.period);
-  h2 = mixFloat(h2, el.t0);
-  return `${h1 >>> 0}:${h2 >>> 0}`;
 }
 
 function normalizePhase01(t: number, t0: number, period: number): number {
@@ -141,40 +103,7 @@ function orbitElementsAt(orbit: OrbitElements | OrbitElementsProvider, t: number
   return typeof orbit === "function" ? orbit(t) : orbit;
 }
 
-const orbitElementsKeyCache = new WeakMap<OrbitElements, OrbitElementsKeyEntry>();
 let observerDirKeyCache: ObserverDirKeyEntry | undefined;
-
-function orbitElementsKey(el: OrbitElements): string {
-  const cached = orbitElementsKeyCache.get(el);
-  if (
-    cached &&
-    cached.a === el.a &&
-    cached.e === el.e &&
-    cached.inc === el.inc &&
-    cached.Omega === el.Omega &&
-    cached.omega === el.omega &&
-    cached.period === el.period &&
-    cached.t0 === el.t0
-  ) {
-    return cached.key;
-  }
-
-  // Compute a compact numeric hash key for this orbit configuration.
-  // hashOrbitElements uses Math.imul bit-mixing — much cheaper than
-  // toFixed(12).join('|') for the cache-miss path.
-  const key = hashOrbitElements(el);
-  orbitElementsKeyCache.set(el, {
-    a: el.a,
-    e: el.e,
-    inc: el.inc,
-    Omega: el.Omega,
-    omega: el.omega,
-    period: el.period,
-    t0: el.t0,
-    key,
-  });
-  return key;
-}
 
 function observerDirKey(dir: Vec3, decimals: number): string {
   const cached = observerDirKeyCache;
@@ -295,6 +224,175 @@ function nbodyConfigKey(params: SystemParams, reg: ProviderIdRegistry, t: number
   ].join("|");
 }
 
+function phaseBinForTime(t: number, t0: number, period: number, bins: number): number {
+  const phase01 = normalizePhase01(t, Number.isFinite(t0) ? t0 : 0, period);
+  return clampInt(Math.floor(phase01 * bins), 0, bins - 1);
+}
+
+function projectedPathPoint(
+  snapshot: NBodySnapshot,
+  observerDir: Vec3,
+  selectVector: NBodyVectorSelector,
+): OrbitPathPoint2D {
+  const sky = projectToSky(selectVector(snapshot), observerDir);
+  return { x: sky.x, y: sky.y };
+}
+
+function sampleNBodyPath(args: {
+  params: SystemParams;
+  t: number;
+  period: number;
+  sampleCount: number;
+  observerDir: Vec3;
+  selectVector: NBodyVectorSelector;
+  fillFallback: (pts: OrbitPathPoint2D[], failedAt: number) => void;
+}): OrbitPathPoint2D[] | null {
+  if (!isNBodyEnabled(args.params)) return null;
+
+  try {
+    const pts: OrbitPathPoint2D[] = new Array(args.sampleCount);
+    const failedAt = fillNBodySamples(args, pts);
+    if (failedAt < 0) return pts;
+    if (failedAt > 0) {
+      args.fillFallback(pts, failedAt);
+      return pts;
+    }
+  } catch {
+    // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
+  }
+  return null;
+}
+
+function fillNBodySamples(
+  args: {
+    params: SystemParams;
+    t: number;
+    period: number;
+    sampleCount: number;
+    observerDir: Vec3;
+    selectVector: NBodyVectorSelector;
+  },
+  pts: OrbitPathPoint2D[],
+): number {
+  for (let i = 0; i < args.sampleCount; i++) {
+    const nb = getNBodyStateAt(args.params, args.t + (i / args.sampleCount) * args.period);
+    if (!nb) return i;
+    pts[i] = projectedPathPoint(nb, args.observerDir, args.selectVector);
+  }
+  return -1;
+}
+
+function planetNBodyVector(snapshot: NBodySnapshot): Vec3 {
+  return vSub(snapshot.state.rP, snapshot.state.rS);
+}
+
+function moonNBodyVector(snapshot: NBodySnapshot): Vec3 {
+  return vSub(snapshot.state.rM, snapshot.state.rS);
+}
+
+function toPath2D(pts: Array<{ x: number; y: number }>): OrbitPathPoint2D[] {
+  const pts2 = new Array<OrbitPathPoint2D>(pts.length);
+  for (let i = 0; i < pts.length; i++) pts2[i] = { x: pts[i].x, y: pts[i].y };
+  return pts2;
+}
+
+function paramsWithObserverDir(params: SystemParams, observerDir: Vec3): SystemParams {
+  return params.observer
+    ? { ...params, observer: { ...params.observer, dir: observerDir } }
+    : { ...params, observer: { dir: observerDir } };
+}
+
+function samplePlanetKeplerPath(
+  params: SystemParams,
+  t: number,
+  sampleCount: number,
+  observerDir: Vec3,
+): OrbitPathPoint2D[] {
+  return toPath2D(sampleOrbitSky(params.planet.orbit, t, sampleCount, observerDir));
+}
+
+function sampleMoonKeplerPath(
+  params: SystemParams,
+  t: number,
+  sampleCount: number,
+  observerDir: Vec3,
+): OrbitPathPoint2D[] {
+  return toPath2D(sampleMoonOrbitSkyAbsolute(paramsWithObserverDir(params, observerDir), t, sampleCount));
+}
+
+function buildPlanetPathKey(args: {
+  params: SystemParams;
+  t: number;
+  observerDir: Vec3;
+  sampleCount: number;
+  close: boolean;
+  elNow: OrbitElements;
+  phaseBin: number;
+  bins: number;
+  providerIds: ProviderIdRegistry;
+  observerDirDecimals: number;
+}): string {
+  return [
+    "planet",
+    `obs:${observerDirKey(args.observerDir, args.observerDirDecimals)}`,
+    `orbit:${orbitProviderIdPart(args.params.planet.orbit, args.providerIds)}`,
+    `el:${orbitElementsKey(args.elNow)}`,
+    `bin:${args.phaseBin}/${args.bins}`,
+    `N:${args.sampleCount}`,
+    `nbody:${nbodyConfigKey(args.params, args.providerIds, args.t)}`,
+    `closed:${args.close ? 1 : 0}`,
+  ].join("|");
+}
+
+function buildMoonPathKey(args: {
+  params: SystemParams;
+  t: number;
+  observerDir: Vec3;
+  sampleCount: number;
+  close: boolean;
+  pEl: OrbitElements;
+  mEl: OrbitElements;
+  phaseBin: number;
+  bins: number;
+  providerIds: ProviderIdRegistry;
+  observerDirDecimals: number;
+}): string {
+  const moon = args.params.moon;
+  if (!moon) return "moonAbs|absent";
+  return [
+    "moonAbs",
+    `obs:${observerDirKey(args.observerDir, args.observerDirDecimals)}`,
+    `planetOrbit:${orbitProviderIdPart(args.params.planet.orbit, args.providerIds)}`,
+    `moonOrbit:${orbitProviderIdPart(moon.orbitAroundPlanet, args.providerIds)}`,
+    `pEl:${orbitElementsKey(args.pEl)}`,
+    `mEl:${orbitElementsKey(args.mEl)}`,
+    `bin:${args.phaseBin}/${args.bins}`,
+    `N:${args.sampleCount}`,
+    `nbody:${nbodyConfigKey(args.params, args.providerIds, args.t)}`,
+    `closed:${args.close ? 1 : 0}`,
+  ].join("|");
+}
+
+function resolveOrbitPathSampling(
+  samples: number | undefined,
+  defaultSamples: number,
+  closePath: boolean | undefined,
+  defaultClose: boolean,
+): OrbitPathSampling {
+  return {
+    sampleCount: clampInt(valueOrDefault(samples, defaultSamples), 32, 4096),
+    close: valueOrDefault(closePath, defaultClose),
+  };
+}
+
+function valueOrDefault<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+/**
+ * Caches discretized sky-plane orbit guides by dynamics, observer, and sampling identity.
+ * Entries are rendering-only and must be cleared when a consumer needs an explicit lifecycle reset.
+ */
 export class OrbitPathCache {
   private opts: Required<OrbitPathCacheOptions>;
   private cachedPlanet?: CachedPath;
@@ -332,73 +430,45 @@ export class OrbitPathCache {
     samples?: number,
     closePath?: boolean,
   ): OrbitPathPoint2D[] {
-    const N = clampInt(samples ?? this.opts.defaultPlanetSamples, 32, 4096);
-    const close = closePath ?? this.opts.closePlanetPath;
-
-    // Determine quantized phase bin for caching.
+    const { sampleCount, close } = resolveOrbitPathSampling(
+      samples,
+      this.opts.defaultPlanetSamples,
+      closePath,
+      this.opts.closePlanetPath,
+    );
     const elNow = orbitElementsAt(params.planet.orbit, t);
     const period = toFinitePositiveOr(elNow.period, 1);
     const bins = clampInt(this.opts.phaseBinsPerOrbit, 8, 2000);
+    const phaseBin = phaseBinForTime(t, elNow.t0, period, bins);
 
-    const phase01 = normalizePhase01(t, Number.isFinite(elNow.t0) ? elNow.t0 : 0, period);
-    const phaseBin = clampInt(Math.floor(phase01 * bins), 0, bins - 1);
-
-    const key = [
-      "planet",
-      `obs:${observerDirKey(observerDir, this.opts.observerDirDecimals)}`,
-      `orbit:${orbitProviderIdPart(params.planet.orbit, this.providerIds)}`,
-      `el:${orbitElementsKey(elNow)}`,
-      `bin:${phaseBin}/${bins}`,
-      `N:${N}`,
-      `nbody:${nbodyConfigKey(params, this.providerIds, t)}`,
-      `closed:${close ? 1 : 0}`,
-    ].join("|");
+    const key = buildPlanetPathKey({
+      params,
+      t,
+      observerDir,
+      sampleCount,
+      close,
+      elNow,
+      phaseBin,
+      bins,
+      providerIds: this.providerIds,
+      observerDirDecimals: this.opts.observerDirDecimals,
+    });
 
     if (this.cachedPlanet?.key === key) return this.cachedPlanet.pts;
 
-    const nbodyOn = isNBodyEnabled(params);
-    let pts2Base: OrbitPathPoint2D[] | null = null;
-
-    if (nbodyOn) {
-      try {
-        const includeEndpoint = false;
-        const denom = includeEndpoint ? Math.max(1, N - 1) : N;
-        const pts: OrbitPathPoint2D[] = new Array(N);
-        let failedAt = -1;
-        for (let i = 0; i < N; i++) {
-          const tt = t + (i / denom) * period;
-          const nb = getNBodyStateAt(params, tt);
-          if (!nb) {
-            failedAt = i;
-            break;
-          }
-          const sky = projectToSky(vSub(nb.state.rP, nb.state.rS), observerDir);
-          pts[i] = { x: sky.x, y: sky.y };
-        }
-        if (failedAt < 0) {
-          // All points sampled successfully via N-body.
-          pts2Base = pts;
-        } else if (failedAt > 0) {
-          // Partial N-body success: fill remaining points with Keplerian fallback.
-          const fallback3 = sampleOrbitSky(params.planet.orbit, t, N, observerDir);
-          for (let i = failedAt; i < N; i++) {
-            pts[i] = { x: fallback3[i].x, y: fallback3[i].y };
-          }
-          pts2Base = pts;
-        }
-        // If failedAt === 0, no N-body points at all; fall through to full Keplerian below.
-      } catch {
-        // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
-      }
-    }
-
-    if (!pts2Base) {
-      // Use simulation helper; it may return (x,y,z). We store only (x,y).
-      const pts3 = sampleOrbitSky(params.planet.orbit, t, N, observerDir);
-      pts2Base = new Array(pts3.length);
-      for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
-    }
-
+    const pts2Base =
+      sampleNBodyPath({
+        params,
+        t,
+        period,
+        sampleCount,
+        observerDir,
+        selectVector: planetNBodyVector,
+        fillFallback: (pts, failedAt) => {
+          const fallback = samplePlanetKeplerPath(params, t, sampleCount, observerDir);
+          for (let i = failedAt; i < sampleCount; i++) pts[i] = fallback[i];
+        },
+      }) ?? samplePlanetKeplerPath(params, t, sampleCount, observerDir);
     const pts2 = closePathIfRequested(pts2Base, close);
 
     this.cachedPlanet = { key, pts: pts2 };
@@ -422,85 +492,47 @@ export class OrbitPathCache {
   ): OrbitPathPoint2D[] {
     if (!params.moon) return [];
 
-    const N = clampInt(samples ?? this.opts.defaultMoonSamples, 32, 4096);
-    const close = closePath ?? this.opts.closeMoonPath;
-
-    // Use moon period (and its t0) as primary phase, but include planet orbit signature too
-    // because sampleMoonOrbitSkyAbsolute uses the planet barycentric orbit to place the moon.
+    const { sampleCount, close } = resolveOrbitPathSampling(
+      samples,
+      this.opts.defaultMoonSamples,
+      closePath,
+      this.opts.closeMoonPath,
+    );
     const pEl = orbitElementsAt(params.planet.orbit, t);
     const mEl = orbitElementsAt(params.moon.orbitAroundPlanet, t);
-
     const moonPeriod = toFinitePositiveOr(mEl.period, toFinitePositiveOr(pEl.period, 1));
     const bins = clampInt(this.opts.phaseBinsPerOrbit, 8, 2000);
+    const phaseBin = phaseBinForTime(t, mEl.t0, moonPeriod, bins);
 
-    const phase01 = normalizePhase01(t, Number.isFinite(mEl.t0) ? mEl.t0 : 0, moonPeriod);
-    const phaseBin = clampInt(Math.floor(phase01 * bins), 0, bins - 1);
-
-    const key = [
-      "moonAbs",
-      `obs:${observerDirKey(observerDir, this.opts.observerDirDecimals)}`,
-      `planetOrbit:${orbitProviderIdPart(params.planet.orbit, this.providerIds)}`,
-      `moonOrbit:${orbitProviderIdPart(params.moon.orbitAroundPlanet, this.providerIds)}`,
-      `pEl:${orbitElementsKey(pEl)}`,
-      `mEl:${orbitElementsKey(mEl)}`,
-      `bin:${phaseBin}/${bins}`,
-      `N:${N}`,
-      `nbody:${nbodyConfigKey(params, this.providerIds, t)}`,
-      `closed:${close ? 1 : 0}`,
-    ].join("|");
+    const key = buildMoonPathKey({
+      params,
+      t,
+      observerDir,
+      sampleCount,
+      close,
+      pEl,
+      mEl,
+      phaseBin,
+      bins,
+      providerIds: this.providerIds,
+      observerDirDecimals: this.opts.observerDirDecimals,
+    });
 
     if (this.cachedMoon?.key === key) return this.cachedMoon.pts;
 
-    const nbodyOn = isNBodyEnabled(params);
-    let pts2Base: OrbitPathPoint2D[] | null = null;
-    if (nbodyOn) {
-      try {
-        const includeEndpoint = false;
-        const denom = includeEndpoint ? Math.max(1, N - 1) : N;
-        const pts: OrbitPathPoint2D[] = new Array(N);
-        let failedAt = -1;
-        for (let i = 0; i < N; i++) {
-          const tt = t + (i / denom) * moonPeriod;
-          const nb = getNBodyStateAt(params, tt);
-          if (!nb) {
-            failedAt = i;
-            break;
-          }
-          const sky = projectToSky(vSub(nb.state.rM, nb.state.rS), observerDir);
-          pts[i] = { x: sky.x, y: sky.y };
-        }
-        if (failedAt < 0) {
-          // All points sampled successfully via N-body.
-          pts2Base = pts;
-        } else if (failedAt > 0) {
-          // Partial N-body success: fill remaining points with Keplerian fallback.
-          const paramsForFallback: SystemParams = params.observer
-            ? { ...params, observer: { ...params.observer, dir: observerDir } }
-            : { ...params, observer: { dir: observerDir } };
-          const fallback3 = sampleMoonOrbitSkyAbsolute(paramsForFallback, t, N);
-          for (let i = failedAt; i < N; i++) {
-            pts[i] = { x: fallback3[i].x, y: fallback3[i].y };
-          }
-          pts2Base = pts;
-        }
-        // If failedAt === 0, no N-body points at all; fall through to full Keplerian below.
-      } catch {
-        // Render path is non-critical; fallback to Kepler guide path if n-body state cannot be sampled.
-      }
-    }
-
-    if (!pts2Base) {
-      // Ensure the moon sampling uses the same observerDir that the cache key is based on.
-      // This is render-only; it does not affect the simulation stepper.
-      const paramsForSampling: SystemParams = params.observer
-        ? { ...params, observer: { ...params.observer, dir: observerDir } }
-        : { ...params, observer: { dir: observerDir } };
-
-      const pts3 = sampleMoonOrbitSkyAbsolute(paramsForSampling, t, N);
-      pts2Base = new Array(pts3.length);
-      for (let i = 0; i < pts3.length; i++) pts2Base[i] = { x: pts3[i].x, y: pts3[i].y };
-    }
-
+    const pts2Base =
+      sampleNBodyPath({
+        params,
+        t,
+        period: moonPeriod,
+        sampleCount,
+        observerDir,
+        selectVector: moonNBodyVector,
+        fillFallback: (pts, failedAt) => {
+          const fallback = sampleMoonKeplerPath(params, t, sampleCount, observerDir);
+          for (let i = failedAt; i < sampleCount; i++) pts[i] = fallback[i];
+        },
+      }) ?? sampleMoonKeplerPath(params, t, sampleCount, observerDir);
     const pts2 = closePathIfRequested(pts2Base, close);
 
     this.cachedMoon = { key, pts: pts2 };

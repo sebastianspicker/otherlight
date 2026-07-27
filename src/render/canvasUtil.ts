@@ -1,4 +1,4 @@
-// src/render/canvasUtil.ts
+/** Provides reusable Canvas 2D drawing and coordinate utilities. */
 //
 // Canvas 2D utilities for HiDPI (devicePixelRatio) sizing and stable coordinate transforms.
 //
@@ -17,12 +17,24 @@
 //   This eliminates forced-layout DOM reads (clientWidth/getBoundingClientRect) on every
 //   frame by caching the last-known size and only re-measuring when the canvas is resized.
 
+import {
+  applyCanvasTransform,
+  cachedSizeForDpr,
+  cssSizeUnavailable,
+  fallbackSizeInfo,
+  getCanvasSizeInfo,
+  getDevicePixelRatio,
+  previousSizeIfLayoutStable,
+  resizeCanvasIfNeeded,
+  updateCachedSize,
+  type CanvasSizeCacheEntry,
+} from "./canvasSizing";
+
 // ── ResizeObserver cache ─────────────────────────────────────────────────────
 // Maps canvas elements to a cached SizeInfo and a dirty flag.
 // The dirty flag is set by the ResizeObserver whenever the element is resized,
 // causing ensureHiDPICanvas to re-measure on the next frame.
-type SizeCacheEntry = { size: SizeInfo; dirty: boolean };
-const _sizeCache = new WeakMap<HTMLCanvasElement, SizeCacheEntry>();
+const _sizeCache = new WeakMap<HTMLCanvasElement, CanvasSizeCacheEntry>();
 
 /**
  * Attach a ResizeObserver to a canvas so that {@link ensureHiDPICanvas} can skip
@@ -77,55 +89,6 @@ export type SizeInfo = {
 };
 
 /**
- * Get current devicePixelRatio in a robust way.
- * Falls back to 1 if window is unavailable (e.g. SSR) or DPR is invalid.
- */
-function getDevicePixelRatio(): number {
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
-  return typeof dpr === "number" && Number.isFinite(dpr) && dpr > 0 ? dpr : 1;
-}
-
-/**
- * Read canvas layout size and compute the backing store size for the current DPR.
- *
- * Notes:
- * - Uses getBoundingClientRect() so it reflects CSS layout size even if width/height attributes differ.
- * - Rounds device-pixel dimensions to integers (canvas backing store is integer).
- */
-function getCanvasSizeInfo(canvas: HTMLCanvasElement): SizeInfo {
-  const dpr = getDevicePixelRatio();
-  const clientW = Math.max(0, canvas.clientWidth || 0);
-  const clientH = Math.max(0, canvas.clientHeight || 0);
-  const rect = clientW > 0 && clientH > 0 ? null : canvas.getBoundingClientRect();
-
-  const cssW = Math.max(0, clientW || rect?.width || 0);
-  const cssH = Math.max(0, clientH || rect?.height || 0);
-
-  // Use Math.round so 0.5 CSS px changes don't “thrash” as often as floor can.
-  const pxW = Math.max(1, Math.round(cssW * dpr));
-  const pxH = Math.max(1, Math.round(cssH * dpr));
-
-  return { dpr, cssW, cssH, pxW, pxH };
-}
-
-function fallbackSizeInfo(canvas: HTMLCanvasElement, prev?: SizeInfo): SizeInfo {
-  if (prev) return prev;
-
-  // If layout is not measurable (hidden), fall back to current backing-store size.
-  const pxW = Math.max(1, canvas.width || 1);
-  const pxH = Math.max(1, canvas.height || 1);
-
-  // cssW/cssH are unknown here; we treat them as pxW/pxH in CSS pixels to keep callers sane.
-  return {
-    dpr: 1,
-    cssW: pxW,
-    cssH: pxH,
-    pxW,
-    pxH,
-  };
-}
-
-/**
  * Ensure a canvas is sized for HiDPI rendering and set the context transform so that
  * drawing operations are expressed in CSS pixels.
  *
@@ -151,71 +114,32 @@ export function ensureHiDPICanvas(
   prev?: SizeInfo,
 ): SizeInfo {
   const dpr = getDevicePixelRatio();
-
-  // ── Fast path: ResizeObserver cache ──────────────────────────────────────
-  // When the canvas is registered with attachCanvasResizeObserver, skip all
-  // DOM layout reads (clientWidth / getBoundingClientRect) on frames where
-  // the observer has not fired since the last measurement.
   const cached = _sizeCache.get(canvas);
-  if (cached && !cached.dirty && cached.size.cssW > 0 && cached.size.cssH > 0) {
-    if (cached.size.dpr === dpr) {
-      // Canvas size and DPR unchanged — use cached size, skip DOM.
-      const { size } = cached;
-      const needResize = !prev || prev.pxW !== size.pxW || prev.pxH !== size.pxH;
-      if (needResize) {
-        canvas.width = size.pxW;
-        canvas.height = size.pxH;
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return size;
-    }
-    // DPR changed (e.g. moved to a different monitor) — fall through to re-measure.
-    cached.dirty = true;
+
+  const cachedSize = cachedSizeForDpr(cached, dpr);
+  if (cachedSize) {
+    resizeCanvasIfNeeded(canvas, cachedSize, prev);
+    applyCanvasTransform(ctx, dpr);
+    return cachedSize;
   }
 
-  // ── Slow path: DOM measurement ────────────────────────────────────────────
-  const clientW = Math.max(0, canvas.clientWidth || 0);
-  const clientH = Math.max(0, canvas.clientHeight || 0);
-  if (prev && clientW > 0 && clientH > 0) {
-    const pxW = Math.max(1, Math.round(clientW * dpr));
-    const pxH = Math.max(1, Math.round(clientH * dpr));
-    if (
-      prev.dpr === dpr &&
-      prev.cssW === clientW &&
-      prev.cssH === clientH &&
-      prev.pxW === pxW &&
-      prev.pxH === pxH
-    ) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return prev;
-    }
+  const stablePreviousSize = previousSizeIfLayoutStable(canvas, prev, dpr);
+  if (stablePreviousSize) {
+    applyCanvasTransform(ctx, dpr);
+    return stablePreviousSize;
   }
 
   const next = getCanvasSizeInfo(canvas);
 
-  // If layout size is not available, keep previous if possible to avoid thrashing.
-  if (next.cssW === 0 || next.cssH === 0) {
+  if (cssSizeUnavailable(next)) {
     const fb = fallbackSizeInfo(canvas, prev);
-    // Keep transform in a known state.
-    ctx.setTransform(fb.dpr, 0, 0, fb.dpr, 0, 0);
+    applyCanvasTransform(ctx, fb.dpr);
     return fb;
   }
 
-  const needResize = !prev || prev.dpr !== next.dpr || prev.pxW !== next.pxW || prev.pxH !== next.pxH;
-
-  if (needResize) {
-    canvas.width = next.pxW;
-    canvas.height = next.pxH;
-  }
-
-  // Store measured size in cache (if registered) and clear dirty flag.
-  if (cached) {
-    cached.size = next;
-    cached.dirty = false;
-  }
-
-  // Always set to a known absolute transform so callers draw in CSS pixels.
-  ctx.setTransform(next.dpr, 0, 0, next.dpr, 0, 0);
+  resizeCanvasIfNeeded(canvas, next, prev);
+  updateCachedSize(cached, next);
+  applyCanvasTransform(ctx, next.dpr);
 
   return next;
 }

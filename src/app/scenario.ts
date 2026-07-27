@@ -1,6 +1,6 @@
-// src/app/scenario.ts
+/** Coordinates scenario selection and parameter application for the app shell. */
 //
-// Scenario loading and defaults — re-exports from canonical locations.
+// Scenario loading and defaults re-exported from canonical locations.
 //
 // The actual implementations live in core/clone.ts (cloneParams) and
 // config/defaults.ts (SCENARIO_DEFAULTS) so that sim/ and ui/ layers

@@ -1,3 +1,5 @@
+/** Verifies param id migration controls and views for accessible, consistent interaction. */
+
 import { describe, expect, it } from "vitest";
 import {
   getParamIdMigrationTable,

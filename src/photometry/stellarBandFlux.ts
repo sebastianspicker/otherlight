@@ -1,3 +1,6 @@
+/**
+ * Owns stellar Band Flux support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ */
 import type { PassbandId } from "../core/types";
 
 const PLANCK_H = 6.626_070_15e-34;
@@ -73,30 +76,90 @@ function planckSpectralRadiance(lambdaM: number, teffK: number): number {
   return (2 * PLANCK_H * LIGHT_C * LIGHT_C) / (Math.pow(lambdaM, 5) * denom);
 }
 
+function passbandSegmentContribution(
+  left: PassbandSample,
+  right: PassbandSample,
+  teffK: number,
+): {
+  weighted: number;
+  throughput: number;
+} {
+  const deltaLambda = right.lambdaM - left.lambdaM;
+  if (!(deltaLambda > 0)) return { weighted: 0, throughput: 0 };
+  const leftValue = left.throughput * planckSpectralRadiance(left.lambdaM, teffK);
+  const rightValue = right.throughput * planckSpectralRadiance(right.lambdaM, teffK);
+  return {
+    weighted: 0.5 * (leftValue + rightValue) * deltaLambda,
+    throughput: 0.5 * (left.throughput + right.throughput) * deltaLambda,
+  };
+}
+
+function integratePassbandRadiance(
+  samples: PassbandSample[],
+  teffK: number,
+): {
+  weightedIntegral: number;
+  throughputIntegral: number;
+} {
+  let weightedIntegral = 0;
+  let throughputIntegral = 0;
+  for (let i = 1; i < samples.length; i += 1) {
+    const segment = passbandSegmentContribution(samples[i - 1], samples[i], teffK);
+    weightedIntegral += segment.weighted;
+    throughputIntegral += segment.throughput;
+  }
+  return { weightedIntegral, throughputIntegral };
+}
+
 export function relativeStellarBandFlux(input: StellarBandFluxInput): number | undefined {
   const radius = finitePositive(input.r);
   const teffK = finitePositive(input.teffK);
   if (!radius || !teffK) return undefined;
   const samples = passbandSamples(input.passband);
   if (!samples) return undefined;
-  let weightedIntegral = 0;
-  let throughputIntegral = 0;
 
-  for (let i = 1; i < samples.length; i += 1) {
-    const left = samples[i - 1];
-    const right = samples[i];
-    const deltaLambda = right.lambdaM - left.lambdaM;
-    if (!(deltaLambda > 0)) continue;
-
-    const leftValue = left.throughput * planckSpectralRadiance(left.lambdaM, teffK);
-    const rightValue = right.throughput * planckSpectralRadiance(right.lambdaM, teffK);
-    weightedIntegral += 0.5 * (leftValue + rightValue) * deltaLambda;
-    throughputIntegral += 0.5 * (left.throughput + right.throughput) * deltaLambda;
-  }
-
-  if (!(weightedIntegral > 0) || !(throughputIntegral > 0)) return undefined;
+  const { weightedIntegral, throughputIntegral } = integratePassbandRadiance(samples, teffK);
+  if (!positiveIntegrals(weightedIntegral, throughputIntegral)) return undefined;
   const spectralRadiance = weightedIntegral / throughputIntegral;
   return spectralRadiance > 0 ? radius * radius * spectralRadiance : undefined;
+}
+
+function positiveIntegrals(weightedIntegral: number, throughputIntegral: number): boolean {
+  return weightedIntegral > 0 && throughputIntegral > 0;
+}
+
+function physicalBinaryLuminosities(args: {
+  primary: StellarBandFluxInput;
+  secondary: StellarBandFluxInput;
+  fallbackPassband?: PassbandId;
+}): DetachedBinaryLuminosities | undefined {
+  const primaryPhysical = relativeStellarBandFlux({
+    ...args.primary,
+    passband: args.primary.passband ?? args.fallbackPassband,
+  });
+  const secondaryPhysical = relativeStellarBandFlux({
+    ...args.secondary,
+    passband: args.secondary.passband ?? args.fallbackPassband,
+  });
+  if (!primaryPhysical || !secondaryPhysical) return undefined;
+  return {
+    primary: 1,
+    secondary: secondaryPhysical / primaryPhysical,
+    source: "physical-bandpass",
+  };
+}
+
+function compatibilityBinaryLuminosities(args: {
+  primary: StellarBandFluxInput;
+  secondary: StellarBandFluxInput;
+  secondaryFallbackLuminosityScale: number;
+}): DetachedBinaryLuminosities {
+  return {
+    primary: finiteNonNegative(args.primary.luminosityScale) ?? 1,
+    secondary:
+      finiteNonNegative(args.secondary.luminosityScale) ?? Math.max(0, args.secondaryFallbackLuminosityScale),
+    source: "compatibility-scale",
+  };
 }
 
 export function resolveDetachedBinaryLuminosities(args: {
@@ -105,27 +168,5 @@ export function resolveDetachedBinaryLuminosities(args: {
   fallbackPassband?: PassbandId;
   secondaryFallbackLuminosityScale: number;
 }): DetachedBinaryLuminosities {
-  const { primary, secondary, fallbackPassband, secondaryFallbackLuminosityScale } = args;
-  const primaryPhysical = relativeStellarBandFlux({
-    ...primary,
-    passband: primary.passband ?? fallbackPassband,
-  });
-  const secondaryPhysical = relativeStellarBandFlux({
-    ...secondary,
-    passband: secondary.passband ?? fallbackPassband,
-  });
-
-  if (primaryPhysical && secondaryPhysical) {
-    return {
-      primary: 1,
-      secondary: secondaryPhysical / primaryPhysical,
-      source: "physical-bandpass",
-    };
-  }
-
-  return {
-    primary: finiteNonNegative(primary.luminosityScale) ?? 1,
-    secondary: finiteNonNegative(secondary.luminosityScale) ?? Math.max(0, secondaryFallbackLuminosityScale),
-    source: "compatibility-scale",
-  };
+  return physicalBinaryLuminosities(args) ?? compatibilityBinaryLuminosities(args);
 }

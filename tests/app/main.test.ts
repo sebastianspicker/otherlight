@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies main contracts across app startup, controls, and runtime integration. */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installAppShellDocument } from "../helpers/appShell";

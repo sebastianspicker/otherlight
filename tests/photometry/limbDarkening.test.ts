@@ -1,3 +1,5 @@
+/** Verifies limb darkening calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { fluxLimbDarkenedDiskDetailed } from "../../src/photometry/transitLimbDarkened";

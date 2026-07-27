@@ -1,9 +1,4 @@
-/* src/style.css
-
-UI styling for the Transit-Exomoon-Lightcurve-Simulator.
-Scientific instrument aesthetic for astronomy students and educators.
-
-*/
+/* Defines shared design tokens and structural defaults consumed by later style layers. */
 
 :root {
   /* --- Color palette (observatory dark theme) --- */
@@ -77,8 +72,7 @@ body {
 
 body {
   font-family: var(--font-body);
-  background:
-    radial-gradient(1200px 800px at 15% 10%, rgba(46, 195, 177, 0.15), transparent 55%),
+  background: radial-gradient(1200px 800px at 15% 10%, rgb(46 195 177 / 15%), transparent 55%),
     radial-gradient(900px 600px at 80% 0%, rgba(245, 194, 107, 0.1), transparent 60%),
     linear-gradient(180deg, var(--bg-1), var(--bg-2) 50%, var(--bg-3));
   background-attachment: fixed;

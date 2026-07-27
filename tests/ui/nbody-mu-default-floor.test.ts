@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies N-body mu default floor controls and views for accessible, consistent interaction. */
 
 import { describe, expect, it } from "vitest";
 import { installAppShellDocument } from "../helpers/appShell";

@@ -1,3 +1,6 @@
+/**
+ * Owns bootstrap Oc Panel support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { UiRefs } from "../ui/refs";
 import { runWithErrorHandling } from "./runWithErrorHandling";
 import {
@@ -48,6 +51,14 @@ export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
   let ocBody: OcBody = "planet";
   let ocUnit: OcUnit = "s";
   let ocTrendMode: OcTrendMode = "raw";
+  let clearedHistory: TransitHistoryState | null = null;
+  const undoClearBtn = document.getElementById("ocUndoClearBtn") as HTMLButtonElement | null;
+
+  const cloneHistory = (history: TransitHistoryState): TransitHistoryState => ({
+    maxEvents: history.maxEvents,
+    planet: { ...history.planet, events: history.planet.events.map((event) => ({ ...event })) },
+    moon: { ...history.moon, events: history.moon.events.map((event) => ({ ...event })) },
+  });
 
   const renderOcPanel = (): void => {
     renderOcHistoryCanvas(ocCanvas, state.transitHistory, ocBody, {
@@ -130,10 +141,29 @@ export function createBootstrapOcPanelController(deps: BootstrapOcPanelDeps): {
     ocClearBtn?.addEventListener(
       "click",
       () => {
+        clearedHistory = cloneHistory(state.transitHistory);
         state.transitHistory = resetTransitHistoryState(state.transitHistory);
         if (timingHistoryVal) {
           timingHistoryVal.textContent = formatTransitHistorySummary(state.transitHistory);
         }
+        if (undoClearBtn) {
+          undoClearBtn.hidden =
+            clearedHistory.planet.events.length === 0 && clearedHistory.moon.events.length === 0;
+        }
+        renderOcPanel();
+      },
+      listenerOptions,
+    );
+
+    undoClearBtn?.addEventListener(
+      "click",
+      () => {
+        if (!clearedHistory) return;
+        state.transitHistory = clearedHistory;
+        clearedHistory = null;
+        undoClearBtn.hidden = true;
+        if (timingHistoryVal)
+          timingHistoryVal.textContent = formatTransitHistorySummary(state.transitHistory);
         renderOcPanel();
       },
       listenerOptions,

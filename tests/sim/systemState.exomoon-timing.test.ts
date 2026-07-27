@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+/** Verifies system state exomoon timing contracts across system state, transit observables, and V4 integration. */
+
+import { expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
+import type { SystemParams } from "../../src/core/types";
 import { buildSkyBasis } from "../../src/physics/frames";
 import { muFromPeriodAndA } from "../../src/physics/kepler";
 import {
@@ -12,209 +15,154 @@ import { getObserverDir } from "../../src/sim/observerContract";
 import { stateFromResolvedElements } from "../../src/sim/orbits";
 import { resolveDynamicSystemState } from "../../src/sim/systemState";
 
-describe("resolveDynamicSystemState exomoon timing shape", () => {
-  it("uses directly propagated moon state when exomoon timing applies only a linear sky-plane drift", () => {
-    const params = cloneParams(SCENARIO_DEFAULTS);
-    params.dynamics = {
-      exomoonTimingShape: {
-        enabled: true,
-        tRef: 0,
-        velDt: 50,
-        moonImpactYDot: 0.5,
-      },
-    };
-    params.star.m = 5.0e29;
-    params.star.r = 1;
-    params.planet.m = 2.0e25;
-    params.planet.r = 1;
-    params.planet.orbit = {
-      a: 10,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 100,
-      t0: 0,
-    };
-    if (!params.moon) throw new Error("expected moon in defaults");
-    params.moon.m = 1.0e25;
-    params.moon.r = 1;
-    params.moon.orbitAroundPlanet = {
-      a: 2,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 10,
-      t0: 0,
-    };
+type BodyState = {
+  r: { x: number; y: number; z: number };
+  v: { x: number; y: number; z: number };
+};
 
-    const tObs = 10;
-    const observerDir = getObserverDir(params);
-    const kin = computeBodyKinematics(params, tObs, observerDir);
-    const state = resolveDynamicSystemState({
-      system: params,
-      tObs,
-      observerDir,
-      kinAtT: kin,
-      velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
-    });
+type PairState = {
+  planet: BodyState;
+  moon: BodyState;
+};
 
-    const planetOrbit = resolvePlanetOrbitForKinematics(params, tObs, "planet.orbit");
-    const baryState = stateFromResolvedElements(
-      planetOrbit,
-      tObs,
-      muFromPeriodAndA(planetOrbit.period, planetOrbit.a),
-      "planet.orbit",
-    );
-    const moonOrbit = resolveMoonOrbitForKinematics(params, tObs, "moon.orbitAroundPlanet");
-    if (!moonOrbit) throw new Error("expected moon orbit");
-    const moonRelState = stateFromResolvedElements(
-      moonOrbit,
-      tObs,
-      muFromPeriodAndA(moonOrbit.period, moonOrbit.a),
-      "moon.orbitAroundPlanet",
-    );
-    const planetMu = params.planet.m! / (params.planet.m! + params.moon!.m!);
-    const moonMu = params.moon!.m! / (params.planet.m! + params.moon!.m!);
-    const baseMoonState = {
+function exomoonTimingParams(
+  shape: NonNullable<SystemParams["dynamics"]>["exomoonTimingShape"],
+): SystemParams {
+  const params = cloneParams(SCENARIO_DEFAULTS);
+  params.dynamics = { exomoonTimingShape: { enabled: true, tRef: 0, velDt: 50, ...shape } };
+  params.star.m = 5.0e29;
+  params.star.r = 1;
+  params.planet.m = 2.0e25;
+  params.planet.r = 1;
+  params.planet.orbit = { a: 10, e: 0, inc: 0, Omega: 0, omega: 0, period: 100, t0: 0 };
+  if (!params.moon) throw new Error("expected moon in defaults");
+  params.moon.m = 1.0e25;
+  params.moon.r = 1;
+  params.moon.orbitAroundPlanet = { a: 2, e: 0, inc: 0, Omega: 0, omega: 0, period: 10, t0: 0 };
+  return params;
+}
+
+function baryAndMoonRelState(params: SystemParams, tObs: number): { bary: BodyState; moonRel: BodyState } {
+  const planetOrbit = resolvePlanetOrbitForKinematics(params, tObs, "planet.orbit");
+  const bary = stateFromResolvedElements(
+    planetOrbit,
+    tObs,
+    muFromPeriodAndA(planetOrbit.period, planetOrbit.a),
+    "planet.orbit",
+  );
+  const moonOrbit = resolveMoonOrbitForKinematics(params, tObs, "moon.orbitAroundPlanet");
+  if (!moonOrbit) throw new Error("expected moon orbit");
+  const moonRel = stateFromResolvedElements(
+    moonOrbit,
+    tObs,
+    muFromPeriodAndA(moonOrbit.period, moonOrbit.a),
+    "moon.orbitAroundPlanet",
+  );
+  return { bary, moonRel };
+}
+
+function combinePair(
+  params: SystemParams,
+  bary: BodyState,
+  moonRel: BodyState,
+  moonRelVelocity = moonRel.v,
+): PairState {
+  const totalMass = params.planet.m! + params.moon!.m!;
+  const planetFraction = params.planet.m! / totalMass;
+  const moonFraction = params.moon!.m! / totalMass;
+  return {
+    planet: {
       r: {
-        x: baryState.r.x + moonRelState.r.x * planetMu,
-        y: baryState.r.y + moonRelState.r.y * planetMu,
-        z: baryState.r.z + moonRelState.r.z * planetMu,
+        x: bary.r.x - moonRel.r.x * moonFraction,
+        y: bary.r.y - moonRel.r.y * moonFraction,
+        z: bary.r.z - moonRel.r.z * moonFraction,
       },
       v: {
-        x: baryState.v.x + moonRelState.v.x * planetMu,
-        y: baryState.v.y + moonRelState.v.y * planetMu,
-        z: baryState.v.z + moonRelState.v.z * planetMu,
+        x: bary.v.x - moonRelVelocity.x * moonFraction,
+        y: bary.v.y - moonRelVelocity.y * moonFraction,
+        z: bary.v.z - moonRelVelocity.z * moonFraction,
       },
-    };
-    const { ey } = buildSkyBasis(observerDir);
-    const expectedMoon = {
+    },
+    moon: {
       r: {
-        x: baseMoonState.r.x + ey.x * (tObs * params.dynamics.exomoonTimingShape!.moonImpactYDot!),
-        y: baseMoonState.r.y + ey.y * (tObs * params.dynamics.exomoonTimingShape!.moonImpactYDot!),
-        z: baseMoonState.r.z + ey.z * (tObs * params.dynamics.exomoonTimingShape!.moonImpactYDot!),
+        x: bary.r.x + moonRel.r.x * planetFraction,
+        y: bary.r.y + moonRel.r.y * planetFraction,
+        z: bary.r.z + moonRel.r.z * planetFraction,
       },
       v: {
-        x: baseMoonState.v.x + ey.x * params.dynamics.exomoonTimingShape!.moonImpactYDot!,
-        y: baseMoonState.v.y + ey.y * params.dynamics.exomoonTimingShape!.moonImpactYDot!,
-        z: baseMoonState.v.z + ey.z * params.dynamics.exomoonTimingShape!.moonImpactYDot!,
+        x: bary.v.x + moonRelVelocity.x * planetFraction,
+        y: bary.v.y + moonRelVelocity.y * planetFraction,
+        z: bary.v.z + moonRelVelocity.z * planetFraction,
       },
-    };
+    },
+  };
+}
 
-    expect(state.planet.r.x).toBeCloseTo(baryState.r.x - moonRelState.r.x * moonMu, 12);
-    expect(state.planet.r.y).toBeCloseTo(baryState.r.y - moonRelState.r.y * moonMu, 12);
-    expect(state.planet.v.x).toBeCloseTo(baryState.v.x - moonRelState.v.x * moonMu, 12);
-    expect(state.planet.v.y).toBeCloseTo(baryState.v.y - moonRelState.v.y * moonMu, 12);
-    expect(state.moon?.r.x).toBeCloseTo(expectedMoon.r.x, 12);
-    expect(state.moon?.r.y).toBeCloseTo(expectedMoon.r.y, 12);
-    expect(state.moon?.v.x).toBeCloseTo(expectedMoon.v.x, 12);
-    expect(state.moon?.v.y).toBeCloseTo(expectedMoon.v.y, 12);
+function resolvedPair(params: SystemParams, tObs: number): PairState {
+  const observerDir = getObserverDir(params);
+  const kin = computeBodyKinematics(params, tObs, observerDir);
+  const state = resolveDynamicSystemState({
+    system: params,
+    tObs,
+    observerDir,
+    kinAtT: kin,
+    velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
   });
+  if (!state.moon) throw new Error("expected resolved moon state");
+  return { planet: state.planet, moon: state.moon };
+}
 
-  it("uses directly propagated planet and moon states when exomoon timing evolves the moon node", () => {
-    const params = cloneParams(SCENARIO_DEFAULTS);
-    params.dynamics = {
-      exomoonTimingShape: {
-        enabled: true,
-        tRef: 0,
-        velDt: 50,
-        moonOmegaDot: 0.5,
-      },
-    };
-    params.star.m = 5.0e29;
-    params.star.r = 1;
-    params.planet.m = 2.0e25;
-    params.planet.r = 1;
-    params.planet.orbit = {
-      a: 10,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 100,
-      t0: 0,
-    };
-    if (!params.moon) throw new Error("expected moon in defaults");
-    params.moon.m = 1.0e25;
-    params.moon.r = 1;
-    params.moon.orbitAroundPlanet = {
-      a: 2,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 10,
-      t0: 0,
-    };
-
-    const tObs = 0;
-    const observerDir = getObserverDir(params);
-    const kin = computeBodyKinematics(params, tObs, observerDir);
-    const state = resolveDynamicSystemState({
-      system: params,
-      tObs,
-      observerDir,
-      kinAtT: kin,
-      velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
-    });
-
-    const planetOrbit = resolvePlanetOrbitForKinematics(params, tObs, "planet.orbit");
-    const baryState = stateFromResolvedElements(
-      planetOrbit,
-      tObs,
-      muFromPeriodAndA(planetOrbit.period, planetOrbit.a),
-      "planet.orbit",
-    );
-    const moonOrbit = resolveMoonOrbitForKinematics(params, tObs, "moon.orbitAroundPlanet");
-    if (!moonOrbit) throw new Error("expected moon orbit");
-    const moonRelState = stateFromResolvedElements(
-      moonOrbit,
-      tObs,
-      muFromPeriodAndA(moonOrbit.period, moonOrbit.a),
-      "moon.orbitAroundPlanet",
-    );
-    const omegaNodeDot = params.dynamics.exomoonTimingShape!.moonOmegaDot!;
-    const moonRelVelocity = {
-      x: moonRelState.v.x,
-      y: moonRelState.v.y + omegaNodeDot * moonRelState.r.x,
-      z: moonRelState.v.z,
-    };
-    const planetMu = params.planet.m! / (params.planet.m! + params.moon!.m!);
-    const moonMu = params.moon!.m! / (params.planet.m! + params.moon!.m!);
-    const expectedPlanet = {
+function applyLinearSkyDrift(pair: PairState, params: SystemParams, tObs: number): PairState {
+  const { ey } = buildSkyBasis(getObserverDir(params));
+  const yDot = params.dynamics!.exomoonTimingShape!.moonImpactYDot!;
+  return {
+    planet: pair.planet,
+    moon: {
       r: {
-        x: baryState.r.x - moonRelState.r.x * moonMu,
-        y: baryState.r.y - moonRelState.r.y * moonMu,
-        z: baryState.r.z - moonRelState.r.z * moonMu,
+        x: pair.moon.r.x + ey.x * tObs * yDot,
+        y: pair.moon.r.y + ey.y * tObs * yDot,
+        z: pair.moon.r.z + ey.z * tObs * yDot,
       },
       v: {
-        x: baryState.v.x - moonRelVelocity.x * moonMu,
-        y: baryState.v.y - moonRelVelocity.y * moonMu,
-        z: baryState.v.z - moonRelVelocity.z * moonMu,
+        x: pair.moon.v.x + ey.x * yDot,
+        y: pair.moon.v.y + ey.y * yDot,
+        z: pair.moon.v.z + ey.z * yDot,
       },
-    };
-    const expectedMoon = {
-      r: {
-        x: baryState.r.x + moonRelState.r.x * planetMu,
-        y: baryState.r.y + moonRelState.r.y * planetMu,
-        z: baryState.r.z + moonRelState.r.z * planetMu,
-      },
-      v: {
-        x: baryState.v.x + moonRelVelocity.x * planetMu,
-        y: baryState.v.y + moonRelVelocity.y * planetMu,
-        z: baryState.v.z + moonRelVelocity.z * planetMu,
-      },
-    };
+    },
+  };
+}
 
-    expect(state.planet.r.x).toBeCloseTo(expectedPlanet.r.x, 12);
-    expect(state.planet.r.y).toBeCloseTo(expectedPlanet.r.y, 12);
-    expect(state.planet.v.x).toBeCloseTo(expectedPlanet.v.x, 12);
-    expect(state.planet.v.y).toBeCloseTo(expectedPlanet.v.y, 12);
-    expect(state.moon?.r.x).toBeCloseTo(expectedMoon.r.x, 12);
-    expect(state.moon?.r.y).toBeCloseTo(expectedMoon.r.y, 12);
-    expect(state.moon?.v.x).toBeCloseTo(expectedMoon.v.x, 12);
-    expect(state.moon?.v.y).toBeCloseTo(expectedMoon.v.y, 12);
-  });
+function pairWithNodeVelocity(params: SystemParams, tObs: number): PairState {
+  const { bary, moonRel } = baryAndMoonRelState(params, tObs);
+  const omegaNodeDot = params.dynamics!.exomoonTimingShape!.moonOmegaDot!;
+  const moonRelVelocity = {
+    x: moonRel.v.x,
+    y: moonRel.v.y + omegaNodeDot * moonRel.r.x,
+    z: moonRel.v.z,
+  };
+  return combinePair(params, bary, moonRel, moonRelVelocity);
+}
+
+function expectPairClose(actual: PairState, expected: PairState): void {
+  expect(actual.planet.r.x).toBeCloseTo(expected.planet.r.x, 12);
+  expect(actual.planet.r.y).toBeCloseTo(expected.planet.r.y, 12);
+  expect(actual.planet.v.x).toBeCloseTo(expected.planet.v.x, 12);
+  expect(actual.planet.v.y).toBeCloseTo(expected.planet.v.y, 12);
+  expect(actual.moon.r.x).toBeCloseTo(expected.moon.r.x, 12);
+  expect(actual.moon.r.y).toBeCloseTo(expected.moon.r.y, 12);
+  expect(actual.moon.v.x).toBeCloseTo(expected.moon.v.x, 12);
+  expect(actual.moon.v.y).toBeCloseTo(expected.moon.v.y, 12);
+}
+
+it("uses directly propagated moon state when exomoon timing applies only a linear sky-plane drift", () => {
+  const params = exomoonTimingParams({ moonImpactYDot: 0.5 });
+  const tObs = 10;
+  const { bary, moonRel } = baryAndMoonRelState(params, tObs);
+  const expected = applyLinearSkyDrift(combinePair(params, bary, moonRel), params, tObs);
+  expectPairClose(resolvedPair(params, tObs), expected);
+});
+
+it("uses directly propagated planet and moon states when exomoon timing evolves the moon node", () => {
+  const params = exomoonTimingParams({ moonOmegaDot: 0.5 });
+  expectPairClose(resolvedPair(params, 0), pairWithNodeVelocity(params, 0));
 });

@@ -1,3 +1,8 @@
+/**
+ * Owns light Curve Plot Series support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
+import { drawDenseFiniteTimeSeries, drawDenseIndexSeries } from "./lightCurvePlotSeriesDense";
+
 export function computeTickLayout(
   lo: number,
   hi: number,
@@ -22,19 +27,34 @@ export function computeTickLayout(
 
 export function formatTickValue(v: number, range: number): string {
   if (!Number.isFinite(v)) return "";
-  const absV = Math.abs(v);
+  const fixedDigits = fixedDigitsForRange(range);
+  if (fixedDigits !== null) return v.toFixed(fixedDigits);
 
-  if (range < 0.001) return v.toFixed(6);
-  if (range < 0.01) return v.toFixed(5);
-  if (range < 0.1) return v.toFixed(4);
-  if (range < 1) return v.toFixed(3);
-  if (absV >= 1e4 || (absV > 0 && absV < 0.01)) return v.toExponential(1);
-  if (range < 10) return v.toFixed(2);
-  if (range < 100) return v.toFixed(1);
-  return v.toFixed(0);
+  const absV = Math.abs(v);
+  if (usesExponentialTick(absV)) return v.toExponential(1);
+  const broadFixedDigits = broadFixedDigitsForRange(range);
+  return v.toFixed(broadFixedDigits);
 }
 
-type DrawSeriesArgs = {
+function fixedDigitsForRange(range: number): number | null {
+  if (range < 0.001) return 6;
+  if (range < 0.01) return 5;
+  if (range < 0.1) return 4;
+  if (range < 1) return 3;
+  return null;
+}
+
+function usesExponentialTick(absV: number): boolean {
+  return absV >= 1e4 || (absV > 0 && absV < 0.01);
+}
+
+function broadFixedDigitsForRange(range: number): number {
+  if (range < 10) return 2;
+  if (range < 100) return 1;
+  return 0;
+}
+
+export type DrawSeriesArgs = {
   ctx: CanvasRenderingContext2D;
   fluxValues: number[];
   timeValues: number[];
@@ -52,177 +72,173 @@ type DrawSeriesArgs = {
 };
 
 export function drawLightCurveSeries(args: DrawSeriesArgs): void {
-  const {
-    ctx,
-    fluxValues,
-    timeValues,
-    visibleStart,
-    n,
-    xIndexOffset,
-    indexScale,
-    yOffset,
-    yScale,
-    xTimeOffset,
-    timeScale,
-    plotW,
-    haveTime,
-    allFiniteTime,
-  } = args;
+  setupSeriesStroke(args.ctx);
+  drawSeriesPath(args);
+  args.ctx.stroke();
+}
 
+function setupSeriesStroke(ctx: CanvasRenderingContext2D): void {
   ctx.beginPath();
   ctx.strokeStyle = "#4cc9f0";
   ctx.lineWidth = 1.5;
   ctx.lineJoin = "round";
+}
 
-  const threshold = plotW * 2;
-
-  if (!haveTime) {
-    if (n <= threshold) {
-      ctx.moveTo(xIndexOffset, yOffset + fluxValues[visibleStart] * yScale);
-      for (let i = 1; i < n; i++) {
-        ctx.lineTo(xIndexOffset + i * indexScale, yOffset + fluxValues[visibleStart + i] * yScale);
-      }
-    } else {
-      ctx.moveTo(xIndexOffset, yOffset + fluxValues[visibleStart] * yScale);
-      const step = Math.max(1, Math.floor(n / plotW));
-
-      for (let i = 1; i < n; i += step) {
-        let chunkMin = Number.POSITIVE_INFINITY;
-        let chunkMax = Number.NEGATIVE_INFINITY;
-        let chunkMinIdx = -1;
-        let chunkMaxIdx = -1;
-
-        const limit = Math.min(n, i + step);
-        for (let j = i; j < limit; j++) {
-          const v = fluxValues[visibleStart + j];
-          if (v < chunkMin) {
-            chunkMin = v;
-            chunkMinIdx = j;
-          }
-          if (v > chunkMax) {
-            chunkMax = v;
-            chunkMaxIdx = j;
-          }
-        }
-
-        if (chunkMinIdx !== -1 && chunkMaxIdx !== -1) {
-          const x = xIndexOffset + Math.floor((i + limit) / 2) * indexScale;
-          if (chunkMinIdx <= chunkMaxIdx) {
-            ctx.lineTo(x, yOffset + chunkMin * yScale);
-            ctx.lineTo(x, yOffset + chunkMax * yScale);
-          } else {
-            ctx.lineTo(x, yOffset + chunkMax * yScale);
-            ctx.lineTo(x, yOffset + chunkMin * yScale);
-          }
-        }
-      }
-    }
-    ctx.stroke();
+function drawSeriesPath(args: DrawSeriesArgs): void {
+  if (!args.haveTime) {
+    drawIndexSeries(args);
     return;
   }
-
-  if (allFiniteTime) {
-    if (n <= threshold) {
-      ctx.moveTo(
-        xTimeOffset + timeValues[visibleStart] * timeScale,
-        yOffset + fluxValues[visibleStart] * yScale,
-      );
-      for (let i = 1; i < n; i++) {
-        const index = visibleStart + i;
-        ctx.lineTo(xTimeOffset + timeValues[index] * timeScale, yOffset + fluxValues[index] * yScale);
-      }
-    } else {
-      ctx.moveTo(
-        xTimeOffset + timeValues[visibleStart] * timeScale,
-        yOffset + fluxValues[visibleStart] * yScale,
-      );
-      const step = Math.max(1, Math.floor(n / plotW));
-
-      for (let i = 1; i < n; i += step) {
-        let chunkMin = Number.POSITIVE_INFINITY;
-        let chunkMax = Number.NEGATIVE_INFINITY;
-        let chunkMinIdx = -1;
-        let chunkMaxIdx = -1;
-
-        const limit = Math.min(n, i + step);
-        for (let j = i; j < limit; j++) {
-          const v = fluxValues[visibleStart + j];
-          if (v < chunkMin) {
-            chunkMin = v;
-            chunkMinIdx = j;
-          }
-          if (v > chunkMax) {
-            chunkMax = v;
-            chunkMaxIdx = j;
-          }
-        }
-
-        if (chunkMinIdx !== -1 && chunkMaxIdx !== -1) {
-          const chunkMidIndex = visibleStart + Math.floor((i + limit) / 2);
-          const x = xTimeOffset + timeValues[chunkMidIndex] * timeScale;
-          if (chunkMinIdx <= chunkMaxIdx) {
-            ctx.lineTo(x, yOffset + chunkMin * yScale);
-            ctx.lineTo(x, yOffset + chunkMax * yScale);
-          } else {
-            ctx.lineTo(x, yOffset + chunkMax * yScale);
-            ctx.lineTo(x, yOffset + chunkMin * yScale);
-          }
-        }
-      }
-    }
-    ctx.stroke();
+  if (args.allFiniteTime) {
+    drawFiniteTimeSeries(args);
     return;
   }
+  drawMixedTimeSeries(args);
+}
 
+function drawIndexSeries(args: DrawSeriesArgs): void {
+  if (shouldDrawDenseSeries(args)) {
+    drawDenseIndexSeries(args);
+    return;
+  }
+  drawDecimatedIndexSeries(args);
+}
+
+function drawFiniteTimeSeries(args: DrawSeriesArgs): void {
+  if (shouldDrawDenseSeries(args)) {
+    drawDenseFiniteTimeSeries(args);
+    return;
+  }
+  drawDecimatedFiniteTimeSeries(args);
+}
+
+function drawMixedTimeSeries(args: DrawSeriesArgs): void {
+  if (shouldDrawDenseSeries(args)) {
+    drawDenseMixedTimeSeries(args);
+    return;
+  }
+  drawDecimatedMixedTimeSeries(args);
+}
+
+function shouldDrawDenseSeries(args: DrawSeriesArgs): boolean {
+  return args.n <= args.plotW * 2;
+}
+
+function drawDecimatedIndexSeries(args: DrawSeriesArgs): void {
+  const { ctx, fluxValues, visibleStart, xIndexOffset, indexScale, yOffset, yScale } = args;
+  ctx.moveTo(xIndexOffset, yOffset + fluxValues[visibleStart] * yScale);
+
+  forEachChunk(args, (start, limit) => {
+    const chunk = collectChunkExtrema(args, start, limit);
+    if (!chunk) return;
+    const x = xIndexOffset + Math.floor((start + limit) / 2) * indexScale;
+    drawChunkExtrema(ctx, x, chunk, yOffset, yScale);
+  });
+}
+
+function drawDecimatedFiniteTimeSeries(args: DrawSeriesArgs): void {
+  const { ctx, fluxValues, timeValues, visibleStart, xTimeOffset, timeScale, yOffset, yScale } = args;
+  ctx.moveTo(xTimeOffset + timeValues[visibleStart] * timeScale, yOffset + fluxValues[visibleStart] * yScale);
+
+  forEachChunk(args, (start, limit) => {
+    const chunk = collectChunkExtrema(args, start, limit);
+    if (!chunk) return;
+    const chunkMidIndex = visibleStart + Math.floor((start + limit) / 2);
+    const x = xTimeOffset + timeValues[chunkMidIndex] * timeScale;
+    drawChunkExtrema(ctx, x, chunk, yOffset, yScale);
+  });
+}
+
+function drawDenseMixedTimeSeries(args: DrawSeriesArgs): void {
+  const { ctx, fluxValues, timeValues, visibleStart, n, xIndexOffset, indexScale, yOffset, yScale } = args;
+  moveToFirstMixedPoint(args);
+  for (let i = 1; i < n; i++) {
+    const index = visibleStart + i;
+    const tt = timeValues[index];
+    const x = Number.isFinite(tt) ? args.xTimeOffset + tt * args.timeScale : xIndexOffset + i * indexScale;
+    ctx.lineTo(x, yOffset + fluxValues[index] * yScale);
+  }
+}
+
+function drawDecimatedMixedTimeSeries(args: DrawSeriesArgs): void {
+  const { ctx, yOffset, yScale } = args;
+  moveToFirstMixedPoint(args);
+
+  forEachChunk(args, (start, limit) => {
+    const chunk = collectChunkExtrema(args, start, limit);
+    if (!chunk) return;
+    const x = mixedChunkX(args, Math.floor((start + limit) / 2));
+    drawChunkExtrema(ctx, x, chunk, yOffset, yScale);
+  });
+}
+
+function moveToFirstMixedPoint(args: DrawSeriesArgs): void {
+  const { ctx, fluxValues, timeValues, visibleStart, xIndexOffset, xTimeOffset, timeScale, yOffset, yScale } =
+    args;
   const firstTime = timeValues[visibleStart];
   const firstX = Number.isFinite(firstTime) ? xTimeOffset + firstTime * timeScale : xIndexOffset;
   ctx.moveTo(firstX, yOffset + fluxValues[visibleStart] * yScale);
+}
 
-  if (n <= threshold) {
-    for (let i = 1; i < n; i++) {
-      const index = visibleStart + i;
-      const tt = timeValues[index];
-      const x = Number.isFinite(tt) ? xTimeOffset + tt * timeScale : xIndexOffset + i * indexScale;
-      ctx.lineTo(x, yOffset + fluxValues[index] * yScale);
-    }
-    ctx.stroke();
+function mixedChunkX(args: DrawSeriesArgs, chunkMid: number): number {
+  const chunkMidIndex = args.visibleStart + chunkMid;
+  const tt = args.timeValues[chunkMidIndex];
+  return Number.isFinite(tt)
+    ? args.xTimeOffset + tt * args.timeScale
+    : args.xIndexOffset + chunkMid * args.indexScale;
+}
+
+type ChunkExtrema = {
+  min: number;
+  max: number;
+  minIdx: number;
+  maxIdx: number;
+};
+
+function forEachChunk(args: DrawSeriesArgs, visit: (start: number, limit: number) => void): void {
+  const step = Math.max(1, Math.floor(args.n / args.plotW));
+  for (let i = 1; i < args.n; i += step) {
+    visit(i, Math.min(args.n, i + step));
+  }
+}
+
+function collectChunkExtrema(args: DrawSeriesArgs, start: number, limit: number): ChunkExtrema | null {
+  const chunk: ChunkExtrema = {
+    min: Number.POSITIVE_INFINITY,
+    max: Number.NEGATIVE_INFINITY,
+    minIdx: -1,
+    maxIdx: -1,
+  };
+  for (let j = start; j < limit; j++) {
+    const value = args.fluxValues[args.visibleStart + j];
+    recordChunkValue(chunk, value, j);
+  }
+  return chunk.minIdx !== -1 && chunk.maxIdx !== -1 ? chunk : null;
+}
+
+function recordChunkValue(chunk: ChunkExtrema, value: number, index: number): void {
+  if (value < chunk.min) {
+    chunk.min = value;
+    chunk.minIdx = index;
+  }
+  if (value > chunk.max) {
+    chunk.max = value;
+    chunk.maxIdx = index;
+  }
+}
+
+function drawChunkExtrema(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  chunk: ChunkExtrema,
+  yOffset: number,
+  yScale: number,
+): void {
+  if (chunk.minIdx <= chunk.maxIdx) {
+    ctx.lineTo(x, yOffset + chunk.min * yScale);
+    ctx.lineTo(x, yOffset + chunk.max * yScale);
     return;
   }
-
-  const step = Math.max(1, Math.floor(n / plotW));
-  for (let i = 1; i < n; i += step) {
-    let chunkMin = Number.POSITIVE_INFINITY;
-    let chunkMax = Number.NEGATIVE_INFINITY;
-    let chunkMinIdx = -1;
-    let chunkMaxIdx = -1;
-
-    const limit = Math.min(n, i + step);
-    for (let j = i; j < limit; j++) {
-      const v = fluxValues[visibleStart + j];
-      if (v < chunkMin) {
-        chunkMin = v;
-        chunkMinIdx = j;
-      }
-      if (v > chunkMax) {
-        chunkMax = v;
-        chunkMaxIdx = j;
-      }
-    }
-
-    if (chunkMinIdx !== -1 && chunkMaxIdx !== -1) {
-      const chunkMid = Math.floor((i + limit) / 2);
-      const chunkMidIndex = visibleStart + chunkMid;
-      const tt = timeValues[chunkMidIndex];
-      const x = Number.isFinite(tt) ? xTimeOffset + tt * timeScale : xIndexOffset + chunkMid * indexScale;
-      if (chunkMinIdx <= chunkMaxIdx) {
-        ctx.lineTo(x, yOffset + chunkMin * yScale);
-        ctx.lineTo(x, yOffset + chunkMax * yScale);
-      } else {
-        ctx.lineTo(x, yOffset + chunkMax * yScale);
-        ctx.lineTo(x, yOffset + chunkMin * yScale);
-      }
-    }
-  }
-
-  ctx.stroke();
+  ctx.lineTo(x, yOffset + chunk.max * yScale);
+  ctx.lineTo(x, yOffset + chunk.min * yScale);
 }

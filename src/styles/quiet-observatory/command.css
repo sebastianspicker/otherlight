@@ -1,0 +1,392 @@
+/*
+ * Quiet Observatory — command strip, status pill, runtime controls, buttons, inputs.
+ */
+
+/* Context / command strip — white surface under identity band */
+.context-toolbar,
+.command-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 10px 20px;
+  align-items: center;
+  width: auto;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-top: 1px solid rgb(255 255 255 / 6%);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sticky);
+}
+
+.command-strip__left,
+.command-strip__context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+/* Workspace document actions live in the command strip (thin identity header) */
+.command-strip .workspace-actions,
+.command-strip__left > .workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.command-strip .workspace-actions button {
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.command-strip__right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 10px;
+  min-width: 0;
+}
+
+.command-strip__right.runtime-toolbar {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.context-toolbar > .inline,
+.command-strip > .inline,
+.command-strip__context > .inline {
+  display: grid;
+  min-width: 148px;
+  max-width: 240px;
+  gap: 4px;
+  color: var(--text-3);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  white-space: normal;
+}
+
+.command-strip__context > .inline select,
+.command-strip__context > .inline > select {
+  min-width: 148px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.context-toolbar .workspace-actions,
+.command-strip .workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: center;
+}
+
+.context-toolbar .context-description,
+.command-strip .context-description {
+  display: none;
+}
+
+/* Status as compact pill (not full-width banner) */
+.app-status,
+#appStatus,
+.command-strip .app-status,
+.command-strip #appStatus {
+  display: inline-flex;
+  min-height: 28px;
+  max-width: min(280px, 36vw);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 12px;
+  border: 1px solid rgb(8 127 115 / 18%);
+  border-radius: 999px;
+  background: var(--action-soft);
+  color: var(--action-ink);
+  font-size: 12px;
+  font-weight: 550;
+  box-shadow: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-strip #appStatusMessage {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-status button,
+#appStatus button {
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.fatal-error {
+  margin: 10px 16px;
+  padding: 14px 16px;
+  border: 1px solid rgb(180 35 24 / 28%);
+  border-radius: var(--radius-md);
+  background: #fff0ee;
+  color: #701b14;
+}
+
+.runtime-toolbar {
+  position: static;
+  z-index: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.runtime-toolbar > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.runtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.runtime-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-left: auto;
+}
+
+.runtime-fields > .inline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 550;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.runtime-view {
+  margin: 0;
+}
+
+.runtime-view > summary {
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-2);
+}
+
+/* Shared controls */
+button,
+input,
+select,
+textarea,
+summary {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 100ms ease;
+}
+
+button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 550;
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #a8b8c0;
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Primary actions — Signal teal */
+#btnStart,
+#btnApplyParams {
+  min-width: 132px;
+  border-color: var(--action);
+  background: var(--action);
+  color: #fff;
+  font-weight: 650;
+}
+
+#btnStart {
+  font-size: 0;
+}
+
+#btnStart::before {
+  margin-right: 8px;
+  content: "▶";
+  font-size: 11px;
+}
+
+#btnStart[aria-pressed="false"]::after,
+#btnStart:not([aria-pressed])::after {
+  content: "Run transit";
+  font-size: 13.5px;
+}
+
+#btnStart[aria-pressed="true"]::before {
+  content: "Ⅱ";
+}
+
+#btnStart[aria-pressed="true"]::after {
+  content: "Pause";
+  font-size: 13.5px;
+}
+
+#btnStart:hover,
+#btnApplyParams:hover {
+  border-color: var(--action-hover);
+  background: var(--action-hover);
+  color: #fff;
+}
+
+#btnReset {
+  font-size: 0;
+}
+
+#btnReset::before {
+  margin-right: 7px;
+  content: "↻";
+  font-size: 15px;
+}
+
+#btnReset::after {
+  content: "Reset";
+  font-size: 13.5px;
+}
+
+#btnClearLC {
+  background: transparent;
+  color: var(--text-3);
+}
+
+#btnClearLC:hover {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+}
+
+select {
+  max-width: 100%;
+  padding-right: 28px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%235a717b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+input[type="number"]:hover,
+input[type="text"]:hover,
+select:hover,
+textarea:hover {
+  border-color: #a8b8c0;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--action);
+  box-shadow: 0 0 0 2px var(--action-soft);
+  outline: none;
+}
+
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--action);
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fatal-error {
+    border-color: #b65c55;
+    background: #3a1d1b;
+    color: #ffd9d5;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%238fa0ab' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}

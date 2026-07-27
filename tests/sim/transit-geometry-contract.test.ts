@@ -1,3 +1,5 @@
+/** Verifies transit geometry remains consistent across state, observables, and V4 execution. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

@@ -1,3 +1,5 @@
+/** Verifies display flux contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/app/binaryLab";

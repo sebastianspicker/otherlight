@@ -1,4 +1,4 @@
-// src/photometry/patches.ts
+/** Precomputes stellar spot and facula geometry for deterministic photometry. */
 //
 // Shared helpers for projected brightness patches (spots/faculae).
 //
@@ -12,29 +12,55 @@
 
 import type { BrightnessPatch } from "../core/types";
 import { isFinitePositive } from "../core/units";
+import { maxPatchFactor, multiplyPatchFactor, overrideLastPatchFactor } from "./patchFactors";
+import type { PatchPre, PatchPreCircle, PatchPreEllipse } from "./patchTypes";
 
 export type PatchCombineMode = "multiply" | "max" | "overrideLast";
+export type { PatchPre } from "./patchTypes";
 
-type PatchPreCircle = {
-  kind: "circle";
-  x: number;
-  y: number;
-  factor: number;
-  r2: number;
-};
+function finitePatchBase(
+  patch: BrightnessPatch | undefined,
+): { x: number; y: number; factor: number } | undefined {
+  if (!patch) return undefined;
+  if (!Number.isFinite(patch.x) || !Number.isFinite(patch.y) || !Number.isFinite(patch.factor))
+    return undefined;
+  return { x: patch.x, y: patch.y, factor: Math.max(0, patch.factor) };
+}
 
-type PatchPreEllipse = {
-  kind: "ellipse";
-  x: number;
-  y: number;
-  factor: number;
-  invRx2: number;
-  invRy2: number;
-  cosA: number;
-  sinA: number;
-};
+function sanitizeCirclePatch(patch: BrightnessPatch): PatchPreCircle | undefined {
+  const base = finitePatchBase(patch);
+  const r = patch.r ?? NaN;
+  if (!base || !isFinitePositive(r)) return undefined;
+  return { kind: "circle", ...base, r2: r * r };
+}
 
-export type PatchPre = PatchPreCircle | PatchPreEllipse;
+function sanitizeEllipsePatch(patch: BrightnessPatch): PatchPreEllipse | undefined {
+  const base = finitePatchBase(patch);
+  const radii = finiteEllipseRadii(patch);
+  if (!base || !radii) return undefined;
+
+  const angle = Number.isFinite(patch.angle) ? (patch.angle as number) : 0;
+  return {
+    kind: "ellipse",
+    ...base,
+    invRx2: 1 / (radii.rx * radii.rx),
+    invRy2: 1 / (radii.ry * radii.ry),
+    cosA: Math.cos(angle),
+    sinA: Math.sin(angle),
+  };
+}
+
+function finiteEllipseRadii(patch: BrightnessPatch): { rx: number; ry: number } | undefined {
+  const rx = patch.rx ?? NaN;
+  const ry = patch.ry ?? NaN;
+  return isFinitePositive(rx) && isFinitePositive(ry) ? { rx, ry } : undefined;
+}
+
+function sanitizeBrightnessPatch(patch: BrightnessPatch | undefined): PatchPre | undefined {
+  if (patch?.shape === "circle") return sanitizeCirclePatch(patch);
+  if (patch?.shape === "ellipse") return sanitizeEllipsePatch(patch);
+  return undefined;
+}
 
 /**
  * Sanitize patches into a precomputed representation.
@@ -45,69 +71,11 @@ export function sanitizeBrightnessPatches(patches: BrightnessPatch[] | undefined
   const out: PatchPre[] = [];
 
   for (const p of patches ?? []) {
-    if (!p) continue;
-    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.factor)) continue;
-
-    const factor = Math.max(0, p.factor);
-
-    if (p.shape === "circle") {
-      const r = p.r ?? NaN;
-      if (!isFinitePositive(r)) continue;
-
-      out.push({ kind: "circle", x: p.x, y: p.y, factor, r2: r * r });
-      continue;
-    }
-
-    if (p.shape === "ellipse") {
-      const rx = p.rx ?? NaN;
-      const ry = p.ry ?? NaN;
-      if (!isFinitePositive(rx) || !isFinitePositive(ry)) continue;
-
-      const angle = Number.isFinite(p.angle) ? (p.angle as number) : 0;
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-
-      out.push({
-        kind: "ellipse",
-        x: p.x,
-        y: p.y,
-        factor,
-        invRx2: 1 / (rx * rx),
-        invRy2: 1 / (ry * ry),
-        cosA,
-        sinA,
-      });
-      continue;
-    }
-
-    // Unknown/unsupported shape => drop.
-    continue;
+    const sanitized = sanitizeBrightnessPatch(p);
+    if (sanitized) out.push(sanitized);
   }
 
   return out;
-}
-
-/** Test if point (x,y) lies inside a precomputed patch. */
-function pointInPatch(x: number, y: number, p: PatchPre): boolean {
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-
-  if (p.kind === "circle") {
-    const dx = x - p.x;
-    const dy = y - p.y;
-    return dx * dx + dy * dy < p.r2;
-  }
-
-  // p.kind === "ellipse"
-  const dx = x - p.x;
-  const dy = y - p.y;
-
-  // Rotate into patch frame:
-  // u = cos(a)*dx + sin(a)*dy
-  // v = -sin(a)*dx + cos(a)*dy
-  const xp = p.cosA * dx + p.sinA * dy;
-  const yp = -p.sinA * dx + p.cosA * dy;
-
-  return xp * xp * p.invRx2 + yp * yp * p.invRy2 < 1;
 }
 
 /**
@@ -122,38 +90,7 @@ export function patchFactorAt(x: number, y: number, patches: PatchPre[], mode: P
   if (!Number.isFinite(x) || !Number.isFinite(y)) return 1;
   if (!Array.isArray(patches) || patches.length === 0) return 1;
 
-  if (mode === "overrideLast") {
-    let f = 1;
-    for (const p of patches) {
-      if (pointInPatch(x, y, p)) f = p.factor;
-    }
-    return Number.isFinite(f) ? Math.max(0, f) : 1;
-  }
-
-  if (mode === "max") {
-    // Max factor among containing patches.
-    // Note: If no patch contains the point, return the neutral factor 1.
-    let f = 0;
-    let hit = false;
-
-    for (const p of patches) {
-      if (pointInPatch(x, y, p)) {
-        hit = true;
-        f = Math.max(f, p.factor);
-      }
-    }
-
-    if (!hit) return 1;
-    return Number.isFinite(f) ? Math.max(0, f) : 1;
-  }
-
-  // mode === "multiply" (default)
-  let f = 1;
-  for (const p of patches) {
-    if (pointInPatch(x, y, p)) f *= p.factor;
-    // Early exit if factor drops to 0 (opaque spot)
-    if (f === 0) return 0;
-  }
-
-  return Number.isFinite(f) ? Math.max(0, f) : 1;
+  if (mode === "overrideLast") return overrideLastPatchFactor(x, y, patches);
+  if (mode === "max") return maxPatchFactor(x, y, patches);
+  return multiplyPatchFactor(x, y, patches);
 }

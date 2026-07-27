@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Serves the production bundle and checks the shell plus referenced assets over HTTP.
+
 set -euo pipefail
 
 host="${SMOKE_HOST:-127.0.0.1}"
@@ -18,10 +20,15 @@ cleanup() {
 trap cleanup EXIT
 
 pnpm build >/dev/null
-pnpm preview --host "${host}" --port "${port}" >"${tmp_dir}/preview.log" 2>&1 &
+pnpm preview --host "${host}" --port "${port}" --strictPort >"${tmp_dir}/preview.log" 2>&1 &
 server_pid=$!
 
 for _ in $(seq 1 50); do
+  if ! kill -0 "${server_pid}" >/dev/null 2>&1; then
+    echo "smoke-served-app: preview exited before becoming ready at ${base_url}" >&2
+    cat "${tmp_dir}/preview.log" >&2 || true
+    exit 1
+  fi
   if curl --fail --silent "${base_url}/" >"${tmp_dir}/index.html"; then
     break
   fi

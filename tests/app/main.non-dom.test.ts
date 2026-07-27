@@ -1,3 +1,5 @@
+/** Verifies main non DOM contracts across app startup, controls, and runtime integration. */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 describe("main entrypoint without DOM", () => {

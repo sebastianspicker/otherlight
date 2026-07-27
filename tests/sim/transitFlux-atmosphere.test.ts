@@ -1,3 +1,5 @@
+/** Verifies transit flux atmosphere contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

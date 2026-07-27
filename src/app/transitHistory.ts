@@ -1,3 +1,6 @@
+/**
+ * Owns transit History support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import type { SimulationStepV3 } from "../sim/v3";
 import { resolveOrbitElements } from "../sim/orbits";

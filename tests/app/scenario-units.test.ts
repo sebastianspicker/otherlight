@@ -1,3 +1,5 @@
+/** Verifies scenario units contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { scenario } from "../../src/app/scenario";

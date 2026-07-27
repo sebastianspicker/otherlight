@@ -1,3 +1,5 @@
+/** Verifies disk midpoint calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { integrateDiskMidpoint } from "../../src/photometry/diskMidpoint";

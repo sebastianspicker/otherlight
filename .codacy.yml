@@ -1,0 +1,18 @@
+---
+exclude_paths:
+  - "docs/audit/**"
+  - "coverage/**"
+  - "dist/**"
+  - "node_modules/**"
+  - "science_backend/.venv/**"
+  - "test-results/**"
+engines:
+  metric:
+    exclude_paths:
+      - "pnpm-lock.yaml"
+      - "docs/audit/**"
+      - "coverage/**"
+      - "dist/**"
+      - "node_modules/**"
+      - "science_backend/.venv/**"
+      - "test-results/**"

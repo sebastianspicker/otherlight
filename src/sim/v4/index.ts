@@ -1,3 +1,4 @@
+/** Defines the supported V4 simulation import surface for application consumers. */
 export type {
   BinaryLabConfigV4,
   BinaryLabMode,

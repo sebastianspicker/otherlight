@@ -1,88 +1,148 @@
+# Dependencies and build output
 node_modules/
+.pnpm-store/
 dist/
 dist-ssr/
+.vite/
+.vitest/
+.vitest-attachments/
+.nyc_output/
+*.tsbuildinfo
+
+# Tests, coverage, and generated reports
 coverage/
 test-results/
-.nyc_output/
-.vitest/
+playwright-report/
+blob-report/
 junit.xml
 junit-*.xml
-.vite/
-.eslintcache
-.cache/
-.pnpm-store/
+docs/audit/
+docs/agent/
+docs/source-audit/
+# Local archive lanes. Keep these specific so future maintained documentation
+# under docs/archive is not hidden by a blanket rule.
+/docs/archive/README.md
+/docs/archive/audits/
+/docs/archive/design/
+/docs/archive/legacy/
+/docs/archive/pre-rebrand-screenshots/
+# Superseded flat gallery files; maintained captures live in web/ and apple/.
+/docs/screenshots/*.png
+/docs/screenshots/manifest.json
+artifacts/
+reports/
+*.sarif
+*.sarif.zip
+codacy-results*.json
+lizard-report.*
+semgrep-results.*
 
+# Python and local scientific runtime products
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.venv/
+science_backend/build/
+science_backend/dist/
+science_backend/*.egg-info/
+.science-cache/
+*.arrow
+*.feather
+*.parquet
+*.ipc
+
+# Swift package and Xcode-local products
+.swiftpm/
+native-apple/Packages/*/.build/
+DerivedData/
+build/
+*.xcarchive/
+*.xcresult/
+*.dSYM/
+*.dmg
+*.ipa
+*.xcuserstate
+*.xccheckout
+**/xcuserdata/
+
+# Operating-system and editor state
 .DS_Store
-*.log
-*.tsbuildinfo
-*.tmp
-
-# Debug logs
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE
+._*
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
 .cursor/
-.codex/
+.continue/
+.windsurf/
+*.log
+*.bak
+*.orig
+*.swp
+*.swo
+*.tmp
+.cache/
+.eslintcache
 
-# Repo harness and audit workspaces
-.agents/
-AGENTS.md
-HARNESS_PRINCIPLES.md
-INDEX.md
-SRC_INDEX.md
-code_review.md
+# Local development, analyzer, and repository-tool state
+/.agents/
+/.claude/
+/.codacy/
+/.codegraph/
+/.codex/
+/.gemini/
+/.kilo/
+/.serena/
+/.impeccable/
+/AGENTS.md
 .github/codex/
+.github/instructions/
+.github/prompts/
+.github/copilot-instructions.md
 .github/workflows/codex.yml
-scripts/topology_inventory.sh
-docs/agent/
-docs/source-audit/
-AGENT_AUDIT_REPORT.md
-AUDIT.md
-artifacts/
-reports/
 
-# docs (local findings/logs/decisions)
-docs/audit/
-docs/AUDIT_*.md
-docs/DEAD_CODE_POLICY.md
-docs/BASELINE.md
-docs/BUGS_AND_FIXES.md
-docs/REPO_MAP.md
-docs/ci-audit.md
-docs/ci-decision.md
-docs/roadmap.md
-DECISIONS.md
-FINDINGS.md
-LOG.md
-REFACTOR_PLAN.md
-PHYSICS_AUDIT.md
-/validation.md
-docs/DECISIONS.md
-docs/FINDINGS.md
-docs/LOG.md
-docs/REFACTOR_PLAN.md
-docs/PHYSICS_AUDIT.md
-docs/DEEP-INSPECTION-*.md
-docs/refactor-plan.md
-docs/github-refresh-plan.md
-docs/github-refresh-progress.md
-docs/physics/alignment-audit.md
-docs/didactics/visualization-progress.md
-docs/didactics/edge-case-milestones.md
-docs/deprecated/
+# Private maintenance notes (the public-surface gate also rejects force-staged copies)
+/AUDIT.md
+/AGENT_AUDIT_REPORT.md
+/DECISIONS.md
+/FINDINGS.md
+/LOG.md
+/REFACTOR_PLAN.md
+/REMEDIATION_LEDGER.md
+/REMEDIATION_PLAN.md
+/REMEDIATION_STATUS.md
+/GITHUB_REFRESH_PLAN.md
+/GITHUB_REFRESH_PROGRESS.md
+/PROMPT.md
+/PROMPTS.md
+/SCRATCH.md
+/TASK_REPORT.md
+/TASK_SUMMARY.md
+/SESSION_SUMMARY.md
+/CONVERSATION_EXPORT.md
+/CONVERSATION_EXPORT.json
+/CONVERSATION_EXPORT.jsonl
 
-# Env files & secrets
+# Environment files, credentials, and key material
 .env
 .env.*
+!.env.example
+!.env.sample
+.envrc
+.direnv/
 *.pem
 *.key
+*.crt
+*.csr
 *.p12
 *.pfx
+*.jks
+*.keystore
+*.mobileprovision
 credentials.json
 secrets.json
 .secret*
+*.secret
+*.secrets

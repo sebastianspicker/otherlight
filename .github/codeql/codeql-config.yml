@@ -1,0 +1,8 @@
+name: CodeQL configuration
+
+paths-ignore:
+  - "coverage/**"
+  - "dist/**"
+  - "node_modules/**"
+  - "science_backend/.venv/**"
+  - "test-results/**"

@@ -1,4 +1,4 @@
-// src/core/typesDynamics.ts
+/** Defines dynamical model configuration, including N-body and perturbation contracts. */
 
 //
 // Optional non-Kepler dynamics hooks/config.

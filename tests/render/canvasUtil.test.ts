@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies canvas util rendering behavior and visual interpretation. */
 
 import { describe, expect, it } from "vitest";
 import { ensureHiDPICanvas } from "../../src/render/canvasUtil";

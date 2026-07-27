@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies scenario flow guard contracts across app startup, controls, and runtime integration. */
 
 import { describe, expect, it } from "vitest";
 import { withScenarioApplyGuard, type ScenarioApplyGuard } from "../../src/app/scenarioFlow";

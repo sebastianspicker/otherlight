@@ -1,0 +1,182 @@
+{
+  "limits": {
+    "maxForwardBodies": 3,
+    "maxForwardSamples": 100000,
+    "maxIntegratorSteps": 500000,
+    "maxRhsEvaluations": 8000000,
+    "maxWallTimeSeconds": 60
+  },
+  "radialVelocityArrowV1": {
+    "format": "arrow-ipc-file",
+    "magic": "ARROW1",
+    "fields": [
+      { "name": "time_offset_s", "type": "float64" },
+      { "name": "radial_velocity_m_s", "type": "float64" }
+    ]
+  },
+  "validForwardRequest": {
+    "kind": "forward",
+    "scenario": {
+      "schemaVersion": "v5",
+      "id": "shared-two-body-si",
+      "epochJdTdb": 2461236.5,
+      "timeScale": "TDB",
+      "bodies": [
+        {
+          "id": "star",
+          "kind": "star",
+          "massKg": 1.98847e30,
+          "radiusM": 695700000,
+          "state": {
+            "positionM": [-449303.09236076573, 0, 0],
+            "velocityMps": [0, -0.08945699906746266, 0]
+          }
+        },
+        {
+          "id": "planet",
+          "kind": "planet",
+          "massKg": 5.9722e24,
+          "radiusM": 6371000,
+          "state": {
+            "positionM": [149597421396.90762, 0, 0],
+            "velocityMps": [0, 29785.097440755075, 0]
+          }
+        }
+      ],
+      "observer": {
+        "lineOfSight": [0, 0, 1],
+        "targetBodyId": "star",
+        "distanceM": 3.085677581e17
+      },
+      "integrator": {
+        "method": "DOP853",
+        "positionToleranceM": 0.001,
+        "velocityToleranceMps": 0.000001,
+        "relativeTolerance": 1e-12,
+        "maxStepSec": 3600
+      }
+    },
+    "startOffsetSec": 0,
+    "endOffsetSec": 86400,
+    "sampleCadenceSec": 60,
+    "outputs": ["radial-velocity"],
+    "seed": 42
+  },
+  "validForwardRequestCanonicalSha256": "d06fff32cb44bd3f5d79061ca20514b2cc21ec8651850c94b88a0ce0f72554d6",
+  "tooManyBodiesCase": {
+    "additionalBodies": [
+      {
+        "id": "moon",
+        "kind": "moon",
+        "massKg": 7.342e22,
+        "radiusM": 1737400,
+        "state": {
+          "positionM": [0, 0, 0],
+          "velocityMps": [0, 0, 0]
+        }
+      },
+      {
+        "id": "companion",
+        "kind": "companion",
+        "massKg": 1e25,
+        "radiusM": 10000000,
+        "state": {
+          "positionM": [0, 0, 0],
+          "velocityMps": [0, 0, 0]
+        }
+      }
+    ],
+    "expected": {
+      "code": "invalid-contract",
+      "path": "request.scenario.bodies",
+      "messageIncludes": "at most 3"
+    }
+  },
+  "errorEnvelopes": [
+    {
+      "status": 404,
+      "code": "unknown-job",
+      "message": "unknown job"
+    },
+    {
+      "status": 404,
+      "code": "unknown-artifact",
+      "message": "unknown artifact"
+    },
+    {
+      "status": 409,
+      "code": "job-not-completed",
+      "message": "job has no completed result"
+    },
+    {
+      "status": 409,
+      "code": "job-already-terminal",
+      "message": "job is already terminal"
+    }
+  ],
+  "validForwardResult": {
+    "kind": "forward",
+    "arrowArtifactId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "runManifest": {
+      "schemaVersion": "science-run-manifest-v2",
+      "runId": "job-shared-fixture",
+      "inputHashSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "scientificResult": true,
+      "implementation": {
+        "application": {
+          "name": "otherlight-science-backend",
+          "version": "0.2.0-alpha.1",
+          "build": "0.2.0-alpha.1"
+        },
+        "engine": {
+          "kind": "python-scipy",
+          "name": "DOP853",
+          "version": "1.18.0"
+        },
+        "runtime": {
+          "name": "Python",
+          "version": "3.14.6"
+        },
+        "artifactWriter": {
+          "name": "PyArrow",
+          "version": "25.0.0"
+        },
+        "platform": {
+          "os": "fixture-os",
+          "architecture": "fixture-architecture"
+        }
+      },
+      "gravitationalConstantM3KgS2": 6.6743e-11,
+      "epochJdTdb": 2461236.5,
+      "startedAt": "2026-07-16T00:00:00.000Z",
+      "completedAt": "2026-07-16T00:00:01.000Z",
+      "capabilityManifestVersion": "0.2.0-alpha.1",
+      "modelVersions": [
+        {
+          "id": "dynamics",
+          "version": "newtonian-point-mass-finite-radius-boundary-v2"
+        }
+      ],
+      "numericalTolerances": {
+        "requestedPositionToleranceM": 0.001,
+        "effectivePositionToleranceM": 0.001,
+        "requestedVelocityToleranceMps": 0.000001,
+        "effectiveVelocityToleranceMps": 0.000001,
+        "requestedRelativeTolerance": 1e-12,
+        "effectiveRelativeTolerance": 1e-12,
+        "requestedMaxStepSec": 3600,
+        "effectiveMaxStepSec": 3600
+      },
+      "datasets": [],
+      "validityDomain": ["Newtonian finite-radius contact boundary"],
+      "warnings": [],
+      "randomSeed": 42,
+      "artifact": {
+        "idSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "format": "arrow-ipc-file",
+        "schemaVersion": "radial-velocity-v1",
+        "rowCount": 1441
+      }
+    }
+  }
+}

@@ -2,12 +2,12 @@
  * Annotation and overlay rendering helpers for the light-curve plot.
  *
  * Exports:
- *  - `collectOverlayRange`  — computes the flux extent of visible overlay series.
- *  - `drawOverlaySeries`    — renders a single overlay series onto the plot.
- *  - `drawWindowOverlays`   — renders shaded time-window overlays (e.g. transit windows).
- *  - `drawMarkers`          — renders labelled vertical timing markers.
- *  - `drawLegend`           — renders the overlay series legend and badge row.
- *  - `drawComparisonInset`  — renders the small comparison-model inset panel.
+ *  - `collectOverlayRange`: computes the flux extent of visible overlay series.
+ *  - `drawOverlaySeries`: renders a single overlay series onto the plot.
+ *  - `drawWindowOverlays`: renders shaded time-window overlays (e.g. transit windows).
+ *  - `drawMarkers`: renders labelled vertical timing markers.
+ *  - `drawLegend`: renders the overlay series legend and badge row.
+ *  - `drawComparisonInset`: renders the small comparison-model inset panel.
  */
 
 import type {
@@ -19,6 +19,9 @@ import type {
 } from "./lightCurvePlotTypes";
 import { type TimeScaleInfo, xOfTime } from "./lightCurvePlotAxes";
 
+type FluxRange = { lo: number; hi: number };
+type PlotRect = { x0: number; y0: number; w: number; h: number };
+
 export function collectOverlayRange(
   overlaySeries: LightCurveOverlaySeries[],
   timeDomain: { tMin: number; tMax: number } | null,
@@ -28,13 +31,20 @@ export function collectOverlayRange(
   for (const series of overlaySeries) {
     if (series.includeInRange === false) continue;
     for (const sample of series.samples) {
-      if (!(Number.isFinite(sample.t) && Number.isFinite(sample.flux))) continue;
-      if (timeDomain && (sample.t < timeDomain.tMin || sample.t > timeDomain.tMax)) continue;
+      if (!isFiniteTimedFlux(sample, timeDomain)) continue;
       lo = Math.min(lo, sample.flux);
       hi = Math.max(hi, sample.flux);
     }
   }
   return Number.isFinite(lo) && Number.isFinite(hi) ? { lo, hi } : null;
+}
+
+function isFiniteTimedFlux(
+  sample: { t: number; flux: number },
+  timeDomain: { tMin: number; tMax: number } | null,
+): boolean {
+  if (!(Number.isFinite(sample.t) && Number.isFinite(sample.flux))) return false;
+  return !timeDomain || (sample.t >= timeDomain.tMin && sample.t <= timeDomain.tMax);
 }
 
 export function drawOverlaySeries(args: {
@@ -93,34 +103,61 @@ export function drawWindowOverlays(args: {
   if (!timeInfo.haveTime) return;
 
   for (const overlay of windows) {
-    if (
-      !(
-        Number.isFinite(overlay.startSec) &&
-        Number.isFinite(overlay.endSec) &&
-        overlay.endSec > overlay.startSec
-      )
-    ) {
-      continue;
-    }
-    const x0 = Math.max(marginLeft, Math.min(marginLeft + plotW, xOfTime(timeInfo, overlay.startSec)));
-    const x1 = Math.max(marginLeft, Math.min(marginLeft + plotW, xOfTime(timeInfo, overlay.endSec)));
-    if (!(x1 > x0)) continue;
-    ctx.save();
-    ctx.fillStyle = overlay.color;
-    ctx.globalAlpha = Number.isFinite(overlay.alpha)
-      ? Math.min(0.75, Math.max(0.08, overlay.alpha as number))
-      : 0.18;
-    ctx.fillRect(x0, marginTop, x1 - x0, plotH);
-    if (overlay.label) {
-      ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
-      ctx.globalAlpha = 1;
-      ctx.font = "10px 'Space Mono', monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(overlay.label, x0 + (x1 - x0) * 0.5, marginTop + 4);
-    }
-    ctx.restore();
+    drawWindowOverlay({ ctx, overlay, timeInfo, marginLeft, marginTop, plotW, plotH });
   }
+}
+
+function drawWindowOverlay(args: {
+  ctx: CanvasRenderingContext2D;
+  overlay: LightCurveWindowOverlay;
+  timeInfo: TimeScaleInfo;
+  marginLeft: number;
+  marginTop: number;
+  plotW: number;
+  plotH: number;
+}): void {
+  const { ctx, overlay, timeInfo, marginLeft, marginTop, plotW, plotH } = args;
+  if (!isValidWindowOverlay(overlay)) return;
+
+  const x0 = clippedOverlayX(timeInfo, overlay.startSec, marginLeft, plotW);
+  const x1 = clippedOverlayX(timeInfo, overlay.endSec, marginLeft, plotW);
+  if (!(x1 > x0)) return;
+
+  ctx.save();
+  ctx.fillStyle = overlay.color;
+  ctx.globalAlpha = windowOverlayAlpha(overlay.alpha);
+  ctx.fillRect(x0, marginTop, x1 - x0, plotH);
+  if (overlay.label) drawWindowOverlayLabel(ctx, overlay.label, x0, x1, marginTop);
+  ctx.restore();
+}
+
+function isValidWindowOverlay(overlay: LightCurveWindowOverlay): boolean {
+  return (
+    Number.isFinite(overlay.startSec) && Number.isFinite(overlay.endSec) && overlay.endSec > overlay.startSec
+  );
+}
+
+function clippedOverlayX(timeInfo: TimeScaleInfo, tSec: number, marginLeft: number, plotW: number): number {
+  return Math.max(marginLeft, Math.min(marginLeft + plotW, xOfTime(timeInfo, tSec)));
+}
+
+function windowOverlayAlpha(alpha: number | undefined): number {
+  return Number.isFinite(alpha) ? Math.min(0.75, Math.max(0.08, alpha as number)) : 0.18;
+}
+
+function drawWindowOverlayLabel(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  x0: number,
+  x1: number,
+  marginTop: number,
+): void {
+  ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
+  ctx.globalAlpha = 1;
+  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText(label, x0 + (x1 - x0) * 0.5, marginTop + 4);
 }
 
 export function drawMarkers(args: {
@@ -164,7 +201,7 @@ export function drawMarkers(args: {
     const textX = Math.max(marginLeft + width * 0.5, Math.min(marginLeft + plotW - width * 0.5, x));
     ctx.fillRect(textX - width * 0.5, yLabel - 1, width, 12);
     ctx.fillStyle = color;
-    ctx.font = "10px 'Space Mono', monospace";
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(text, textX, yLabel);
@@ -204,7 +241,7 @@ export function drawLegend(args: {
     ctx.fillStyle = badge.color;
     ctx.fillRect(badgeX + 3, badgeY + 3, 6, 6);
     ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
-    ctx.font = "10px 'Space Mono', monospace";
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText(badge.label, badgeX + 12, badgeY + 1);
@@ -231,7 +268,7 @@ export function drawLegend(args: {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(225, 233, 239, 0.9)";
-    ctx.font = "10px 'Space Mono', monospace";
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText(text, x + 18, legendY + 1);
@@ -252,57 +289,113 @@ export function drawComparisonInset(args: {
   const { ctx, inset, marginLeft, marginTop, plotW, plotH, timeInfo } = args;
   if (!inset || !timeInfo.haveTime || inset.series.length === 0) return;
 
-  const insetW = Math.min(240, plotW * 0.36);
-  const insetH = Math.min(86, plotH * 0.34);
-  const x0 = marginLeft + plotW - insetW - 10;
-  const y0 = marginTop + plotH - insetH - 10;
+  const rect = comparisonInsetRect(marginLeft, marginTop, plotW, plotH);
+  const range = collectComparisonInsetRange(inset, timeInfo);
+  if (!range) return;
+
+  ctx.save();
+  drawComparisonInsetPanel(ctx, inset.title, rect);
+  for (const series of inset.series) {
+    drawComparisonInsetSeries({ ctx, series, rect, range, timeInfo });
+  }
+  ctx.restore();
+}
+
+function comparisonInsetRect(marginLeft: number, marginTop: number, plotW: number, plotH: number): PlotRect {
+  const w = Math.min(240, plotW * 0.36);
+  const h = Math.min(86, plotH * 0.34);
+  return {
+    x0: marginLeft + plotW - w - 10,
+    y0: marginTop + plotH - h - 10,
+    w,
+    h,
+  };
+}
+
+function collectComparisonInsetRange(
+  inset: LightCurveComparisonInset,
+  timeInfo: TimeScaleInfo,
+): FluxRange | null {
   let lo = Number.POSITIVE_INFINITY;
   let hi = Number.NEGATIVE_INFINITY;
 
   for (const series of inset.series) {
     for (const sample of series.samples) {
-      if (!(Number.isFinite(sample.t) && Number.isFinite(sample.flux))) continue;
-      if (sample.t < timeInfo.tMin || sample.t > timeInfo.tMax) continue;
+      if (!isFiniteTimedFlux(sample, timeInfo)) continue;
       lo = Math.min(lo, sample.flux);
       hi = Math.max(hi, sample.flux);
     }
   }
-  if (!(Number.isFinite(lo) && Number.isFinite(hi))) return;
+  return Number.isFinite(lo) && Number.isFinite(hi) ? paddedFluxRange(lo, hi) : null;
+}
+
+function paddedFluxRange(lo: number, hi: number): FluxRange {
   const span = Math.max(1e-8, hi - lo);
   const pad = span * 0.15;
-  const yOf = (flux: number) => y0 + insetH - ((flux - (lo - pad)) / (span + 2 * pad)) * insetH;
+  return { lo: lo - pad, hi: hi + pad };
+}
 
-  ctx.save();
+function drawComparisonInsetPanel(ctx: CanvasRenderingContext2D, title: string, rect: PlotRect): void {
+  const { x0, y0, w, h } = rect;
   ctx.fillStyle = "rgba(6, 10, 16, 0.84)";
-  ctx.fillRect(x0, y0, insetW, insetH);
+  ctx.fillRect(x0, y0, w, h);
   ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
   ctx.lineWidth = 1;
-  ctx.strokeRect(x0, y0, insetW, insetH);
+  ctx.strokeRect(x0, y0, w, h);
   ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
-  ctx.font = "10px 'Space Grotesk', sans-serif";
+  ctx.font = "11px system-ui, sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  ctx.fillText(inset.title, x0 + 6, y0 + 4);
-  for (const series of inset.series) {
-    ctx.save();
-    ctx.strokeStyle = series.color;
-    ctx.lineWidth = 1.25;
-    ctx.beginPath();
-    let started = false;
-    for (const sample of series.samples) {
-      if (!(Number.isFinite(sample.t) && Number.isFinite(sample.flux))) continue;
-      if (sample.t < timeInfo.tMin || sample.t > timeInfo.tMax) continue;
-      const x = x0 + ((sample.t - timeInfo.tMin) / Math.max(1e-12, timeInfo.tSpan)) * insetW;
-      const y = yOf(sample.flux);
-      if (!started) {
-        ctx.moveTo(x, y);
-        started = true;
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    if (started) ctx.stroke();
-    ctx.restore();
-  }
+  ctx.fillText(title, x0 + 6, y0 + 4);
+}
+
+function drawComparisonInsetSeries(args: {
+  ctx: CanvasRenderingContext2D;
+  series: LightCurveComparisonInset["series"][number];
+  rect: PlotRect;
+  range: FluxRange;
+  timeInfo: TimeScaleInfo;
+}): void {
+  const { ctx, series, rect, range, timeInfo } = args;
+  ctx.save();
+  ctx.strokeStyle = series.color;
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  const started = drawComparisonInsetPath({ ctx, series, rect, range, timeInfo });
+  if (started) ctx.stroke();
   ctx.restore();
+}
+
+function drawComparisonInsetPath(args: {
+  ctx: CanvasRenderingContext2D;
+  series: LightCurveComparisonInset["series"][number];
+  rect: PlotRect;
+  range: FluxRange;
+  timeInfo: TimeScaleInfo;
+}): boolean {
+  const { ctx, series, rect, range, timeInfo } = args;
+  let started = false;
+  for (const sample of series.samples) {
+    if (!isFiniteTimedFlux(sample, timeInfo)) continue;
+    const point = comparisonInsetPoint(sample, rect, range, timeInfo);
+    if (!started) {
+      ctx.moveTo(point.x, point.y);
+      started = true;
+    } else {
+      ctx.lineTo(point.x, point.y);
+    }
+  }
+  return started;
+}
+
+function comparisonInsetPoint(
+  sample: { t: number; flux: number },
+  rect: PlotRect,
+  range: FluxRange,
+  timeInfo: TimeScaleInfo,
+): { x: number; y: number } {
+  return {
+    x: rect.x0 + ((sample.t - timeInfo.tMin) / Math.max(1e-12, timeInfo.tSpan)) * rect.w,
+    y: rect.y0 + rect.h - ((sample.flux - range.lo) / Math.max(1e-12, range.hi - range.lo)) * rect.h,
+  };
 }

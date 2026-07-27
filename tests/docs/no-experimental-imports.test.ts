@@ -1,7 +1,8 @@
-import fs from "node:fs";
+/** Enforces documentation boundaries against experimental implementation imports. */
+
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { walkTsFiles } from "../helpers/walkTsFiles";
+import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 describe("boundary hygiene", () => {
   it("contains no production imports from src/experimental", () => {
@@ -13,7 +14,7 @@ describe("boundary hygiene", () => {
     const importRx = /import\s+[^\n]*from\s+["'][^"']*experimental[^"']*["']/;
 
     for (const file of files) {
-      const text = fs.readFileSync(file, "utf8");
+      const text = readTextFileWithinRepo(file);
       if (importRx.test(text)) {
         offenders.push(path.relative(root, file));
       }

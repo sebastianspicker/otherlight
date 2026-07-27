@@ -1,4 +1,4 @@
-// src/render/lightCurvePlot.ts
+/** Composes the light-curve plotting surface from axes, series, and annotations. */
 
 //
 // Light-curve plotter (Canvas2D).
@@ -22,7 +22,7 @@ import {
   pushLightCurveSample,
   setLightCurveCapacity,
 } from "./lightCurvePlotBuffer";
-import type { VisibleTimeDomain, VisibleWindow } from "./lightCurvePlotMath";
+import type { VisibleWindow } from "./lightCurvePlotMath";
 import { drawLightCurvePlot } from "./lightCurvePlotRenderer";
 import type {
   LightCurveBadge,
@@ -35,14 +35,36 @@ import type {
   LightCurveSample,
   ResolvedLightCurvePlotOptions,
 } from "./lightCurvePlotTypes";
-import {
-  getVisibleSampleBounds,
-  getVisibleTimeDomain,
-  getVisibleTimeDomainInfo,
-  getVisibleWindowInfo,
-} from "./lightCurvePlotViewport";
+import { getVisibleWindowInfo } from "./lightCurvePlotViewport";
 
 export type { LightCurvePlotOptions, LightCurveSample } from "./lightCurvePlotTypes";
+
+export type LightCurveAccessibleSnapshot = {
+  sampleCount: number;
+  timeMinSec?: number;
+  timeMaxSec?: number;
+  fluxMin?: number;
+  fluxMax?: number;
+  latestFlux?: number;
+};
+
+export type LightCurveHistorySnapshot = {
+  flux: number[];
+  timeSec: number[];
+};
+
+type LightCurveTrackingOptions = Pick<
+  ResolvedLightCurvePlotOptions,
+  "xMode" | "trackingMode" | "dynamicWindowSec" | "dynamicWindowSamples"
+>;
+type LightCurveScaleOptions = Pick<
+  ResolvedLightCurvePlotOptions,
+  "yScaleMode" | "yQuantiles" | "yPadFrac" | "manualYRange"
+>;
+type LightCurveDisplayOptions = Pick<
+  ResolvedLightCurvePlotOptions,
+  "showUnityBaseline" | "showMeanLine" | "title"
+>;
 
 export class LightCurvePlot {
   private ctx: CanvasRenderingContext2D;
@@ -56,39 +78,13 @@ export class LightCurvePlot {
   private comparisonInset?: LightCurveComparisonInset;
   private detachResizeObserver: () => void;
 
-  private get flux(): number[] {
-    return this.state.flux;
-  }
-  private get t(): number[] {
-    return this.state.t;
-  }
-
   constructor(
     private canvas: HTMLCanvasElement,
-    private capacity = 2000,
+    capacity = 2000,
     opts: LightCurvePlotOptions = {},
   ) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("LightCurvePlot: 2D context unavailable.");
-    this.ctx = ctx;
-
-    this.opts = {
-      xMode: opts.xMode ?? "index",
-      yScaleMode: opts.yScaleMode ?? "robust",
-      yQuantiles: {
-        lo: opts.yQuantiles?.lo ?? 0.01,
-        hi: opts.yQuantiles?.hi ?? 0.99,
-      },
-      yPadFrac: opts.yPadFrac ?? 0.15,
-      manualYRange: opts.manualYRange,
-      showUnityBaseline: opts.showUnityBaseline ?? true,
-      showMeanLine: opts.showMeanLine ?? false,
-      title: opts.title ?? "Flux (normalized)",
-      trackingMode: opts.trackingMode ?? "fixed",
-      dynamicWindowSec: opts.dynamicWindowSec ?? 180,
-      dynamicWindowSamples: opts.dynamicWindowSamples ?? 300,
-    };
-
+    this.ctx = getLightCurveContext(canvas);
+    this.opts = resolveLightCurvePlotOptions(opts);
     this.state = createLightCurveHistoryState(capacity);
     this.detachResizeObserver = attachCanvasResizeObserver(canvas);
   }
@@ -142,6 +138,44 @@ export class LightCurvePlot {
     clearLightCurveHistory(this.state);
   }
 
+  createHistorySnapshot(): LightCurveHistorySnapshot {
+    return {
+      flux: this.state.flux.slice(this.state.startIndex),
+      timeSec: this.state.t.slice(this.state.startIndex),
+    };
+  }
+
+  restoreHistorySnapshot(snapshot: LightCurveHistorySnapshot): void {
+    clearLightCurveHistory(this.state);
+    const count = Math.min(snapshot.flux.length, snapshot.timeSec.length);
+    for (let index = 0; index < count; index++) {
+      pushLightCurveSample(this.state, { flux: snapshot.flux[index], t: snapshot.timeSec[index] });
+    }
+  }
+
+  getAccessibleSnapshot(): LightCurveAccessibleSnapshot {
+    const snapshot = this.createHistorySnapshot();
+    const finiteFlux = snapshot.flux.filter(Number.isFinite);
+    const finiteTime = snapshot.timeSec.filter(Number.isFinite);
+    return {
+      sampleCount: finiteFlux.length,
+      timeMinSec: finiteTime.length > 0 ? Math.min(...finiteTime) : undefined,
+      timeMaxSec: finiteTime.length > 0 ? Math.max(...finiteTime) : undefined,
+      fluxMin: finiteFlux.length > 0 ? Math.min(...finiteFlux) : undefined,
+      fluxMax: finiteFlux.length > 0 ? Math.max(...finiteFlux) : undefined,
+      latestFlux: finiteFlux.length > 0 ? finiteFlux[finiteFlux.length - 1] : undefined,
+    };
+  }
+
+  buildCsv(): string {
+    const snapshot = this.createHistorySnapshot();
+    const rows = snapshot.flux.map((flux, index) => {
+      const time = snapshot.timeSec[index];
+      return `${Number.isFinite(time) ? time : ""},${flux}`;
+    });
+    return `time_s,flux\n${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
+  }
+
   setOverlaySeries(series: LightCurveOverlaySeries[]): void {
     this.overlaySeries = Array.isArray(series) ? [...series] : [];
   }
@@ -166,18 +200,6 @@ export class LightCurvePlot {
     return getVisibleWindowInfo(this.state, this.opts);
   }
 
-  private getVisibleSampleBounds(): { start: number; end: number } {
-    return getVisibleSampleBounds(this.state, this.opts);
-  }
-
-  private getVisibleTimeDomain(start: number, end: number): { tMin: number; tMax: number } | null {
-    return getVisibleTimeDomain(this.state, this.opts, start, end);
-  }
-
-  private getVisibleTimeDomainInfo(start: number, end: number): VisibleTimeDomain | null {
-    return getVisibleTimeDomainInfo(this.state, this.opts, start, end);
-  }
-
   draw(): void {
     this.size = drawLightCurvePlot({
       canvas: this.canvas,
@@ -193,4 +215,57 @@ export class LightCurvePlot {
       comparisonInset: this.comparisonInset,
     });
   }
+}
+
+function getLightCurveContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("LightCurvePlot: 2D context unavailable.");
+  return ctx;
+}
+
+function resolveLightCurvePlotOptions(opts: LightCurvePlotOptions): ResolvedLightCurvePlotOptions {
+  return {
+    ...resolveLightCurveTrackingOptions(opts),
+    ...resolveLightCurveScaleOptions(opts),
+    ...resolveLightCurveDisplayOptions(opts),
+  };
+}
+
+function resolveLightCurveTrackingOptions(opts: LightCurvePlotOptions): LightCurveTrackingOptions {
+  return {
+    xMode: defaultOption(opts.xMode, "index"),
+    trackingMode: defaultOption(opts.trackingMode, "fixed"),
+    dynamicWindowSec: defaultOption(opts.dynamicWindowSec, 180),
+    dynamicWindowSamples: defaultOption(opts.dynamicWindowSamples, 300),
+  };
+}
+
+function resolveLightCurveScaleOptions(opts: LightCurvePlotOptions): LightCurveScaleOptions {
+  return {
+    yScaleMode: defaultOption(opts.yScaleMode, "robust"),
+    yQuantiles: resolveLightCurveYQuantiles(opts.yQuantiles),
+    yPadFrac: defaultOption(opts.yPadFrac, 0.15),
+    manualYRange: opts.manualYRange,
+  };
+}
+
+function resolveLightCurveDisplayOptions(opts: LightCurvePlotOptions): LightCurveDisplayOptions {
+  return {
+    showUnityBaseline: defaultOption(opts.showUnityBaseline, true),
+    showMeanLine: defaultOption(opts.showMeanLine, false),
+    title: defaultOption(opts.title, "Flux (normalized)"),
+  };
+}
+
+function resolveLightCurveYQuantiles(
+  yQuantiles: LightCurvePlotOptions["yQuantiles"],
+): ResolvedLightCurvePlotOptions["yQuantiles"] {
+  return {
+    lo: defaultOption(yQuantiles?.lo, 0.01),
+    hi: defaultOption(yQuantiles?.hi, 0.99),
+  };
+}
+
+function defaultOption<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
 }

@@ -1,3 +1,6 @@
+/**
+ * Owns cache support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { OrbitElements } from "../../core/types";
 import type { Vec3 } from "../../physics/vec3";
 import {
@@ -90,22 +93,37 @@ export function findClosestEntry(entries: NBodyCacheEntry[], t: number): NBodyCa
 }
 
 export function storeEntry(entries: NBodyCacheEntry[], state: NBodyState): void {
-  const eps = 1e-9;
-  for (let i = 0; i < entries.length; i++) {
-    if (Math.abs(entries[i].t - state.t) <= eps) {
-      entries[i] = { t: state.t, state: cloneState(state), lastAccess: Date.now() };
-      return;
-    }
+  const existingIndex = findStoredEntryIndex(entries, state.t);
+  if (existingIndex >= 0) {
+    entries[existingIndex] = makeCacheEntry(state);
+    return;
   }
 
-  entries.push({ t: state.t, state: cloneState(state), lastAccess: Date.now() });
+  entries.push(makeCacheEntry(state));
+  evictLeastRecentlyUsed(entries);
+}
 
+function findStoredEntryIndex(entries: NBodyCacheEntry[], t: number): number {
+  const eps = 1e-9;
+  for (let i = 0; i < entries.length; i++) {
+    if (Math.abs(entries[i].t - t) <= eps) return i;
+  }
+  return -1;
+}
+
+function makeCacheEntry(state: NBodyState): NBodyCacheEntry {
+  return { t: state.t, state: cloneState(state), lastAccess: Date.now() };
+}
+
+function evictLeastRecentlyUsed(entries: NBodyCacheEntry[]): void {
   if (entries.length <= NBODY_CACHE_MAX) return;
+  entries.splice(leastRecentlyUsedIndex(entries), 1);
+}
 
-  // LRU eviction: remove the least recently accessed entry to maintain
-  // a spread of cached time points instead of clustering near current time.
+function leastRecentlyUsedIndex(entries: NBodyCacheEntry[]): number {
   let lruIdx = 0;
   let lruTime = entries[0].lastAccess ?? 0;
+
   for (let i = 1; i < entries.length; i++) {
     const access = entries[i].lastAccess ?? 0;
     if (access < lruTime) {
@@ -113,5 +131,6 @@ export function storeEntry(entries: NBodyCacheEntry[], state: NBodyState): void 
       lruIdx = i;
     }
   }
-  entries.splice(lruIdx, 1);
+
+  return lruIdx;
 }

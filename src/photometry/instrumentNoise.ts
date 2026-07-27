@@ -1,4 +1,4 @@
-// src/photometry/instrumentNoise.ts
+/** Applies stateful instrument noise and systematics to normalized flux samples. */
 
 //
 // Instrument noise + systematics measurement layer.
@@ -27,17 +27,15 @@
 //     - Deterministic additive systematics/correlated terms may drive fluxPreNoise negative.
 // - Must never throw for normal invalid UI inputs; treat as safe no-op and return input flux.
 
-import { clamp, toFiniteNumber } from "../core/units";
 import { createMulberry32, type PRNG as PRNGPublic } from "./random";
+import { applyDetrend, applyElectronNoise, computeDt, isGapSample } from "./instrumentNoiseHelpers";
 import {
-  applyDetrend,
-  applyCorrelatedNoise,
-  applyDeterministicSystematics,
-  applyElectronNoise,
-  applyFluxDomainEffects,
-  computeDt,
-  isGapSample,
-} from "./instrumentNoiseHelpers";
+  clampMeasuredFlux,
+  finiteNoiseOutputOrFallback,
+  maybeResetOnTimeJump,
+  measuredFluxBeforeElectronNoise,
+  updateNoiseMemoryFlags,
+} from "./instrumentNoiseRuntime";
 
 // NOTE: Type lives in core to avoid core -> photometry dependency cycles.
 // Keep re-export for backwards compatibility with existing imports.
@@ -119,8 +117,8 @@ export function resetInstrumentNoiseState(
 }
 
 /**
- * Apply instrument noise + systematics to a (smeared or instantaneous) flux sample.
- * This mutates `state` to keep time correlation and random walks continuous.
+ * Applies instrument noise and systematics to a flux sample in normalized stellar units.
+ * Mutates `state` to preserve correlated-noise continuity; disabled configuration is a strict, mutation-free no-op.
  */
 export function applyInstrumentNoiseAndSystematics(args: {
   flux: number; // physical/smeared flux in stellar units
@@ -145,66 +143,24 @@ export function applyInstrumentNoiseAndSystematics(args: {
   if (!Number.isFinite(fluxIn) || !Number.isFinite(t)) return fluxIn;
 
   const state = args.state;
-
-  // Optional reset on backward time jumps (reset/seek semantics).
-  const r = args.resetOnTimeJump;
-  const resetEnabled = typeof r === "boolean" ? r : Boolean(r?.enabled);
-  if (resetEnabled && typeof state.lastT === "number" && Number.isFinite(state.lastT)) {
-    const rawDt = t - state.lastT;
-    if (Number.isFinite(rawDt) && rawDt < 0) {
-      resetInstrumentNoiseState(state, {
-        resetRng: typeof r === "object" ? Boolean(r.resetRng) : false,
-      });
-    }
-  }
+  maybeResetOnTimeJump({
+    tSec: t,
+    resetOnTimeJump: args.resetOnTimeJump,
+    state,
+    resetState: resetInstrumentNoiseState,
+  });
 
   const correlatedEnabled = Boolean(cfg.correlatedNoise?.enabled);
   const tempEnabled = Boolean(cfg.trends?.enabled && cfg.trends.temperature?.enabled);
   const dt = computeDt(t, args.dtSec, state.lastT);
   state.lastT = t;
+  updateNoiseMemoryFlags(state, cfg, { correlatedEnabled, tempEnabled });
 
-  // If correlated noise was enabled and is now disabled, reset its memory so re-enable starts fresh.
-  if (state._wasCorrelatedEnabled && !correlatedEnabled) {
-    state.ar1 = state.ar1 ?? { x: 0 };
-    state.ar1.x = 0;
-    state.ar1Bank = undefined;
-    state.oneOverFSignature = undefined;
-  }
-  state._wasCorrelatedEnabled = correlatedEnabled;
-
-  // Temperature random walk: optional reset-on-disable behavior.
-  const tempResetOnDisable = Boolean(cfg.trends?.temperature?.resetOnDisable);
-  if (tempResetOnDisable && state._wasTempEnabled && !tempEnabled) {
-    state.tempRW = 0;
-  }
-  state._wasTempEnabled = tempEnabled;
-
-  // ---------- Deterministic systematics + correlated noise (flux units, additive) ----------
-  const sysFluxAdd = applyDeterministicSystematics(state, cfg.trends, t, dt);
-  const corrFluxAdd = correlatedEnabled ? applyCorrelatedNoise(state, cfg.correlatedNoise, dt) : 0;
-
-  // Combine physical flux with additive terms, then apply detector/atmosphere effects.
-  const fluxPreNoise = applyFluxDomainEffects(state, cfg, fluxIn + sysFluxAdd + corrFluxAdd, t, dt);
-
-  // ---------- Photon + read noise in electrons ----------
+  const fluxPreNoise = measuredFluxBeforeElectronNoise({ fluxIn, t, dt, cfg, state, correlatedEnabled });
   let fluxOut = applyElectronNoise(state, cfg, fluxPreNoise);
 
   if (isGapSample(cfg.observer, t)) return Number.NaN;
 
   fluxOut = applyDetrend(fluxOut, t, cfg.postprocess, state);
-
-  // Optional clamp for numerical safety / UI preferences.
-  const clampCfg = cfg.clampFlux;
-  if (clampCfg?.enabled) {
-    const lo = toFiniteNumber(clampCfg.min, -1e9);
-    const hi = toFiniteNumber(clampCfg.max, 1e9);
-    fluxOut = clamp(fluxOut, lo, hi);
-  }
-
-  // Guard: if NaN/Inf produced by extreme inputs, fall back to pre-noise.
-  if (!Number.isFinite(fluxOut)) return Number.isFinite(fluxPreNoise) ? fluxPreNoise : 1.0;
-
-  return fluxOut;
+  return finiteNoiseOutputOrFallback(clampMeasuredFlux(fluxOut, cfg), fluxPreNoise);
 }
-
-export { runInstrumentNoiseSelfTests } from "./instrumentNoiseSelfTest";

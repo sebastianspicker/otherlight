@@ -1,3 +1,6 @@
+/**
+ * Owns state Sampler support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { SystemParams } from "../core/types";
 import { G_SI } from "../core/units";
 import { muFromPeriodAndA } from "../physics/kepler";
@@ -27,6 +30,20 @@ export type SampledSystemState = {
   star: SampledBodyState;
 };
 
+type RelativityConfig = ReturnType<typeof normalizeRelativityParams>;
+type TimingTerms = { ltteSec?: number; shapiroSec?: number };
+type ShapiroMass = { mu: number; r: Vec3 };
+type ShapiroTimingInput = {
+  params: SystemParams;
+  kin: BodyKinematics;
+  observerDir: Vec3;
+  r: Vec3;
+  rel: RelativityConfig;
+};
+type ShapiroDelayInput = ShapiroTimingInput & {
+  muStar: number;
+};
+
 function resolveMuStar(params: SystemParams, kin: BodyKinematics): number | undefined {
   const muNBody = params.dynamics?.nbodyPlanetMoon?.muStar;
   if (Number.isFinite(muNBody) && (muNBody as number) > 0) return muNBody as number;
@@ -49,50 +66,73 @@ function sampleTimingTerms(
   kin: BodyKinematics,
   observerDir: Vec3,
   r: Vec3,
-): { ltteSec?: number; shapiroSec?: number } {
+): TimingTerms {
   const rel = normalizeRelativityParams(params.dynamics?.relativity);
   if (!rel.enabled) return {};
 
-  const out: { ltteSec?: number; shapiroSec?: number } = {};
+  return {
+    ...ltteTimingTerm(rel, r, observerDir),
+    ...shapiroTimingTerm({ params, kin, observerDir, r, rel }),
+  };
+}
 
-  if (rel.ltte) {
-    out.ltteSec = lightTimeDelaySec(r, observerDir, rel.c);
-    if (!Number.isFinite(out.ltteSec)) out.ltteSec = undefined;
-  }
+function ltteTimingTerm(rel: RelativityConfig, r: Vec3, observerDir: Vec3): TimingTerms {
+  if (!rel.ltte) return {};
 
-  if (rel.shapiro) {
-    const muStar = resolveMuStar(params, kin);
-    if (Number.isFinite(muStar) && (muStar as number) > 0) {
-      const relativityLevel = params.dynamics?.relativityLevel ?? "toy";
-      const s =
-        relativityLevel === "enhanced"
-          ? shapiroDelayMultiBodySec({
-              rBody: r,
-              observerDir,
-              c: rel.c,
-              minImpact: rel.shapiroMinImpact,
-              masses: [
-                { mu: muStar as number, r: VEC3ZERO },
-                Number.isFinite(params.planet?.m) && (params.planet!.m as number) > 0
-                  ? { mu: G_SI * (params.planet!.m as number), r: kin.rPlanetAbs }
-                  : null,
-                Number.isFinite(params.moon?.m) && (params.moon!.m as number) > 0 && kin.rMoonAbs
-                  ? { mu: G_SI * (params.moon!.m as number), r: kin.rMoonAbs }
-                  : null,
-              ].filter(Boolean) as Array<{ mu: number; r: Vec3 }>,
-            })
-          : shapiroDelaySec({
-              r,
-              observerDir,
-              mu: muStar as number,
-              c: rel.c,
-              minImpact: rel.shapiroMinImpact,
-            });
-      out.shapiroSec = Number.isFinite(s) ? s : undefined;
-    }
-  }
+  const ltteSec = lightTimeDelaySec(r, observerDir, rel.c);
+  return Number.isFinite(ltteSec) ? { ltteSec } : {};
+}
 
-  return out;
+function shapiroTimingTerm(input: ShapiroTimingInput): TimingTerms {
+  const { params, kin, rel } = input;
+  if (!rel.shapiro) return {};
+
+  const muStar = resolveMuStar(params, kin);
+  if (!Number.isFinite(muStar) || (muStar as number) <= 0) return {};
+
+  const shapiroSec = shapiroDelayForLevel({ ...input, muStar: muStar as number });
+  return Number.isFinite(shapiroSec) ? { shapiroSec } : {};
+}
+
+function shapiroDelayForLevel(input: ShapiroDelayInput): number {
+  const { params, kin, observerDir, r, rel, muStar } = input;
+  return (params.dynamics?.relativityLevel ?? "toy") === "enhanced"
+    ? shapiroDelayMultiBodySec({
+        rBody: r,
+        observerDir,
+        c: rel.c,
+        minImpact: rel.shapiroMinImpact,
+        masses: shapiroMasses(params, kin, muStar),
+      })
+    : shapiroDelaySec({
+        r,
+        observerDir,
+        mu: muStar,
+        c: rel.c,
+        minImpact: rel.shapiroMinImpact,
+      });
+}
+
+function shapiroMasses(params: SystemParams, kin: BodyKinematics, muStar: number): ShapiroMass[] {
+  return [{ mu: muStar, r: VEC3ZERO }, planetShapiroMass(params, kin), moonShapiroMass(params, kin)].filter(
+    isShapiroMass,
+  );
+}
+
+function planetShapiroMass(params: SystemParams, kin: BodyKinematics): ShapiroMass | null {
+  return Number.isFinite(params.planet?.m) && (params.planet!.m as number) > 0
+    ? { mu: G_SI * (params.planet!.m as number), r: kin.rPlanetAbs }
+    : null;
+}
+
+function moonShapiroMass(params: SystemParams, kin: BodyKinematics): ShapiroMass | null {
+  return Number.isFinite(params.moon?.m) && (params.moon!.m as number) > 0 && kin.rMoonAbs
+    ? { mu: G_SI * (params.moon!.m as number), r: kin.rMoonAbs }
+    : null;
+}
+
+function isShapiroMass(mass: ShapiroMass | null): mass is ShapiroMass {
+  return mass !== null;
 }
 
 export function sampleSystemState(params: {

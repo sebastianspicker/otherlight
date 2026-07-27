@@ -1,3 +1,5 @@
+/** Verifies numerical properties invariants across generated physics inputs. */
+
 // tests/property/numerical-properties.test.ts
 //
 // Property-based tests for numerical correctness of core modules.

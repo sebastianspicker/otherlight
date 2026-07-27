@@ -1,3 +1,6 @@
+/**
+ * Owns types Photometry Atmosphere support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ */
 export type AtmosphereTransmissionParams = {
   enabled?: boolean;
   target?: "planet" | "moon";

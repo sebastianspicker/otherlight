@@ -1,3 +1,5 @@
+/** Verifies limb darkening derived calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import {

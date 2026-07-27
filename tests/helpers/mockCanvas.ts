@@ -1,4 +1,12 @@
-export function makeMockCanvas(w = 200, h = 100): HTMLCanvasElement {
+/** Provides canvas mocks that preserve the DOM contracts used by renderer and UI tests. */
+
+type MockCanvasContextOverrides = Record<string, unknown>;
+
+export function makeMockCanvas(
+  w = 200,
+  h = 100,
+  overrides: MockCanvasContextOverrides = {},
+): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -55,6 +63,7 @@ export function makeMockCanvas(w = 200, h = 100): HTMLCanvasElement {
       lineJoin: "miter" as CanvasLineJoin,
       textAlign: "start" as CanvasTextAlign,
       textBaseline: "alphabetic" as CanvasTextBaseline,
+      ...overrides,
     }) as unknown as CanvasRenderingContext2D;
 
   return canvas;

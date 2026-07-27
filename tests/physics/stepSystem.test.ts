@@ -1,3 +1,5 @@
+/** Verifies step system calculations in orbital dynamics and numerical integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";

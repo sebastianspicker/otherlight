@@ -1,0 +1,56 @@
+{
+  "name": "Quiet Observatory",
+  "register": "product",
+  "theme": "ink-identity-lab-surfaces-dark-plots",
+  "colors": {
+    "ink": "#081923",
+    "observatoryInk": "#081923",
+    "inkSecondary": "#123142",
+    "deepOcean": "#123142",
+    "shell": "#eef3f4",
+    "surface": "#ffffff",
+    "surfaceSoft": "#f7fafb",
+    "surfaceSubtle": "#f7fafb",
+    "text": "#12242c",
+    "text2": "#3a525c",
+    "textMuted": "#3a525c",
+    "text3": "#5a717b",
+    "border": "#c5d2d8",
+    "borderSoft": "#d7e1e6",
+    "action": "#087f73",
+    "actionHover": "#06665c",
+    "actionSoft": "#e6f5f3",
+    "actionInk": "#045248",
+    "world": "#315fba",
+    "worldSoft": "#e8eef9",
+    "signal": "#c48a1f",
+    "signalSoft": "#fbf3e3",
+    "success": "#147a45",
+    "warning": "#8a5a00",
+    "error": "#b42318",
+    "plot": "#09151d"
+  },
+  "typography": {
+    "interface": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "data": "'SF Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace",
+    "bodyPx": 15,
+    "labelPx": 13
+  },
+  "radiusPx": {
+    "small": 4,
+    "control": 6,
+    "region": 10,
+    "dialog": 12
+  },
+  "motionMs": {
+    "fast": 120,
+    "normal": 180
+  },
+  "layout": {
+    "identityBand": "ink",
+    "commandStrip": "single-row",
+    "inspectorRail": true,
+    "educationDefault": true,
+    "scientificFailClosed": true
+  }
+}

@@ -1,4 +1,4 @@
-// src/photometry/stellarVariability.ts
+/** Models phenomenological stellar variability terms in normalized flux units. */
 //
 // Small out-of-transit stellar/system photometry terms (phenomenological):
 // - Doppler beaming (a.k.a. Doppler boosting) ~ sin(phi)
@@ -19,62 +19,15 @@
 import type { OrbitElements, StellarVariabilityParams, StellarVariabilityPhaseModel } from "../core/types";
 import { clamp, isFiniteNumber, wrapTo2Pi } from "../core/units";
 import { solveKeplerE, trueAnomalyFromE } from "../physics/kepler";
+import {
+  finiteOrZero,
+  hasNoVariability,
+  normalizeClampBounds,
+  variabilityComponents,
+  type StellarVariabilityComponents,
+} from "./stellarVariabilityComponents";
 
 export type { StellarVariabilityParams, StellarVariabilityPhaseModel } from "../core/types";
-
-function finiteOrZero(x: unknown): number {
-  return isFiniteNumber(x) ? x : 0;
-}
-
-function finiteOrDefault(x: unknown, def: number): number {
-  return isFiniteNumber(x) ? x : def;
-}
-
-function flareContribution(t: number, model?: StellarVariabilityParams["flare"]): number {
-  if (!model?.enabled || !Number.isFinite(t)) return 0;
-  const amp = Math.max(0, finiteOrZero(model.amp));
-  const tPeak = finiteOrDefault(model.tPeakSec, 0);
-  const riseSec = Math.max(1e-6, finiteOrDefault(model.riseSec, 300));
-  const decaySec = Math.max(1e-6, finiteOrDefault(model.decaySec, 1200));
-  if (amp <= 0) return 0;
-
-  const dt = t - tPeak;
-  if (dt <= 0) {
-    return amp * Math.exp(-0.5 * (dt / riseSec) ** 2);
-  }
-  return amp * Math.exp(-dt / decaySec);
-}
-
-function pulsationContribution(t: number, model?: StellarVariabilityParams["pulsations"]): number {
-  if (!model?.enabled || !Number.isFinite(t) || !Array.isArray(model.modes)) return 0;
-  let acc = 0;
-  for (const mode of model.modes) {
-    const amp = finiteOrZero(mode.amp);
-    const periodSec = finiteOrDefault(mode.periodSec, NaN);
-    const phaseRad = finiteOrZero(mode.phaseRad);
-    if (!(Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0)) continue;
-    acc += amp * Math.sin((2 * Math.PI * t) / periodSec + phaseRad);
-  }
-  return Number.isFinite(acc) ? acc : 0;
-}
-
-function normalizeClampBounds(model?: StellarVariabilityParams): {
-  min: number;
-  max: number;
-} {
-  const min0 = finiteOrDefault(model?.clampMin, -1e3);
-  const max0 = finiteOrDefault(model?.clampMax, 1e3);
-
-  // If user swaps them or provides nonsense, fall back to defaults.
-  if (!Number.isFinite(min0) || !Number.isFinite(max0)) return { min: -1e3, max: 1e3 };
-  if (min0 === max0) return { min: -1e3, max: 1e3 };
-
-  const min = Math.min(min0, max0);
-  const max = Math.max(min0, max0);
-
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: -1e3, max: 1e3 };
-  return { min, max };
-}
 
 /**
  * Compute an orbital phase angle phi(t) in [0, 2π) from (period, t0).
@@ -102,16 +55,29 @@ export function spotLifecycleWeight(params: {
   t0?: number;
   phaseOffset?: number;
 }): number {
-  const t = params.t;
-  const lifetime = params.lifetimeSec;
-  if (!Number.isFinite(t) || !Number.isFinite(lifetime) || lifetime <= 0) return 1;
+  const inputs = resolveSpotLifecycleInputs(params);
+  if (!inputs) return 1;
 
-  const t0 = isFiniteNumber(params.t0) ? (params.t0 as number) : 0;
-  const phaseOffset = isFiniteNumber(params.phaseOffset) ? (params.phaseOffset as number) : 0;
-
-  const phi = wrapTo2Pi((2 * Math.PI * (t - t0)) / lifetime + phaseOffset);
+  const phi = wrapTo2Pi((2 * Math.PI * (inputs.t - inputs.t0)) / inputs.lifetimeSec + inputs.phaseOffset);
   const w = 0.5 - 0.5 * Math.cos(phi);
   return Number.isFinite(w) ? clamp(w, 0, 1) : 1;
+}
+
+function resolveSpotLifecycleInputs(params: {
+  t: number;
+  lifetimeSec: number;
+  t0?: number;
+  phaseOffset?: number;
+}): { t: number; lifetimeSec: number; t0: number; phaseOffset: number } | undefined {
+  if (!Number.isFinite(params.t) || !Number.isFinite(params.lifetimeSec) || params.lifetimeSec <= 0) {
+    return undefined;
+  }
+  return {
+    t: params.t,
+    lifetimeSec: params.lifetimeSec,
+    t0: isFiniteNumber(params.t0) ? (params.t0 as number) : 0,
+    phaseOffset: isFiniteNumber(params.phaseOffset) ? (params.phaseOffset as number) : 0,
+  };
 }
 
 /**
@@ -138,6 +104,70 @@ function orbitalPhaseFromTrueAnomaly(params: { t: number; period: number; t0: nu
   return wrapTo2Pi(nu);
 }
 
+type StellarVariabilityContext = {
+  t: number;
+  orbit: OrbitElements;
+  model: StellarVariabilityParams;
+  period: number;
+  t0: number;
+};
+
+function resolveStellarVariabilityContext(params: {
+  t: number;
+  orbit: OrbitElements;
+  model?: StellarVariabilityParams;
+}): StellarVariabilityContext | undefined {
+  const model = params.model;
+  if (!model?.enabled) return undefined;
+  const period = params.orbit?.period;
+  const t0 = params.orbit?.t0;
+  if (!hasValidOrbitalClock(params.t, period, t0)) return undefined;
+  return { t: params.t, orbit: params.orbit, model, period, t0 };
+}
+
+function hasValidOrbitalClock(t: number, period: number, t0: number): boolean {
+  return Number.isFinite(t) && Number.isFinite(period) && period > 0 && Number.isFinite(t0);
+}
+
+function variabilityPhase(context: StellarVariabilityContext): number {
+  const phaseModel: StellarVariabilityPhaseModel = context.model.phaseModel ?? "linear-period";
+  if (phaseModel === "true-anomaly") {
+    return orbitalPhaseFromTrueAnomaly({
+      t: context.t,
+      period: context.period,
+      t0: context.t0,
+      e: context.orbit.e,
+    });
+  }
+  return orbitalPhaseFromPeriod({ t: context.t, period: context.period, t0: context.t0 });
+}
+
+function harmonicVariabilityTerms(
+  phi: number,
+  model: StellarVariabilityParams,
+  components: StellarVariabilityComponents,
+): number {
+  const beamingOffset = finiteOrZero(model.beamingOffset);
+  const ellipOffset = finiteOrZero(model.ellipsoidalOffset);
+  return (
+    components.beamingAmp * Math.sin(phi + beamingOffset) -
+    components.ellipAmp * Math.cos(2 * (phi + ellipOffset))
+  );
+}
+
+function combineVariabilityTerms(
+  phi: number,
+  model: StellarVariabilityParams,
+  components: StellarVariabilityComponents,
+): number {
+  return (
+    components.constant +
+    harmonicVariabilityTerms(phi, model, components) +
+    components.flare +
+    components.pulsations
+  );
+}
+
 /**
  * Phenomenological stellar variability flux term (additive, in stellar units).
  *
@@ -154,110 +184,18 @@ export function stellarVariabilityFlux(params: {
   orbit: OrbitElements;
   model?: StellarVariabilityParams;
 }): number {
-  const model = params.model;
-  if (!model?.enabled) return 0;
+  const context = resolveStellarVariabilityContext(params);
+  if (!context) return 0;
 
-  const orbit = params.orbit;
-  const t = params.t;
+  const components = variabilityComponents(context.t, context.model);
+  if (hasNoVariability(components)) return 0;
 
-  const P = orbit?.period;
-  const t0 = orbit?.t0;
-
-  if (!Number.isFinite(t) || !Number.isFinite(P) || P <= 0 || !Number.isFinite(t0)) return 0;
-
-  const beamingAmp = finiteOrZero(model.beamingAmp);
-  const ellipAmp = finiteOrZero(model.ellipsoidalAmp);
-  const constant = finiteOrDefault(model.constant, 0);
-  const flare = flareContribution(t, model.flare);
-  const pulsations = pulsationContribution(t, model.pulsations);
-
-  // Fast no-op.
-  if (beamingAmp === 0 && ellipAmp === 0 && constant === 0 && flare === 0 && pulsations === 0) return 0;
-
-  const phaseModel: StellarVariabilityPhaseModel = model.phaseModel ?? "linear-period";
-
-  const phi =
-    phaseModel === "true-anomaly"
-      ? orbitalPhaseFromTrueAnomaly({ t, period: P, t0, e: orbit.e })
-      : orbitalPhaseFromPeriod({ t, period: P, t0 });
-
+  const phi = variabilityPhase(context);
   if (!Number.isFinite(phi)) return 0;
 
-  const beamingOffset = finiteOrZero(model.beamingOffset);
-  const ellipOffset = finiteOrZero(model.ellipsoidalOffset);
-
-  // Compute harmonics:
-  // Beaming: ~ sin(phi)
-  // Ellipsoidal: ~ -cos(2*phi) (negative sign: flux is maximized at quadrature phases,
-  // where the tidal bulge presents maximum cross-section to the observer).
-  const termBeaming = beamingAmp * Math.sin(phi + beamingOffset);
-  const termEllip = -ellipAmp * Math.cos(2 * (phi + ellipOffset));
-
-  const out = constant + termBeaming + termEllip + flare + pulsations;
+  const out = combineVariabilityTerms(phi, context.model, components);
   if (!Number.isFinite(out)) return 0;
 
-  const { min, max } = normalizeClampBounds(model);
+  const { min, max } = normalizeClampBounds(context.model);
   return clamp(out, min, max);
-}
-
-// ---------------------------
-// Minimal built-in tests
-// ---------------------------
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`stellarVariability self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-12): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-/**
- * Self-tests:
- * - For e=0, "true-anomaly" and "linear-period" should match (nu == M modulo 2π).
- * - The function should be stable and finite for typical values.
- */
-export function runStellarVariabilitySelfTests(): void {
-  const orbitCirc: OrbitElements = {
-    a: 1,
-    e: 0,
-    inc: 0,
-    Omega: 0,
-    omega: 0,
-    period: 10,
-    t0: 0,
-  };
-
-  for (const t of [0, 1, 2.5, 7.7, 10.0, 123.4]) {
-    const phiLin = orbitalPhaseFromPeriod({
-      t,
-      period: orbitCirc.period,
-      t0: orbitCirc.t0,
-    });
-    const phiTA = orbitalPhaseFromTrueAnomaly({
-      t,
-      period: orbitCirc.period,
-      t0: orbitCirc.t0,
-      e: orbitCirc.e,
-    });
-
-    assert(Number.isFinite(phiLin) && Number.isFinite(phiTA), "Phases must be finite for e=0.");
-
-    // Compare wrapped difference.
-    const d = wrapTo2Pi(phiLin - phiTA);
-    assert(approxEq(d, 0, 1e-10) || approxEq(d, 2 * Math.PI, 1e-10), "e=0 phases should match.");
-  }
-
-  const f = stellarVariabilityFlux({
-    t: 3,
-    orbit: orbitCirc,
-    model: {
-      enabled: true,
-      beamingAmp: 1e-4,
-      ellipsoidalAmp: 2e-4,
-      constant: 0,
-      phaseModel: "linear-period",
-    },
-  });
-  assert(Number.isFinite(f), "Flux must be finite for typical settings.");
 }

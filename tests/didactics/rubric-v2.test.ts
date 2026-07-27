@@ -1,3 +1,5 @@
+/** Verifies rubric v2 contracts supporting interpretable lesson flows. */
+
 import { describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";

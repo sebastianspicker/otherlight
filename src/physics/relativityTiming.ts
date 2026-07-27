@@ -1,4 +1,4 @@
-// src/physics/relativity.ts
+/** Converts relativistic orbital corrections into transit-timing observables. */
 //
 // Lightweight relativity-inspired timing and precession utilities.
 //
@@ -6,11 +6,11 @@
 // - These are toy-model corrections intended for timing offsets and simple apsidal precession.
 // - Speed of light `c` must be provided in SI units (m/s).
 
-import type { OrbitElements } from "../core/types";
 import type { RelativityParams } from "../core/typesDynamics";
-import { muFromPeriodAndA } from "./kepler";
+import { evaluateShapiroDelay, evaluateShapiroDelayMultiBody } from "./relativityShapiro";
 import type { Vec3 } from "./vec3";
 import { vDot, vIsFinite, vLen, vNormalizeOrZero } from "./vec3";
+export { grPrecessionPerOrbit, resolveGrPrecessionPerOrbit } from "./relativityPrecession";
 
 export type { RelativityParams };
 
@@ -47,9 +47,19 @@ export type LightTimeSolveResult = {
   diagnostics: LightTimeSolveDiagnostics;
 };
 
-type ShapiroDelayEvaluation = {
-  delaySec: number;
-  impactFloorEngaged: boolean;
+type LightTimeSolveInput = {
+  tObs: number;
+  rAtTime: (t: number) => Vec3;
+  observerDir: Vec3;
+  c: number;
+  shapiro?: {
+    enabled: boolean;
+    mu?: number;
+    minImpact?: number;
+    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
+  };
+  maxIters?: number;
+  tolSec?: number;
 };
 
 const DEFAULT_LTTE_ITERS = 2;
@@ -95,12 +105,9 @@ export function lightTimeDelaySec(r: Vec3, observerDir: Vec3, c: number): number
  * Shapiro delay for a point mass at the origin, relative to a reference constant.
  * This returns a small, geometry-dependent timing correction (can be +/-).
  *
- * Note: this is a *relative-delay* model only. It computes an absolute Shapiro
- * delay without subtracting a baseline/reference geometry. This is acceptable
- * for differential timing work (e.g., TTV computation) because both the
- * reference and observed epochs receive the same systematic offset, which
- * cancels in the difference. Do not use the raw return value as a calibrated
- * absolute time delay.
+ * The additive constant is fixed by the implementation's dimensionless
+ * reference geometry. Use differences between epochs; do not interpret the
+ * raw return value as a calibrated absolute propagation time.
  */
 export function shapiroDelaySec(params: {
   r: Vec3;
@@ -110,43 +117,6 @@ export function shapiroDelaySec(params: {
   minImpact?: number;
 }): number {
   return evaluateShapiroDelay(params).delaySec;
-}
-
-function evaluateShapiroDelay(params: {
-  r: Vec3;
-  observerDir: Vec3;
-  mu: number;
-  c: number;
-  minImpact?: number;
-}): ShapiroDelayEvaluation {
-  const { r, observerDir, mu, c } = params;
-  if (!vIsFinite(r) || !vIsFinite(observerDir)) return { delaySec: 0, impactFloorEngaged: false };
-  if (!(Number.isFinite(mu) && mu > 0)) return { delaySec: 0, impactFloorEngaged: false };
-  if (!(Number.isFinite(c) && c > 0)) return { delaySec: 0, impactFloorEngaged: false };
-
-  const dir = vNormalizeOrZero(observerDir, 1e-15);
-  if (vLen(dir) === 0) return { delaySec: 0, impactFloorEngaged: false };
-
-  const rMag = vLen(r);
-  if (!(rMag > 0) || !Number.isFinite(rMag)) return { delaySec: 0, impactFloorEngaged: false };
-
-  const z = vDot(r, dir);
-  const minImpact = Number.isFinite(params.minImpact)
-    ? Math.max(0, params.minImpact as number)
-    : DEFAULT_SHAPIRO_MIN_IMPACT;
-  const minR = Math.max(1e-12, minImpact);
-  const rawRPlusZ = rMag + z;
-  const impactFloorEngaged = rawRPlusZ < minR;
-  const rPlusZ = Math.max(rawRPlusZ, minR);
-
-  const arg = rPlusZ / rMag;
-  if (!(arg > 0) || !Number.isFinite(arg)) return { delaySec: 0, impactFloorEngaged };
-
-  const delay = (2 * mu * Math.log(arg)) / (c * c * c);
-  return {
-    delaySec: Number.isFinite(delay) ? delay : 0,
-    impactFloorEngaged,
-  };
 }
 
 /**
@@ -164,72 +134,15 @@ export function shapiroDelayMultiBodySec(params: {
   return evaluateShapiroDelayMultiBody(params).delaySec;
 }
 
-function evaluateShapiroDelayMultiBody(params: {
-  rBody: Vec3;
-  observerDir: Vec3;
-  masses: Array<{ mu: number; r: Vec3 }>;
-  c: number;
-  minImpact?: number;
-}): ShapiroDelayEvaluation {
-  if (!Array.isArray(params.masses) || params.masses.length === 0) {
-    return { delaySec: 0, impactFloorEngaged: false };
-  }
-  let sum = 0;
-  let impactFloorEngaged = false;
-  for (const m of params.masses) {
-    if (!m || !vIsFinite(m.r)) continue;
-    const evaluated = evaluateShapiroDelay({
-      r: { x: params.rBody.x - m.r.x, y: params.rBody.y - m.r.y, z: params.rBody.z - m.r.z },
-      observerDir: params.observerDir,
-      mu: m.mu,
-      c: params.c,
-      minImpact: params.minImpact,
-    });
-    impactFloorEngaged ||= evaluated.impactFloorEngaged;
-    const d = evaluated.delaySec;
-    if (Number.isFinite(d)) sum += d;
-  }
-  return {
-    delaySec: Number.isFinite(sum) ? sum : 0,
-    impactFloorEngaged,
-  };
-}
-
 /**
  * Solve for retarded/emission time using a fixed-point iteration:
  * t_obs = t_emit + (light travel time from r(t_emit) to observer), so t_emit = t_obs - totalDelay(r(t_emit)).
  */
-export function solveLightTimeCorrectedTime(params: {
-  tObs: number;
-  rAtTime: (t: number) => Vec3;
-  observerDir: Vec3;
-  c: number;
-  shapiro?: {
-    enabled: boolean;
-    mu?: number;
-    minImpact?: number;
-    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
-  };
-  maxIters?: number;
-  tolSec?: number;
-}): number {
+export function solveLightTimeCorrectedTime(params: LightTimeSolveInput): number {
   return solveLightTimeCorrectedResult(params).tEmit;
 }
 
-export function solveLightTimeCorrectedResult(params: {
-  tObs: number;
-  rAtTime: (t: number) => Vec3;
-  observerDir: Vec3;
-  c: number;
-  shapiro?: {
-    enabled: boolean;
-    mu?: number;
-    minImpact?: number;
-    massesAtTime?: (t: number) => Array<{ mu: number; r: Vec3 }>;
-  };
-  maxIters?: number;
-  tolSec?: number;
-}): LightTimeSolveResult {
+export function solveLightTimeCorrectedResult(params: LightTimeSolveInput): LightTimeSolveResult {
   const tObs = params.tObs;
   const maxItersImplicit = !Number.isFinite(params.maxIters);
   const tolSecImplicit = !Number.isFinite(params.tolSec);
@@ -429,48 +342,4 @@ export function solveLightTimeCorrectedResult(params: {
       residualSec,
     },
   };
-}
-
-/**
- * Resolve GR precession per orbit using the standard weak-field formula if no override is provided.
- * If override is a non-zero finite number, it takes precedence.
- */
-export function resolveGrPrecessionPerOrbit(params: {
-  orbit: OrbitElements;
-  c: number;
-  override?: number;
-  mu?: number;
-}): number {
-  const override = params.override;
-  if (Number.isFinite(override) && override !== 0) return override as number;
-
-  const orbit = params.orbit;
-  if (!(Number.isFinite(orbit.a) && orbit.a > 0 && Number.isFinite(orbit.period) && orbit.period > 0)) {
-    return 0;
-  }
-
-  const mu =
-    Number.isFinite(params.mu) && (params.mu as number) > 0
-      ? (params.mu as number)
-      : muFromPeriodAndA(orbit.period, orbit.a);
-
-  if (!(Number.isFinite(mu) && mu > 0)) return 0;
-  return grPrecessionPerOrbit({ mu, a: orbit.a, e: orbit.e, c: params.c });
-}
-
-/**
- * Apsidal precession per orbit from the GR weak-field formula:
- * Δω = 6π * mu / (a (1 - e^2) c^2)
- */
-export function grPrecessionPerOrbit(params: { mu: number; a: number; e: number; c: number }): number {
-  const { mu, a, e, c } = params;
-  if (!(Number.isFinite(mu) && mu > 0)) return 0;
-  if (!(Number.isFinite(a) && a > 0)) return 0;
-  if (!(Number.isFinite(e) && e >= 0 && e < 1)) return 0;
-  if (!(Number.isFinite(c) && c > 0)) return 0;
-
-  const denom = a * (1 - e * e) * c * c;
-  if (!(denom > 0) || !Number.isFinite(denom)) return 0;
-
-  return (6 * Math.PI * mu) / denom;
 }

@@ -1,4 +1,4 @@
-// src/photometry/transitShapes.ts
+/** Integrates mixed occulter silhouettes across the projected stellar disk. */
 //
 // Generic transit integrators for mixed-shape occulters (ellipses, rings).
 // These are numeric midpoint integrations and are used as a fallback when
@@ -14,15 +14,58 @@ import { clampGridRes } from "./occulterCircle";
 import { type OcculterShape, sanitizeOcculterShapes } from "./occulterEllipse";
 import { integrateDiskMidpointShapes } from "./diskMidpoint";
 
+function requirePositiveStarRadius(rStar: number, caller: string): void {
+  if (!isFinitePositive(rStar)) {
+    throw new Error(`${caller}: rStar must be a positive finite number.`);
+  }
+}
+
+function requireLimbDarkeningLaw(
+  law: LimbDarkeningLaw | undefined,
+  constraints: LimbDarkeningConstraints | undefined,
+): asserts law is LimbDarkeningLaw {
+  if (!law) {
+    throw new Error("fluxLimbDarkenedDiskShapes: limbDarkeningLaw must be provided.");
+  }
+  validateLimbDarkeningLaw(law, constraints);
+}
+
+function normalizedFluxRatio(total: number, blocked: number): number {
+  if (!(Number.isFinite(total) && total > 0)) return 1.0;
+  return clamp01(1 - blocked / total);
+}
+
+function positivePatchFactor(
+  x: number,
+  y: number,
+  patches: ReturnType<typeof sanitizeBrightnessPatches>,
+  mode: PatchCombineMode,
+): number {
+  const factor = patchFactorAt(x, y, patches, mode);
+  return Number.isFinite(factor) ? Math.max(0, factor) : 1;
+}
+
+function limbDarkenedPatchIntensity(params: {
+  x: number;
+  y: number;
+  mu: number;
+  limbDarkeningLaw: LimbDarkeningLaw;
+  patches: ReturnType<typeof sanitizeBrightnessPatches>;
+  patchCombineMode: PatchCombineMode;
+}): number {
+  const Ild = intensityNonNegative(params.mu, params.limbDarkeningLaw);
+  if (Ild === 0) return 0;
+  const I = Ild * positivePatchFactor(params.x, params.y, params.patches, params.patchCombineMode);
+  return Number.isFinite(I) ? I : 0;
+}
+
 export function fluxUniformDiskShapes(params: {
   rStar: number;
   occulters?: readonly OcculterShape[];
   gridRes?: number;
 }): number {
   const rStar = params.rStar;
-  if (!isFinitePositive(rStar)) {
-    throw new Error("fluxUniformDiskShapes: rStar must be a positive finite number.");
-  }
+  requirePositiveStarRadius(rStar, "fluxUniformDiskShapes");
 
   const occulters = sanitizeOcculterShapes(rStar, params.occulters ?? []);
   if (occulters.length === 0) return 1.0;
@@ -51,9 +94,7 @@ export function fluxUniformDiskWithPatchesShapes(params: {
   patchCombineMode?: PatchCombineMode;
 }): number {
   const rStar = params.rStar;
-  if (!isFinitePositive(rStar)) {
-    throw new Error("fluxUniformDiskWithPatchesShapes: rStar must be a positive finite number.");
-  }
+  requirePositiveStarRadius(rStar, "fluxUniformDiskWithPatchesShapes");
 
   const occulters = sanitizeOcculterShapes(rStar, params.occulters ?? []);
   if (occulters.length === 0) return 1.0;
@@ -67,13 +108,11 @@ export function fluxUniformDiskWithPatchesShapes(params: {
     occulters,
     gridRes,
     intensityAt: ({ x, y }) => {
-      const I = patchFactorAt(x, y, patches, patchCombineMode);
-      return Number.isFinite(I) ? Math.max(0, I) : 1;
+      return positivePatchFactor(x, y, patches, patchCombineMode);
     },
   });
 
-  if (!(Number.isFinite(total) && total > 0)) return 1.0;
-  return clamp01(1 - blocked / total);
+  return normalizedFluxRatio(total, blocked);
 }
 
 export function fluxLimbDarkenedDiskShapes(params: {
@@ -87,14 +126,8 @@ export function fluxLimbDarkenedDiskShapes(params: {
   earlyExitFluxEps?: number;
 }): number {
   const rStar = params.rStar;
-  if (!isFinitePositive(rStar)) {
-    throw new Error("fluxLimbDarkenedDiskShapes: rStar must be a positive finite number.");
-  }
-  if (!params.limbDarkeningLaw) {
-    throw new Error("fluxLimbDarkenedDiskShapes: limbDarkeningLaw must be provided.");
-  }
-
-  validateLimbDarkeningLaw(params.limbDarkeningLaw, params.constraints);
+  requirePositiveStarRadius(rStar, "fluxLimbDarkenedDiskShapes");
+  requireLimbDarkeningLaw(params.limbDarkeningLaw, params.constraints);
 
   const occulters = sanitizeOcculterShapes(rStar, params.occulters ?? []);
   if (occulters.length === 0) return 1.0;
@@ -108,16 +141,17 @@ export function fluxLimbDarkenedDiskShapes(params: {
     occulters,
     gridRes,
     intensityAt: ({ x, y, mu }) => {
-      const Ild = intensityNonNegative(mu, params.limbDarkeningLaw);
-      if (Ild === 0) return 0;
-      const Praw = patchFactorAt(x, y, patches, patchCombineMode);
-      const P = Number.isFinite(Praw) ? Math.max(0, Praw) : 1;
-      const I = Ild * P;
-      return Number.isFinite(I) ? I : 0;
+      return limbDarkenedPatchIntensity({
+        x,
+        y,
+        mu,
+        limbDarkeningLaw: params.limbDarkeningLaw,
+        patches,
+        patchCombineMode,
+      });
     },
     earlyExitFluxEps: params.earlyExitFluxEps ?? 0,
   });
 
-  if (!(Number.isFinite(total) && total > 0)) return 1.0;
-  return clamp01(1 - blocked / total);
+  return normalizedFluxRatio(total, blocked);
 }

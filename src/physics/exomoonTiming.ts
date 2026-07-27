@@ -1,4 +1,4 @@
-// src/physics/exomoonTiming.ts
+/** Computes exomoon timing signals from the system geometry and orbital state. */
 //
 // Exomoon timing/shape diagnostics and lightweight, data-driven orbit-orientation evolution.
 //
@@ -15,11 +15,8 @@
 // - Results in simulator-native units (length units, seconds, radians).
 
 import type { OrbitElements } from "../core/types";
-import type { Vec3 } from "./vec3";
 
-import { clamp, isFiniteNumber, normalizeFiniteDiffDtSec, toFinitePos, wrapTo2Pi } from "../core/units";
-import { buildSkyBasis, projectToSkyWithBasis } from "./frames";
-import { vIsFinite, vNearlyZero, vNormalizeOrZero } from "./vec3";
+import { clamp, isFiniteNumber, wrapTo2Pi } from "../core/units";
 
 export type AngleWrapMode = "none" | "2pi";
 
@@ -70,43 +67,77 @@ export type OrbitOrientationEvolution = {
 
 export type SkyPoint = { x: number; y: number; z: number };
 
-export type SkyPlaneSpeedOptions = {
-  /** Finite-difference step size [s]. Must be > 0. */
-  dtSec?: number;
-
-  /**
-   * If true, compute speed via central difference using t±dt/2.
-   * If false, uses forward difference t→t+dt.
-   * Default: true.
-   */
-  central?: boolean;
-
-  /** Minimum dt enforced for numerical stability (seconds). */
-  dtMinSec?: number;
-};
-
-const DEFAULT_DT_SEC = 2.0;
-const DEFAULT_DT_MIN_SEC = 1e-6;
-
-function normalizeDtSec(dtSec: unknown, dtMinSec: unknown): number {
-  // Base policy (repo-wide): finite, strictly-positive dt with a built-in epsilon.
-  const dtBase = normalizeFiniteDiffDtSec(dtSec, DEFAULT_DT_SEC);
-
-  // Optional local floor (can be >= base epsilon).
-  const dtMin = toFinitePos(dtMinSec, DEFAULT_DT_MIN_SEC, DEFAULT_DT_MIN_SEC);
-
-  return Math.max(dtMin, dtBase);
-}
-
 function wrapAngle(a: number, mode: AngleWrapMode): number {
   if (!Number.isFinite(a)) return a;
   return mode === "2pi" ? wrapTo2Pi(a) : a;
 }
 
-function normalizeObserverDirOrNaN(observerDir: Vec3): Vec3 | null {
-  if (!vIsFinite(observerDir)) return null;
-  const dir = vNormalizeOrZero(observerDir, 1e-15);
-  return vNearlyZero(dir, 1e-15) ? null : dir;
+type OrientationAngles = Pick<OrbitElements, "Omega" | "omega" | "inc">;
+
+type OrientationRates = {
+  OmegaDot: number;
+  omegaDot: number;
+  incDot: number;
+};
+
+type OrientationSettings = {
+  wrapMode: AngleWrapMode;
+  clampInc: boolean;
+};
+
+function finiteOrDefault(value: number | undefined, fallback: number): number {
+  return isFiniteNumber(value) ? value : fallback;
+}
+
+function orientationSettings(evo: OrbitOrientationEvolution): OrientationSettings {
+  return {
+    wrapMode: evo.wrapAngles ?? "2pi",
+    clampInc: evo.clampInc01Pi ?? true,
+  };
+}
+
+function orientationRates(evo: OrbitOrientationEvolution): OrientationRates {
+  return {
+    OmegaDot: finiteOrDefault(evo.OmegaDot, 0),
+    omegaDot: finiteOrDefault(evo.omegaDot, 0),
+    incDot: finiteOrDefault(evo.incDot, 0),
+  };
+}
+
+function orientationBaselines(base: OrbitElements, evo: OrbitOrientationEvolution): OrientationAngles {
+  return {
+    Omega: finiteOrDefault(evo.Omega0, base.Omega),
+    omega: finiteOrDefault(evo.omega0, base.omega),
+    inc: finiteOrDefault(evo.inc0, base.inc),
+  };
+}
+
+function normalizedOrientationAngles(
+  angles: OrientationAngles,
+  settings: OrientationSettings,
+): OrientationAngles {
+  return {
+    Omega: wrapAngle(angles.Omega, settings.wrapMode),
+    omega: wrapAngle(angles.omega, settings.wrapMode),
+    inc: settings.clampInc ? clamp(angles.inc, 0, Math.PI) : angles.inc,
+  };
+}
+
+function evolvedOrientationAngles(
+  baseAngles: OrientationAngles,
+  rates: OrientationRates,
+  dt: number,
+  settings: OrientationSettings,
+): OrientationAngles {
+  const inc = baseAngles.inc + rates.incDot * dt;
+  return normalizedOrientationAngles(
+    {
+      Omega: baseAngles.Omega + rates.OmegaDot * dt,
+      omega: baseAngles.omega + rates.omegaDot * dt,
+      inc: settings.clampInc && Number.isFinite(inc) ? clamp(inc, 0, Math.PI) : inc,
+    },
+    { ...settings, clampInc: false },
+  );
 }
 
 /**
@@ -120,96 +151,17 @@ export function applyOrientationEvolution(
   tSec: number,
   evo: OrbitOrientationEvolution | undefined,
 ): OrbitElements {
-  const enabled = Boolean(evo?.enabled);
-  if (!enabled) return { ...base };
+  if (!evo?.enabled) return { ...base };
 
-  const tRef = isFiniteNumber(evo?.tRef) ? evo.tRef : 0;
+  const settings = orientationSettings(evo);
+  const baselines = orientationBaselines(base, evo);
+  const tRef = finiteOrDefault(evo.tRef, 0);
   const dt = Number.isFinite(tSec) ? tSec - tRef : NaN;
+  const angles = Number.isFinite(dt)
+    ? evolvedOrientationAngles(baselines, orientationRates(evo), dt, settings)
+    : normalizedOrientationAngles(baselines, settings);
 
-  const OmegaDot = isFiniteNumber(evo?.OmegaDot) ? evo.OmegaDot : 0;
-  const omegaDot = isFiniteNumber(evo?.omegaDot) ? evo.omegaDot : 0;
-  const incDot = isFiniteNumber(evo?.incDot) ? evo.incDot : 0;
-
-  const wrapMode: AngleWrapMode = evo?.wrapAngles ?? "2pi";
-  const clampInc = evo?.clampInc01Pi ?? true;
-
-  const OmegaBase = isFiniteNumber(evo?.Omega0) ? evo.Omega0 : base.Omega;
-  const omegaBase = isFiniteNumber(evo?.omega0) ? evo.omega0 : base.omega;
-  const incBase = isFiniteNumber(evo?.inc0) ? evo.inc0 : base.inc;
-
-  // If tSec is non-finite, keep base values (robust no-op rather than spreading NaNs).
-  if (!Number.isFinite(dt)) {
-    return {
-      ...base,
-      Omega: wrapAngle(OmegaBase, wrapMode),
-      omega: wrapAngle(omegaBase, wrapMode),
-      inc: clampInc ? clamp(incBase, 0, Math.PI) : incBase,
-    };
-  }
-
-  const Omega = wrapAngle(OmegaBase + OmegaDot * dt, wrapMode);
-  const omega = wrapAngle(omegaBase + omegaDot * dt, wrapMode);
-
-  // Inclination is not periodic; clamp optionally.
-  let inc = incBase + incDot * dt;
-  if (clampInc && Number.isFinite(inc)) inc = clamp(inc, 0, Math.PI);
-
-  return { ...base, Omega, omega, inc };
-}
-
-/**
- * Estimate sky-plane speed |v⊥| from two sky-projected points and a time step.
- * Uses only x,y components (sky plane). z is ignored.
- */
-function estimateSkyPlaneSpeedFromSkyPoints(p0: SkyPoint, p1: SkyPoint, dtSec: number): number {
-  if (!Number.isFinite(dtSec) || dtSec <= 0) return NaN;
-  if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y) || !Number.isFinite(p1.x) || !Number.isFinite(p1.y))
-    return NaN;
-
-  const vx = (p1.x - p0.x) / dtSec;
-  const vy = (p1.y - p0.y) / dtSec;
-  const v = Math.hypot(vx, vy);
-
-  return Number.isFinite(v) ? v : NaN;
-}
-
-/**
- * Estimate sky-plane speed |v⊥| for a body given a position function r(t) in inertial coordinates.
- *
- * Central difference:
- * - If central=true, uses t±dt/2.
- * - Else uses forward difference.
- *
- * Numerical stability:
- * - Uses repo-wide dt policy, then enforces dt >= dtMinSec.
- */
-function estimateSkyPlaneSpeed(
-  rAt: (tSec: number) => Vec3,
-  tSec: number,
-  observerDir: Vec3,
-  opts: SkyPlaneSpeedOptions | undefined = {},
-): number {
-  const dt = normalizeDtSec(opts?.dtSec, opts?.dtMinSec);
-  const central = opts?.central ?? true;
-
-  if (!Number.isFinite(tSec)) return NaN;
-  if (!Number.isFinite(dt) || dt <= 0) return NaN;
-
-  const dir = normalizeObserverDirOrNaN(observerDir);
-  if (!dir) return NaN;
-
-  const t0 = central ? tSec - 0.5 * dt : tSec;
-  const t1 = central ? tSec + 0.5 * dt : tSec + dt;
-
-  const r0 = rAt(t0);
-  const r1 = rAt(t1);
-  if (!vIsFinite(r0) || !vIsFinite(r1)) return NaN;
-
-  const basis = buildSkyBasis(dir);
-  const p0 = projectToSkyWithBasis(r0, basis);
-  const p1 = projectToSkyWithBasis(r1, basis);
-
-  return estimateSkyPlaneSpeedFromSkyPoints(p0, p1, t1 - t0);
+  return { ...base, ...angles };
 }
 
 /**
@@ -244,65 +196,18 @@ export function impactParameterFromSkyY(y: number, rStar: number): number {
  * Behind-star geometry returns NaN so higher-level callers can omit the value.
  */
 export function impactParameterFromProjectedSky(sky: SkyPoint | undefined, rStar: number): number {
-  if (!sky) return NaN;
-  if (!Number.isFinite(sky.x) || !Number.isFinite(sky.y) || !Number.isFinite(sky.z)) return NaN;
-  if (!(sky.z > 0)) return NaN;
-  if (!Number.isFinite(rStar) || rStar <= 0) return NaN;
+  if (!isFrontFiniteSkyPoint(sky)) return NaN;
+  if (!isPositiveFiniteRadius(rStar)) return NaN;
 
   const b = Math.hypot(sky.x, sky.y) / rStar;
   return Number.isFinite(b) ? b : NaN;
 }
 
-/* -----------------------------
- * Minimal built-in tests
- * ----------------------------- */
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`exomoonTiming self-test failed: ${msg}`);
+function isFrontFiniteSkyPoint(sky: SkyPoint | undefined): sky is SkyPoint {
+  if (!sky) return false;
+  return Number.isFinite(sky.x) && Number.isFinite(sky.y) && Number.isFinite(sky.z) && sky.z > 0;
 }
 
-function approxEq(a: number, b: number, eps = 1e-10): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-export function runExomoonTimingSelfTests(): void {
-  const base: OrbitElements = {
-    a: 1,
-    e: 0.1,
-    inc: 0.3,
-    Omega: 1,
-    omega: 2,
-    period: 10,
-    t0: 0,
-  };
-
-  const evo = {
-    enabled: true,
-    tRef: 0,
-    OmegaDot: 0.1,
-    omegaDot: -0.2,
-    incDot: 0.05,
-    wrapAngles: "2pi" as AngleWrapMode,
-    clampInc01Pi: true,
-  };
-
-  const evolved = applyOrientationEvolution(base, 10, evo);
-  assert(approxEq(evolved.Omega, wrapTo2Pi(1 + 1), 1e-12), "Omega evolution mismatch.");
-  assert(approxEq(evolved.omega, wrapTo2Pi(2 - 2), 1e-12), "omega evolution mismatch.");
-  assert(approxEq(evolved.inc, 0.3 + 0.5, 1e-12), "inc evolution mismatch.");
-
-  const v = estimateSkyPlaneSpeed(
-    (t) => ({ x: t, y: 0, z: 0 }),
-    0,
-    { x: 0, y: 0, z: 1 },
-    { dtSec: 1, central: true },
-  );
-  assert(approxEq(v, 1, 1e-12), "sky-plane speed should be 1 for unit motion.");
-
-  const b = impactParameterFromSkyY(2, 4);
-  assert(approxEq(b, 0.5, 1e-12), "impact parameter should be |y|/R.");
-  const bProjected = impactParameterFromProjectedSky({ x: 3, y: 4, z: 1 }, 2);
-  assert(approxEq(bProjected, 2.5, 1e-12), "projected impact parameter should use hypot(x,y)/R.");
-  const bBehind = impactParameterFromProjectedSky({ x: 3, y: 4, z: -1 }, 2);
-  assert(Number.isNaN(bBehind), "behind-star projected impact parameter should be undefined/NaN.");
+function isPositiveFiniteRadius(radius: number): boolean {
+  return Number.isFinite(radius) && radius > 0;
 }

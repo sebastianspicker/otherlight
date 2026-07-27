@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/transit-light-curve-lab/workspace-v1/workspace.schema.json",
+  "title": "Otherlight workspace document",
+  "type": "object",
+  "required": ["schemaVersion", "productContext", "education"],
+  "properties": {
+    "schemaVersion": { "const": "workspace-v1" },
+    "productContext": { "$ref": "#/$defs/productContext" },
+    "education": { "$ref": "#/$defs/education" },
+    "scientific": { "$ref": "#/$defs/scientific" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "productContext": {
+            "properties": { "profile": { "const": "scientific" } },
+            "required": ["profile"]
+          }
+        }
+      },
+      "then": { "required": ["scientific"] },
+      "else": { "not": { "required": ["scientific"] } }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "productContext": {
+      "type": "object",
+      "required": ["profile", "mode", "ui", "source", "scenario", "lab", "lesson", "runtime"],
+      "properties": {
+        "profile": { "enum": ["education", "scientific"] },
+        "mode": { "enum": ["simulation", "lab"] },
+        "ui": { "enum": ["essential", "advanced"] },
+        "source": { "enum": ["preset", "real"] },
+        "scenario": { "$ref": "#/$defs/stableId" },
+        "lab": { "$ref": "#/$defs/stableId" },
+        "lesson": { "$ref": "#/$defs/stableId" },
+        "runtime": { "enum": ["interactive", "reference"] }
+      },
+      "additionalProperties": false
+    },
+    "education": {
+      "type": "object",
+      "required": ["scenario"],
+      "properties": {
+        "scenario": { "$ref": "../education-parity-v1/scenario.schema.json" },
+        "guidedLab": { "$ref": "#/$defs/guidedLab" }
+      },
+      "additionalProperties": false
+    },
+    "guidedLab": {
+      "type": "object",
+      "required": ["learning", "responses", "hintLevel"],
+      "properties": {
+        "learning": { "$ref": "#/$defs/learning" },
+        "responses": {
+          "type": "object",
+          "propertyNames": { "minLength": 1, "maxLength": 512 },
+          "additionalProperties": { "$ref": "#/$defs/response" }
+        },
+        "hintLevel": { "enum": ["L1", "L2", "L3"] },
+        "binaryLab": { "$ref": "#/$defs/binaryLab" }
+      },
+      "additionalProperties": false
+    },
+    "learning": {
+      "type": "object",
+      "required": ["lessonId", "stepIndex", "passedStepIds"],
+      "properties": {
+        "lessonId": { "$ref": "#/$defs/stableId" },
+        "stepIndex": { "type": "integer", "minimum": 0 },
+        "phaseIndex": { "type": "integer", "minimum": 0 },
+        "passedStepIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stableId" },
+          "uniqueItems": true
+        },
+        "lastScore": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "properties": {
+        "primary": { "type": "string", "maxLength": 20000 },
+        "secondary": { "type": "string", "maxLength": 20000 }
+      },
+      "additionalProperties": false
+    },
+    "binaryLab": {
+      "type": "object",
+      "required": ["revealed"],
+      "properties": {
+        "revealed": { "type": "boolean" },
+        "hypothesis": {
+          "enum": [
+            "primary-eclipse-deepest",
+            "secondary-eclipse-dominates",
+            "eccentricity-shifts-eclipse-spacing"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "scientific": {
+      "type": "object",
+      "required": ["request"],
+      "properties": {
+        "request": { "$ref": "../science-v5/forward-request.schema.json" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

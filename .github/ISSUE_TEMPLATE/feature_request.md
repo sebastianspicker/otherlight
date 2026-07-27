@@ -13,6 +13,12 @@ What user/science/didactic problem does this solve?
 
 Describe the desired behavior and UI/API impact.
 
+## Runtime contract
+
+- Runtime mode affected:
+- Physics/units assumption:
+- UI surface affected:
+
 ## Scope and non-goals
 
 - In scope:

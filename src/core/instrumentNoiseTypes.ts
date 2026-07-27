@@ -1,4 +1,4 @@
-// src/core/instrumentNoiseTypes.ts
+/** Defines state and configuration contracts for photometric instrument noise. */
 
 //
 // Plain-data (JSON-serializable) types for instrument noise + systematics.

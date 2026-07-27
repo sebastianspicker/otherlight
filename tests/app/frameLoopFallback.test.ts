@@ -1,3 +1,5 @@
+/** Verifies frame loop fallback contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -101,6 +103,22 @@ describe("fallbackStepV3", () => {
 
     const step = fallbackStepV3(10, minimalParams, prev);
     expect(step.kinematics.planetSky).toEqual({ x: 0.5, y: 0.2, z: 0 });
+  });
+
+  it("does not propagate stale timing or didactic payloads from previous steps", () => {
+    const prev = fallbackStepV3(0, minimalParams);
+    prev.timing = { planetTransitCenterSec: 0, planetTtvSec: 0.25 };
+    prev.observables = { timing: prev.timing };
+    prev.conservation = { energy: 1, angularMomentum: 2 };
+    prev.didactics = { signals: { event: "in-transit" } as never };
+
+    const step = fallbackStepV3(10, minimalParams, prev);
+
+    expect(step.timing).toBeUndefined();
+    expect(step.observables).toBeUndefined();
+    expect(step.conservation).toBeUndefined();
+    expect(step.didactics).toBeUndefined();
+    expect(step.renderSignals.uncertaintyFlags).toContain("fallback-step-used");
   });
 
   it("debug.displayFluxValue falls back to total flux", () => {

@@ -1,3 +1,6 @@
+/**
+ * Owns v4Runtime support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { BinaryStarPhotometryParams, SystemParams } from "../core/types";
 import { cloneParams } from "../core/clone";
 import { createSimulationV4, migrateSystemParamsToV4 } from "../sim/v4";
@@ -11,8 +14,34 @@ import { createScientificBrowserRuntimeError } from "../sim/v4/scientificErrors"
 
 export type AppSimulationRuntime = SimulationRuntimeV4WithDispose;
 
-export function stripUnsupportedPhotometryForV4Runtime(system: SystemParams): SystemParams {
+// Boundary for callers that still pass the older SystemParams shape into V4 setup.
+export function cloneParamsForV4Runtime(system: SystemParams): SystemParams {
   return cloneParams(system);
+}
+
+function binaryLuminosityScale(source: BinaryStarPhotometryParams, fallbackLuminosityScale: number): number {
+  if (!Number.isFinite(source.luminosityScale)) return fallbackLuminosityScale;
+  return Math.max(0, source.luminosityScale as number);
+}
+
+function copyFiniteBinaryStarParams(
+  out: BinaryStarPhotometryParams,
+  source: BinaryStarPhotometryParams,
+): void {
+  if (Number.isFinite(source.teffK)) out.teffK = source.teffK;
+  if (Number.isFinite(source.loggCgs)) out.loggCgs = source.loggCgs;
+  if (Number.isFinite(source.metallicityDex)) out.metallicityDex = source.metallicityDex;
+}
+
+function nonEmptyPassband(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function mergedBinaryPassband(
+  source: BinaryStarPhotometryParams,
+  fallbackPassband: string | undefined,
+): string | undefined {
+  return nonEmptyPassband(source.passband) ?? nonEmptyPassband(fallbackPassband);
 }
 
 function mergeBinaryStarPhotometry(args: {
@@ -23,18 +52,11 @@ function mergeBinaryStarPhotometry(args: {
   const { legacy, fallbackPassband, fallbackLuminosityScale } = args;
   const source = legacy ?? {};
   const out: BinaryStarPhotometryParams = {
-    luminosityScale: Number.isFinite(source.luminosityScale)
-      ? Math.max(0, source.luminosityScale as number)
-      : fallbackLuminosityScale,
+    luminosityScale: binaryLuminosityScale(source, fallbackLuminosityScale),
   };
-  if (Number.isFinite(source.teffK)) out.teffK = source.teffK;
-  if (Number.isFinite(source.loggCgs)) out.loggCgs = source.loggCgs;
-  if (Number.isFinite(source.metallicityDex)) out.metallicityDex = source.metallicityDex;
-  if (typeof source.passband === "string" && source.passband.length > 0) {
-    out.passband = source.passband;
-  } else if (typeof fallbackPassband === "string" && fallbackPassband.length > 0) {
-    out.passband = fallbackPassband;
-  }
+  copyFiniteBinaryStarParams(out, source);
+  const passband = mergedBinaryPassband(source, fallbackPassband);
+  if (passband) out.passband = passband;
   return out;
 }
 
@@ -207,6 +229,8 @@ export function createSimulationRuntimeV4FromParams(args: {
   executionMode?: RuntimeExecutionModeV4;
   binaryLabDefaults?: BinaryLabConfigV4;
 }): AppSimulationRuntime {
+  // All UI paths enter the runtime through this adapter. It is intentionally the
+  // only place that turns legacy SystemParams plus UI mode into a V4 config.
   const cfg = buildSimulationConfigV4FromParams(args);
   const unsupportedFeatures = collectUnsupportedPhotometryFeaturesV4(cfg);
   let pendingStatusMessage =

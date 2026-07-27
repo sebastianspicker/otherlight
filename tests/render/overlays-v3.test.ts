@@ -1,3 +1,5 @@
+/** Verifies overlays v3 rendering behavior and visual interpretation. */
+
 import { describe, expect, it, vi } from "vitest";
 import { drawDebugOverlayV3 } from "../../src/render/overlays";
 

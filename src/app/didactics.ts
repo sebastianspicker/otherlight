@@ -1,3 +1,6 @@
+/**
+ * Owns didactics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type {
   DidacticResponseStore,
   DidacticSignals,
@@ -35,21 +38,43 @@ export type DidacticsRuntimeState = {
 };
 
 export function ensureDidacticsConfig(system: SystemParams): SystemParams {
-  const prev = system.didactics ?? {};
   return {
     ...system,
-    didactics: {
-      ...prev,
-      enabled: prev.enabled ?? true,
-      activeLessonId: prev.activeLessonId ?? DEFAULT_LESSON_ID,
-      autoAssess: prev.autoAssess ?? true,
-      hintLevel: prev.hintLevel ?? "L1",
-      misconceptionChecks: { enabled: prev.misconceptionChecks?.enabled ?? true },
-      compareLabs: {
-        enabled: prev.compareLabs?.enabled ?? true,
-        autoInterpret: prev.compareLabs?.autoInterpret ?? true,
-      },
-    },
+    didactics: didacticsConfigWithDefaults(system.didactics),
+  };
+}
+
+function defaultWhenMissing<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+function didacticsConfigWithDefaults(
+  prev: SystemParams["didactics"],
+): NonNullable<SystemParams["didactics"]> {
+  const didactics = prev ?? {};
+  return {
+    ...didactics,
+    enabled: defaultWhenMissing(didactics.enabled, true),
+    activeLessonId: defaultWhenMissing(didactics.activeLessonId, DEFAULT_LESSON_ID),
+    autoAssess: defaultWhenMissing(didactics.autoAssess, true),
+    hintLevel: defaultWhenMissing(didactics.hintLevel, "L1"),
+    misconceptionChecks: misconceptionChecksWithDefaults(didactics.misconceptionChecks),
+    compareLabs: compareLabsWithDefaults(didactics.compareLabs),
+  };
+}
+
+function misconceptionChecksWithDefaults(
+  prev: NonNullable<SystemParams["didactics"]>["misconceptionChecks"],
+): NonNullable<NonNullable<SystemParams["didactics"]>["misconceptionChecks"]> {
+  return { enabled: defaultWhenMissing(prev?.enabled, true) };
+}
+
+function compareLabsWithDefaults(
+  prev: NonNullable<SystemParams["didactics"]>["compareLabs"],
+): NonNullable<NonNullable<SystemParams["didactics"]>["compareLabs"]> {
+  return {
+    enabled: defaultWhenMissing(prev?.enabled, true),
+    autoInterpret: defaultWhenMissing(prev?.autoInterpret, true),
   };
 }
 
@@ -172,6 +197,18 @@ export function switchDidacticsLesson(
   };
 }
 
+const clampedLessonPhaseIndex = (phaseIndex: number | undefined, phaseCount: number): number =>
+  Math.max(0, Math.min(phaseIndex ?? 0, Math.max(phaseCount - 1, 0)));
+
+const commitLessonLearning = (
+  system: SystemParams,
+  runtime: DidacticsRuntimeState,
+  learning: LearningState,
+): DidacticsRuntimeState => {
+  if (system.didactics) system.didactics.learningState = learning;
+  return { ...runtime, learning };
+};
+
 export function advanceLessonFlow(
   system: SystemParams,
   runtime: DidacticsRuntimeState,
@@ -179,10 +216,7 @@ export function advanceLessonFlow(
 ): DidacticsRuntimeState {
   const lesson = activeLesson(runtime);
   const phases = getLessonStepPhases(lesson, runtime.learning.stepIndex);
-  const currentPhaseIndex = Math.max(
-    0,
-    Math.min(runtime.learning.phaseIndex ?? 0, Math.max(phases.length - 1, 0)),
-  );
+  const currentPhaseIndex = clampedLessonPhaseIndex(runtime.learning.phaseIndex, phases.length);
   const atLastPhase = currentPhaseIndex >= phases.length - 1;
   const atLastStep = runtime.learning.stepIndex >= lesson.steps.length - 1;
   const nextLearning = atLastPhase
@@ -197,8 +231,7 @@ export function advanceLessonFlow(
         phaseIndex: currentPhaseIndex + 1,
         updatedAtSec: tSec,
       };
-  if (system.didactics) system.didactics.learningState = nextLearning;
-  return { ...runtime, learning: nextLearning };
+  return commitLessonLearning(system, runtime, nextLearning);
 }
 
 export function retreatLessonFlow(
@@ -208,10 +241,7 @@ export function retreatLessonFlow(
 ): DidacticsRuntimeState {
   const lesson = activeLesson(runtime);
   const phases = getLessonStepPhases(lesson, runtime.learning.stepIndex);
-  const currentPhaseIndex = Math.max(
-    0,
-    Math.min(runtime.learning.phaseIndex ?? 0, Math.max(phases.length - 1, 0)),
-  );
+  const currentPhaseIndex = clampedLessonPhaseIndex(runtime.learning.phaseIndex, phases.length);
   let nextLearning: LearningState;
   if (currentPhaseIndex > 0) {
     nextLearning = {
@@ -231,8 +261,7 @@ export function retreatLessonFlow(
   } else {
     nextLearning = runtime.learning;
   }
-  if (system.didactics) system.didactics.learningState = nextLearning;
-  return { ...runtime, learning: nextLearning };
+  return commitLessonLearning(system, runtime, nextLearning);
 }
 
 export function updateDidacticResponse(

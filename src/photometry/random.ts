@@ -1,4 +1,4 @@
-// src/photometry/random.ts
+/** Provides deterministic pseudo-random sampling for repeatable measurement noise. */
 //
 // Deterministic PRNG + sampling utilities for photometry/instrument-noise layers.
 //
@@ -141,9 +141,9 @@ export function normal(rng: PRNG, mean = 0, sigma = 1): number {
  * - For lambda < 15: Knuth exact algorithm (stable and exact, but linear in lambda).
  * - For lambda >= 15: Normal approximation N(lambda, lambda) rounded with continuity correction, clamped to >=0.
  *
- * The threshold was lowered from 50 to 15 because the Knuth algorithm suffers from
- * floating-point underflow for lambda in the 15-30 range (exp(-lambda) underflows),
- * producing biased results. The normal approximation is accurate for lambda >= 15.
+ * The switch at 15 bounds the expected work of Knuth's O(lambda) loop. The
+ * normal branch is an explicit approximation (especially near the threshold),
+ * not a response to exp(-lambda) underflow, which occurs only at much larger lambda.
  *
  * Returns 0 if lambda is non-finite or <=0.
  */
@@ -172,6 +172,25 @@ export function poisson(rng: PRNG, lambda: number): number {
   return Math.max(0, k);
 }
 
+function normalizedOuInputs(
+  prev: number,
+  dtSec: number,
+  tauSec: number,
+  sigma: number,
+):
+  | {
+      dt: number;
+      tau: number;
+      sigma: number;
+    }
+  | undefined {
+  const dt = isFiniteNumber(dtSec) ? Math.max(0, dtSec) : NaN;
+  const tau = isFiniteNumber(tauSec) ? Math.max(1e-9, tauSec) : NaN;
+  if (!isFiniteNumber(prev) || !isFiniteNumber(dt)) return undefined;
+  if (!isFiniteNumber(tau) || !isFiniteNumber(sigma)) return undefined;
+  return { dt, tau, sigma };
+}
+
 /**
  * OU / AR(1) step:
  *   x(t+dt) = a x(t) + b z, where z ~ N(0,1)
@@ -181,16 +200,13 @@ export function poisson(rng: PRNG, lambda: number): number {
  * Here sigma is the stationary RMS of the OU process.
  */
 export function ouStep(rng: PRNG, prev: number, dtSec: number, tauSec: number, sigma: number): number {
-  const dt = isFiniteNumber(dtSec) ? Math.max(0, dtSec) : NaN;
-  const tau = isFiniteNumber(tauSec) ? Math.max(1e-9, tauSec) : NaN;
+  const inputs = normalizedOuInputs(prev, dtSec, tauSec, sigma);
+  if (!inputs) return NaN;
+  if (inputs.sigma <= 0) return prev;
+  if (inputs.dt === 0) return prev;
 
-  if (!isFiniteNumber(prev) || !isFiniteNumber(dt) || !isFiniteNumber(tau) || !isFiniteNumber(sigma))
-    return NaN;
-  if (sigma <= 0) return prev;
-  if (dt === 0) return prev;
-
-  const a = Math.exp(-dt / tau);
-  const b = sigma * Math.sqrt(Math.max(0, 1 - a * a));
+  const a = Math.exp(-inputs.dt / inputs.tau);
+  const b = inputs.sigma * Math.sqrt(Math.max(0, 1 - a * a));
 
   return a * prev + b * rng.n01();
 }
@@ -208,66 +224,4 @@ export function randomWalkStep(rng: PRNG, prev: number, dtSec: number, sigmaPerS
   if (sigmaPerSqrtSec <= 0 || dt === 0) return prev;
 
   return prev + sigmaPerSqrtSec * Math.sqrt(dt) * rng.n01();
-}
-
-// ---------------------------
-// Minimal built-in tests
-// ---------------------------
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`random self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-12): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-/**
- * Self-tests:
- * - Determinism: same seed => same u32 sequence.
- * - State restore: getState/setState reproduce the u32 stream exactly.
- * - Range: u01 in [0,1), n01 finite.
- * - Cache determinism: setState resets Box–Muller cache.
- */
-export function runRandomSelfTests(): void {
-  const r1 = createMulberry32(123);
-  const r2 = createMulberry32(123);
-  for (let i = 0; i < 10; i++) {
-    const a = r1.u32();
-    const b = r2.u32();
-    assert(a === b, "Same seed must produce same u32 sequence.");
-  }
-
-  const r3 = createMulberry32(999);
-  const s0 = r3.getState();
-  const x0 = r3.u32();
-  const x1 = r3.u32();
-
-  r3.setState(s0);
-  const y0 = r3.u32();
-  const y1 = r3.u32();
-  assert(x0 === y0 && x1 === y1, "setState(getState()) must reproduce the u32 stream.");
-
-  const r4 = createMulberry32(42);
-  const u = r4.u01();
-  assert(Number.isFinite(u) && u >= 0 && u < 1, "u01 must be in [0,1).");
-
-  const z = r4.n01();
-  assert(Number.isFinite(z), "n01 must be finite.");
-
-  // Ensure setState clears Box–Muller cache and the next n01() sequence is deterministic:
-  const r5 = createMulberry32(7);
-  void r5.n01(); // consume one pair so we are at a known stream position
-  const stateAfter = r5.getState();
-
-  r5.setState(stateAfter);
-  const zB1 = r5.n01();
-  const zB2 = r5.n01();
-  r5.setState(stateAfter);
-  const zB1b = r5.n01();
-  const zB2b = r5.n01();
-  assert(
-    approxEq(zB1, zB1b, 0) && approxEq(zB2, zB2b, 0),
-    "Cache reset + same underlying state must reproduce n01 draws.",
-  );
 }

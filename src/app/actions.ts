@@ -1,3 +1,6 @@
+/**
+ * Owns actions support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import { clamp, toFiniteNumber } from "../core/units";
 import { setText } from "../core/dom";
 import type { NoiseState } from "./noise";
@@ -13,7 +16,8 @@ export function setRunningState(
   btnStart: HTMLButtonElement,
 ): { running: boolean; last: number } {
   const running = next;
-  btnStart.textContent = running ? "Stop" : "Start";
+  btnStart.textContent = running ? "Pause" : "Start";
+  btnStart.setAttribute("aria-pressed", String(running));
   return { running, last: performance.now() };
 }
 

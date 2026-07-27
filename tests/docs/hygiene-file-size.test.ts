@@ -1,18 +1,18 @@
-import fs from "node:fs";
+/** Enforces documentation file-size limits that keep public guidance reviewable. */
+
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { walkTsFiles } from "../helpers/walkTsFiles";
+import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 describe("hygiene file size", () => {
   it("keeps source files below warning threshold", () => {
     const root = process.cwd();
     const files = walkTsFiles(path.join(root, "src"));
     const offenders: string[] = [];
-    // Raised to accommodate src/main.ts (init, animation loop, handler wiring). Lower again if handlers are extracted (e.g. to wireHandlers.ts).
-    const threshold = 720;
+    const threshold = 700;
 
     for (const file of files) {
-      const lines = fs.readFileSync(file, "utf8").split("\n").length;
+      const lines = readTextFileWithinRepo(file).split("\n").length;
       if (lines > threshold) offenders.push(`${path.relative(root, file)} (${lines})`);
     }
 

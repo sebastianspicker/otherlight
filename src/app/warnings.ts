@@ -1,3 +1,6 @@
+/**
+ * Owns warnings support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { SystemParams } from "../core/types";
 import { collectParamWarnings } from "../sim/validation";
 

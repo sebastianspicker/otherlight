@@ -1,3 +1,6 @@
+/**
+ * Owns quick Controls support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ */
 import { setText } from "../core/dom";
 import { toFiniteNumber } from "../core/units";
 import { muFromPeriodAndA } from "../physics/kepler";

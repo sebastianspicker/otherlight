@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/** Verifies enable controls and views for accessible, consistent interaction. */
 
 import { describe, expect, it } from "vitest";
 import { installAppShellDocument } from "../helpers/appShell";

@@ -1,97 +1,16 @@
-import type { SystemDynamicsParams, SystemParams } from "../core/types";
-import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
+/**
+ * Owns presets Atmosphere Advanced support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
+import {
+  enableAccuratePhysics,
+  makeEdgeCasePreset,
+  setPlanetImpactParameter,
+  stripToTransitCase,
+  type EdgeCaseScenarioPreset,
+} from "./presetEdgeCaseUtils";
 
-type AtmosphereScenarioPreset = {
-  id: string;
-  label: string;
-  description: string;
-  params: SystemParams;
-};
-
-function base(): SystemParams {
-  return cloneParams(SCENARIO_DEFAULTS);
-}
-
-function withoutPatches(p: SystemParams): void {
-  const ph = p.star.photometry;
-  if (!ph) return;
-  ph.brightnessPatches = [];
-  delete ph.spotEvolution;
-}
-
-function disableAdditiveTerms(p: SystemParams): void {
-  const ph = p.star.photometry;
-  if (!ph) return;
-  delete ph.phaseCurve;
-  delete ph.moonPhaseCurve;
-  delete ph.forwardScattering;
-  delete ph.ringScattering;
-  delete ph.stellarVariability;
-  delete ph.dayNightVisibility;
-}
-
-function disableMeasurementTerms(p: SystemParams): void {
-  const ph = p.star.photometry;
-  if (!ph) return;
-  ph.cadenceSec = 0;
-  ph.nSubsamples = 1;
-  if (ph.instrumentNoise) ph.instrumentNoise = { ...ph.instrumentNoise, enabled: false };
-  if (ph.instrument) ph.instrument = { ...ph.instrument, enabled: false };
-}
-
-function disableAdvancedAtmosphere(p: SystemParams): void {
-  const ph = p.star.photometry;
-  if (!ph) return;
-  if (ph.atmosphereTransmission) ph.atmosphereTransmission = { ...ph.atmosphereTransmission, enabled: false };
-  delete ph.atmosphereRT;
-}
-
-function stripToTransitCase(p: SystemParams): void {
-  delete p.moon;
-  withoutPatches(p);
-  disableAdditiveTerms(p);
-  disableMeasurementTerms(p);
-  disableAdvancedAtmosphere(p);
-  delete p.dynamics?.nbodyPlanetMoon;
-  if (p.dynamics?.exomoonTimingShape) p.dynamics.exomoonTimingShape.enabled = false;
-  if (p.dynamics?.relativity) p.dynamics.relativity.enabled = false;
-}
-
-function setPlanetImpactParameter(p: SystemParams, b: number): void {
-  const orbit = p.planet.orbit;
-  if (!("a" in orbit) || !("inc" in orbit)) return;
-  const a = orbit.a;
-  const rStar = p.star.r;
-  if (!(Number.isFinite(a) && a > 0 && Number.isFinite(rStar) && rStar > 0)) return;
-  const cosI = Math.max(-1, Math.min(1, (b * rStar) / a));
-  orbit.inc = Math.acos(cosI);
-}
-
-function enableAccuratePhysics(
-  p: SystemParams,
-  features: Partial<NonNullable<SystemDynamicsParams["physicsFeatures"]>>,
-): void {
-  const dyn = (p.dynamics ??= {});
-  dyn.fidelityProfile = "accurate";
-  dyn.physicsFeatures = {
-    ...(dyn.physicsFeatures ?? {}),
-    ...features,
-  };
-}
-
-function makePreset(
-  id: string,
-  label: string,
-  description: string,
-  build: (p: SystemParams) => void,
-): AtmosphereScenarioPreset {
-  const p = base();
-  build(p);
-  return { id, label, description, params: p };
-}
-
-export const ADVANCED_ATMOSPHERE_EDGE_CASE_PRESETS: AtmosphereScenarioPreset[] = [
-  makePreset(
+export const ADVANCED_ATMOSPHERE_EDGE_CASE_PRESETS: EdgeCaseScenarioPreset[] = [
+  makeEdgeCasePreset(
     "ec-atmosphere-molecular-feature",
     "Edge Case: molecular feature surrogate",
     "Bounded atmosphere-RT transit case with a narrow line-center opacity feature so the learner can compare continuum and absorption-dominated wavelengths.",
@@ -121,7 +40,7 @@ export const ADVANCED_ATMOSPHERE_EDGE_CASE_PRESETS: AtmosphereScenarioPreset[] =
       };
     },
   ),
-  makePreset(
+  makeEdgeCasePreset(
     "ec-atmosphere-spectral-contamination",
     "Edge Case: spectral contamination surrogate",
     "Same bounded spectral transit lane, but with an observer-side throughput loss that downweights the deepest atmospheric feature and biases the integrated depth.",
@@ -156,7 +75,7 @@ export const ADVANCED_ATMOSPHERE_EDGE_CASE_PRESETS: AtmosphereScenarioPreset[] =
       };
     },
   ),
-  makePreset(
+  makeEdgeCasePreset(
     "ec-atmosphere-refraction-shoulder",
     "Edge Case: atmospheric refraction shoulder",
     "Bounded additive atmosphere-RT preset with a small pre/post-contact refractive brightening shoulder layered onto an otherwise standard transit.",

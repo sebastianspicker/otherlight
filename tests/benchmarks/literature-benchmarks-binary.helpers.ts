@@ -1,3 +1,5 @@
+/** Covers literature benchmarks binary helpers reference data and literature comparisons for photometry calibration. */
+
 import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/app/binaryLab";
 import { binaryFluxDisplayBaseline, scaleFluxForDisplay } from "../../src/app/displayFlux";
 import { circleIntersectionArea } from "../../src/photometry/mutualEvents";

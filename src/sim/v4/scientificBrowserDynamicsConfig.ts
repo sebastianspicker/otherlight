@@ -1,9 +1,25 @@
+/**
+ * Owns scientific Browser Dynamics Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import { assertOrbit } from "../validation/assertions";
 import type { SimulationConfigV4 } from "./types";
 
 function isFinitePositive(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x) && x > 0;
 }
+
+function isFiniteNonNegative(x: unknown): x is number {
+  return typeof x === "number" && Number.isFinite(x) && x >= 0;
+}
+
+function isFiniteIntegerAtLeast(x: unknown, min: number): x is number {
+  return typeof x === "number" && Number.isFinite(x) && Number.isInteger(x) && x >= min;
+}
+
+type DynamicsConfig = NonNullable<SimulationConfigV4["dynamics"]>;
+type RelativityConfig = NonNullable<DynamicsConfig["relativity"]>;
+type NBodyPlanetMoonConfig = NonNullable<DynamicsConfig["nbodyPlanetMoon"]>;
+type MassSourceBody = { m?: number };
 
 export function collectScientificBrowserOrbitIssues(config: SimulationConfigV4): string[] {
   const issues: string[] = [];
@@ -27,52 +43,44 @@ export function collectScientificBrowserRelativityIssues(config: SimulationConfi
   if (!rel?.enabled) return [];
 
   const issues: string[] = [];
-  if (dyn?.relativityLevel === undefined) {
-    issues.push(
-      'scientific-browser relativity requires an explicit dynamics.relativityLevel ("toy" or "enhanced")',
-    );
-  }
-
-  const useLTTE = rel.ltte !== false;
-  if (useLTTE) {
-    if (!isFinitePositive(rel.c)) {
-      issues.push(
-        "scientific-browser relativity requires an explicit positive relativity.c when LTTE is enabled",
-      );
-    }
-    const ltteIters = rel.ltteIters;
-    if (
-      !(
-        typeof ltteIters === "number" &&
-        Number.isFinite(ltteIters) &&
-        Number.isInteger(ltteIters) &&
-        ltteIters >= 1
-      )
-    ) {
-      issues.push(
-        "scientific-browser relativity requires an explicit integer relativity.ltteIters >= 1 when LTTE is enabled",
-      );
-    }
-    const ltteTolSec = rel.ltteTolSec;
-    if (!(typeof ltteTolSec === "number" && Number.isFinite(ltteTolSec) && ltteTolSec > 0)) {
-      issues.push(
-        "scientific-browser relativity requires an explicit positive relativity.ltteTolSec when LTTE is enabled",
-      );
-    }
-  }
-
-  const useShapiro = useLTTE && rel.shapiro !== false;
-  const shapiroMinImpact = rel.shapiroMinImpact;
-  if (
-    useShapiro &&
-    !(typeof shapiroMinImpact === "number" && Number.isFinite(shapiroMinImpact) && shapiroMinImpact >= 0)
-  ) {
-    issues.push(
-      "scientific-browser relativity requires an explicit finite relativity.shapiroMinImpact >= 0 when Shapiro is enabled",
-    );
-  }
-
+  collectRelativityLevelIssues(dyn, issues);
+  collectLtteIssues(rel, issues);
+  collectShapiroIssues(rel, issues);
   return issues;
+}
+
+function collectRelativityLevelIssues(dyn: DynamicsConfig | undefined, issues: string[]): void {
+  if (dyn?.relativityLevel !== undefined) return;
+  issues.push(
+    'scientific-browser relativity requires an explicit dynamics.relativityLevel ("toy" or "enhanced")',
+  );
+}
+
+function collectLtteIssues(rel: RelativityConfig, issues: string[]): void {
+  if (rel.ltte === false) return;
+  if (!isFinitePositive(rel.c)) {
+    issues.push(
+      "scientific-browser relativity requires an explicit positive relativity.c when LTTE is enabled",
+    );
+  }
+  if (!isFiniteIntegerAtLeast(rel.ltteIters, 1)) {
+    issues.push(
+      "scientific-browser relativity requires an explicit integer relativity.ltteIters >= 1 when LTTE is enabled",
+    );
+  }
+  if (!isFinitePositive(rel.ltteTolSec)) {
+    issues.push(
+      "scientific-browser relativity requires an explicit positive relativity.ltteTolSec when LTTE is enabled",
+    );
+  }
+}
+
+function collectShapiroIssues(rel: RelativityConfig, issues: string[]): void {
+  if (rel.ltte === false || rel.shapiro === false) return;
+  if (isFiniteNonNegative(rel.shapiroMinImpact)) return;
+  issues.push(
+    "scientific-browser relativity requires an explicit finite relativity.shapiroMinImpact >= 0 when Shapiro is enabled",
+  );
 }
 
 export function collectScientificBrowserNBodyIssues(config: SimulationConfigV4): string[] {
@@ -87,26 +95,38 @@ export function collectScientificBrowserNBodyIssues(config: SimulationConfigV4):
   if (!moon) {
     issues.push("scientific-browser nbodyPlanetMoon requires an explicit moon body");
   }
+  collectNBodyMassSourceIssues(nbody, star, planet, moon, issues);
+  collectNBodyStepIssues(nbody, issues);
+  return issues;
+}
 
-  const hasStarMassSource =
-    isFinitePositive(nbody.muStar) || isFinitePositive(nbody.mStar) || isFinitePositive(star?.m);
-  const hasPlanetMassSource =
-    isFinitePositive(nbody.muPlanet) || isFinitePositive(nbody.mPlanet) || isFinitePositive(planet?.m);
-  const hasMoonMassSource =
-    isFinitePositive(nbody.muMoon) || isFinitePositive(nbody.mMoon) || isFinitePositive(moon?.m);
-
-  if (!hasStarMassSource) {
+function collectNBodyMassSourceIssues(
+  nbody: NBodyPlanetMoonConfig,
+  star: MassSourceBody | undefined,
+  planet: MassSourceBody | undefined,
+  moon: MassSourceBody | undefined,
+  issues: string[],
+): void {
+  if (!hasAnyFinitePositive([nbody.muStar, nbody.mStar, star?.m])) {
     issues.push("scientific-browser nbodyPlanetMoon requires an explicit positive star mass source");
   }
-  if (!hasPlanetMassSource) {
+  if (!hasAnyFinitePositive([nbody.muPlanet, nbody.mPlanet, planet?.m])) {
     issues.push("scientific-browser nbodyPlanetMoon requires an explicit positive planet mass source");
   }
-  if (!hasMoonMassSource) {
+  if (!hasAnyFinitePositive([nbody.muMoon, nbody.mMoon, moon?.m])) {
     issues.push("scientific-browser nbodyPlanetMoon requires an explicit positive moon mass source");
   }
+}
+
+function hasAnyFinitePositive(values: unknown[]): boolean {
+  for (const value of values) {
+    if (isFinitePositive(value)) return true;
+  }
+  return false;
+}
+
+function collectNBodyStepIssues(nbody: NBodyPlanetMoonConfig, issues: string[]): void {
   if (!isFinitePositive(nbody.dtMax)) {
     issues.push("scientific-browser nbodyPlanetMoon requires dtMax > 0");
   }
-
-  return issues;
 }

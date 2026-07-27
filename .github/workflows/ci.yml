@@ -30,7 +30,7 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@9.0.0 --activate
+          corepack install
 
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
@@ -65,7 +65,7 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@9.0.0 --activate
+          corepack install
 
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
@@ -81,8 +81,52 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: TypeScript type check
+      - name: TypeScript 7 and TypeScript 6 compatibility checks
         run: pnpm ci:typecheck
+
+  python:
+    name: Python 3.14.6 backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.14.6
+          cache: pip
+          cache-dependency-path: science_backend/pyproject.toml
+
+      - name: Verify exact Python runtime
+        run: |
+          python --version
+          test "$(python -c 'import platform; print(platform.python_version())')" = "3.14.6"
+
+      - name: Install backend and development tools
+        run: python -m pip install -e './science_backend[dev]'
+
+      - name: Ruff format and lint
+        run: |
+          python -m ruff format --check science_backend
+          python -m ruff check science_backend
+
+      - name: Pyright
+        run: python -m pyright science_backend
+
+      - name: Backend tests
+        run: python -m pytest -q science_backend/tests
+
+      - name: Build wheel
+        run: python -m build --wheel science_backend --outdir "$RUNNER_TEMP/wheels"
+
+      - name: Install and import built wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-smoke"
+          "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install "$RUNNER_TEMP"/wheels/*.whl
+          "$RUNNER_TEMP/wheel-smoke/bin/python" -c \
+            "import science_backend; from importlib.metadata import version; assert science_backend.__version__ == '0.2.0-alpha.1'; assert version('otherlight-science-backend') == '0.2.0a1'"
 
   test:
     name: test (node ${{ matrix.node }})
@@ -91,7 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -104,7 +148,7 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@9.0.0 --activate
+          corepack install
 
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
@@ -140,7 +184,7 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@9.0.0 --activate
+          corepack install
 
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
@@ -159,6 +203,45 @@ jobs:
       - name: Build
         run: pnpm ci:build
 
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+
+      - name: Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Configure pnpm store path
+        run: pnpm config set store-dir ~/.pnpm-store
+
+      - name: Cache pnpm store
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ runner.os }}-22-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-22-
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Run browser E2E tests
+        run: pnpm ci:e2e
+
   quality-gates:
     name: quality gates
     runs-on: ubuntu-24.04
@@ -176,7 +259,7 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: |
           corepack enable
-          corepack prepare pnpm@9.0.0 --activate
+          corepack install
 
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
@@ -194,6 +277,9 @@ jobs:
 
       - name: Literature benchmarks
         run: pnpm literature-benchmarks
+
+      - name: Scientific calibration
+        run: pnpm scientific-calibration
 
       - name: Didactics acceptance
         run: pnpm didactics-acceptance

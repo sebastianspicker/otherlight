@@ -1,3 +1,5 @@
+/** Verifies binary lab state contracts supporting interpretable lesson flows. */
+
 import { describe, expect, it } from "vitest";
 
 import {

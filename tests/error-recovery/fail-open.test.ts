@@ -1,3 +1,5 @@
+/** Verifies fail-open policies keep application failures visible and recoverable. */
+
 import { describe, expect, it } from "vitest";
 
 import { computeTransitFlux } from "../../src/sim/transitFlux";
@@ -91,17 +93,20 @@ describe("assertStepInputs error recovery", () => {
 // ---------------------------------------------------------------------------
 
 describe("sanitizeStaticOrbit edge cases", () => {
-  it("clamps negative period to fallback default", () => {
+  it("replaces negative period with fallback default", () => {
     const result = sanitizeStaticOrbit({ a: 1e11, e: 0, inc: 0, Omega: 0, omega: 0, period: -100, t0: 0 });
-    // -100 is finite, so finiteOrDefault returns it as-is (sanitizer trusts finite values).
-    expect(Number.isFinite(result.period)).toBe(true);
-    expect(result.period).toBe(-100);
+    expect(result.period).toBe(1);
   });
 
-  it("falls back eccentricity > 1 to provided value (finite pass-through)", () => {
+  it("replaces eccentricity >= 1 with fallback default", () => {
     const result = sanitizeStaticOrbit({ a: 1e11, e: 1.5, inc: 0, Omega: 0, omega: 0, period: 86400, t0: 0 });
-    // finiteOrDefault accepts any finite number, so 1.5 passes through.
-    expect(result.e).toBe(1.5);
+    expect(result.e).toBe(0);
+  });
+
+  it("replaces negative eccentricity and non-positive semimajor axis with fallback defaults", () => {
+    const result = sanitizeStaticOrbit({ a: 0, e: -0.1, inc: 0, Omega: 0, omega: 0, period: 86400, t0: 0 });
+    expect(result.a).toBe(1);
+    expect(result.e).toBe(0);
   });
 
   it("replaces NaN period with fallback default", () => {

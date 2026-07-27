@@ -1,3 +1,7 @@
+/**
+ * Owns the stateful V4 execution lifecycle, mode switching, and reference
+ * aggregation while keeping numerical state independent of browser controls.
+ */
 import { deepClone } from "../../core/clone";
 import type { SimulationStepV3 } from "../v3";
 import { normalizeScenarioInputToV4 } from "./migrate";
@@ -6,6 +10,8 @@ import type { RuntimeExecutionModeV4, RuntimeModeV4, SimulationConfigV4 } from "
 import { createScientificBrowserRuntimeError, isScientificBrowserRuntimeError } from "./scientificErrors";
 import { assertScientificBrowserConfig } from "./scientificBrowserConfig";
 import { detachedBinaryBaselineFlux, displayFluxValueForConfig } from "./binaryBaseline";
+import { rethrowScientificBrowserNormalizationFailure } from "./runtimeNormalization";
+import { averageNumericFields } from "./runtimeAggregation";
 
 export type SimulationRuntimeV4 = {
   prepare: () => Promise<void>;
@@ -74,28 +80,6 @@ function stepAtTime(args: {
   }
 }
 
-function averageNumericFields<T extends Record<string, unknown>>(
-  items: Array<T | undefined>,
-): Partial<T> | undefined {
-  const sums = new Map<string, number>();
-  const counts = new Map<string, number>();
-  for (const item of items) {
-    if (!item) continue;
-    for (const [key, value] of Object.entries(item)) {
-      if (!(typeof value === "number" && Number.isFinite(value))) continue;
-      sums.set(key, (sums.get(key) ?? 0) + value);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-  }
-  if (sums.size === 0) return undefined;
-
-  const averaged: Record<string, number> = {};
-  for (const [key, sum] of sums) {
-    averaged[key] = sum / (counts.get(key) ?? 1);
-  }
-  return averaged as Partial<T>;
-}
-
 function aggregateReferenceStep(config: SimulationConfigV4, samples: SimulationStepV3[]): SimulationStepV3 {
   const center = samples[Math.floor(samples.length / 2)]!;
   const flux = {
@@ -162,8 +146,17 @@ function aggregateReferenceStep(config: SimulationConfigV4, samples: SimulationS
   };
 }
 
+/**
+ * Creates the validated V4 runtime; time is observed seconds and invalid scientific-browser input fails closed.
+ * The runtime retains its conservation baseline across steps, so callers must create a fresh instance for a new lifecycle.
+ */
 export function createSimulationV4(input: SimulationConfigV4 | unknown): SimulationRuntimeV4 {
-  const config = normalizeScenarioInputToV4(input);
+  let config: SimulationConfigV4;
+  try {
+    config = normalizeScenarioInputToV4(input);
+  } catch (error) {
+    rethrowScientificBrowserNormalizationFailure(input, error);
+  }
   assertScientificBrowserConfig(config);
 
   let mode: RuntimeModeV4 = config.runtime?.mode ?? "realtime";
@@ -192,6 +185,9 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
       // dt is in seconds; 0.2 s is fine-grained relative to typical orbital periods (hours–days).
       const dt = 0.2;
       const samples: SimulationStepV3[] = [];
+      const publicStepBaseline = conservationBaseline;
+      const centerIndex = Math.floor(substeps / 2);
+      let nextConservationBaseline = conservationBaseline;
       for (let i = 0; i < substeps; i++) {
         const alpha = substeps <= 1 ? 0 : i / (substeps - 1);
         const t = tObsSec + (alpha - 0.5) * dt;
@@ -201,11 +197,12 @@ export function createSimulationV4(input: SimulationConfigV4 | unknown): Simulat
           attemptedTimeSec: t,
           runtimeMode: mode,
           executionMode,
-          conservationBaseline,
+          conservationBaseline: publicStepBaseline,
         });
-        conservationBaseline = out.conservationBaseline;
+        if (i === centerIndex) nextConservationBaseline = out.conservationBaseline;
         samples.push(out.step);
       }
+      conservationBaseline = nextConservationBaseline;
       return aggregateReferenceStep(config, samples);
     },
     setMode: (next: RuntimeModeV4): void => {

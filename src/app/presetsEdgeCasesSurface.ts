@@ -1,3 +1,6 @@
+/**
+ * Owns presets Edge Cases Surface support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { LimbDarkeningModel } from "../core/types";
 import {
   enableAccuratePhysics,

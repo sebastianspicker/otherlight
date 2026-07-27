@@ -1,3 +1,6 @@
+/**
+ * Owns transit Timing Solve support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
 import type { SkyPoint, StepEventTimingSolveDiagnostics, SystemParams } from "../core/types";
 
 export type TransitEventEstimate = {
@@ -27,6 +30,12 @@ type RootSolveResult = {
 type BracketScanResult = {
   bracket?: [number, number];
   scans: number;
+};
+
+type LinearCenterProjection = {
+  dtCenter: number;
+  impactMin: number;
+  zCenter: number;
 };
 
 export function usesExactTransitTiming(params: SystemParams): boolean {
@@ -99,35 +108,67 @@ function estimateTransitEventLinearized(args: {
   transitReferenceEpochSec?: number;
 }): TransitEventEstimate | undefined {
   const { tObsSec, rStar, rBody, sky, vSky, periodSec, transitReferenceEpochSec } = args;
-  if (!(Number.isFinite(rStar) && rStar > 0)) return undefined;
-  if (!(Number.isFinite(rBody) && rBody > 0)) return undefined;
-  if (!Number.isFinite(sky.x) || !Number.isFinite(sky.y) || !Number.isFinite(sky.z)) return undefined;
-  if (!Number.isFinite(vSky.x) || !Number.isFinite(vSky.y) || !Number.isFinite(vSky.z)) return undefined;
+  if (!hasValidLinearTransitInputs(rStar, rBody, sky, vSky)) return undefined;
 
-  const speed2 = vSky.x * vSky.x + vSky.y * vSky.y;
-  if (!(speed2 > 0)) return undefined;
+  const speed2 = skyPlaneSpeedSquared(vSky);
+  if (speed2 === undefined) return undefined;
 
-  const dtCenter = -((sky.x * vSky.x + sky.y * vSky.y) / speed2);
-  const xCenter = sky.x + vSky.x * dtCenter;
-  const yCenter = sky.y + vSky.y * dtCenter;
-  const zCenter = sky.z + vSky.z * dtCenter;
-  const impactMin = Math.hypot(xCenter, yCenter);
+  const center = projectLinearCenter(sky, vSky, speed2);
   const rSum = rStar + rBody;
 
-  if (!(impactMin < rSum)) return undefined;
-  if (!(zCenter > 0)) return undefined;
+  if (!isVisibleTransitCenter(center, rSum)) return undefined;
 
-  const chord = Math.sqrt(Math.max(0, rSum * rSum - impactMin * impactMin)) * 2;
-  const speed = Math.sqrt(speed2);
-  if (!(speed > 0)) return undefined;
-  const durationSec = chord / speed;
+  const durationSec = linearTransitDurationSec(rSum, center.impactMin, speed2);
+  if (durationSec === undefined) return undefined;
 
-  const centerSec = tObsSec + dtCenter;
+  const centerSec = tObsSec + center.dtCenter;
   const ingressSec = centerSec - durationSec / 2;
   const egressSec = centerSec + durationSec / 2;
   const ttvSec = computeTtvSec(centerSec, periodSec, transitReferenceEpochSec);
 
   return { centerSec, durationSec, ingressSec, egressSec, ttvSec };
+}
+
+function hasValidLinearTransitInputs(rStar: number, rBody: number, sky: SkyPoint, vSky: SkyPoint): boolean {
+  return (
+    Number.isFinite(rStar) &&
+    rStar > 0 &&
+    Number.isFinite(rBody) &&
+    rBody > 0 &&
+    isFiniteSkyPoint(sky) &&
+    isFiniteSkyPoint(vSky)
+  );
+}
+
+function isFiniteSkyPoint(sky: SkyPoint): boolean {
+  return Number.isFinite(sky.x) && Number.isFinite(sky.y) && Number.isFinite(sky.z);
+}
+
+function skyPlaneSpeedSquared(vSky: SkyPoint): number | undefined {
+  const speed2 = vSky.x * vSky.x + vSky.y * vSky.y;
+  return speed2 > 0 ? speed2 : undefined;
+}
+
+function projectLinearCenter(sky: SkyPoint, vSky: SkyPoint, speed2: number): LinearCenterProjection {
+  const dtCenter = -((sky.x * vSky.x + sky.y * vSky.y) / speed2);
+  const xCenter = sky.x + vSky.x * dtCenter;
+  const yCenter = sky.y + vSky.y * dtCenter;
+
+  return {
+    dtCenter,
+    impactMin: Math.hypot(xCenter, yCenter),
+    zCenter: sky.z + vSky.z * dtCenter,
+  };
+}
+
+function isVisibleTransitCenter(center: LinearCenterProjection, rSum: number): boolean {
+  return center.impactMin < rSum && center.zCenter > 0;
+}
+
+function linearTransitDurationSec(rSum: number, impactMin: number, speed2: number): number | undefined {
+  const chord = Math.sqrt(Math.max(0, rSum * rSum - impactMin * impactMin)) * 2;
+  const speed = Math.sqrt(speed2);
+  return speed > 0 ? chord / speed : undefined;
 }
 
 function contactValueAt(sample: TransitEventSample | undefined, rSum: number): number | undefined {
@@ -141,8 +182,7 @@ function contactValueAt(sample: TransitEventSample | undefined, rSum: number): n
 function centerDerivativeAt(sample: TransitEventSample | undefined): number | undefined {
   if (!sample) return undefined;
   const { sky, vSky } = sample;
-  if (!Number.isFinite(sky.x) || !Number.isFinite(sky.y) || !Number.isFinite(sky.z)) return undefined;
-  if (!Number.isFinite(vSky.x) || !Number.isFinite(vSky.y) || !Number.isFinite(vSky.z)) return undefined;
+  if (!isFiniteSkyPoint(sky) || !isFiniteSkyPoint(vSky)) return undefined;
   if (!(sky.z > 0)) return undefined;
   return sky.x * vSky.x + sky.y * vSky.y;
 }

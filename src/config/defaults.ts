@@ -1,4 +1,4 @@
-// src/config/defaults.ts
+/** Provides the canonical default system and simulation configuration. */
 //
 // Scenario defaults loaded from the bundled JSON snapshot.
 // Lives in config/ so that both sim/ and ui/ can import without violating layer boundaries.
@@ -40,31 +40,48 @@ function assertScenarioUnitsSI(meta: unknown): void {
   }
 }
 
-function loadDefaults(): SystemParams {
-  const raw: unknown = scenarioJson;
-
+function scenarioRoot(raw: unknown): Record<string, unknown> {
   if (!isObject(raw)) {
     throw new Error("scenario.default.json must be a JSON object");
   }
-  const rawObj = raw as Record<string, unknown>;
+  return raw;
+}
 
+function scenarioDefaults(rawObj: Record<string, unknown>): Record<string, unknown> {
   const defaults = rawObj.defaults;
   if (!isObject(defaults)) {
     throw new Error("scenario.default.json must contain a 'defaults' object");
   }
-  assertScenarioUnitsSI(rawObj.meta);
+  return defaults;
+}
 
-  // Basic structural validation of critical numeric fields before the cast.
-  const d = defaults as Record<string, unknown>;
-  const star = d.star as Record<string, unknown> | undefined;
-  const planet = d.planet as Record<string, unknown> | undefined;
+function assertDefaultStar(defaults: Record<string, unknown>): void {
+  const star = defaults.star as Record<string, unknown> | undefined;
   if (!star || typeof star.r !== "number" || !(star.r > 0)) {
     throw new Error("scenario.default.json defaults.star.r must be a positive number.");
   }
+}
+
+function assertDefaultPlanet(defaults: Record<string, unknown>): void {
+  const planet = defaults.planet as Record<string, unknown> | undefined;
   const planetOrbit = planet?.orbit as Record<string, unknown> | undefined;
   if (!planet || !planetOrbit || typeof planetOrbit.period !== "number" || !(planetOrbit.period > 0)) {
     throw new Error("scenario.default.json defaults.planet.orbit.period must be a positive number.");
   }
+}
+
+function assertCriticalDefaults(defaults: Record<string, unknown>): void {
+  assertDefaultStar(defaults);
+  assertDefaultPlanet(defaults);
+}
+
+function loadDefaults(): SystemParams {
+  const rawObj = scenarioRoot(scenarioJson);
+  const defaults = scenarioDefaults(rawObj);
+  assertScenarioUnitsSI(rawObj.meta);
+
+  // Basic structural validation of critical numeric fields before the cast.
+  assertCriticalDefaults(defaults);
 
   // Deep-clone to prevent accidental mutation of the import object.
   return cloneParams(defaults as SystemParams);

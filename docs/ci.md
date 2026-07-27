@@ -1,112 +1,117 @@
-# CI Overview
+# Continuous integration
 
-## Goals
+The repository separates browser and Python checks from native Apple checks.
+Workflow access to repository contents is read-only, and action revisions are
+pinned. The CodeQL workflow also grants `security-events: write` so it can
+publish its analysis results.
 
-- Deterministic and reproducible checks.
-- Fast feedback for pull requests.
-- Security coverage with least-privilege workflow permissions.
+## Browser and Python workflow
 
-## Pipeline at a glance
+`.github/workflows/ci.yml` runs on pull requests and pushes to `main` and `dev`.
+Its jobs are:
 
-```mermaid
-flowchart LR
-  PR["pull_request / push"] --> CI["CI workflow: verify"]
-  PR --> SEC["Security workflow: gitleaks"]
-  PR --> CQL["CodeQL workflow: analyze"]
-  SCH["weekly schedule"] --> DEP["Dependency audit workflow"]
-  CI --> GATE["Required quality gate"]
-  SEC --> GATE
-  CQL --> GATE
-  DEP --> REPORT["Security report and remediation backlog"]
+| Job             | Environment                  | Checks                                                                            |
+| --------------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| `lint`          | Ubuntu 24.04, Node 22        | Public-surface and documentation hygiene, ESLint, Prettier, Knip, and duplication |
+| `typecheck`     | Ubuntu 24.04, Node 22        | TypeScript 7 and TypeScript 6 compatibility projects                              |
+| `python`        | Ubuntu 24.04, Python 3.14.6  | Ruff, Pyright, pytest, wheel build, clean wheel install and import                |
+| `test`          | Ubuntu 24.04, Node 22 and 24 | Vitest unit and integration suites                                                |
+| `build`         | Ubuntu 24.04, Node 22        | Vite production build                                                             |
+| `e2e`           | Ubuntu 24.04, Node 22        | Playwright Chromium, Firefox, WebKit, tablet, and mobile projects                 |
+| `quality-gates` | Ubuntu 24.04, Node 22        | Literature, calibration, didactics, performance, physics, and migration checks    |
+
+Each Node job installs dependencies with:
+
+```bash
+corepack enable
+corepack install
+pnpm install --frozen-lockfile
 ```
 
-## Workflows
+## Native Apple workflow
 
-- `CI` (`.github/workflows/ci.yml`)
-  - Triggers: `pull_request` against `dev`, `push` on `dev`
-  - Jobs (run in dependency order):
-    1. `lint` — `pnpm ci:lint` (Node 22)
-    2. `typecheck` — `pnpm ci:typecheck` (Node 22)
-    3. `test` — `pnpm ci:test` (Node 20 and 22, matrix)
-    4. `build` — `pnpm ci:build` (Node 22, needs lint + typecheck)
-    5. `quality-gates` — literature benchmarks, didactics acceptance, perf smoke, physics regression, migration regression (Node 22, needs test)
-  - Cache: pnpm store via `actions/cache` (`~/.pnpm-store`)
+`.github/workflows/native-apple.yml` runs when its workflow, native source,
+capability contract, Swift toolchain selector, or real-systems snapshot changes.
+It can also be dispatched manually. It uses macOS 26, Xcode 26.6, and Swift
+6.3.3.
 
-- `Security` (`.github/workflows/security.yml`)
-  - Triggers: `pull_request` against `dev`, `push` on `dev`
-  - Job: `gitleaks`
+The workflow:
 
-- `CodeQL` (`.github/workflows/codeql.yml`)
-  - Triggers: `pull_request` against `dev`, `push` on `dev`, weekly schedule
-  - Job: `analyze`
+- tests `native-apple/Packages/OtherlightCore`
+- tests the macOS-only `native-apple/Packages/OtherlightScience`
+- checks Swift formatting
+- tests the shared app on macOS, iPhone 17 Pro with iOS 26.5, and iPad Pro
+  13-inch (M5) with iOS 26.5
+- creates an unsigned generic iOS archive and verifies bundle metadata, the
+  privacy manifest, and the absence of Arrow in mobile dependencies
 
-- `Dependency Audit` (`.github/workflows/dependency-audit.yml`)
-  - Triggers: weekly schedule, `workflow_dispatch`
-  - Main command: `pnpm audit --audit-level=high --prod`
-  - Scope: production dependency graph only (deterministic PR behavior, runtime-first risk focus)
+This workflow is path-filtered. It is not a check on changes outside those
+paths.
 
-## Local execution
+## macOS DMG workflow
 
-Full local CI parity:
+`.github/workflows/native-macos-dmg.yml` runs only through
+`workflow_dispatch`. It creates and checksums an unsigned Universal 2 DMG in
+the runner temporary directory. It does not upload, sign, notarize, publish, or
+create a release.
+
+## Security automation
+
+- `.github/workflows/security.yml` runs Gitleaks on pushes and pull requests.
+- `.github/workflows/codeql.yml` runs CodeQL on pushes, pull requests, and its
+  configured schedule.
+- `.github/workflows/dependency-audit.yml` runs the moderate pnpm advisory gate
+  on schedule or manual dispatch.
+- `.github/dependabot.yml` monitors root pnpm dependencies, Python backend
+  dependencies, and GitHub Actions.
+
+No standard verification workflow requires repository secrets.
+
+## Local checks
+
+Run the same browser and TypeScript checks used by the main workflow:
+
+```bash
+pnpm ci:verify
+```
+
+Run the broader local loop:
 
 ```bash
 ./scripts/ci-local.sh
 ```
 
-Optional local security dependency audit:
+The script performs a frozen install, installs Playwright browsers, runs
+browser E2E tests, probes the served build, records coverage, runs the moderate
+dependency audit, and executes the scientific contract and project quality
+gates. It does not run the Python backend checks or native Apple checks.
+
+Run those separately:
 
 ```bash
-CI_AUDIT=1 ./scripts/ci-local.sh
+source science_backend/.venv/bin/activate
+python -m ruff format --check science_backend
+python -m ruff check science_backend
+python -m pyright science_backend
+PYTHONPATH=science_backend python -m pytest science_backend/tests
+
+source scripts/select-swift-toolchain.sh
+swift format lint --strict --recursive native-apple
+swift test --package-path native-apple/Packages/OtherlightCore
+swift test --package-path native-apple/Packages/OtherlightScience
 ```
 
-Equivalent manual steps:
+The local dependency audit requires network access. Playwright installation may
+also download browser binaries.
 
-```bash
-pnpm install --frozen-lockfile
-pnpm ci:verify
-pnpm audit:security
-```
+## Changing automation
 
-## Determinism controls
+When editing a workflow:
 
-- OS is pinned (`ubuntu-24.04`).
-- Node is pinned in CI (22).
-- pnpm is pinned (`pnpm@9.0.0` via Corepack).
-- Lockfile is enforced (`--frozen-lockfile`).
-
-## Required checks for merge
-
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-- Optional strict gates used in release prep:
-  - `pnpm literature-benchmarks`
-  - `pnpm didactics-acceptance`
-  - `pnpm perf-smoke`
-  - `pnpm migration-regression`
-
-## Secrets and permissions
-
-Current workflows do not require repository secrets for standard verification.
-If deployment/secrets are added later:
-
-- run only on trusted triggers (`push`/`workflow_dispatch`),
-- use GitHub Environments with approval,
-- keep workflow permissions minimal.
-
-## Release checklist
-
-Before cutting a release (tag or GitHub release):
-
-1. Run full verification: `pnpm ci:verify`
-2. Optionally run strict gates: `pnpm literature-benchmarks`, `pnpm didactics-acceptance`, `pnpm perf-smoke`, `pnpm migration-regression`
-3. Ensure `CHANGELOG.md` has a versioned section for the release
-4. Tag the version (e.g. `git tag v0.1.0`) and push
-5. Optional: refresh real-systems snapshot with `pnpm data:real-systems:refresh` if you want the release to ship updated NASA data
-
-## Extending CI safely
-
-- Keep PR checks fast (`lint`, `typecheck`, `test`, `build`).
-- Run expensive or non-deterministic checks on schedule/manual triggers.
-- Always set `timeout-minutes`, explicit permissions, and caching strategy.
+1. Keep permissions at the smallest required scope.
+2. Pin third-party actions to immutable revisions.
+3. Set a finite timeout.
+4. Keep installation tied to the checked-in lockfile or package metadata.
+5. Add path filters only when an unaffected change can safely skip the job.
+6. Do not add signing, upload, publication, or infrastructure mutation to a
+   verification workflow.

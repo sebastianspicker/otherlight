@@ -1,3 +1,5 @@
+/** Verifies real systems contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { AU_M, DAY_S, DEG2RAD, JUPITER_RADIUS_M, SOLAR_MASS_KG, SOLAR_RADIUS_M } from "../../src/core/units";

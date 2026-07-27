@@ -2,9 +2,9 @@
  * Axis and tick rendering for the light-curve plot.
  *
  * Exports:
- *  - `TimeScaleInfo`  — shared layout descriptor used by axes and annotations.
- *  - `xOfTime`        — converts a time value to a canvas x-coordinate.
- *  - `drawAxes`       — draws the plot border, Y/X grid lines, tick marks and labels.
+ *  - `TimeScaleInfo`: shared layout descriptor used by axes and annotations.
+ *  - `xOfTime`: converts a time value to a canvas x-coordinate.
+ *  - `drawAxes`: draws the plot border, Y/X grid lines, tick marks and labels.
  */
 
 import { computeTickLayout, formatTickValue } from "./lightCurvePlotSeries";
@@ -47,7 +47,7 @@ export function drawAxes(args: {
   ctx.stroke();
 
   const yTickLayout = computeTickLayout(lo, hi, Math.min(6, Math.floor(plotH / 36)));
-  ctx.font = "10px 'Space Mono', monospace";
+  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -119,7 +119,7 @@ export function drawAxes(args: {
 
   ctx.save();
   ctx.fillStyle = "rgba(208, 219, 229, 0.8)";
-  ctx.font = "11px 'Space Grotesk', sans-serif";
+  ctx.font = "12px system-ui, sans-serif";
   ctx.translate(12, marginTop + plotH * 0.5);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
@@ -129,7 +129,7 @@ export function drawAxes(args: {
 
   if (timeInfo.haveTime) {
     ctx.fillStyle = "rgba(208, 219, 229, 0.8)";
-    ctx.font = "11px 'Space Grotesk', sans-serif";
+    ctx.font = "12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("t [s]", marginLeft + plotW * 0.5, h - 10);

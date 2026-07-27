@@ -1,3 +1,5 @@
+/** Verifies occulter circle calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -83,7 +85,7 @@ describe("clampGridRes", () => {
   });
 
   it("clamps above the maximum", () => {
-    expect(clampGridRes(10000, 100)).toBe(4096);
+    expect(clampGridRes(10000, 100)).toBe(1024);
   });
 
   it("uses fallback for non-finite input", () => {
@@ -94,6 +96,10 @@ describe("clampGridRes", () => {
   it("respects custom min/max options", () => {
     expect(clampGridRes(5, 100, { minRes: 10, maxRes: 50 })).toBe(10);
     expect(clampGridRes(200, 100, { minRes: 10, maxRes: 50 })).toBe(50);
+  });
+
+  it("does not let custom bounds bypass the hard runtime ceiling", () => {
+    expect(clampGridRes(10000, 100, { minRes: 5000, maxRes: 10000 })).toBe(1024);
   });
 });
 

@@ -1,3 +1,6 @@
+/**
+ * Owns light Curve Plot Buffer support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ */
 import { isFiniteNumber } from "../core/units";
 
 import type { LightCurveHistoryState, LightCurveSample } from "./lightCurvePlotTypes";
@@ -74,22 +77,42 @@ export function resolveEarliestFiniteTime(state: LightCurveHistoryState, activeL
 }
 
 export function resolveLatestFiniteTime(state: LightCurveHistoryState, activeLength: number): number {
-  if (state.latestFiniteTimeIndex >= state.startIndex && Number.isFinite(state.latestFiniteTime)) {
+  if (hasCachedFiniteTime(state.latestFiniteTimeIndex, state.startIndex, state.latestFiniteTime)) {
     return state.latestFiniteTime;
   }
 
+  return refreshLatestFiniteTime(state, activeLength);
+}
+
+function hasCachedFiniteTime(index: number, startIndex: number, value: number): boolean {
+  return index >= startIndex && Number.isFinite(value);
+}
+
+function refreshLatestFiniteTime(state: LightCurveHistoryState, activeLength: number): number {
+  const latest = findLatestFiniteTime(state, activeLength);
+  if (!latest) {
+    state.latestFiniteTime = Number.NaN;
+    state.latestFiniteTimeIndex = -1;
+    return Number.NaN;
+  }
+
+  state.latestFiniteTime = latest.time;
+  state.latestFiniteTimeIndex = latest.index;
+  return latest.time;
+}
+
+function findLatestFiniteTime(
+  state: LightCurveHistoryState,
+  activeLength: number,
+): { time: number; index: number } | null {
   for (let i = activeLength - 1; i >= 0; i--) {
     const index = state.startIndex + i;
     const tt = state.t[index];
     if (!Number.isFinite(tt)) continue;
-    state.latestFiniteTime = tt;
-    state.latestFiniteTimeIndex = index;
-    return tt;
+    return { time: tt, index };
   }
 
-  state.latestFiniteTime = Number.NaN;
-  state.latestFiniteTimeIndex = -1;
-  return Number.NaN;
+  return null;
 }
 
 function compactHistory(state: LightCurveHistoryState, force = false): void {

@@ -1,6 +1,6 @@
-// src/sim/diagnostics.ts
+/** Derives simulation diagnostics separately from physical state evolution. */
 
-import type { SystemParams } from "../core/types";
+import type { SkyPoint, SystemParams } from "../core/types";
 import { toFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { impactParameterFromProjectedSky, tdvRatioFromSkyPlaneSpeeds } from "../physics/exomoonTiming";
@@ -23,54 +23,91 @@ export function computeExoDiagnostics(
   observerDir: Vec3,
   kin: BodyKinematics,
 ): ExoDiagnostics {
+  assertExoDiagnosticsInputs(params, t);
+
+  const exo = getExomoonConfig(params);
+  const impacts = computeImpactDiagnostics(params, kin);
+  const sampledNow = sampleDiagnosticsNow(params, t, observerDir, kin, exo?.velDt);
+  const sampledRef = sampleDiagnosticsReference(params, observerDir, exo);
+  const vPlanetSky = skyPlaneSpeed(sampledNow.planet.v, observerDir);
+  const vPlanetSkyRef = sampledRef ? skyPlaneSpeed(sampledRef.planet.v, observerDir) : undefined;
+
+  return {
+    vPlanetSky,
+    vPlanetSkyRef,
+    tdvRatio: finiteTdvRatio(vPlanetSkyRef, vPlanetSky),
+    ...impacts,
+  };
+}
+
+function assertExoDiagnosticsInputs(params: SystemParams, t: number): void {
   if (!Number.isFinite(t)) throw new Error("computeExoDiagnostics: t must be finite.");
   if (!params.star || !Number.isFinite(params.star.r) || params.star.r <= 0) {
     throw new Error("computeExoDiagnostics: star.r must be > 0");
   }
+}
 
-  const exo = getExomoonConfig(params);
+function computeImpactDiagnostics(
+  params: SystemParams,
+  kin: BodyKinematics,
+): Pick<ExoDiagnostics, "bPlanet" | "bMoon"> {
+  return {
+    bPlanet: finiteImpactParameter(kin.planetSky, params.star.r),
+    bMoon: kin.moonSky ? finiteImpactParameter(kin.moonSky, params.star.r) : undefined,
+  };
+}
 
-  const bPlanetRaw = impactParameterFromProjectedSky(kin.planetSky, params.star.r);
-  const bPlanet = Number.isFinite(bPlanetRaw) ? bPlanetRaw : undefined;
-  const bMoonRaw = kin.moonSky ? impactParameterFromProjectedSky(kin.moonSky, params.star.r) : Number.NaN;
-  const bMoon = Number.isFinite(bMoonRaw) ? bMoonRaw : undefined;
+function finiteImpactParameter(sky: SkyPoint, starRadius: number): number | undefined {
+  const impact = impactParameterFromProjectedSky(sky, starRadius);
+  return Number.isFinite(impact) ? impact : undefined;
+}
 
-  const sampledNow = sampleSystemState({
+function sampleDiagnosticsNow(
+  params: SystemParams,
+  t: number,
+  observerDir: Vec3,
+  kin: BodyKinematics,
+  velDtSec: number | undefined,
+): ReturnType<typeof sampleSystemState> {
+  return sampleSystemState({
     system: params,
     tObs: t,
     observerDir,
     kinAtT: kin,
-    velDtSec: exo?.velDt,
+    velDtSec,
   });
+}
 
+function sampleDiagnosticsReference(
+  params: SystemParams,
+  observerDir: Vec3,
+  exo: ReturnType<typeof getExomoonConfig>,
+): ReturnType<typeof sampleSystemState> | undefined {
   // Skip the expensive reference-epoch sample only when exomoon timing is
   // completely absent (no config object at all). When the config exists but
   // is disabled, still compute diagnostics so they remain available in the UI.
-  const sampledRef = exo
-    ? sampleSystemState({
-        system: params,
-        tObs: toFiniteNumber(exo.tRef, 0),
-        observerDir,
-        velDtSec: exo.velDt,
-      })
-    : undefined;
+  if (!exo) return undefined;
 
-  const vNowSky = projectToSky(sampledNow.planet.v, observerDir);
-  const vPlanetSkyRaw = Math.hypot(vNowSky.x, vNowSky.y);
-  const vPlanetSky = Number.isFinite(vPlanetSkyRaw) ? vPlanetSkyRaw : undefined;
+  return sampleSystemState({
+    system: params,
+    tObs: toFiniteNumber(exo.tRef, 0),
+    observerDir,
+    velDtSec: exo.velDt,
+  });
+}
 
-  let vPlanetSkyRef: number | undefined;
-  if (sampledRef) {
-    const vRefSky = projectToSky(sampledRef.planet.v, observerDir);
-    const vPlanetSkyRefRaw = Math.hypot(vRefSky.x, vRefSky.y);
-    vPlanetSkyRef = Number.isFinite(vPlanetSkyRefRaw) ? vPlanetSkyRefRaw : undefined;
-  }
+function skyPlaneSpeed(v: Vec3, observerDir: Vec3): number | undefined {
+  const vSky = projectToSky(v, observerDir);
+  const speed = Math.hypot(vSky.x, vSky.y);
+  return Number.isFinite(speed) ? speed : undefined;
+}
 
-  let tdvRatio: number | undefined;
-  if (vPlanetSkyRef !== undefined && vPlanetSky !== undefined) {
-    const r = tdvRatioFromSkyPlaneSpeeds(vPlanetSkyRef, vPlanetSky);
-    if (Number.isFinite(r)) tdvRatio = r;
-  }
+function finiteTdvRatio(
+  vPlanetSkyRef: number | undefined,
+  vPlanetSky: number | undefined,
+): number | undefined {
+  if (vPlanetSkyRef === undefined || vPlanetSky === undefined) return undefined;
 
-  return { vPlanetSky, vPlanetSkyRef, tdvRatio, bPlanet, bMoon };
+  const ratio = tdvRatioFromSkyPlaneSpeeds(vPlanetSkyRef, vPlanetSky);
+  return Number.isFinite(ratio) ? ratio : undefined;
 }

@@ -1,4 +1,4 @@
-// src/core/typesDidactics.ts
+/** Defines the shared didactic lesson, progress, and feedback contracts. */
 //
 // Contracts for in-app learning workflows (Bachelor/Master STEM focus).
 

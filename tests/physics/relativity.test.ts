@@ -1,3 +1,5 @@
+/** Verifies relativity calculations in orbital dynamics and numerical integration. */
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -42,7 +44,7 @@ describe("lightTimeDelaySec", () => {
 });
 
 describe("shapiroDelaySec", () => {
-  it("returns a positive delay for a body in front of the gravitating center", () => {
+  it("returns a finite relative delay for a body in front of the gravitating center", () => {
     const delay = shapiroDelaySec({
       r: { x: 0, y: 0, z: 10 },
       observerDir: { x: 0, y: 0, z: 1 },
@@ -50,8 +52,8 @@ describe("shapiroDelaySec", () => {
       c: 3e8,
     });
     expect(Number.isFinite(delay)).toBe(true);
-    // The delay should be non-negative for a standard configuration
-    expect(delay).toBeGreaterThanOrEqual(0);
+    // A differential delay may be negative because its additive zero is arbitrary.
+    expect(delay).toBeLessThan(0);
   });
 
   it("returns 0 for non-positive mu", () => {
@@ -87,20 +89,38 @@ describe("shapiroDelaySec", () => {
     ).toBe(0);
   });
 
-  it("increases with larger mu", () => {
+  it("scales linearly with mass parameter", () => {
     const d1 = shapiroDelaySec({
-      r: { x: 0, y: 1, z: 10 },
+      r: { x: 0, y: 1, z: -10 },
       observerDir: { x: 0, y: 0, z: 1 },
       mu: 1e10,
       c: 3e8,
     });
     const d2 = shapiroDelaySec({
-      r: { x: 0, y: 1, z: 10 },
+      r: { x: 0, y: 1, z: -10 },
       observerDir: { x: 0, y: 0, z: 1 },
       mu: 2e10,
       c: 3e8,
     });
-    expect(d2).toBeGreaterThan(d1);
+    expect(d2).toBeCloseTo(2 * d1, 12);
+  });
+
+  it("regularizes superior conjunction using transverse impact parameter", () => {
+    const nearAxis = shapiroDelaySec({
+      r: { x: 1, y: 0, z: -100 },
+      observerDir: { x: 0, y: 0, z: 1 },
+      mu: 1e10,
+      c: 3e8,
+    });
+    const floored = shapiroDelaySec({
+      r: { x: 1, y: 0, z: -100 },
+      observerDir: { x: 0, y: 0, z: 1 },
+      mu: 1e10,
+      c: 3e8,
+      minImpact: 5,
+    });
+    expect(floored).toBeGreaterThan(0);
+    expect(floored).toBeLessThan(nearAxis);
   });
 });
 
@@ -201,7 +221,7 @@ describe("grPrecessionPerOrbit", () => {
   });
 });
 
-describe("solveLightTimeCorrectedResult", () => {
+describe("solveLightTimeCorrectedResult convergence", () => {
   it("reports convergence metadata for a constant-position LTTE solve", () => {
     const out = solveLightTimeCorrectedResult({
       tObs: 100,
@@ -286,7 +306,9 @@ describe("solveLightTimeCorrectedResult", () => {
     expect(out.diagnostics.residualSec).toBeLessThanOrEqual(1e-12);
     expect(out.tEmit).toBeCloseTo(expected, 10);
   });
+});
 
+describe("solveLightTimeCorrectedResult diagnostics", () => {
   it("emits explicit validity flags for the weak-field relative Shapiro models", () => {
     const out = solveLightTimeCorrectedResult({
       tObs: 10_000,

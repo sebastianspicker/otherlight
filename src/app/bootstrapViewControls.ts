@@ -1,3 +1,6 @@
+/**
+ * Owns bootstrap View Controls support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
 import type { UiRefs } from "../ui/refs";
 import { readTimeSpeed } from "./actions";
@@ -9,115 +12,132 @@ type BootstrapViewControlDeps = {
   signal?: AbortSignal;
 };
 
+type ListenerOptions = AddEventListenerOptions | undefined;
+
 export function wireBootstrapViewControls(deps: BootstrapViewControlDeps): void {
   const { refs, renderer, plot, signal } = deps;
-  const {
-    btnZoomIn,
-    btnZoomOut,
-    btnZoomReset,
-    plotTrackingMode,
-    timeSpeed,
-    timeSpeedMultiplier,
-    timeSpeedVal,
-    viewAutoFit,
-    viewZoomEnabled,
-    zoomVal,
-  } = refs;
   const listenerOptions = signal ? { signal } : undefined;
 
-  const setZoomControlsEnabled = (enabled: boolean): void => {
-    if (btnZoomOut) btnZoomOut.disabled = !enabled;
-    if (btnZoomIn) btnZoomIn.disabled = !enabled;
-    if (btnZoomReset) btnZoomReset.disabled = !enabled;
-  };
+  wireTimeSpeedControls(refs, listenerOptions);
+  wirePlotTrackingMode(refs, plot, listenerOptions);
+  wireManualZoomControls(refs, renderer, listenerOptions);
+  wireZoomButtons(refs, renderer, listenerOptions);
+  wireAutoFitControl(refs, renderer, listenerOptions);
+}
 
-  const syncZoomReadout = (): void => {
-    if (zoomVal) zoomVal.textContent = `${renderer.getZoomMultiplier().toFixed(1)}x`;
-  };
+function setZoomControlsEnabled(refs: UiRefs, enabled: boolean): void {
+  if (refs.btnZoomOut) refs.btnZoomOut.disabled = !enabled;
+  if (refs.btnZoomIn) refs.btnZoomIn.disabled = !enabled;
+  if (refs.btnZoomReset) refs.btnZoomReset.disabled = !enabled;
+}
 
-  const applyZoomMultiplier = (next: number): void => {
-    renderer.setZoomMultiplier(next);
-    renderer.invalidateSceneScale();
-    syncZoomReadout();
-  };
+function syncZoomReadout(refs: UiRefs, renderer: Canvas2DRenderer): void {
+  if (refs.zoomVal) refs.zoomVal.textContent = `${renderer.getZoomMultiplier().toFixed(1)}x`;
+}
 
-  const syncTimeSpeed = () => void readTimeSpeed(timeSpeed, timeSpeedVal, timeSpeedMultiplier);
-  timeSpeed.addEventListener("input", syncTimeSpeed, listenerOptions);
-  timeSpeedMultiplier.value = "1";
-  timeSpeedMultiplier.addEventListener("change", syncTimeSpeed, listenerOptions);
+function applyZoomMultiplier(refs: UiRefs, renderer: Canvas2DRenderer, next: number): void {
+  renderer.setZoomMultiplier(next);
+  renderer.invalidateSceneScale();
+  syncZoomReadout(refs, renderer);
+}
+
+function wireTimeSpeedControls(refs: UiRefs, listenerOptions: ListenerOptions): void {
+  const syncTimeSpeed = () => void readTimeSpeed(refs.timeSpeed, refs.timeSpeedVal, refs.timeSpeedMultiplier);
+  refs.timeSpeed.addEventListener("input", syncTimeSpeed, listenerOptions);
+  refs.timeSpeedMultiplier.value = "1";
+  refs.timeSpeedMultiplier.addEventListener("change", syncTimeSpeed, listenerOptions);
   syncTimeSpeed();
+}
 
-  if (plotTrackingMode) {
-    plotTrackingMode.value = "dynamic";
-    plotTrackingMode.addEventListener(
+function plotTrackingModeValue(value: string): "fixed" | "dynamic" | "live" {
+  if (value === "live") return "live";
+  if (value === "dynamic") return "dynamic";
+  return "fixed";
+}
+
+function wirePlotTrackingMode(refs: UiRefs, plot: LightCurvePlot, listenerOptions: ListenerOptions): void {
+  const control = refs.plotTrackingMode;
+  if (control) {
+    control.value = "dynamic";
+    control.addEventListener(
       "change",
       () => {
-        const nextMode =
-          plotTrackingMode.value === "live"
-            ? "live"
-            : plotTrackingMode.value === "dynamic"
-              ? "dynamic"
-              : "fixed";
-        plot.setOptions({ trackingMode: nextMode });
+        plot.setOptions({ trackingMode: plotTrackingModeValue(control.value) });
       },
       listenerOptions,
     );
   }
+}
 
-  if (viewZoomEnabled) {
-    viewZoomEnabled.checked = false;
-    setZoomControlsEnabled(false);
+function wireManualZoomControls(
+  refs: UiRefs,
+  renderer: Canvas2DRenderer,
+  listenerOptions: ListenerOptions,
+): void {
+  const control = refs.viewZoomEnabled;
+  if (control) {
+    control.checked = false;
+    setZoomControlsEnabled(refs, false);
     renderer.resetZoom();
-    syncZoomReadout();
-    viewZoomEnabled.addEventListener(
+    syncZoomReadout(refs, renderer);
+    control.addEventListener(
       "change",
       () => {
-        const enabled = viewZoomEnabled.checked;
-        setZoomControlsEnabled(enabled);
+        const enabled = control.checked;
+        setZoomControlsEnabled(refs, enabled);
         if (!enabled) {
           renderer.resetZoom();
           renderer.invalidateSceneScale();
-          syncZoomReadout();
+          syncZoomReadout(refs, renderer);
         }
       },
       listenerOptions,
     );
   } else {
-    syncZoomReadout();
+    syncZoomReadout(refs, renderer);
   }
+}
 
-  btnZoomOut?.addEventListener(
+function wireZoomButtons(refs: UiRefs, renderer: Canvas2DRenderer, listenerOptions: ListenerOptions): void {
+  refs.btnZoomOut?.addEventListener(
     "click",
     () => {
-      if (!viewZoomEnabled?.checked) return;
-      applyZoomMultiplier(renderer.getZoomMultiplier() / 1.5);
+      if (!refs.viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(refs, renderer, renderer.getZoomMultiplier() / 1.5);
     },
     listenerOptions,
   );
-  btnZoomIn?.addEventListener(
+  refs.btnZoomIn?.addEventListener(
     "click",
     () => {
-      if (!viewZoomEnabled?.checked) return;
-      applyZoomMultiplier(renderer.getZoomMultiplier() * 1.5);
+      if (!refs.viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(refs, renderer, renderer.getZoomMultiplier() * 1.5);
     },
     listenerOptions,
   );
-  btnZoomReset?.addEventListener(
+  refs.btnZoomReset?.addEventListener(
     "click",
     () => {
-      if (!viewZoomEnabled?.checked) return;
-      applyZoomMultiplier(1);
+      if (!refs.viewZoomEnabled?.checked) return;
+      applyZoomMultiplier(refs, renderer, 1);
     },
     listenerOptions,
   );
+}
 
-  if (viewAutoFit) {
-    viewAutoFit.checked = false;
+function wireAutoFitControl(
+  refs: UiRefs,
+  renderer: Canvas2DRenderer,
+  listenerOptions: ListenerOptions,
+): void {
+  const control = refs.viewAutoFit;
+  if (control) {
+    control.checked = false;
     renderer.setAutoFitScene(false);
-    viewAutoFit.addEventListener(
+    control.addEventListener(
       "change",
       () => {
-        renderer.setAutoFitScene(viewAutoFit.checked);
+        renderer.setAutoFitScene(control.checked);
         renderer.invalidateSceneScale();
       },
       listenerOptions,

@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+/** Verifies DOM contracts in shared app and physics primitives. */
+
 import { describe, expect, it } from "vitest";
 
 import { mustGet, mustGetAs, setText, setHidden, setDisabled } from "../../src/core/dom";
@@ -81,9 +83,10 @@ describe("setText", () => {
 
   it("escapes HTML (safe against injection)", () => {
     const el = document.createElement("span");
-    setText(el, "<script>alert(1)</script>");
-    expect(el.innerHTML).not.toContain("<script>");
-    expect(el.textContent).toBe("<script>alert(1)</script>");
+    const htmlTextPayload = `<img src="x" onerror="alert(1)">`;
+    setText(el, htmlTextPayload);
+    expect(el.innerHTML).not.toContain("<img");
+    expect(el.textContent).toBe(htmlTextPayload);
   });
 });
 

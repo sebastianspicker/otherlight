@@ -1,7 +1,8 @@
-import fs from "node:fs";
+/** Enforces the documentation any-type budget for reviewable public interfaces. */
+
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { walkTsFiles } from "../helpers/walkTsFiles";
+import { readTextFileWithinRepo, walkTsFiles } from "../helpers/walkTsFiles";
 
 describe("hygiene any budget", () => {
   it("keeps explicit any usage under the current migration budget", () => {
@@ -12,7 +13,7 @@ describe("hygiene any budget", () => {
 
     let count = 0;
     for (const f of files) {
-      const text = fs.readFileSync(f, "utf8");
+      const text = readTextFileWithinRepo(f);
       const matches = text.match(rx);
       count += matches?.length ?? 0;
     }

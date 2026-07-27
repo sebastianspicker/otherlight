@@ -1,3 +1,5 @@
+/** Verifies transit history contracts across app startup, controls, and runtime integration. */
+
 import { describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
@@ -6,6 +8,7 @@ import {
   formatTransitHistorySummary,
   updateTransitHistoryFromStep,
 } from "../../src/app/transitHistory";
+import { fallbackStepV3 } from "../../src/app/frameLoopFallback";
 
 function makeSystem(periodSec = 1000): SystemParams {
   return {
@@ -68,5 +71,17 @@ describe("transit history state", () => {
 
     expect(updateTransitHistoryFromStep({ state, step, system, tNowSec: 100 })).toBe(false);
     expect(state.planet.events).toHaveLength(0);
+  });
+
+  it("does not update from fallback steps that reuse a previous valid step", () => {
+    const state = createTransitHistoryState();
+    const system = makeSystem(1000);
+    const previous = fallbackStepV3(101, system);
+    previous.timing = { planetTransitCenterSec: 100, planetTtvSec: 0.2, planetTransitDurationSec: 10 };
+    const fallback = fallbackStepV3(200, system, previous);
+
+    expect(updateTransitHistoryFromStep({ state, step: fallback, system, tNowSec: 200 })).toBe(false);
+    expect(state.planet.events).toHaveLength(0);
+    expect(fallback.renderSignals.uncertaintyFlags).toContain("fallback-step-used");
   });
 });

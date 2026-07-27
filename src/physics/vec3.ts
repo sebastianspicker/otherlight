@@ -1,4 +1,4 @@
-// src/physics/vec3.ts
+/** Implements finite three-vector algebra used by orbital and frame calculations. */
 //
 // Minimal, dependency-free 3D vector utilities used across physics, photometry,
 // simulation, and render.
@@ -27,19 +27,6 @@ export function v3(x: number, y: number, z: number): Vec3 {
 /** True iff all components are finite (rejects NaN and ±Infinity). */
 export function vIsFinite(v: Vec3): boolean {
   return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
-}
-
-/** Exact equality (mostly useful for tests). */
-function vEq(a: Vec3, b: Vec3): boolean {
-  return a.x === b.x && a.y === b.y && a.z === b.z;
-}
-
-/** Component-wise approximate equality. */
-function vApproxEq(a: Vec3, b: Vec3, eps = 1e-12): boolean {
-  if (!Number.isFinite(eps) || eps < 0) {
-    throw new Error("vApproxEq: eps must be a finite number >= 0.");
-  }
-  return Math.abs(a.x - b.x) <= eps && Math.abs(a.y - b.y) <= eps && Math.abs(a.z - b.z) <= eps;
 }
 
 export function vAdd(a: Vec3, b: Vec3): Vec3 {
@@ -139,51 +126,4 @@ export function vNearlyZero(v: Vec3, eps = 1e-15): boolean {
     throw new Error("vNearlyZero: eps must be a finite number >= 0.");
   }
   return vLenSq(v) < eps * eps;
-}
-
-/**
- * Returns a unit vector orthogonal to v (arbitrary but deterministic),
- * or zero if v is too small/non-finite.
- */
-function vAnyOrthogonalUnit(v: Vec3, eps = 1e-15): Vec3 {
-  const u = vNormalizeOrZero(v, eps);
-  if (vEq(u, VEC3ZERO)) return VEC3ZERO;
-
-  // Pick helper axis least aligned with u (maximizes cross-product magnitude).
-  const ax = Math.abs(u.x);
-  const ay = Math.abs(u.y);
-  const az = Math.abs(u.z);
-
-  const helper: Vec3 =
-    ax <= ay && ax <= az ? { x: 1, y: 0, z: 0 } : ay <= az ? { x: 0, y: 1, z: 0 } : { x: 0, y: 0, z: 1 };
-
-  return vNormalizeOrZero(vCross(u, helper), eps);
-}
-
-/* -----------------------------
- * Minimal built-in tests
- * ----------------------------- */
-
-function assert(cond: unknown, msg: string): void {
-  if (!cond) throw new Error(`vec3 self-test failed: ${msg}`);
-}
-
-function approxEq(a: number, b: number, eps = 1e-12): boolean {
-  return Math.abs(a - b) <= eps;
-}
-
-export function runVec3SelfTests(): void {
-  const ex = v3(1, 0, 0);
-  const ey = v3(0, 1, 0);
-  const ez = v3(0, 0, 1);
-
-  const c = vCross(ex, ey);
-  assert(vApproxEq(c, ez, 1e-12), "cross product should be right-handed.");
-
-  const n = vNormalizeOrThrow(v3(3, 0, 0));
-  assert(vApproxEq(n, ex, 1e-12), "normalize should produce unit axis.");
-
-  const o = vAnyOrthogonalUnit(ex);
-  assert(approxEq(vDot(o, ex), 0, 1e-12), "orthogonal unit should be perpendicular.");
-  assert(approxEq(vLen(o), 1, 1e-12), "orthogonal unit should be normalized.");
 }

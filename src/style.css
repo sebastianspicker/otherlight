@@ -1,3 +1,7 @@
+/* Orders the style layers so structural defaults load before public-alpha overrides. */
+
 @import "./styles/base.css";
 @import "./styles/shell.css";
 @import "./styles/features.css";
+@import url("./styles/public-alpha.css");
+@import "./styles/otherlight-instrument.css";

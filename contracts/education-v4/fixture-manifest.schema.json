@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/transit-light-curve-lab/education-v4/fixture-manifest.schema.json",
+  "title": "Native parity fixture manifest",
+  "type": "object",
+  "required": ["contractVersion", "generator", "sourceRevision", "comparisonPolicy", "scenarios"],
+  "properties": {
+    "contractVersion": { "const": "education-v4/1" },
+    "generator": { "const": "scripts/export-native-parity-fixtures.mjs" },
+    "sourceRevision": { "type": "string", "minLength": 1 },
+    "comparisonPolicy": {
+      "type": "object",
+      "required": ["exactFields", "floating"],
+      "properties": {
+        "exactFields": { "type": "array", "items": { "type": "string" } },
+        "floating": {
+          "type": "object",
+          "required": ["absolute", "relative"],
+          "properties": {
+            "absolute": { "type": "number", "minimum": 0 },
+            "relative": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "sampleTimesSec", "scenario", "expectedSteps"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "sampleTimesSec": { "type": "array", "minItems": 4, "items": { "type": "number" } },
+          "scenario": { "$ref": "scenario.schema.json" },
+          "expectedSteps": { "type": "array", "minItems": 4, "items": { "$ref": "step.schema.json" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

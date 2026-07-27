@@ -1,0 +1,1487 @@
+{
+  "contractVersion": "education-v4/1",
+  "generator": "scripts/export-native-parity-fixtures.mjs",
+  "sourceRevision": "77555e131da9931c9974011dbe10c505273d4814+dirty",
+  "comparisonPolicy": {
+    "exactFields": ["scenario.version", "scenario.mode", "renderSignals.events", "warningFlags"],
+    "floating": {
+      "absolute": 1e-10,
+      "relative": 1e-9
+    }
+  },
+  "scenarios": [
+    {
+      "id": "default",
+      "label": "Default (didactic transit model)",
+      "sampleTimesSec": [0, 7946.126912235764, 15892.253824471529, 31784.507648943058],
+      "scenario": {
+        "version": "4",
+        "mode": "general-lab",
+        "runtime": {
+          "mode": "realtime",
+          "executionMode": "interactive",
+          "referenceSubsteps": 5
+        },
+        "observer": {
+          "dir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          }
+        },
+        "binaryLab": {
+          "enabled": true,
+          "hideSkyUntilReveal": true,
+          "requireHypothesis": true,
+          "lockParamsUntilHypothesis": true
+        },
+        "bodies": {
+          "stars": [
+            {
+              "id": "star-a",
+              "r": 695700000,
+              "m": 1.98847e30,
+              "luminosityScale": 1
+            },
+            {
+              "id": "star-b",
+              "r": 660915000,
+              "m": 0,
+              "luminosityScale": 0
+            }
+          ],
+          "planets": [
+            {
+              "id": "planet-1",
+              "r": 150000000,
+              "m": 3.5e28,
+              "orbit": {
+                "a": 2400000000,
+                "e": 0,
+                "inc": 1.5603243512829308,
+                "Omega": 0,
+                "omega": 0,
+                "period": 63569.015297886115,
+                "t0": 0
+              },
+              "parentStarId": "star-a",
+              "parentSystem": "star"
+            }
+          ],
+          "moons": [
+            {
+              "id": "moon-1",
+              "r": 50000000,
+              "m": 5.9722e24,
+              "orbit": {
+                "a": 210000000,
+                "e": 0,
+                "inc": 0,
+                "Omega": 0,
+                "omega": 0,
+                "period": 12509.353831060787,
+                "t0": 0
+              },
+              "parentPlanetId": "planet-1"
+            }
+          ]
+        },
+        "orbits": {
+          "binary": {
+            "a": 2400000000,
+            "e": 0,
+            "inc": 1.5603243512829308,
+            "Omega": 0,
+            "omega": 0,
+            "period": 63569.015297886115,
+            "t0": 0
+          },
+          "hierarchy": [
+            {
+              "childId": "planet-1",
+              "parentId": "star-a",
+              "relation": "orbits"
+            },
+            {
+              "childId": "moon-1",
+              "parentId": "planet-1",
+              "relation": "orbits"
+            }
+          ]
+        },
+        "photometry": {
+          "cadenceSec": 60,
+          "nSubsamples": 9,
+          "gridRes": 220,
+          "baselineFlux": 1,
+          "limbDarkeningModel": {
+            "default": {
+              "kind": "quadratic",
+              "u1": 0.35,
+              "u2": 0.25
+            }
+          },
+          "brightnessPatches": [],
+          "phaseCurve": {
+            "enabled": true,
+            "reflAmp": 0.006,
+            "thermAmp": 0.0003,
+            "reflOffset": 0,
+            "thermOffset": 0,
+            "lambertian": true,
+            "physicalScaling": false,
+            "constant": 0
+          },
+          "moonPhaseCurve": {
+            "enabled": true,
+            "reflAmp": 0.002,
+            "thermAmp": 0.00015,
+            "lambertian": true,
+            "physicalScaling": false
+          },
+          "forwardScattering": {
+            "enabled": false,
+            "amp": 0,
+            "g": 0.8,
+            "sigmaPhase": 0.12,
+            "phaseOffset": 0,
+            "gateWhenBehindStar": true,
+            "clampNonNegative": true
+          },
+          "atmosphereTransmission": {
+            "enabled": false,
+            "target": "planet",
+            "kind": "hard",
+            "r0": 0,
+            "H": 0,
+            "tau0": 0
+          },
+          "stellarVariability": {
+            "enabled": false,
+            "beamingAmp": 0,
+            "ellipsoidalAmp": 0,
+            "beamingOffset": 0,
+            "ellipsoidalOffset": 0,
+            "constant": 0
+          },
+          "dayNightVisibility": {
+            "enabled": true,
+            "clamp": true,
+            "reflectedModel": "lambert",
+            "thermalModel": "constant"
+          },
+          "instrumentNoise": {
+            "enabled": false,
+            "seed": 123,
+            "electronsPerUnitFlux": 1000000,
+            "exposureSec": 60,
+            "throughput": 1,
+            "photonNoise": {
+              "enabled": true,
+              "gaussianApproxMinElectrons": 50
+            },
+            "readNoise": {
+              "enabled": false,
+              "sigmaElectrons": 10
+            },
+            "correlatedNoise": {
+              "enabled": false,
+              "sigmaFlux": 0.0001,
+              "tauSec": 200
+            },
+            "trends": {
+              "enabled": false
+            }
+          }
+        },
+        "dynamics": {
+          "exomoonTimingShape": {
+            "enabled": true,
+            "tRef": 0,
+            "velDt": 2,
+            "moonOmegaDot": 0,
+            "moonIncDot": 0,
+            "moonOmegaSmallDot": 0,
+            "moonImpactYDot": 0
+          },
+          "nbodyPlanetMoon": {
+            "enabled": false,
+            "muStar": 132716453210000000000,
+            "muPlanet": 126686890590000000,
+            "muMoon": 398602544600000,
+            "dtMax": 60,
+            "softening": 0,
+            "perturbers": []
+          },
+          "relativity": {
+            "enabled": false,
+            "ltte": true,
+            "grPrecession": true,
+            "c": 299792458,
+            "planetPrecessionPerOrbit": 0,
+            "moonPrecessionPerOrbit": 0
+          }
+        },
+        "didactics": {
+          "enabled": true,
+          "activeLessonId": "kepler-geometry",
+          "autoAssess": true
+        }
+      },
+      "expectedSteps": [
+        {
+          "timeSec": 0,
+          "kinematics": {
+            "planetSky": {
+              "x": 0,
+              "y": 2400000000,
+              "z": 0
+            },
+            "moonSky": {
+              "x": 0,
+              "y": 2610000000,
+              "z": 0
+            }
+          },
+          "flux": {
+            "total": 1.0029964790894703,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.002209859317102744,
+            "moonPhase": 0.0007866197723675814
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": 0,
+                  "y": 2400000000,
+                  "z": 0
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 0,
+                  "y": 2610000000,
+                  "z": 0
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 7946.126912235764,
+          "kinematics": {
+            "planetSky": {
+              "x": -17771206.943325296,
+              "y": 1697056274.8477142,
+              "z": 1696963224.1754024
+            },
+            "moonSky": {
+              "x": 139939419.78254515,
+              "y": 1558393524.9192162,
+              "z": 1696963224.1754024
+            }
+          },
+          "flux": {
+            "total": 1.0008227983218365,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.000589872461156028,
+            "moonPhase": 0.0002329258606805889
+          },
+          "timing": {
+            "planetTransitCenterSec": 18061.23127154538,
+            "planetTransitDurationSec": 10074.141490848084,
+            "planetIngressSec": 13024.160526121339,
+            "planetEgressSec": 23098.30201696942
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -17771206.943325296,
+                  "y": 1697056274.8477142,
+                  "z": 1696963224.1754024
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 139939419.78254515,
+                  "y": 1558393524.9192162,
+                  "z": 1696963224.1754024
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 15892.253824471529,
+          "kinematics": {
+            "planetSky": {
+              "x": -25132281.87898955,
+              "y": 1.4695761589768239e-7,
+              "z": 2399868406.477229
+            },
+            "moonSky": {
+              "x": -233404559.92428538,
+              "y": -26882302.688255336,
+              "z": 2399868406.477229
+            }
+          },
+          "flux": {
+            "total": 0.9393186942336598,
+            "transitFactor": 0.9388684964644253,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.0003000007310737905,
+            "moonPhase": 0.00015019703816061795
+          },
+          "timing": {
+            "planetTransitCenterSec": 15892.253824471529,
+            "planetTransitDurationSec": 7127.034210481838,
+            "planetIngressSec": 12328.73671923061,
+            "planetEgressSec": 19455.77092971245,
+            "moonTransitCenterSec": 15840.663049736497,
+            "moonTransitDurationSec": 4138.861712486919,
+            "moonIngressSec": 13771.232193493037,
+            "moonEgressSec": 17910.093905979957
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -25132281.87898955,
+                  "y": 1.4695761589768239e-7,
+                  "z": 2399868406.477229
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": -233404559.92428538,
+                  "y": -26882302.688255336,
+                  "z": 2399868406.477229
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": true
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 31784.507648943058,
+          "kinematics": {
+            "planetSky": {
+              "x": -3.077816855837358e-9,
+              "y": -2400000000,
+              "z": 2.938991162367198e-7
+            },
+            "moonSky": {
+              "x": 53322270.6665348,
+              "y": -2603117540.9731145,
+              "z": 2.938991162367198e-7
+            }
+          },
+          "flux": {
+            "total": 1.0029964790894703,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.002209859317102744,
+            "moonPhase": 0.0007866197723675813
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -3.077816855837358e-9,
+                  "y": -2400000000,
+                  "z": 2.938991162367198e-7
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 53322270.6665348,
+                  "y": -2603117540.9731145,
+                  "z": 2.938991162367198e-7
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        }
+      ]
+    },
+    {
+      "id": "kepler-planet-only",
+      "label": "Kepler: planet-only transit",
+      "sampleTimesSec": [0, 7946.126912235764, 15892.253824471529, 31784.507648943058],
+      "scenario": {
+        "version": "4",
+        "mode": "general-lab",
+        "runtime": {
+          "mode": "realtime",
+          "executionMode": "interactive",
+          "referenceSubsteps": 5
+        },
+        "observer": {
+          "dir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          }
+        },
+        "binaryLab": {
+          "enabled": true,
+          "hideSkyUntilReveal": true,
+          "requireHypothesis": true,
+          "lockParamsUntilHypothesis": true
+        },
+        "bodies": {
+          "stars": [
+            {
+              "id": "star-a",
+              "r": 695700000,
+              "m": 1.98847e30,
+              "luminosityScale": 1
+            },
+            {
+              "id": "star-b",
+              "r": 660915000,
+              "m": 0,
+              "luminosityScale": 0
+            }
+          ],
+          "planets": [
+            {
+              "id": "planet-1",
+              "r": 150000000,
+              "m": 3.5e28,
+              "orbit": {
+                "a": 2400000000,
+                "e": 0,
+                "inc": 1.5603243512829308,
+                "Omega": 0,
+                "omega": 0,
+                "period": 63569.015297886115,
+                "t0": 0
+              },
+              "parentStarId": "star-a",
+              "parentSystem": "star"
+            }
+          ],
+          "moons": []
+        },
+        "orbits": {
+          "binary": {
+            "a": 2400000000,
+            "e": 0,
+            "inc": 1.5603243512829308,
+            "Omega": 0,
+            "omega": 0,
+            "period": 63569.015297886115,
+            "t0": 0
+          },
+          "hierarchy": [
+            {
+              "childId": "planet-1",
+              "parentId": "star-a",
+              "relation": "orbits"
+            }
+          ]
+        },
+        "photometry": {
+          "cadenceSec": 60,
+          "nSubsamples": 9,
+          "gridRes": 220,
+          "baselineFlux": 1,
+          "limbDarkeningModel": {
+            "default": {
+              "kind": "quadratic",
+              "u1": 0.35,
+              "u2": 0.25
+            }
+          },
+          "brightnessPatches": [],
+          "atmosphereTransmission": {
+            "enabled": false,
+            "target": "planet",
+            "kind": "hard",
+            "r0": 0,
+            "H": 0,
+            "tau0": 0
+          },
+          "instrumentNoise": {
+            "enabled": false,
+            "seed": 123,
+            "electronsPerUnitFlux": 1000000,
+            "exposureSec": 60,
+            "throughput": 1,
+            "photonNoise": {
+              "enabled": true,
+              "gaussianApproxMinElectrons": 50
+            },
+            "readNoise": {
+              "enabled": false,
+              "sigmaElectrons": 10
+            },
+            "correlatedNoise": {
+              "enabled": false,
+              "sigmaFlux": 0.0001,
+              "tauSec": 200
+            },
+            "trends": {
+              "enabled": false
+            }
+          }
+        },
+        "dynamics": {
+          "exomoonTimingShape": {
+            "enabled": false,
+            "tRef": 0,
+            "velDt": 2,
+            "moonOmegaDot": 0,
+            "moonIncDot": 0,
+            "moonOmegaSmallDot": 0,
+            "moonImpactYDot": 0
+          },
+          "relativity": {
+            "enabled": false,
+            "ltte": true,
+            "grPrecession": true,
+            "c": 299792458,
+            "planetPrecessionPerOrbit": 0,
+            "moonPrecessionPerOrbit": 0
+          }
+        },
+        "didactics": {
+          "enabled": true,
+          "activeLessonId": "kepler-geometry",
+          "autoAssess": true
+        }
+      },
+      "expectedSteps": [
+        {
+          "timeSec": 0,
+          "kinematics": {
+            "planetSky": {
+              "x": 0,
+              "y": 2400000000,
+              "z": 0
+            }
+          },
+          "flux": {
+            "total": 1,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0,
+            "moonPhase": 0
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": 0,
+                  "y": 2400000000,
+                  "z": 0
+                },
+                "radius": 150000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 7946.126912235764,
+          "kinematics": {
+            "planetSky": {
+              "x": -17771206.943325296,
+              "y": 1697056274.8477142,
+              "z": 1696963224.1754024
+            }
+          },
+          "flux": {
+            "total": 1,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0,
+            "moonPhase": 0
+          },
+          "timing": {
+            "planetTransitCenterSec": 18061.23127154538,
+            "planetTransitDurationSec": 10074.141490848084,
+            "planetIngressSec": 13024.160526121339,
+            "planetEgressSec": 23098.30201696942
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -17771206.943325296,
+                  "y": 1697056274.8477142,
+                  "z": 1696963224.1754024
+                },
+                "radius": 150000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 15892.253824471529,
+          "kinematics": {
+            "planetSky": {
+              "x": -25132281.87898955,
+              "y": 1.4695761589768239e-7,
+              "z": 2399868406.477229
+            }
+          },
+          "flux": {
+            "total": 0.9449423169688579,
+            "transitFactor": 0.9449423169688579,
+            "stellarPreTransit": 1,
+            "planetPhase": 0,
+            "moonPhase": 0
+          },
+          "timing": {
+            "planetTransitCenterSec": 15892.253824471529,
+            "planetTransitDurationSec": 7127.034210481838,
+            "planetIngressSec": 12328.73671923061,
+            "planetEgressSec": 19455.77092971245
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -25132281.87898955,
+                  "y": 1.4695761589768239e-7,
+                  "z": 2399868406.477229
+                },
+                "radius": 150000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": true
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 31784.507648943058,
+          "kinematics": {
+            "planetSky": {
+              "x": -3.077816855837358e-9,
+              "y": -2400000000,
+              "z": 2.938991162367198e-7
+            }
+          },
+          "flux": {
+            "total": 1,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0,
+            "moonPhase": 0
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -3.077816855837358e-9,
+                  "y": -2400000000,
+                  "z": 2.938991162367198e-7
+                },
+                "radius": 150000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        }
+      ]
+    },
+    {
+      "id": "limb-darkening-variation",
+      "label": "Limb darkening: multi-band variation",
+      "sampleTimesSec": [0, 7946.126912235764, 15892.253824471529, 31784.507648943058],
+      "scenario": {
+        "version": "4",
+        "mode": "general-lab",
+        "runtime": {
+          "mode": "realtime",
+          "executionMode": "interactive",
+          "referenceSubsteps": 5
+        },
+        "observer": {
+          "dir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          }
+        },
+        "binaryLab": {
+          "enabled": true,
+          "hideSkyUntilReveal": true,
+          "requireHypothesis": true,
+          "lockParamsUntilHypothesis": true
+        },
+        "bodies": {
+          "stars": [
+            {
+              "id": "star-a",
+              "r": 695700000,
+              "m": 1.98847e30,
+              "luminosityScale": 1,
+              "passband": "g"
+            },
+            {
+              "id": "star-b",
+              "r": 660915000,
+              "m": 0,
+              "luminosityScale": 0,
+              "passband": "g"
+            }
+          ],
+          "planets": [
+            {
+              "id": "planet-1",
+              "r": 150000000,
+              "m": 3.5e28,
+              "orbit": {
+                "a": 2400000000,
+                "e": 0,
+                "inc": 1.5603243512829308,
+                "Omega": 0,
+                "omega": 0,
+                "period": 63569.015297886115,
+                "t0": 0
+              },
+              "parentStarId": "star-a",
+              "parentSystem": "star"
+            }
+          ],
+          "moons": [
+            {
+              "id": "moon-1",
+              "r": 50000000,
+              "m": 5.9722e24,
+              "orbit": {
+                "a": 210000000,
+                "e": 0,
+                "inc": 0,
+                "Omega": 0,
+                "omega": 0,
+                "period": 12509.353831060787,
+                "t0": 0
+              },
+              "parentPlanetId": "planet-1"
+            }
+          ]
+        },
+        "orbits": {
+          "binary": {
+            "a": 2400000000,
+            "e": 0,
+            "inc": 1.5603243512829308,
+            "Omega": 0,
+            "omega": 0,
+            "period": 63569.015297886115,
+            "t0": 0
+          },
+          "hierarchy": [
+            {
+              "childId": "planet-1",
+              "parentId": "star-a",
+              "relation": "orbits"
+            },
+            {
+              "childId": "moon-1",
+              "parentId": "planet-1",
+              "relation": "orbits"
+            }
+          ]
+        },
+        "photometry": {
+          "cadenceSec": 60,
+          "nSubsamples": 9,
+          "gridRes": 220,
+          "baselineFlux": 1,
+          "limbDarkeningModel": {
+            "bandpass": "g",
+            "default": {
+              "kind": "quadratic",
+              "u1": 0.55,
+              "u2": 0.15
+            },
+            "bands": {
+              "g": {
+                "kind": "quadratic",
+                "u1": 0.55,
+                "u2": 0.15
+              },
+              "r": {
+                "kind": "quadratic",
+                "u1": 0.42,
+                "u2": 0.22
+              },
+              "i": {
+                "kind": "quadratic",
+                "u1": 0.35,
+                "u2": 0.25
+              }
+            }
+          },
+          "brightnessPatches": [],
+          "phaseCurve": {
+            "enabled": true,
+            "reflAmp": 0.006,
+            "thermAmp": 0.0003,
+            "reflOffset": 0,
+            "thermOffset": 0,
+            "lambertian": true,
+            "physicalScaling": false,
+            "constant": 0
+          },
+          "moonPhaseCurve": {
+            "enabled": true,
+            "reflAmp": 0.002,
+            "thermAmp": 0.00015,
+            "lambertian": true,
+            "physicalScaling": false
+          },
+          "forwardScattering": {
+            "enabled": false,
+            "amp": 0,
+            "g": 0.8,
+            "sigmaPhase": 0.12,
+            "phaseOffset": 0,
+            "gateWhenBehindStar": true,
+            "clampNonNegative": true
+          },
+          "atmosphereTransmission": {
+            "enabled": false,
+            "target": "planet",
+            "kind": "hard",
+            "r0": 0,
+            "H": 0,
+            "tau0": 0
+          },
+          "stellarVariability": {
+            "enabled": false,
+            "beamingAmp": 0,
+            "ellipsoidalAmp": 0,
+            "beamingOffset": 0,
+            "ellipsoidalOffset": 0,
+            "constant": 0
+          },
+          "dayNightVisibility": {
+            "enabled": true,
+            "clamp": true,
+            "reflectedModel": "lambert",
+            "thermalModel": "constant"
+          },
+          "instrumentNoise": {
+            "enabled": false,
+            "seed": 123,
+            "electronsPerUnitFlux": 1000000,
+            "exposureSec": 60,
+            "throughput": 1,
+            "photonNoise": {
+              "enabled": true,
+              "gaussianApproxMinElectrons": 50
+            },
+            "readNoise": {
+              "enabled": false,
+              "sigmaElectrons": 10
+            },
+            "correlatedNoise": {
+              "enabled": false,
+              "sigmaFlux": 0.0001,
+              "tauSec": 200
+            },
+            "trends": {
+              "enabled": false
+            }
+          }
+        },
+        "dynamics": {
+          "exomoonTimingShape": {
+            "enabled": true,
+            "tRef": 0,
+            "velDt": 2,
+            "moonOmegaDot": 0,
+            "moonIncDot": 0,
+            "moonOmegaSmallDot": 0,
+            "moonImpactYDot": 0
+          },
+          "nbodyPlanetMoon": {
+            "enabled": false,
+            "muStar": 132716453210000000000,
+            "muPlanet": 126686890590000000,
+            "muMoon": 398602544600000,
+            "dtMax": 60,
+            "softening": 0,
+            "perturbers": []
+          },
+          "relativity": {
+            "enabled": false,
+            "ltte": true,
+            "grPrecession": true,
+            "c": 299792458,
+            "planetPrecessionPerOrbit": 0,
+            "moonPrecessionPerOrbit": 0
+          }
+        },
+        "didactics": {
+          "enabled": true,
+          "activeLessonId": "kepler-geometry",
+          "autoAssess": true
+        }
+      },
+      "expectedSteps": [
+        {
+          "timeSec": 0,
+          "kinematics": {
+            "planetSky": {
+              "x": 0,
+              "y": 2400000000,
+              "z": 0
+            },
+            "moonSky": {
+              "x": 0,
+              "y": 2610000000,
+              "z": 0
+            }
+          },
+          "flux": {
+            "total": 1.0029964790894703,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.002209859317102744,
+            "moonPhase": 0.0007866197723675814
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": 0,
+                  "y": 2400000000,
+                  "z": 0
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 0,
+                  "y": 2610000000,
+                  "z": 0
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 7946.126912235764,
+          "kinematics": {
+            "planetSky": {
+              "x": -17771206.943325296,
+              "y": 1697056274.8477142,
+              "z": 1696963224.1754024
+            },
+            "moonSky": {
+              "x": 139939419.78254515,
+              "y": 1558393524.9192162,
+              "z": 1696963224.1754024
+            }
+          },
+          "flux": {
+            "total": 1.0008227983218365,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.000589872461156028,
+            "moonPhase": 0.0002329258606805889
+          },
+          "timing": {
+            "planetTransitCenterSec": 18061.23127154538,
+            "planetTransitDurationSec": 10074.141490848084,
+            "planetIngressSec": 13024.160526121339,
+            "planetEgressSec": 23098.30201696942
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -17771206.943325296,
+                  "y": 1697056274.8477142,
+                  "z": 1696963224.1754024
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 139939419.78254515,
+                  "y": 1558393524.9192162,
+                  "z": 1696963224.1754024
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 15892.253824471529,
+          "kinematics": {
+            "planetSky": {
+              "x": -25132281.87898955,
+              "y": 1.4695761589768239e-7,
+              "z": 2399868406.477229
+            },
+            "moonSky": {
+              "x": -233404559.92428538,
+              "y": -26882302.688255336,
+              "z": 2399868406.477229
+            }
+          },
+          "flux": {
+            "total": 0.9356789365539427,
+            "transitFactor": 0.9352287387847082,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.0003000007310737905,
+            "moonPhase": 0.00015019703816061795
+          },
+          "timing": {
+            "planetTransitCenterSec": 15892.253824471529,
+            "planetTransitDurationSec": 7127.034210481838,
+            "planetIngressSec": 12328.73671923061,
+            "planetEgressSec": 19455.77092971245,
+            "moonTransitCenterSec": 15840.663049736497,
+            "moonTransitDurationSec": 4138.861712486919,
+            "moonIngressSec": 13771.232193493037,
+            "moonEgressSec": 17910.093905979957
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -25132281.87898955,
+                  "y": 1.4695761589768239e-7,
+                  "z": 2399868406.477229
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": -233404559.92428538,
+                  "y": -26882302.688255336,
+                  "z": 2399868406.477229
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": true
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": true
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        },
+        {
+          "timeSec": 31784.507648943058,
+          "kinematics": {
+            "planetSky": {
+              "x": -3.077816855837358e-9,
+              "y": -2400000000,
+              "z": 2.938991162367198e-7
+            },
+            "moonSky": {
+              "x": 53322270.6665348,
+              "y": -2603117540.9731145,
+              "z": 2.938991162367198e-7
+            }
+          },
+          "flux": {
+            "total": 1.0029964790894703,
+            "transitFactor": 1,
+            "stellarPreTransit": 1,
+            "planetPhase": 0.002209859317102744,
+            "moonPhase": 0.0007866197723675813
+          },
+          "renderSignals": {
+            "occulters": [
+              {
+                "body": "planet",
+                "kind": "circle",
+                "center": {
+                  "x": -3.077816855837358e-9,
+                  "y": -2400000000,
+                  "z": 2.938991162367198e-7
+                },
+                "radius": 150000000
+              },
+              {
+                "body": "moon",
+                "kind": "circle",
+                "center": {
+                  "x": 53322270.6665348,
+                  "y": -2603117540.9731145,
+                  "z": 2.938991162367198e-7
+                },
+                "radius": 50000000
+              }
+            ],
+            "events": [
+              {
+                "id": "transit",
+                "kind": "transit",
+                "label": "Transit attenuation active",
+                "active": false
+              },
+              {
+                "id": "mutual",
+                "kind": "mutual-event",
+                "label": "Mutual event active",
+                "active": false
+              },
+              {
+                "id": "timing-correction",
+                "kind": "timing",
+                "label": "Timing diagnostics available",
+                "active": false
+              },
+              {
+                "id": "conjunction",
+                "kind": "conjunction",
+                "label": "Conjunction",
+                "active": false
+              }
+            ]
+          },
+          "warningFlags": []
+        }
+      ]
+    }
+  ]
+}

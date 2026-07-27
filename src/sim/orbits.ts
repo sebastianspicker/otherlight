@@ -1,4 +1,4 @@
-// src/sim/orbits.ts
+/** Evaluates orbital elements and body states in the simulation reference frame. */
 //
 // Small utilities for working with Keplerian orbital elements.
 //
@@ -69,7 +69,11 @@ export function stateFromResolvedElements(
     throw new Error(`${nameForErrors}: muCentral must be a positive finite number.`);
   }
 
-  const n = (2 * Math.PI) / el.period;
+  // A Cartesian state must use one dynamical contract for both phase and
+  // velocity. Derive mean motion from the same mu and semimajor axis used by
+  // the velocity below; callers that want period-driven preview positions use
+  // posFromResolvedElements instead.
+  const n = Math.sqrt(muCentral / el.a) / el.a;
   const M = n * (t - el.t0);
   const E = solveKeplerE(M, el.e, keplerOpts ?? 30);
   const nu = trueAnomalyFromE(E, el.e);

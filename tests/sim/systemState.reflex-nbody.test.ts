@@ -1,221 +1,373 @@
+/** Verifies system state reflex N-body contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 
 import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
-import { computeBodyKinematics } from "../../src/sim/kinematics";
+import type { SystemParams } from "../../src/core/types";
+import { projectToSky } from "../../src/physics/frames";
+import { muFromPeriodAndA } from "../../src/physics/kepler";
+import { solveLightTimeCorrectedTime } from "../../src/physics/relativity";
+import type { Vec3 } from "../../src/physics/vec3";
+import { vSub } from "../../src/physics/vec3";
+import { getNBodyStateAt } from "../../src/sim/dynamics";
+import {
+  computeBodyKinematics,
+  resolveMoonOrbitForKinematics,
+  resolvePlanetOrbitForKinematics,
+} from "../../src/sim/kinematics";
 import { getObserverDir } from "../../src/sim/observerContract";
 import { stateFromResolvedElements } from "../../src/sim/orbits";
-import { solveLightTimeCorrectedTime } from "../../src/physics/relativity";
 import { resolveDynamicSystemState } from "../../src/sim/systemState";
-import { resolveMoonOrbitForKinematics, resolvePlanetOrbitForKinematics } from "../../src/sim/kinematics";
-import { muFromPeriodAndA } from "../../src/physics/kepler";
 
-describe("resolveDynamicSystemState", () => {
-  it("uses directly propagated retarded planet and moon states when LTTE is enabled on a moon-bearing orbit", () => {
-    const params = cloneParams(SCENARIO_DEFAULTS);
-    params.observer = { dir: { x: 1, y: 0, z: 0 } };
-    params.dynamics = {
-      relativity: {
+type BodyState = { r: Vec3; v: Vec3 };
+type PairState = { planet: BodyState; moon: BodyState };
+type NBodyRelativeState = PairState & { star: BodyState };
+type ResolvedDynamicState = ReturnType<typeof resolveDynamicSystemState>;
+
+function moonBearingLtteParams(nbody = false): SystemParams {
+  const params = cloneParams(SCENARIO_DEFAULTS);
+  params.observer = { dir: { x: 1, y: 0, z: 0 } };
+  setCircularMoonBearingSystem(params);
+  params.dynamics = {
+    relativity: {
+      enabled: true,
+      grPrecession: false,
+      ltte: true,
+      shapiro: false,
+      c: 1,
+      ltteIters: 8,
+      ltteTolSec: 1e-12,
+    },
+    exomoonTimingShape: {
+      enabled: false,
+      velDt: nbody ? 0.5 : 50,
+    },
+  };
+  if (nbody) {
+    params.dynamics.nbodyPlanetMoon = {
+      enabled: true,
+      dtMax: 0.5,
+      muStar: 10,
+      muPlanet: 1,
+      muMoon: 0.5,
+    };
+  }
+  return params;
+}
+
+function setCircularMoonBearingSystem(params: SystemParams): void {
+  const moon = requireMoon(params);
+  params.star.m = 5.0e29;
+  params.star.r = 1;
+  params.planet.m = 2.0e25;
+  params.planet.r = 1;
+  params.planet.orbit = {
+    a: 10,
+    e: 0,
+    inc: 0,
+    Omega: 0,
+    omega: 0,
+    period: 100,
+    t0: 0,
+  };
+  moon.m = 1.0e25;
+  moon.r = 1;
+  moon.orbitAroundPlanet = {
+    a: 2,
+    e: 0,
+    inc: 0,
+    Omega: 0,
+    omega: 0,
+    period: 10,
+    t0: 0,
+  };
+}
+
+function massClosureParams(): SystemParams {
+  const params = cloneParams(SCENARIO_DEFAULTS);
+  params.star.m = params.star.m ?? 1.0e30;
+  params.planet.m = params.planet.m ?? 1.0e27;
+  const moon = params.moon;
+  if (moon) {
+    moon.m = moon.m ?? 1.0e23;
+  }
+  return params;
+}
+
+function integratedNbodyReflexParams(): SystemParams {
+  const params = cloneParams(SCENARIO_DEFAULTS);
+  params.dynamics = params.dynamics ?? {};
+  params.dynamics.nbodyPlanetMoon = {
+    ...(params.dynamics.nbodyPlanetMoon ?? {}),
+    enabled: true,
+    dtMax: 30,
+    perturbers: [
+      {
         enabled: true,
-        grPrecession: false,
-        ltte: true,
-        shapiro: false,
-        c: 1,
-        ltteIters: 8,
-        ltteTolSec: 1e-12,
-      },
-      exomoonTimingShape: {
-        enabled: false,
-        velDt: 50,
-      },
-    };
-    params.star.m = 5.0e29;
-    params.star.r = 1;
-    params.planet.m = 2.0e25;
-    params.planet.r = 1;
-    params.planet.orbit = {
-      a: 10,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 100,
-      t0: 0,
-    };
-    if (!params.moon) throw new Error("expected moon in defaults");
-    params.moon.m = 1.0e25;
-    params.moon.r = 1;
-    params.moon.orbitAroundPlanet = {
-      a: 2,
-      e: 0,
-      inc: 0,
-      Omega: 0,
-      omega: 0,
-      period: 10,
-      t0: 0,
-    };
-
-    const pairStateAt = (t: number) => {
-      const planetOrbit = resolvePlanetOrbitForKinematics(params, t, "planet.orbit");
-      const baryState = stateFromResolvedElements(
-        planetOrbit,
-        t,
-        muFromPeriodAndA(planetOrbit.period, planetOrbit.a),
-        "planet.orbit",
-      );
-      const moonOrbit = params.moon
-        ? resolveMoonOrbitForKinematics(params, t, "moon.orbitAroundPlanet")
-        : undefined;
-      if (!moonOrbit) throw new Error("expected moon orbit");
-      const moonRelState = stateFromResolvedElements(
-        moonOrbit,
-        t,
-        muFromPeriodAndA(moonOrbit.period, moonOrbit.a),
-        "moon.orbitAroundPlanet",
-      );
-      const planetMu = params.planet.m! / (params.planet.m! + params.moon!.m!);
-      const moonMu = params.moon!.m! / (params.planet.m! + params.moon!.m!);
-      return {
-        planet: {
-          r: {
-            x: baryState.r.x - moonRelState.r.x * moonMu,
-            y: baryState.r.y - moonRelState.r.y * moonMu,
-            z: baryState.r.z - moonRelState.r.z * moonMu,
-          },
-          v: {
-            x: baryState.v.x - moonRelState.v.x * moonMu,
-            y: baryState.v.y - moonRelState.v.y * moonMu,
-            z: baryState.v.z - moonRelState.v.z * moonMu,
-          },
+        mu: 2.0e16,
+        orbit: {
+          a: 1.8e10,
+          e: 0.05,
+          inc: 0.1,
+          Omega: 0.2,
+          omega: 0.1,
+          period: 2.3e6,
+          t0: 0,
         },
-        moon: {
-          r: {
-            x: baryState.r.x + moonRelState.r.x * planetMu,
-            y: baryState.r.y + moonRelState.r.y * planetMu,
-            z: baryState.r.z + moonRelState.r.z * planetMu,
-          },
-          v: {
-            x: baryState.v.x + moonRelState.v.x * planetMu,
-            y: baryState.v.y + moonRelState.v.y * planetMu,
-            z: baryState.v.z + moonRelState.v.z * planetMu,
-          },
-        },
-      };
-    };
+      },
+    ],
+  };
+  delete params.star.m;
+  delete params.planet.m;
+  const moon = params.moon;
+  if (moon) {
+    delete moon.m;
+  }
+  return params;
+}
 
-    const tObs = 0;
-    const observerDir = getObserverDir(params);
-    const kin = computeBodyKinematics(params, tObs, observerDir);
-    const state = resolveDynamicSystemState({
+function requireMoon(params: SystemParams): NonNullable<SystemParams["moon"]> {
+  if (!params.moon) throw new Error("expected moon in defaults");
+  return params.moon;
+}
+
+function requireNumber(value: number | undefined, label: string): number {
+  if (value === undefined || Number.isNaN(value)) {
+    throw new Error(`expected numeric ${label}`);
+  }
+  return value;
+}
+
+function dynamicStateAt(
+  params: SystemParams,
+  tObs: number,
+): {
+  observerDir: Vec3;
+  state: ResolvedDynamicState;
+  kinAtT: ReturnType<typeof computeBodyKinematics>;
+} {
+  const observerDir = getObserverDir(params);
+  const kinAtT = computeBodyKinematics(params, tObs, observerDir);
+  return {
+    observerDir,
+    kinAtT,
+    state: resolveDynamicSystemState({
       system: params,
       tObs,
       observerDir,
-      kinAtT: kin,
+      kinAtT,
       velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
-    });
+    }),
+  };
+}
 
-    const tPlanet = solveLightTimeCorrectedTime({
-      tObs,
-      rAtTime: (t) => pairStateAt(t).planet.r,
-      observerDir,
-      c: params.dynamics!.relativity!.c!,
-      maxIters: params.dynamics!.relativity!.ltteIters,
-      tolSec: params.dynamics!.relativity!.ltteTolSec,
-    });
-    const tMoon = solveLightTimeCorrectedTime({
-      tObs,
-      rAtTime: (t) => pairStateAt(t).moon.r,
-      observerDir,
-      c: params.dynamics!.relativity!.c!,
-      maxIters: params.dynamics!.relativity!.ltteIters,
-      tolSec: params.dynamics!.relativity!.ltteTolSec,
-    });
-    const expectedPlanet = pairStateAt(tPlanet).planet;
-    const expectedMoon = pairStateAt(tMoon).moon;
+function baryStateAt(params: SystemParams, t: number): BodyState {
+  const orbit = resolvePlanetOrbitForKinematics(params, t, "planet.orbit");
+  return stateFromResolvedElements(orbit, t, muFromPeriodAndA(orbit.period, orbit.a), "planet.orbit");
+}
 
-    expect(state.planet.r.x).toBeCloseTo(expectedPlanet.r.x, 12);
-    expect(state.planet.r.y).toBeCloseTo(expectedPlanet.r.y, 12);
-    expect(state.planet.v.x).toBeCloseTo(expectedPlanet.v.x, 12);
-    expect(state.planet.v.y).toBeCloseTo(expectedPlanet.v.y, 12);
-    expect(state.moon?.r.x).toBeCloseTo(expectedMoon.r.x, 12);
-    expect(state.moon?.r.y).toBeCloseTo(expectedMoon.r.y, 12);
-    expect(state.moon?.v.x).toBeCloseTo(expectedMoon.v.x, 12);
-    expect(state.moon?.v.y).toBeCloseTo(expectedMoon.v.y, 12);
+function moonRelativeStateAt(params: SystemParams, t: number): BodyState {
+  const orbit = resolveMoonOrbitForKinematics(params, t, "moon.orbitAroundPlanet");
+  if (!orbit) throw new Error("expected moon orbit");
+  return stateFromResolvedElements(
+    orbit,
+    t,
+    muFromPeriodAndA(orbit.period, orbit.a),
+    "moon.orbitAroundPlanet",
+  );
+}
+
+function pairStateAt(params: SystemParams, t: number): PairState {
+  return combineBarycentricPair(
+    baryStateAt(params, t),
+    moonRelativeStateAt(params, t),
+    requireNumber(params.planet.m, "planet mass"),
+    requireNumber(requireMoon(params).m, "moon mass"),
+  );
+}
+
+function combineBarycentricPair(
+  baryState: BodyState,
+  moonRelativeState: BodyState,
+  planetMass: number,
+  moonMass: number,
+): PairState {
+  const totalMass = planetMass + moonMass;
+  return {
+    planet: offsetState(baryState, moonRelativeState, -moonMass / totalMass),
+    moon: offsetState(baryState, moonRelativeState, planetMass / totalMass),
+  };
+}
+
+function offsetState(base: BodyState, offset: BodyState, scale: number): BodyState {
+  return {
+    r: offsetVec(base.r, offset.r, scale),
+    v: offsetVec(base.v, offset.v, scale),
+  };
+}
+
+function offsetVec(base: Vec3, offset: Vec3, scale: number): Vec3 {
+  return {
+    x: base.x + offset.x * scale,
+    y: base.y + offset.y * scale,
+    z: base.z + offset.z * scale,
+  };
+}
+
+function retardedTimeFor(
+  params: SystemParams,
+  tObs: number,
+  observerDir: Vec3,
+  rAtTime: (t: number) => Vec3,
+): number {
+  const relativity = params.dynamics?.relativity;
+  if (!relativity) throw new Error("expected relativity config");
+  return solveLightTimeCorrectedTime({
+    tObs,
+    rAtTime,
+    observerDir,
+    c: requireNumber(relativity.c, "relativity.c"),
+    maxIters: relativity.ltteIters,
+    tolSec: relativity.ltteTolSec,
+  });
+}
+
+function retardedPairState(params: SystemParams, tObs: number, observerDir: Vec3): PairState {
+  const tPlanet = retardedTimeFor(params, tObs, observerDir, (t) => pairStateAt(params, t).planet.r);
+  const tMoon = retardedTimeFor(params, tObs, observerDir, (t) => pairStateAt(params, t).moon.r);
+  return {
+    planet: pairStateAt(params, tPlanet).planet,
+    moon: pairStateAt(params, tMoon).moon,
+  };
+}
+
+function nbodyRelativeStateAt(params: SystemParams, time: number): NBodyRelativeState {
+  const sample = getNBodyStateAt(params, time);
+  if (!sample) throw new Error("expected N-body state");
+  return {
+    planet: {
+      r: vSub(sample.state.rP, sample.state.rS),
+      v: vSub(sample.state.vP, sample.state.vS),
+    },
+    moon: {
+      r: vSub(sample.state.rM, sample.state.rS),
+      v: vSub(sample.state.vM, sample.state.vS),
+    },
+    star: {
+      r: sample.state.rS,
+      v: sample.state.vS,
+    },
+  };
+}
+
+function retardedNbodyState(params: SystemParams, tObs: number, observerDir: Vec3): NBodyRelativeState {
+  const tPlanet = retardedTimeFor(params, tObs, observerDir, (t) => nbodyRelativeStateAt(params, t).planet.r);
+  const tMoon = retardedTimeFor(params, tObs, observerDir, (t) => nbodyRelativeStateAt(params, t).moon.r);
+  const tStar = retardedTimeFor(params, tObs, observerDir, (t) => nbodyRelativeStateAt(params, t).star.r);
+  return {
+    planet: nbodyRelativeStateAt(params, tPlanet).planet,
+    moon: nbodyRelativeStateAt(params, tMoon).moon,
+    star: nbodyRelativeStateAt(params, tStar).star,
+  };
+}
+
+function expectVecClose(actual: Vec3, expected: Vec3, digits = 12): void {
+  expect(actual.x).toBeCloseTo(expected.x, digits);
+  expect(actual.y).toBeCloseTo(expected.y, digits);
+  expect(actual.z).toBeCloseTo(expected.z, digits);
+}
+
+function expectBodyStateClose(actual: BodyState, expected: BodyState): void {
+  expectVecClose(actual.r, expected.r);
+  expectVecClose(actual.v, expected.v);
+}
+
+function expectResolvedPairClose(state: ResolvedDynamicState, expected: PairState): void {
+  if (!state.moon) throw new Error("expected moon state");
+  expectBodyStateClose(state.planet, expected.planet);
+  expectBodyStateClose(state.moon, expected.moon);
+}
+
+function moonMassOrZero(params: SystemParams): number {
+  return params.moon ? requireNumber(params.moon.m, "moon mass") : 0;
+}
+
+function moonPositionOrZero(state: ResolvedDynamicState): Vec3 {
+  return state.moon?.r ?? { x: 0, y: 0, z: 0 };
+}
+
+function expectMassClosureReflex(state: ResolvedDynamicState, params: SystemParams): void {
+  const starMass = requireNumber(params.star.m, "star mass");
+  const planetMass = requireNumber(params.planet.m, "planet mass");
+  const moonMass = moonMassOrZero(params);
+  const moonR = moonPositionOrZero(state);
+  expect(state.star.r.x).toBeCloseTo(-(planetMass * state.planet.r.x + moonMass * moonR.x) / starMass, 8);
+  expect(state.star.r.y).toBeCloseTo(-(planetMass * state.planet.r.y + moonMass * moonR.y) / starMass, 8);
+  expect(state.star.r.z).toBeCloseTo(-(planetMass * state.planet.r.z + moonMass * moonR.z) / starMass, 8);
+}
+
+function expectFiniteVelocity(state: ResolvedDynamicState): void {
+  expect(Number.isFinite(state.planet.v.x)).toBe(true);
+  expect(Number.isFinite(state.star.v.x)).toBe(true);
+}
+
+function expectFiniteStarVector(state: ResolvedDynamicState): void {
+  expect(Number.isFinite(state.star.v.x)).toBe(true);
+  expect(Number.isFinite(state.star.v.y)).toBe(true);
+  expect(Number.isFinite(state.star.v.z)).toBe(true);
+  expect(Math.hypot(state.star.v.x, state.star.v.y, state.star.v.z)).toBeGreaterThan(1e-12);
+}
+
+function expectProjectedSkyState(
+  state: ResolvedDynamicState,
+  expected: NBodyRelativeState,
+  observerDir: Vec3,
+): void {
+  if (!state.moon) throw new Error("expected moon state");
+  expect(state.planet.sky).toEqual(projectToSky(expected.planet.r, observerDir));
+  expect(state.moon.sky).toEqual(projectToSky(expected.moon.r, observerDir));
+  expect(state.star.sky).toEqual(projectToSky(expected.star.r, observerDir));
+}
+
+function expectResolvedNbodyClose(state: ResolvedDynamicState, expected: NBodyRelativeState): void {
+  if (!state.moon) throw new Error("expected moon state");
+  expectBodyStateClose(state.planet, expected.planet);
+  expectBodyStateClose(state.moon, expected.moon);
+  expectBodyStateClose(state.star, expected.star);
+}
+
+describe("resolveDynamicSystemState LTTE", () => {
+  it("uses directly propagated retarded planet and moon states when LTTE is enabled on a moon-bearing orbit", () => {
+    const params = moonBearingLtteParams();
+    const { observerDir, state } = dynamicStateAt(params, 0);
+    expectResolvedPairClose(state, retardedPairState(params, 0, observerDir));
   });
 
+  it("keeps N-body LTTE positions on the same retarded time surface as projected sky coordinates", () => {
+    const params = moonBearingLtteParams(true);
+    const { observerDir, state, kinAtT } = dynamicStateAt(params, 0);
+    const expected = retardedNbodyState(params, 0, observerDir);
+    const observed = nbodyRelativeStateAt(params, 0);
+
+    expectResolvedNbodyClose(state, expected);
+    expectProjectedSkyState(state, expected, observerDir);
+    expect(Math.abs(state.planet.r.x - observed.planet.r.x)).toBeGreaterThan(1e-3);
+    expect(state.planet.r.x).toBeCloseTo(kinAtT.rPlanetAbs.x, 12);
+  });
+});
+
+describe("resolveDynamicSystemState star reflex", () => {
   it("derives the non-N-body star reflex state from the same mass-closure model as the sampled planet/moon state", () => {
-    const params = cloneParams(SCENARIO_DEFAULTS);
-    params.star.m = params.star.m ?? 1.0e30;
-    params.planet.m = params.planet.m ?? 1.0e27;
-    if (params.moon) {
-      params.moon.m = params.moon.m ?? 1.0e23;
-    }
+    const params = massClosureParams();
+    const { state, kinAtT } = dynamicStateAt(params, 12_345);
 
-    const tObs = 12_345;
-    const observerDir = getObserverDir(params);
-    const kin = computeBodyKinematics(params, tObs, observerDir);
-    const state = resolveDynamicSystemState({
-      system: params,
-      tObs,
-      observerDir,
-      kinAtT: kin,
-      velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
-    });
-
-    const mS = params.star.m as number;
-    const mP = params.planet.m as number;
-    const mM = params.moon?.m ?? 0;
-
-    expect(state.planet.r).toEqual(kin.rPlanetAbs);
-    expect(state.moon?.r).toEqual(kin.rMoonAbs);
-    expect(state.star.r.x).toBeCloseTo(-(mP * state.planet.r.x + mM * (state.moon?.r.x ?? 0)) / mS, 8);
-    expect(state.star.r.y).toBeCloseTo(-(mP * state.planet.r.y + mM * (state.moon?.r.y ?? 0)) / mS, 8);
-    expect(state.star.r.z).toBeCloseTo(-(mP * state.planet.r.z + mM * (state.moon?.r.z ?? 0)) / mS, 8);
-    expect(Number.isFinite(state.planet.v.x)).toBe(true);
-    expect(Number.isFinite(state.star.v.x)).toBe(true);
+    expect(state.planet.r).toEqual(kinAtT.rPlanetAbs);
+    expect(state.moon?.r).toEqual(kinAtT.rMoonAbs);
+    expectMassClosureReflex(state, params);
+    expectFiniteVelocity(state);
   });
 
   it("uses the integrated N-body star state instead of mass-closure reflex reconstruction when N-body is enabled", () => {
-    const params = cloneParams(SCENARIO_DEFAULTS);
-    params.dynamics = params.dynamics ?? {};
-    params.dynamics.nbodyPlanetMoon = {
-      ...(params.dynamics.nbodyPlanetMoon ?? {}),
-      enabled: true,
-      dtMax: 30,
-      perturbers: [
-        {
-          enabled: true,
-          mu: 2.0e16,
-          orbit: {
-            a: 1.8e10,
-            e: 0.05,
-            inc: 0.1,
-            Omega: 0.2,
-            omega: 0.1,
-            period: 2.3e6,
-            t0: 0,
-          },
-        },
-      ],
-    };
-
-    delete params.star.m;
-    delete params.planet.m;
-    if (params.moon) delete params.moon.m;
-
-    const tObs = 54_321;
-    const observerDir = getObserverDir(params);
-    const kin = computeBodyKinematics(params, tObs, observerDir);
-    const state = resolveDynamicSystemState({
-      system: params,
-      tObs,
-      observerDir,
-      kinAtT: kin,
-      velDtSec: params.dynamics?.exomoonTimingShape?.velDt,
-    });
-
-    expect(Number.isFinite(state.star.v.x)).toBe(true);
-    expect(Number.isFinite(state.star.v.y)).toBe(true);
-    expect(Number.isFinite(state.star.v.z)).toBe(true);
-    expect(Math.hypot(state.star.v.x, state.star.v.y, state.star.v.z)).toBeGreaterThan(1e-12);
+    expectFiniteStarVector(dynamicStateAt(integratedNbodyReflexParams(), 54_321).state);
   });
 });

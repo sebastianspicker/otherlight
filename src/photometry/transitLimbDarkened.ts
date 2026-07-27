@@ -1,4 +1,4 @@
-// src/photometry/transitLimbDarkened.ts
+/** Numerically integrates limb-darkened circular-occultation transit flux. */
 
 //
 // Generic limb-darkened stellar transit photometry (numerical, robust).
@@ -34,6 +34,41 @@ export type FluxLimbDarkenedDiskMeta = {
   earlyExit: boolean;
 };
 
+function requireLimbDarkenedInputs(
+  rStar: number,
+  law: LimbDarkeningLaw | undefined,
+  constraints: LimbDarkeningConstraints | undefined,
+): asserts law is LimbDarkeningLaw {
+  if (!isFinitePositive(rStar)) {
+    throw new Error("fluxLimbDarkenedDisk: rStar must be a positive finite number.");
+  }
+  if (!law) {
+    throw new Error("fluxLimbDarkenedDisk: limbDarkeningLaw must be provided.");
+  }
+  validateLimbDarkeningLaw(law, constraints);
+}
+
+function limbDarkenedPatchIntensity(params: {
+  x: number;
+  y: number;
+  mu: number;
+  limbDarkeningLaw: LimbDarkeningLaw;
+  patches: ReturnType<typeof sanitizeBrightnessPatches>;
+  patchCombineMode: PatchCombineMode;
+}): number {
+  const Ild = intensityNonNegative(params.mu, params.limbDarkeningLaw);
+  if (Ild === 0) return 0;
+  const patch = patchFactorAt(params.x, params.y, params.patches, params.patchCombineMode);
+  const patchFactor = Number.isFinite(patch) ? Math.max(0, patch) : 1;
+  const intensity = Ild * patchFactor;
+  return Number.isFinite(intensity) ? intensity : 0;
+}
+
+function normalizedLimbFlux(totalIntensity: number, blockedIntensity: number): number {
+  const flux = totalIntensity > 1e-12 ? 1 - blockedIntensity / totalIntensity : 1.0;
+  return clamp01(flux);
+}
+
 /**
  * Normalized flux for a limb-darkened stellar disk with circular occulters and optional
  * brightness patches (spots/faculae).
@@ -57,27 +92,13 @@ export function fluxLimbDarkenedDiskDetailed(params: {
   earlyExitFluxEps?: number;
 }): { flux: number; meta: FluxLimbDarkenedDiskMeta } {
   const rStar = params.rStar;
+  requireLimbDarkenedInputs(rStar, params.limbDarkeningLaw, params.constraints);
 
-  if (!isFinitePositive(rStar)) {
-    throw new Error("fluxLimbDarkenedDisk: rStar must be a positive finite number.");
-  }
-  if (!params.limbDarkeningLaw) {
-    throw new Error("fluxLimbDarkenedDisk: limbDarkeningLaw must be provided.");
-  }
-
-  // Validate once per call (NOT per pixel).
-  validateLimbDarkeningLaw(params.limbDarkeningLaw, params.constraints);
-
-  // Single-source occulter handling + tangency policy.
   const occulters = sanitizeCircleOcculters(params.rStar, params.rOcculters);
-
-  // Quick check: if no occulters overlap, flux is 1.0 (relative to patchy star).
   if (occulters.length === 0) {
     return { flux: 1.0, meta: { earlyExit: false } };
   }
 
-  // Optimization: if any single occulter fully covers the star, flux is 0.
-  // (Assuming non-negative patches; if patches are additive-negative, this is still 0).
   if (anyCircleOcculterFullyCoversStar(rStar, occulters)) {
     return { flux: 0.0, meta: { earlyExit: false } };
   }
@@ -95,20 +116,18 @@ export function fluxLimbDarkenedDiskDetailed(params: {
     occulters,
     gridRes,
     intensityAt: ({ x, y, mu }) => {
-      const Ild = intensityNonNegative(mu, params.limbDarkeningLaw);
-      if (Ild === 0) return 0;
-
-      const Praw = patchFactorAt(x, y, patches, patchCombineMode);
-      const P = Number.isFinite(Praw) ? Math.max(0, Praw) : 1;
-      const I = Ild * P;
-      return Number.isFinite(I) ? I : 0;
+      return limbDarkenedPatchIntensity({
+        x,
+        y,
+        mu,
+        limbDarkeningLaw: params.limbDarkeningLaw,
+        patches,
+        patchCombineMode,
+      });
     },
     earlyExitFluxEps: params.earlyExitFluxEps ?? 0,
   });
   const earlyExit = Boolean(earlyExitRaw);
 
-  // Safe division: if totalIntensity is effectively zero (completely dark patches?), return 1.
-  const flux = totalIntensity > 1e-12 ? 1 - blockedIntensity / totalIntensity : 1.0;
-
-  return { flux: clamp01(flux), meta: { earlyExit } };
+  return { flux: normalizedLimbFlux(totalIntensity, blockedIntensity), meta: { earlyExit } };
 }

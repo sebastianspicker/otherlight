@@ -1,3 +1,5 @@
+/** Verifies transit transmission calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import { fluxStarWithTransmissiveOcculters } from "../../src/photometry/transitTransmission";

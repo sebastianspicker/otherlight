@@ -1,4 +1,4 @@
-// src/photometry/occulterCircle.ts
+/** Defines canonical circular opaque-occultation geometry and coverage helpers. */
 //
 // Single-source utilities for circular, opaque occulters used by the transit photometry modules.
 //
@@ -24,6 +24,9 @@
 // - Prefer conservative "fail open" behavior for invalid inputs (e.g. return empty list / false).
 
 import { isFiniteNumber, isFinitePositive } from "../core/units";
+import { MAX_TRANSIT_GRID_RES, MIN_TRANSIT_GRID_RES } from "../core/transitComputeBudget";
+
+export { MAX_TRANSIT_GRID_RES };
 
 /** A circular opaque occulter in the sky plane (legacy planet/moon disk). */
 export type CircleOcculter = {
@@ -64,7 +67,8 @@ export function pointInCircleOcculter(x: number, y: number, o: CircleOcculter): 
  *
  * Defaults:
  * - minRes=60 matches common integrator defaults in this codebase.
- * - maxRes=4096 is a safe upper cap for runtime/memory protection.
+ * - maxRes=1024 bounds a single synchronous disk integration to roughly one
+ *   million point evaluations while retaining the normal UI range.
  */
 export function clampGridRes(
   raw: unknown,
@@ -75,8 +79,14 @@ export function clampGridRes(
   const maxResRaw = opts.maxRes;
 
   // Enforce hard floor of 1 to prevent gridRes=0 logic errors.
-  const minRes = isFinitePositive(minResRaw) ? Math.max(1, Math.floor(minResRaw)) : 60;
-  const maxRes = isFinitePositive(maxResRaw) ? Math.max(minRes, Math.floor(maxResRaw)) : 4096;
+  const requestedMinRes = isFinitePositive(minResRaw)
+    ? Math.max(1, Math.floor(minResRaw))
+    : MIN_TRANSIT_GRID_RES;
+  const minRes = Math.min(requestedMinRes, MAX_TRANSIT_GRID_RES);
+  const requestedMaxRes = isFinitePositive(maxResRaw)
+    ? Math.max(minRes, Math.floor(maxResRaw))
+    : MAX_TRANSIT_GRID_RES;
+  const maxRes = Math.min(requestedMaxRes, MAX_TRANSIT_GRID_RES);
 
   // Ensure bounds are sane even if caller provided inverted values.
   const lo = Math.min(minRes, maxRes);
@@ -115,23 +125,26 @@ export function sanitizeCircleOcculters(
   if (!Array.isArray(occulters) || occulters.length === 0) return out;
 
   for (const o of occulters) {
-    if (!o) continue;
-
-    // dx/dy must be finite. r must be finite and strictly positive.
-    if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-
-    const d = Math.hypot(o.dx, o.dy);
-    // Math.hypot guarantees non-negative finite result if inputs are finite.
-    // Check isFinite just to be extremely defensive.
-    if (!Number.isFinite(d)) continue;
-
-    // Tangency (d = rStar + rOcc) is measure-zero -> treat as no overlap (flux not reduced).
-    if (d >= rStar + o.r) continue;
-
-    out.push(o);
+    if (isOverlappingCircleOcculter(rStar, o)) out.push(o);
   }
 
   return out;
+}
+
+function isFiniteCircleOcculter(o: CircleOcculter | undefined): o is CircleOcculter {
+  return Boolean(o && isFiniteNumber(o.dx) && isFiniteNumber(o.dy) && isFinitePositive(o.r));
+}
+
+function circleCenterDistance(o: CircleOcculter): number {
+  return Math.hypot(o.dx, o.dy);
+}
+
+function isOverlappingCircleOcculter(rStar: number, o: CircleOcculter | undefined): o is CircleOcculter {
+  if (!isFiniteCircleOcculter(o)) return false;
+  const d = circleCenterDistance(o);
+  if (!Number.isFinite(d)) return false;
+  // Tangency (d = rStar + rOcc) is measure-zero -> treat as no overlap.
+  return d < rStar + o.r;
 }
 
 /**
@@ -151,19 +164,17 @@ export function anyCircleOcculterFullyCoversStar(
   if (!Array.isArray(occulters) || occulters.length === 0) return false;
 
   for (const o of occulters) {
-    if (!o) continue;
-    if (!isFiniteNumber(o.dx) || !isFiniteNumber(o.dy) || !isFinitePositive(o.r)) continue;
-
-    // If the occulter is smaller than the star, it cannot fully cover it.
-    if (o.r < rStar) continue;
-
-    const d = Math.hypot(o.dx, o.dy);
-    if (!Number.isFinite(d)) continue;
-
-    // Full coverage includes tangency at the containment boundary (d == rOcc - rStar).
-    // The occulter covers the star if the furthest point of the star (d + rStar) is within rOcc.
-    if (d <= o.r - rStar) return true;
+    if (circleOcculterFullyCoversStar(rStar, o)) return true;
   }
 
   return false;
+}
+
+function circleOcculterFullyCoversStar(rStar: number, o: CircleOcculter | undefined): boolean {
+  if (!isFiniteCircleOcculter(o)) return false;
+  if (o.r < rStar) return false;
+  const d = circleCenterDistance(o);
+  if (!Number.isFinite(d)) return false;
+  // Full coverage includes tangency at the containment boundary.
+  return d <= o.r - rStar;
 }

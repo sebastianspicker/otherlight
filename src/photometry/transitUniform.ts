@@ -1,6 +1,6 @@
-// src/photometry/transitUniform.ts
+/** Computes opaque circular transits of a uniformly bright stellar disk. */
 //
-// Uniform-brightness stellar disk transit photometry for *circular* opaque occulters.
+// Uniform-brightness stellar disk transit photometry for circular opaque occulters.
 //
 // Scientific model:
 // - Star: uniformly bright disk of radius rStar in the sky plane.
@@ -10,7 +10,7 @@
 // Numerical approach:
 // - 0 occulters: F = 1
 // - 1 occulter: analytic overlap area of two circles (star disk and occulter disk)
-// - >=2 occulters: deterministic midpoint integration of the *union* silhouette over the stellar disk,
+// - >=2 occulters: deterministic midpoint integration of the union silhouette over the stellar disk,
 //   avoiding double-counting where occulters overlap.
 //
 // Continuity / edge-case policy (must match other integrators):
@@ -38,6 +38,37 @@ import {
 } from "./occulterCircle";
 import { integrateDiskMidpoint } from "./diskMidpoint";
 
+function uniformStarArea(rStar: number): number {
+  if (!isFinitePositive(rStar)) {
+    throw new Error("fluxUniformDisk: rStar must be a positive finite number.");
+  }
+  return Math.PI * rStar * rStar;
+}
+
+function singleOcculterUniformFlux(rStar: number, starArea: number, occulter: CircleOcculter): number {
+  const d = Math.hypot(occulter.dx, occulter.dy);
+  if (!isFiniteNonNegative(d)) return 1.0;
+  const blocked = circleIntersectionArea(d, rStar, occulter.r);
+  return clamp01(1.0 - blocked / starArea);
+}
+
+function multiOcculterUniformFlux(
+  rStar: number,
+  starArea: number,
+  occulters: CircleOcculter[],
+  gridResRaw: number | undefined,
+): number {
+  const gridRes = clampGridRes(gridResRaw, 220);
+  const blockedArea = integrateDiskMidpoint({
+    rStar,
+    occulters,
+    gridRes,
+    intensityAt: () => 1,
+    earlyExitFluxEps: 0,
+  }).blocked;
+  return clamp01(1.0 - blockedArea / starArea);
+}
+
 /**
  * Normalized flux for a uniform-brightness stellar disk.
  * Returns flux F in [0,1], where 1 is unobscured.
@@ -57,41 +88,15 @@ export function fluxUniformDisk(params: {
   gridRes?: number;
 }): number {
   const rStar = params.rStar;
-
-  if (!isFinitePositive(rStar)) {
-    throw new Error("fluxUniformDisk: rStar must be a positive finite number.");
-  }
-
-  const starArea = Math.PI * rStar * rStar;
+  const starArea = uniformStarArea(rStar);
   if (!isFinitePositive(starArea)) return 1.0;
 
-  // Single source: sanitize + full cover checks live in occulterCircle.ts.
   const occulters = sanitizeCircleOcculters(rStar, params.rOcculters ?? []);
   if (occulters.length === 0) return 1.0;
 
-  // Hard gate: full coverage => exactly 0 (avoids numeric integral missing a tiny crescent).
   if (anyCircleOcculterFullyCoversStar(rStar, occulters)) return 0.0;
-
-  // Fast/exact path for a single occulter.
-  if (occulters.length === 1) {
-    const o = occulters[0];
-    const d = Math.hypot(o.dx, o.dy);
-    if (!isFiniteNonNegative(d)) return 1.0;
-
-    const blocked = circleIntersectionArea(d, rStar, o.r);
-    return clamp01(1.0 - blocked / starArea);
-  }
-
-  // Robust path for multiple occulters: union via disk integral.
-  const gridRes = clampGridRes(params.gridRes, 220);
-  const blockedArea = integrateDiskMidpoint({
-    rStar,
-    occulters,
-    gridRes,
-    intensityAt: () => 1,
-    earlyExitFluxEps: 0,
-  }).blocked;
-  return clamp01(1.0 - blockedArea / starArea);
+  if (occulters.length === 1) return singleOcculterUniformFlux(rStar, starArea, occulters[0]);
+  return multiOcculterUniformFlux(rStar, starArea, occulters, params.gridRes);
 }
 
 // Backwards-compat: keep the old exported name if other modules import it as Occulter.

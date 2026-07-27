@@ -1,224 +1,326 @@
-import type { PhaseCurveParams, SystemParams } from "../../core/types";
+/**
+ * Owns assert Photometry support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ */
+import type {
+  AtmosphereRTLayer,
+  AtmosphereRTParams,
+  ForwardScatteringParams,
+  PhaseCurveParams,
+  PhotometryParams,
+  RingScatteringParams,
+  SpectralBandpassParams,
+  SpotEvolutionParams,
+  StellarSurfaceParams,
+  SystemParams,
+  ThermalInertiaParams,
+  ThermalModelAdvancedParams,
+} from "../../core/types";
 import { isFiniteNonNegative } from "../../core/units";
 
-function usesHigherFidelityAdditiveComposition(params: SystemParams): boolean {
+const usesHigherFidelityAdditiveComposition = (params: SystemParams): boolean => {
   const fid = params.dynamics?.fidelityProfile;
   return fid === "accurate" || fid === "reference";
-}
+};
 
-function hasActiveThermalPhaseChannel(model: PhaseCurveParams | undefined, params: SystemParams): boolean {
+const isFinitePositive = (value: unknown): boolean => {
+  return Number.isFinite(value) && (value as number) > 0;
+};
+
+const isFiniteUnitInterval = (value: unknown): boolean => {
+  return Number.isFinite(value) && (value as number) >= 0 && (value as number) <= 1;
+};
+
+const hasActiveThermalPhaseChannel = (model: PhaseCurveParams | undefined, params: SystemParams): boolean => {
   if (!model?.enabled) return false;
-  if (Number.isFinite(model.thermAmp) && (model.thermAmp as number) > 0) return true;
-  if (Number.isFinite(model.constant) && (model.constant as number) > 0) return true;
+  if (isFinitePositive(model.thermAmp)) return true;
+  if (isFinitePositive(model.constant)) return true;
   return Boolean(params.star.photometry?.thermalModelAdvanced?.enabled);
-}
+};
 
-function hasActiveReflectedPhaseChannel(model: PhaseCurveParams | undefined): boolean {
-  return Boolean(model?.enabled && Number.isFinite(model.reflAmp) && (model.reflAmp as number) > 0);
-}
+const hasActiveReflectedPhaseChannel = (model: PhaseCurveParams | undefined): boolean => {
+  return Boolean(model?.enabled && isFinitePositive(model.reflAmp));
+};
 
-function hasActiveHigherFidelityAdditiveChannels(params: SystemParams): boolean {
+const hasActiveForwardScattering = (phot: PhotometryParams | undefined): boolean => {
+  return Boolean(phot?.forwardScattering?.enabled && isFinitePositive(phot.forwardScattering.amp));
+};
+
+const hasActiveRingScattering = (phot: PhotometryParams | undefined): boolean => {
+  return Boolean(phot?.ringScattering?.enabled && isFinitePositive(phot.ringScattering.amp));
+};
+
+const hasActiveRtEmission = (phot: PhotometryParams | undefined): boolean => {
+  const emission = phot?.atmosphereRT?.emission;
+  return Boolean(phot?.atmosphereRT?.enabled && emission?.enabled && isFinitePositive(emission.amp));
+};
+
+const hasActiveHigherFidelityAdditiveChannels = (params: SystemParams): boolean => {
   const phot = params.star.photometry;
-  const rtEmission = phot?.atmosphereRT?.emission;
   return Boolean(
     phot?.phaseCurve?.enabled ||
-    phot?.moonPhaseCurve?.enabled ||
-    (phot?.forwardScattering?.enabled &&
-      Number.isFinite(phot.forwardScattering.amp) &&
-      (phot.forwardScattering.amp as number) > 0) ||
-    (phot?.ringScattering?.enabled &&
-      Number.isFinite(phot.ringScattering.amp) &&
-      (phot.ringScattering.amp as number) > 0) ||
-    (phot?.atmosphereRT?.enabled &&
-      rtEmission?.enabled &&
-      Number.isFinite(rtEmission.amp) &&
-      (rtEmission.amp as number) > 0),
+      phot?.moonPhaseCurve?.enabled ||
+      hasActiveForwardScattering(phot) ||
+      hasActiveRingScattering(phot) ||
+      hasActiveRtEmission(phot),
   );
-}
+};
 
-export function assertPhotometryInputs(params: SystemParams): void {
-  const phot = params.star.photometry;
+const assertPhotometryGridRes = (phot: PhotometryParams | undefined): void => {
   const gridRes = phot?.gridRes;
   if (gridRes !== undefined && (!Number.isFinite(gridRes) || gridRes <= 0)) {
     throw new Error("star.photometry.gridRes must be > 0 and finite if provided.");
   }
+};
 
+const assertPhotometryBaselineFlux = (phot: PhotometryParams | undefined): void => {
   const baselineFlux = phot?.baselineFlux;
   if (baselineFlux !== undefined && !isFiniteNonNegative(baselineFlux)) {
     throw new Error("star.photometry.baselineFlux must be finite and >= 0 if provided.");
   }
+};
 
+const assertPhotometryCadence = (phot: PhotometryParams | undefined): void => {
   const cadenceSec = phot?.cadenceSec;
   if (cadenceSec !== undefined && !isFiniteNonNegative(cadenceSec)) {
     throw new Error("star.photometry.cadenceSec must be finite and >= 0 if provided.");
   }
+};
 
+const assertPhotometrySubsamples = (phot: PhotometryParams | undefined): void => {
   const nSubsamples = phot?.nSubsamples;
   if (nSubsamples !== undefined && (!Number.isFinite(nSubsamples) || nSubsamples < 1)) {
     throw new Error("star.photometry.nSubsamples must be finite and >= 1 if provided.");
   }
+};
 
-  const validateThermalInertia = (
-    thermalInertia:
-      | {
-          enabled?: boolean;
-          albedo?: number;
-          emissivity?: number;
-          thermalTimescaleSec?: number;
-          redistribution?: number;
-        }
-      | undefined,
-    name: string,
-  ): void => {
-    if (!thermalInertia?.enabled) return;
-    if (
-      thermalInertia.albedo !== undefined &&
-      (!Number.isFinite(thermalInertia.albedo) || thermalInertia.albedo < 0 || thermalInertia.albedo > 1)
-    ) {
-      throw new Error(`${name}.albedo must be in [0,1] if provided.`);
-    }
-    if (
-      thermalInertia.emissivity !== undefined &&
-      (!Number.isFinite(thermalInertia.emissivity) ||
-        thermalInertia.emissivity < 0 ||
-        thermalInertia.emissivity > 1)
-    ) {
-      throw new Error(`${name}.emissivity must be in [0,1] if provided.`);
-    }
-    if (
-      thermalInertia.thermalTimescaleSec !== undefined &&
-      (!Number.isFinite(thermalInertia.thermalTimescaleSec) || thermalInertia.thermalTimescaleSec < 0)
-    ) {
-      throw new Error(`${name}.thermalTimescaleSec must be >= 0 if provided.`);
-    }
-    if (
-      thermalInertia.redistribution !== undefined &&
-      (!Number.isFinite(thermalInertia.redistribution) ||
-        thermalInertia.redistribution < 0 ||
-        thermalInertia.redistribution > 1)
-    ) {
-      throw new Error(`${name}.redistribution must be in [0,1] if provided.`);
-    }
-  };
+const assertBasicPhotometry = (phot: PhotometryParams | undefined): void => {
+  assertPhotometryGridRes(phot);
+  assertPhotometryBaselineFlux(phot);
+  assertPhotometryCadence(phot);
+  assertPhotometrySubsamples(phot);
+};
 
-  validateThermalInertia(phot?.phaseCurve?.thermalInertia, "phaseCurve.thermalInertia");
-  validateThermalInertia(phot?.moonPhaseCurve?.thermalInertia, "moonPhaseCurve.thermalInertia");
-
-  const spot = phot?.spotEvolution;
-  if (spot?.enabled) {
-    const period = spot.rotationPeriodSec ?? Number.NaN;
-    if (!Number.isFinite(period) || period <= 0) {
-      throw new Error("star.photometry.spotEvolution.rotationPeriodSec must be > 0 when enabled.");
-    }
-    if (
-      spot.coverage !== undefined &&
-      (!Number.isFinite(spot.coverage) || spot.coverage < 0 || spot.coverage > 1)
-    ) {
-      throw new Error("star.photometry.spotEvolution.coverage must be in [0,1] if provided.");
-    }
-    if (spot.lifetimeSec !== undefined && (!Number.isFinite(spot.lifetimeSec) || spot.lifetimeSec < 0)) {
-      throw new Error("star.photometry.spotEvolution.lifetimeSec must be >= 0 if provided.");
-    }
-    if (spot.driftRateRadPerSec !== undefined && !Number.isFinite(spot.driftRateRadPerSec)) {
-      throw new Error("star.photometry.spotEvolution.driftRateRadPerSec must be finite if provided.");
-    }
-    if (spot.tRef !== undefined && !Number.isFinite(spot.tRef)) {
-      throw new Error("star.photometry.spotEvolution.tRef must be finite if provided.");
-    }
-    if (spot.rotationPhase0 !== undefined && !Number.isFinite(spot.rotationPhase0)) {
-      throw new Error("star.photometry.spotEvolution.rotationPhase0 must be finite if provided.");
-    }
+const assertThermalInertiaAlbedo = (thermalInertia: ThermalInertiaParams, name: string): void => {
+  if (thermalInertia.albedo !== undefined && !isFiniteUnitInterval(thermalInertia.albedo)) {
+    throw new Error(`${name}.albedo must be in [0,1] if provided.`);
   }
+};
 
-  const surf = phot?.stellarSurface;
-  if (surf?.enabled) {
-    if (
-      surf.differentialRotationK !== undefined &&
-      (!Number.isFinite(surf.differentialRotationK) ||
-        surf.differentialRotationK < 0 ||
-        surf.differentialRotationK > 1)
-    ) {
-      throw new Error("star.photometry.stellarSurface.differentialRotationK must be in [0,1] if provided.");
-    }
-    if (
-      surf.rotationPeriodSec !== undefined &&
-      (!Number.isFinite(surf.rotationPeriodSec) || surf.rotationPeriodSec <= 0)
-    ) {
-      throw new Error("star.photometry.stellarSurface.rotationPeriodSec must be finite and > 0 if provided.");
-    }
+const assertThermalInertiaEmissivity = (thermalInertia: ThermalInertiaParams, name: string): void => {
+  if (thermalInertia.emissivity !== undefined && !isFiniteUnitInterval(thermalInertia.emissivity)) {
+    throw new Error(`${name}.emissivity must be in [0,1] if provided.`);
   }
+};
 
-  const bp = phot?.spectralBandpass;
-  if (bp?.enabled) {
-    const lambda = Array.isArray(bp.lambdaNm) ? bp.lambdaNm : [];
-    if (lambda.length > 0 && lambda.some((x) => !Number.isFinite(x) || x <= 0)) {
-      throw new Error("star.photometry.spectralBandpass.lambdaNm entries must be finite and > 0.");
-    }
-    const weights = Array.isArray(bp.weights) ? bp.weights : [];
-    if (weights.length > 0 && weights.some((x) => !Number.isFinite(x) || x < 0)) {
-      throw new Error("star.photometry.spectralBandpass.weights entries must be finite and >= 0.");
-    }
-    if (weights.length > 0 && weights.length !== lambda.length) {
-      throw new Error("star.photometry.spectralBandpass.weights must match lambdaNm length when provided.");
-    }
+const assertThermalInertiaTimescale = (thermalInertia: ThermalInertiaParams, name: string): void => {
+  if (
+    thermalInertia.thermalTimescaleSec !== undefined &&
+    (!Number.isFinite(thermalInertia.thermalTimescaleSec) || thermalInertia.thermalTimescaleSec < 0)
+  ) {
+    throw new Error(`${name}.thermalTimescaleSec must be >= 0 if provided.`);
   }
+};
 
-  const rt = phot?.atmosphereRT;
-  if (rt?.enabled) {
-    if (rt.lambdaRefNm !== undefined && (!Number.isFinite(rt.lambdaRefNm) || rt.lambdaRefNm <= 0)) {
-      throw new Error("star.photometry.atmosphereRT.lambdaRefNm must be finite and > 0 if provided.");
-    }
-    const layers = Array.isArray(rt.layers) ? rt.layers : [];
-    for (let i = 0; i < layers.length; i++) {
-      const ly = layers[i];
-      if (!Number.isFinite(ly.r0) || ly.r0 <= 0) {
-        throw new Error(`star.photometry.atmosphereRT.layers[${i}].r0 must be finite and > 0.`);
-      }
-      if (!Number.isFinite(ly.H) || ly.H <= 0) {
-        throw new Error(`star.photometry.atmosphereRT.layers[${i}].H must be finite and > 0.`);
-      }
-      if (!Number.isFinite(ly.tau0) || ly.tau0 < 0) {
-        throw new Error(`star.photometry.atmosphereRT.layers[${i}].tau0 must be finite and >= 0.`);
-      }
-      if (ly.alpha !== undefined && !Number.isFinite(ly.alpha)) {
-        throw new Error(`star.photometry.atmosphereRT.layers[${i}].alpha must be finite if provided.`);
-      }
-    }
+const assertThermalInertiaRedistribution = (thermalInertia: ThermalInertiaParams, name: string): void => {
+  if (thermalInertia.redistribution !== undefined && !isFiniteUnitInterval(thermalInertia.redistribution)) {
+    throw new Error(`${name}.redistribution must be in [0,1] if provided.`);
   }
+};
 
-  const thAdv = phot?.thermalModelAdvanced;
-  if (thAdv?.enabled) {
-    if (
-      thAdv.equilibriumScale !== undefined &&
-      (!Number.isFinite(thAdv.equilibriumScale) || thAdv.equilibriumScale < 0)
-    ) {
-      throw new Error(
-        "star.photometry.thermalModelAdvanced.equilibriumScale must be finite and >= 0 if provided.",
-      );
-    }
-    if (
-      thAdv.redistribution !== undefined &&
-      (!Number.isFinite(thAdv.redistribution) || thAdv.redistribution < 0 || thAdv.redistribution > 1)
-    ) {
-      throw new Error("star.photometry.thermalModelAdvanced.redistribution must be in [0,1] if provided.");
-    }
-    if (thAdv.tauSec !== undefined && (!Number.isFinite(thAdv.tauSec) || thAdv.tauSec < 0)) {
-      throw new Error("star.photometry.thermalModelAdvanced.tauSec must be finite and >= 0 if provided.");
-    }
+const assertThermalInertia = (thermalInertia: ThermalInertiaParams | undefined, name: string): void => {
+  if (!thermalInertia?.enabled) return;
+  assertThermalInertiaAlbedo(thermalInertia, name);
+  assertThermalInertiaEmissivity(thermalInertia, name);
+  assertThermalInertiaTimescale(thermalInertia, name);
+  assertThermalInertiaRedistribution(thermalInertia, name);
+};
+
+const assertPhaseCurveThermalInertia = (phot: PhotometryParams | undefined): void => {
+  assertThermalInertia(phot?.phaseCurve?.thermalInertia, "phaseCurve.thermalInertia");
+  assertThermalInertia(phot?.moonPhaseCurve?.thermalInertia, "moonPhaseCurve.thermalInertia");
+};
+
+const assertSpotRotation = (spot: SpotEvolutionParams): void => {
+  const period = spot.rotationPeriodSec ?? Number.NaN;
+  if (!Number.isFinite(period) || period <= 0) {
+    throw new Error("star.photometry.spotEvolution.rotationPeriodSec must be > 0 when enabled.");
   }
+};
 
-  const ringSc = phot?.ringScattering;
-  if (ringSc?.enabled) {
-    if (ringSc.amp !== undefined && (!Number.isFinite(ringSc.amp) || ringSc.amp < 0)) {
-      throw new Error("star.photometry.ringScattering.amp must be finite and >= 0 if provided.");
-    }
-    if (ringSc.sigmaPhase !== undefined && (!Number.isFinite(ringSc.sigmaPhase) || ringSc.sigmaPhase <= 0)) {
-      throw new Error("star.photometry.ringScattering.sigmaPhase must be finite and > 0 if provided.");
-    }
+const assertSpotCoverage = (spot: SpotEvolutionParams): void => {
+  if (spot.coverage !== undefined && !isFiniteUnitInterval(spot.coverage)) {
+    throw new Error("star.photometry.spotEvolution.coverage must be in [0,1] if provided.");
   }
+};
 
-  if (!usesHigherFidelityAdditiveComposition(params)) return;
+const assertSpotTiming = (spot: SpotEvolutionParams): void => {
+  if (spot.lifetimeSec !== undefined && (!Number.isFinite(spot.lifetimeSec) || spot.lifetimeSec < 0)) {
+    throw new Error("star.photometry.spotEvolution.lifetimeSec must be >= 0 if provided.");
+  }
+  if (spot.driftRateRadPerSec !== undefined && !Number.isFinite(spot.driftRateRadPerSec)) {
+    throw new Error("star.photometry.spotEvolution.driftRateRadPerSec must be finite if provided.");
+  }
+  if (spot.tRef !== undefined && !Number.isFinite(spot.tRef)) {
+    throw new Error("star.photometry.spotEvolution.tRef must be finite if provided.");
+  }
+};
 
+const assertSpotPhase = (spot: SpotEvolutionParams): void => {
+  if (spot.rotationPhase0 !== undefined && !Number.isFinite(spot.rotationPhase0)) {
+    throw new Error("star.photometry.spotEvolution.rotationPhase0 must be finite if provided.");
+  }
+};
+
+const assertSpotEvolution = (spot: SpotEvolutionParams | undefined): void => {
+  if (!spot?.enabled) return;
+  assertSpotRotation(spot);
+  assertSpotCoverage(spot);
+  assertSpotTiming(spot);
+  assertSpotPhase(spot);
+};
+
+const assertStellarSurface = (surface: StellarSurfaceParams | undefined): void => {
+  if (!surface?.enabled) return;
+  if (surface.differentialRotationK !== undefined && !isFiniteUnitInterval(surface.differentialRotationK)) {
+    throw new Error("star.photometry.stellarSurface.differentialRotationK must be in [0,1] if provided.");
+  }
+  if (
+    surface.rotationPeriodSec !== undefined &&
+    (!Number.isFinite(surface.rotationPeriodSec) || surface.rotationPeriodSec <= 0)
+  ) {
+    throw new Error("star.photometry.stellarSurface.rotationPeriodSec must be finite and > 0 if provided.");
+  }
+};
+
+const numericArray = (value: unknown): unknown[] => {
+  return Array.isArray(value) ? value : [];
+};
+
+const hasInvalidPositiveEntry = (values: unknown[]): boolean => {
+  return values.some((x) => !Number.isFinite(x) || (x as number) <= 0);
+};
+
+const hasInvalidNonNegativeEntry = (values: unknown[]): boolean => {
+  return values.some((x) => !Number.isFinite(x) || (x as number) < 0);
+};
+
+const assertSpectralBandpassEntries = (lambda: unknown[], weights: unknown[]): void => {
+  if (lambda.length > 0 && hasInvalidPositiveEntry(lambda)) {
+    throw new Error("star.photometry.spectralBandpass.lambdaNm entries must be finite and > 0.");
+  }
+  if (weights.length > 0 && hasInvalidNonNegativeEntry(weights)) {
+    throw new Error("star.photometry.spectralBandpass.weights entries must be finite and >= 0.");
+  }
+};
+
+const assertSpectralBandpassWeights = (lambda: unknown[], weights: unknown[]): void => {
+  if (weights.length > 0 && weights.length !== lambda.length) {
+    throw new Error("star.photometry.spectralBandpass.weights must match lambdaNm length when provided.");
+  }
+};
+
+const assertSpectralBandpass = (bp: SpectralBandpassParams | undefined): void => {
+  if (!bp?.enabled) return;
+  const lambda = numericArray(bp.lambdaNm);
+  const weights = numericArray(bp.weights);
+  assertSpectralBandpassEntries(lambda, weights);
+  assertSpectralBandpassWeights(lambda, weights);
+};
+
+const assertAtmosphereRtReference = (rt: AtmosphereRTParams): void => {
+  if (rt.lambdaRefNm !== undefined && (!Number.isFinite(rt.lambdaRefNm) || rt.lambdaRefNm <= 0)) {
+    throw new Error("star.photometry.atmosphereRT.lambdaRefNm must be finite and > 0 if provided.");
+  }
+};
+
+const assertAtmosphereRtLayerGeometry = (layer: AtmosphereRTLayer, index: number): void => {
+  if (!Number.isFinite(layer.r0) || layer.r0 <= 0) {
+    throw new Error(`star.photometry.atmosphereRT.layers[${index}].r0 must be finite and > 0.`);
+  }
+  if (!Number.isFinite(layer.H) || layer.H <= 0) {
+    throw new Error(`star.photometry.atmosphereRT.layers[${index}].H must be finite and > 0.`);
+  }
+};
+
+const assertAtmosphereRtLayerOpticalDepth = (layer: AtmosphereRTLayer, index: number): void => {
+  if (!Number.isFinite(layer.tau0) || layer.tau0 < 0) {
+    throw new Error(`star.photometry.atmosphereRT.layers[${index}].tau0 must be finite and >= 0.`);
+  }
+  if (layer.alpha !== undefined && !Number.isFinite(layer.alpha)) {
+    throw new Error(`star.photometry.atmosphereRT.layers[${index}].alpha must be finite if provided.`);
+  }
+};
+
+const assertAtmosphereRtLayer = (layer: AtmosphereRTLayer, index: number): void => {
+  assertAtmosphereRtLayerGeometry(layer, index);
+  assertAtmosphereRtLayerOpticalDepth(layer, index);
+};
+
+const assertAtmosphereRtLayers = (rt: AtmosphereRTParams): void => {
+  const layers = Array.isArray(rt.layers) ? rt.layers : [];
+  for (let index = 0; index < layers.length; index++) {
+    assertAtmosphereRtLayer(layers[index], index);
+  }
+};
+
+const assertAtmosphereRt = (rt: AtmosphereRTParams | undefined): void => {
+  if (!rt?.enabled) return;
+  assertAtmosphereRtReference(rt);
+  assertAtmosphereRtLayers(rt);
+};
+
+const assertThermalModelScale = (model: ThermalModelAdvancedParams): void => {
+  if (
+    model.equilibriumScale !== undefined &&
+    (!Number.isFinite(model.equilibriumScale) || model.equilibriumScale < 0)
+  ) {
+    throw new Error(
+      "star.photometry.thermalModelAdvanced.equilibriumScale must be finite and >= 0 if provided.",
+    );
+  }
+};
+
+const assertThermalModelRedistribution = (model: ThermalModelAdvancedParams): void => {
+  if (model.redistribution !== undefined && !isFiniteUnitInterval(model.redistribution)) {
+    throw new Error("star.photometry.thermalModelAdvanced.redistribution must be in [0,1] if provided.");
+  }
+};
+
+const assertThermalModelTau = (model: ThermalModelAdvancedParams): void => {
+  if (model.tauSec !== undefined && (!Number.isFinite(model.tauSec) || model.tauSec < 0)) {
+    throw new Error("star.photometry.thermalModelAdvanced.tauSec must be finite and >= 0 if provided.");
+  }
+};
+
+const assertThermalModelAdvanced = (model: ThermalModelAdvancedParams | undefined): void => {
+  if (!model?.enabled) return;
+  assertThermalModelScale(model);
+  assertThermalModelRedistribution(model);
+  assertThermalModelTau(model);
+};
+
+const assertRingScatteringAmp = (ringScattering: RingScatteringParams): void => {
+  if (ringScattering.amp !== undefined && (!Number.isFinite(ringScattering.amp) || ringScattering.amp < 0)) {
+    throw new Error("star.photometry.ringScattering.amp must be finite and >= 0 if provided.");
+  }
+};
+
+const assertRingScatteringSigma = (ringScattering: RingScatteringParams): void => {
+  if (
+    ringScattering.sigmaPhase !== undefined &&
+    (!Number.isFinite(ringScattering.sigmaPhase) || ringScattering.sigmaPhase <= 0)
+  ) {
+    throw new Error("star.photometry.ringScattering.sigmaPhase must be finite and > 0 if provided.");
+  }
+};
+
+const assertRingScattering = (ringScattering: RingScatteringParams | undefined): void => {
+  if (!ringScattering?.enabled) return;
+  assertRingScatteringAmp(ringScattering);
+  assertRingScatteringSigma(ringScattering);
+};
+
+const assertHigherFidelityOptIn = (params: SystemParams, phot: PhotometryParams | undefined): void => {
   if (
     hasActiveHigherFidelityAdditiveChannels(params) &&
     phot?.additiveComposition !== "higher-fidelity-coupled"
@@ -227,41 +329,51 @@ export function assertPhotometryInputs(params: SystemParams): void {
       'higher-fidelity additive composition requires star.photometry.additiveComposition = "higher-fidelity-coupled" when additive body-light channels are active.',
     );
   }
+};
 
-  const rtEmission = phot?.atmosphereRT?.enabled ? phot.atmosphereRT.emission : undefined;
+const hasActiveEmissionForTarget = (
+  phot: PhotometryParams | undefined,
+  target: "planet" | "moon",
+): boolean => {
+  const emission = phot?.atmosphereRT?.enabled ? phot.atmosphereRT.emission : undefined;
   const rtTarget = phot?.atmosphereRT?.target ?? "planet";
-  const emissionActive = Boolean(
-    rtEmission?.enabled && Number.isFinite(rtEmission.amp) && (rtEmission.amp as number) > 0,
-  );
-  if (emissionActive) {
-    if (rtTarget === "planet" && hasActiveThermalPhaseChannel(phot?.phaseCurve, params)) {
-      throw new Error(
-        "higher-fidelity additive composition rejects star.photometry.atmosphereRT.emission together with an active planet thermal phase channel.",
-      );
-    }
-    if (rtTarget === "moon" && hasActiveThermalPhaseChannel(phot?.moonPhaseCurve, params)) {
-      throw new Error(
-        "higher-fidelity additive composition rejects star.photometry.atmosphereRT.emission together with an active moon thermal phase channel.",
-      );
-    }
-  }
+  return rtTarget === target && Boolean(emission?.enabled && isFinitePositive(emission.amp));
+};
 
-  const forwardSc = phot?.forwardScattering;
+const assertEmissionThermalConflict = (params: SystemParams, phot: PhotometryParams | undefined): void => {
+  if (hasActiveEmissionForTarget(phot, "planet") && hasActiveThermalPhaseChannel(phot?.phaseCurve, params)) {
+    throw new Error(
+      "higher-fidelity additive composition rejects star.photometry.atmosphereRT.emission together with an active planet thermal phase channel.",
+    );
+  }
   if (
-    forwardSc?.enabled &&
-    Number.isFinite(forwardSc.amp) &&
-    (forwardSc.amp as number) > 0 &&
-    hasActiveReflectedPhaseChannel(phot?.phaseCurve)
+    hasActiveEmissionForTarget(phot, "moon") &&
+    hasActiveThermalPhaseChannel(phot?.moonPhaseCurve, params)
+  ) {
+    throw new Error(
+      "higher-fidelity additive composition rejects star.photometry.atmosphereRT.emission together with an active moon thermal phase channel.",
+    );
+  }
+};
+
+const assertForwardScatteringConflict = (
+  forwardScattering: ForwardScatteringParams | undefined,
+  phaseCurve: PhaseCurveParams | undefined,
+): void => {
+  if (
+    forwardScattering?.enabled &&
+    isFinitePositive(forwardScattering.amp) &&
+    hasActiveReflectedPhaseChannel(phaseCurve)
   ) {
     throw new Error(
       "higher-fidelity additive composition rejects star.photometry.forwardScattering together with an active reflected planet phase channel.",
     );
   }
+};
 
+const assertRingScatteringConflict = (params: SystemParams, phot: PhotometryParams | undefined): void => {
   if (
-    ringSc?.enabled &&
-    Number.isFinite(ringSc.amp) &&
-    (ringSc.amp as number) > 0 &&
+    hasActiveRingScattering(phot) &&
     params.planet.rings &&
     hasActiveReflectedPhaseChannel(phot?.phaseCurve)
   ) {
@@ -269,4 +381,29 @@ export function assertPhotometryInputs(params: SystemParams): void {
       "higher-fidelity additive composition rejects star.photometry.ringScattering together with an active reflected planet phase channel.",
     );
   }
+};
+
+const assertHigherFidelityAdditiveComposition = (
+  params: SystemParams,
+  phot: PhotometryParams | undefined,
+): void => {
+  assertHigherFidelityOptIn(params, phot);
+  assertEmissionThermalConflict(params, phot);
+  assertForwardScatteringConflict(phot?.forwardScattering, phot?.phaseCurve);
+  assertRingScatteringConflict(params, phot);
+};
+
+export function assertPhotometryInputs(params: SystemParams): void {
+  const phot = params.star.photometry;
+  assertBasicPhotometry(phot);
+  assertPhaseCurveThermalInertia(phot);
+  assertSpotEvolution(phot?.spotEvolution);
+  assertStellarSurface(phot?.stellarSurface);
+  assertSpectralBandpass(phot?.spectralBandpass);
+  assertAtmosphereRt(phot?.atmosphereRT);
+  assertThermalModelAdvanced(phot?.thermalModelAdvanced);
+  assertRingScattering(phot?.ringScattering);
+
+  if (!usesHigherFidelityAdditiveComposition(params)) return;
+  assertHigherFidelityAdditiveComposition(params, phot);
 }

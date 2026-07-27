@@ -1,3 +1,5 @@
+/** Verifies v3 validation contracts across system state, transit observables, and V4 integration. */
+
 import { describe, expect, it } from "vitest";
 import {
   validateSimulationConfigV3,

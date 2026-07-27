@@ -228,6 +228,13 @@ Instrument noise:
 
 ## Dynamics: N-body (Velocity-Verlet)
 
+These fields configure the compatibility kernel. The strict V4
+`scientific-browser` validation profile rejects an enabled N-body request.
+Interactive V4 may retain the configuration but does not execute that
+integrator and marks it unavailable/not run. A bounded scientific propagation
+must use a capability-confirmed V5 backend and satisfy its input/execution
+contract.
+
 | UI ID            | SystemParams path                  | Unit      | Meaning                   |
 | ---------------- | ---------------------------------- | --------- | ------------------------- |
 | `nbodyEnabled`   | `dynamics.nbodyPlanetMoon.enabled` | -         | Toggle                    |
@@ -243,6 +250,10 @@ Perturbers:
 - `pert2*` -> `dynamics.nbodyPlanetMoon.perturbers[1]`
 
 ## Relativity (LTTE / Shapiro / GR precession)
+
+These fields remain compatibility/preview inputs. The V4 browser runtime rejects
+enabled relativity rather than claiming to apply LTTE, Shapiro delay, or 1PN
+precession. The current local V5 backend also declares relativity unsupported.
 
 | UI ID           | SystemParams path             | Unit       | Meaning                |
 | --------------- | ----------------------------- | ---------- | ---------------------- |

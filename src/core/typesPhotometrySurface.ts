@@ -1,3 +1,6 @@
+/**
+ * Owns types Photometry Surface support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ */
 export type BrightnessPatchShape = "circle" | "ellipse";
 
 export type BrightnessPatch = {

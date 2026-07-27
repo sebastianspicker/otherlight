@@ -1,3 +1,5 @@
+/** Covers perf smoke scenarios used for physics-performance regression checks. */
+
 import { describe, expect, it } from "vitest";
 import { performance } from "node:perf_hooks";
 

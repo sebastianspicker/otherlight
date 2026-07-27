@@ -1,3 +1,5 @@
+/** Verifies transit shapes calculations in the observable-light and transit model. */
+
 import { describe, expect, it } from "vitest";
 
 import {

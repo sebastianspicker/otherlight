@@ -34,7 +34,9 @@ Rotation to inertial coordinates:
 
 Runtime note:
 
-- These Kepler elements drive both the default interactive browser runtime and the stricter `scientific-browser` validation/runtime path.
+- These Kepler elements drive both the default interactive browser runtime and
+  the stricter `scientific-browser` validation profile. Both are V4 educational
+  Kepler previews; neither is the V5 scientific backend contract.
 - The difference is not the orbital parametrization itself but the surrounding runtime contract, diagnostics, and feature gating applied after the orbital state is built.
 
 Related code:

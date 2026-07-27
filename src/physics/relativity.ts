@@ -1,4 +1,4 @@
-// src/physics/relativity.ts
+/** Solves supported relativistic timing and propagation corrections in SI units. */
 //
 // Lightweight relativity-inspired timing and precession utilities.
 //
@@ -9,7 +9,6 @@
 import type { OrbitElements } from "../core/types";
 import type { RelativityParams } from "../core/typesDynamics";
 import { wrapTo2Pi } from "../core/units";
-import { muFromPeriodAndA } from "./kepler";
 import type { Vec3 } from "./vec3";
 import { vDot, vIsFinite, vLen, vNormalizeOrZero } from "./vec3";
 
@@ -31,78 +30,95 @@ export type NormalizedRelativityParams = {
   shapiroMinImpact: number;
 };
 
-export type LightTimeSolveDiagnostics = {
-  status: "converged" | "max-iters" | "invalid-input" | "nonfinite-delay" | "nonfinite-next";
-  converged: boolean;
-  iterations: number;
-  maxIters: number;
-  tolSec: number;
-  usedShapiro: boolean;
-  usedMultiBodyShapiro: boolean;
-  validityFlags: string[];
-  roemerSec?: number;
-  shapiroSec?: number;
-  delaySec?: number;
-  residualSec?: number;
-};
-
-export type LightTimeSolveResult = {
-  tEmit: number;
-  diagnostics: LightTimeSolveDiagnostics;
-};
+export type { LightTimeSolveDiagnostics, LightTimeSolveResult } from "./relativityTiming";
 
 const DEFAULT_C = 299_792_458;
 const DEFAULT_LTTE_ITERS = 2;
 const DEFAULT_LTTE_TOL_SEC = 1e-6;
 const DEFAULT_SHAPIRO_MIN_IMPACT = 0;
 
-/** Merge user-provided relativity config with safe defaults (c, iteration limits, enable flags). */
-export function normalizeRelativityParams(params: RelativityParams | undefined): NormalizedRelativityParams {
+type RelativityFeatureFlags = Pick<
+  NormalizedRelativityParams,
+  "enabled" | "ltte" | "grPrecession" | "shapiro" | "einsteinDelay" | "lightBending"
+>;
+
+type RelativityScalarDefaults = Omit<NormalizedRelativityParams, keyof RelativityFeatureFlags>;
+
+function isPositiveFinite(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function finiteOrDefault(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? (value as number) : fallback;
+}
+
+function positiveFiniteOrDefault(value: number | undefined, fallback: number): number {
+  return isPositiveFinite(value) ? value : fallback;
+}
+
+function integerAtLeast(value: number | undefined, fallback: number, min: number): number {
+  return Number.isFinite(value) ? Math.max(min, Math.floor(value as number)) : fallback;
+}
+
+function nonNegativeFiniteOrDefault(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? Math.max(0, value as number) : fallback;
+}
+
+function enabledDefaultTrue(enabled: boolean, value: boolean | undefined): boolean {
+  return enabled && (value ?? true);
+}
+
+function enabledOptIn(enabled: boolean, value: boolean | undefined): boolean {
+  return enabled && Boolean(value);
+}
+
+function normalizeRelativityFeatureFlags(params: RelativityParams | undefined): RelativityFeatureFlags {
   const enabled = Boolean(params?.enabled);
-  const ltte = enabled && (params?.ltte ?? true);
-  const grPrecession = enabled && (params?.grPrecession ?? true);
-  const shapiro = enabled && (params?.shapiro ?? true);
-  const einsteinDelay = enabled && Boolean(params?.einsteinDelay);
-  const lightBending = enabled && Boolean(params?.lightBending);
-
-  const c = Number.isFinite(params?.c) && (params!.c as number) > 0 ? (params!.c as number) : DEFAULT_C;
-  const timingRefSec = Number.isFinite(params?.timingRefSec) ? (params!.timingRefSec as number) : 0;
-
-  const planetPrecessionPerOrbit = Number.isFinite(params?.planetPrecessionPerOrbit)
-    ? (params!.planetPrecessionPerOrbit as number)
-    : 0;
-  const moonPrecessionPerOrbit = Number.isFinite(params?.moonPrecessionPerOrbit)
-    ? (params!.moonPrecessionPerOrbit as number)
-    : 0;
-
-  const ltteItersRaw = params?.ltteIters;
-  const ltteIters = Number.isFinite(ltteItersRaw)
-    ? Math.max(1, Math.floor(ltteItersRaw as number))
-    : DEFAULT_LTTE_ITERS;
-
-  const ltteTolRaw = params?.ltteTolSec;
-  const ltteTolSec = Number.isFinite(ltteTolRaw) ? Math.max(0, ltteTolRaw as number) : DEFAULT_LTTE_TOL_SEC;
-
-  const shapiroMinImpactRaw = params?.shapiroMinImpact;
-  const shapiroMinImpact = Number.isFinite(shapiroMinImpactRaw)
-    ? Math.max(0, shapiroMinImpactRaw as number)
-    : DEFAULT_SHAPIRO_MIN_IMPACT;
-
   return {
     enabled,
-    ltte,
-    grPrecession,
-    shapiro,
-    einsteinDelay,
-    lightBending,
-    c,
-    timingRefSec,
-    planetPrecessionPerOrbit,
-    moonPrecessionPerOrbit,
-    ltteIters,
-    ltteTolSec,
-    shapiroMinImpact,
+    ltte: enabledDefaultTrue(enabled, params?.ltte),
+    grPrecession: enabledDefaultTrue(enabled, params?.grPrecession),
+    shapiro: enabledDefaultTrue(enabled, params?.shapiro),
+    einsteinDelay: enabledOptIn(enabled, params?.einsteinDelay),
+    lightBending: enabledOptIn(enabled, params?.lightBending),
   };
+}
+
+function normalizeRelativityScalarDefaults(params: RelativityParams | undefined): RelativityScalarDefaults {
+  return {
+    c: positiveFiniteOrDefault(params?.c, DEFAULT_C),
+    timingRefSec: finiteOrDefault(params?.timingRefSec, 0),
+    planetPrecessionPerOrbit: finiteOrDefault(params?.planetPrecessionPerOrbit, 0),
+    moonPrecessionPerOrbit: finiteOrDefault(params?.moonPrecessionPerOrbit, 0),
+    ltteIters: integerAtLeast(params?.ltteIters, DEFAULT_LTTE_ITERS, 1),
+    ltteTolSec: nonNegativeFiniteOrDefault(params?.ltteTolSec, DEFAULT_LTTE_TOL_SEC),
+    shapiroMinImpact: nonNegativeFiniteOrDefault(params?.shapiroMinImpact, DEFAULT_SHAPIRO_MIN_IMPACT),
+  };
+}
+
+/** Merge user-provided relativity config with safe defaults (c, iteration limits, enable flags). */
+export function normalizeRelativityParams(params: RelativityParams | undefined): NormalizedRelativityParams {
+  return {
+    ...normalizeRelativityFeatureFlags(params),
+    ...normalizeRelativityScalarDefaults(params),
+  };
+}
+
+function hasValidEinsteinScalars(params: { mu: number; c: number; tObs: number }): boolean {
+  return isPositiveFinite(params.mu) && isPositiveFinite(params.c) && Number.isFinite(params.tObs);
+}
+
+function positiveVectorLength(vec: Vec3): number | undefined {
+  const length = vLen(vec);
+  return Number.isFinite(length) && length > 0 ? length : undefined;
+}
+
+function finiteOptionalReference(value: number | undefined): number {
+  return Number.isFinite(value) ? (value as number) : 0;
+}
+
+function finiteOrZero(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 /**
@@ -120,22 +136,49 @@ export function einsteinDelaySurrogateSec(params: {
   tObs: number;
   tRef?: number;
 }): number {
+  const state = resolveEinsteinDelayState(params);
+  if (!state) return 0;
+
+  return finiteOrZero(((0.5 * state.v2 + state.mu / state.rMag) / state.c2) * state.dt);
+}
+
+function resolveEinsteinDelayState(params: {
+  r: Vec3;
+  v: Vec3;
+  mu: number;
+  c: number;
+  tObs: number;
+  tRef?: number;
+}): { mu: number; c2: number; rMag: number; v2: number; dt: number } | null {
   const { r, v, mu, c, tObs } = params;
-  if (!vIsFinite(r) || !vIsFinite(v)) return 0;
-  if (!(Number.isFinite(mu) && mu > 0 && Number.isFinite(c) && c > 0 && Number.isFinite(tObs))) return 0;
+  if (!vIsFinite(r) || !vIsFinite(v)) return null;
+  if (!hasValidEinsteinScalars({ mu, c, tObs })) return null;
 
-  const rMag = vLen(r);
-  if (!(Number.isFinite(rMag) && rMag > 0)) return 0;
+  const rMag = positiveVectorLength(r);
+  if (rMag === undefined) return null;
   const v2 = vDot(v, v);
-  if (!Number.isFinite(v2)) return 0;
-  const tRef = Number.isFinite(params.tRef) ? (params.tRef as number) : 0;
+  if (!Number.isFinite(v2)) return null;
+  const tRef = finiteOptionalReference(params.tRef);
   const dt = tObs - tRef;
-  if (!Number.isFinite(dt) || dt === 0) return 0;
+  if (!Number.isFinite(dt) || dt === 0) return null;
 
-  const c2 = c * c;
-  const rate = (0.5 * v2 + mu / rMag) / c2;
-  const delay = rate * dt;
-  return Number.isFinite(delay) ? delay : 0;
+  return { mu, c2: c * c, rMag, v2, dt };
+}
+
+function normalizedDirection(observerDir: Vec3): Vec3 | undefined {
+  const dir = vNormalizeOrZero(observerDir, 1e-15);
+  return vLen(dir) > 0 ? dir : undefined;
+}
+
+function nonNegativeFiniteOrZero(value: number | undefined): number {
+  return Number.isFinite(value) ? Math.max(0, value as number) : 0;
+}
+
+function transverseImpactSq(r: Vec3, dir: Vec3): number | undefined {
+  const z = vDot(r, dir);
+  const rMag2 = vDot(r, r);
+  if (!Number.isFinite(z) || !Number.isFinite(rMag2) || rMag2 <= 0) return undefined;
+  return Math.max(0, rMag2 - z * z);
 }
 
 /**
@@ -152,16 +195,14 @@ export function lightBendingAngleRad(params: {
 }): number {
   const { r, observerDir, mu, c } = params;
   if (!vIsFinite(r) || !vIsFinite(observerDir)) return 0;
-  if (!(Number.isFinite(mu) && mu > 0 && Number.isFinite(c) && c > 0)) return 0;
+  if (!isPositiveFinite(mu) || !isPositiveFinite(c)) return 0;
 
-  const dir = vNormalizeOrZero(observerDir, 1e-15);
-  if (!(vLen(dir) > 0)) return 0;
+  const dir = normalizedDirection(observerDir);
+  if (!dir) return 0;
 
-  const z = vDot(r, dir);
-  const rMag2 = vDot(r, r);
-  if (!(Number.isFinite(z) && Number.isFinite(rMag2) && rMag2 > 0)) return 0;
-  const impactSq = Math.max(0, rMag2 - z * z);
-  const minImpact = Number.isFinite(params.minImpact) ? Math.max(0, params.minImpact as number) : 0;
+  const impactSq = transverseImpactSq(r, dir);
+  if (impactSq === undefined) return 0;
+  const minImpact = nonNegativeFiniteOrZero(params.minImpact);
   const b = Math.max(Math.sqrt(impactSq), minImpact, 1e-12);
   const angle = (4 * mu) / (b * c * c);
   return Number.isFinite(angle) ? Math.max(0, angle) : 0;
@@ -195,49 +236,11 @@ export function applyApsidalPrecession(
  */
 
 export {
+  grPrecessionPerOrbit,
   lightTimeDelaySec,
+  resolveGrPrecessionPerOrbit,
   shapiroDelayMultiBodySec,
   shapiroDelaySec,
   solveLightTimeCorrectedResult,
   solveLightTimeCorrectedTime,
 } from "./relativityTiming";
-
-export function resolveGrPrecessionPerOrbit(params: {
-  orbit: OrbitElements;
-  c: number;
-  override?: number;
-  mu?: number;
-}): number {
-  const override = params.override;
-  if (Number.isFinite(override) && override !== 0) return override as number;
-
-  const orbit = params.orbit;
-  if (!(Number.isFinite(orbit.a) && orbit.a > 0 && Number.isFinite(orbit.period) && orbit.period > 0)) {
-    return 0;
-  }
-
-  const mu =
-    Number.isFinite(params.mu) && (params.mu as number) > 0
-      ? (params.mu as number)
-      : muFromPeriodAndA(orbit.period, orbit.a);
-
-  if (!(Number.isFinite(mu) && mu > 0)) return 0;
-  return grPrecessionPerOrbit({ mu, a: orbit.a, e: orbit.e, c: params.c });
-}
-
-/**
- * Apsidal precession per orbit from the GR weak-field formula:
- * Δω = 6π * mu / (a (1 - e^2) c^2)
- */
-export function grPrecessionPerOrbit(params: { mu: number; a: number; e: number; c: number }): number {
-  const { mu, a, e, c } = params;
-  if (!(Number.isFinite(mu) && mu > 0)) return 0;
-  if (!(Number.isFinite(a) && a > 0)) return 0;
-  if (!(Number.isFinite(e) && e >= 0 && e < 1)) return 0;
-  if (!(Number.isFinite(c) && c > 0)) return 0;
-
-  const denom = a * (1 - e * e) * c * c;
-  if (!(denom > 0) || !Number.isFinite(denom)) return 0;
-
-  return (6 * Math.PI * mu) / denom;
-}

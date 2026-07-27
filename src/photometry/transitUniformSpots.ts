@@ -1,4 +1,4 @@
-// src/photometry/transitUniformSpots.ts
+/** Computes uniform-disk transits with projected stellar spot and facula effects. */
 //
 // Uniform-brightness stellar disk transit photometry with stellar spots/faculae,
 // using deterministic midpoint integration over the stellar disk.
@@ -25,6 +25,21 @@ import {
   sanitizeCircleOcculters,
   type CircleOcculter,
 } from "./occulterCircle";
+
+function positivePatchIntensity(
+  x: number,
+  y: number,
+  patches: ReturnType<typeof sanitizeBrightnessPatches>,
+  mode: PatchCombineMode,
+): number {
+  const I = patchFactorAt(x, y, patches, mode);
+  return Number.isFinite(I) ? Math.max(0, I) : 1;
+}
+
+function normalizedPatchFlux(totalIntensity: number, blockedIntensity: number): number {
+  if (!(Number.isFinite(totalIntensity) && totalIntensity > 0)) return 1.0;
+  return clamp01((totalIntensity - blockedIntensity) / totalIntensity);
+}
 
 /**
  * Normalized flux for a uniform-brightness stellar disk with brightness patches (spots/faculae)
@@ -59,10 +74,8 @@ export function fluxUniformDiskWithPatches(params: {
 
   if (anyCircleOcculterFullyCoversStar(rStar, occulters)) return 0.0;
 
-  // Shared patch sanitization.
   const patches = sanitizeBrightnessPatches(params.brightnessPatches);
   const patchCombineMode: PatchCombineMode = params.patchCombineMode ?? "multiply";
-
   const gridRes = clampGridRes(params.gridRes, 220);
 
   const { total: totalIntensity, blocked: blockedIntensity } = integrateDiskMidpoint({
@@ -70,17 +83,80 @@ export function fluxUniformDiskWithPatches(params: {
     occulters,
     gridRes,
     intensityAt: ({ x, y }) => {
-      const I = patchFactorAt(x, y, patches, patchCombineMode);
-      return Number.isFinite(I) ? Math.max(0, I) : 1;
+      return positivePatchIntensity(x, y, patches, patchCombineMode);
     },
     earlyExitFluxEps: 0,
   });
 
-  // Pathological: factor==0 everywhere => totalIntensity==0. Avoid division by zero.
-  if (!(Number.isFinite(totalIntensity) && totalIntensity > 0)) return 1.0;
+  return normalizedPatchFlux(totalIntensity, blockedIntensity);
+}
 
-  const flux = (totalIntensity - blockedIntensity) / totalIntensity;
-  return clamp01(flux);
+type SpotEvolutionContext = {
+  t: number;
+  tRef: number;
+  rotation: number;
+  coverage: number;
+  lifetime: number;
+};
+
+function finiteOrDefault(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? (value as number) : fallback;
+}
+
+function rotationPhaseAtTime(t: number, model: SpotEvolutionParams, tRef: number): number {
+  const period = model.rotationPeriodSec ?? Number.NaN;
+  const phase = Number.isFinite(period) && period > 0 ? orbitalPhaseFromPeriod({ t, period, t0: tRef }) : 0;
+  return Number.isFinite(phase) ? phase : 0;
+}
+
+function spotEvolutionContext(t: number, model: SpotEvolutionParams): SpotEvolutionContext {
+  const tRef = finiteOrDefault(model.tRef, 0);
+  const driftRate = finiteOrDefault(model.driftRateRadPerSec, 0);
+  const rotOffset = finiteOrDefault(model.rotationPhase0, 0);
+  return {
+    t,
+    tRef,
+    rotation: rotationPhaseAtTime(t, model, tRef) + driftRate * (t - tRef) + rotOffset,
+    coverage: clamp(finiteOrDefault(model.coverage, 1), 0, 1),
+    lifetime: finiteOrDefault(model.lifetimeSec, 0),
+  };
+}
+
+function finitePatchCoordinate(value: number | undefined): number {
+  return Number.isFinite(value) ? (value as number) : 0;
+}
+
+function evolvedPatchFactor(
+  patch: BrightnessPatch,
+  baseAngle: number,
+  context: SpotEvolutionContext,
+): number {
+  let factor = finiteOrDefault(patch.factor, 1);
+  factor = 1 + context.coverage * (factor - 1);
+  if (context.lifetime > 0) {
+    const w = spotLifecycleWeight({
+      t: context.t,
+      lifetimeSec: context.lifetime,
+      t0: context.tRef,
+      phaseOffset: baseAngle,
+    });
+    factor = 1 + (factor - 1) * w;
+  }
+  return Math.max(0, factor);
+}
+
+function evolveSingleBrightnessPatch(patch: BrightnessPatch, context: SpotEvolutionContext): BrightnessPatch {
+  const x0 = finitePatchCoordinate(patch.x);
+  const y0 = finitePatchCoordinate(patch.y);
+  const r = Math.hypot(x0, y0);
+  const baseAngle = r > 0 ? Math.atan2(y0, x0) : 0;
+  const angle = baseAngle + context.rotation;
+  const factor = evolvedPatchFactor(patch, baseAngle, context);
+  const position = { x: r * Math.cos(angle), y: r * Math.sin(angle), factor };
+  if (patch.shape !== "ellipse") return { ...patch, ...position };
+
+  const baseShapeAngle = finiteOrDefault(patch.angle, 0);
+  return { ...patch, ...position, angle: baseShapeAngle + context.rotation };
 }
 
 export function evolveBrightnessPatches(params: {
@@ -93,49 +169,11 @@ export function evolveBrightnessPatches(params: {
 
   if (!model?.enabled || patches.length === 0) return patches;
 
-  const t = params.t;
-  const tRef = Number.isFinite(model.tRef) ? (model.tRef as number) : 0;
-  const period = model.rotationPeriodSec ?? Number.NaN;
-  const rotPhase =
-    Number.isFinite(period) && period > 0 ? orbitalPhaseFromPeriod({ t, period, t0: tRef }) : 0;
-  const rotPhaseSafe = Number.isFinite(rotPhase) ? rotPhase : 0;
-  const driftRate = Number.isFinite(model.driftRateRadPerSec) ? (model.driftRateRadPerSec as number) : 0;
-  const rotOffset = Number.isFinite(model.rotationPhase0) ? (model.rotationPhase0 as number) : 0;
-  const rot = rotPhaseSafe + driftRate * (t - tRef) + rotOffset;
-
-  const coverage = clamp(Number.isFinite(model.coverage) ? (model.coverage as number) : 1, 0, 1);
-  const lifetime = Number.isFinite(model.lifetimeSec) ? (model.lifetimeSec as number) : 0;
-
+  const context = spotEvolutionContext(params.t, model);
   const out: BrightnessPatch[] = new Array(patches.length);
   for (let i = 0; i < patches.length; i++) {
     const p = patches[i];
-    if (!p) {
-      out[i] = p;
-      continue;
-    }
-
-    const x0 = Number.isFinite(p.x) ? (p.x as number) : 0;
-    const y0 = Number.isFinite(p.y) ? (p.y as number) : 0;
-    const r = Math.hypot(x0, y0);
-    const baseAngle = r > 0 ? Math.atan2(y0, x0) : 0;
-    const ang = baseAngle + rot;
-
-    let factor = Number.isFinite(p.factor) ? (p.factor as number) : 1;
-    factor = 1 + coverage * (factor - 1);
-
-    if (lifetime > 0) {
-      const w = spotLifecycleWeight({ t, lifetimeSec: lifetime, t0: tRef, phaseOffset: baseAngle });
-      factor = 1 + (factor - 1) * w;
-    }
-    factor = Math.max(0, factor);
-
-    if (p.shape === "ellipse") {
-      const baseShapeAngle = Number.isFinite(p.angle) ? (p.angle as number) : 0;
-      out[i] = { ...p, x: r * Math.cos(ang), y: r * Math.sin(ang), factor, angle: baseShapeAngle + rot };
-      continue;
-    }
-
-    out[i] = { ...p, x: r * Math.cos(ang), y: r * Math.sin(ang), factor };
+    out[i] = p ? evolveSingleBrightnessPatch(p, context) : p;
   }
 
   return out;

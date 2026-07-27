@@ -1,9 +1,13 @@
+/**
+ * Owns scenario Flow support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ */
 import type { LessonSimMode, SystemParams } from "../core/types";
+import { getLabSystemByControlValue, getLabSystemById } from "../core/labs";
 import { cloneParams } from "./scenario";
 import { buildBinaryLabParams, DEFAULT_BINARY_LAB_CONFIG_V4 } from "./binaryLab";
 import { getPresetById } from "./presets";
 import { buildParamsFromRealSystem, formatRealSystemMeta, getRealSystemById } from "./realSystems";
-import { stripUnsupportedPhotometryForV4Runtime } from "./v4Runtime";
+import { cloneParamsForV4Runtime } from "./v4Runtime";
 import type { UiRefs } from "../ui/refs";
 import { setHidden } from "../core/dom";
 import { loadParamsIntoUI } from "../ui/params";
@@ -29,8 +33,8 @@ import type {
 } from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 
-export const BINARY_MODE_VALUE = "binary-lab";
-export const PRESET_MODE_VALUE = "preset-lab";
+export const BINARY_MODE_VALUE = getLabSystemById("binary-stars").controlValue;
+export const PRESET_MODE_VALUE = getLabSystemById("transit-exomoon").controlValue;
 export const LAB_PRODUCT_MODE_VALUE = "lab";
 export const SIMULATION_PRODUCT_MODE_VALUE = "simulation";
 const BINARY_HYPOTHESIS_VALUES: BinaryLabHypothesis[] = [
@@ -83,6 +87,13 @@ export function isBinaryModeActive(refs: UiRefs): boolean {
   );
 }
 
+type BinaryLabUiStatus = {
+  active: boolean;
+  skyVisible: boolean;
+  canEdit: boolean;
+  canReveal: boolean;
+};
+
 function activeLessonSimMode(refs: UiRefs): LessonSimMode {
   return isBinaryModeActive(refs) ? "binary-lab" : "preset-lab";
 }
@@ -107,22 +118,43 @@ function syncBinaryModeSurfaceVisibility(active: boolean): void {
 }
 
 export function syncBinaryLabUiState(refs: UiRefs, binaryLabState: BinaryLabState): void {
-  const active = isBinaryModeActive(refs);
-  const skyVisible = !active || binaryLabState.skyVisible;
-  const canEdit = !active || canEditParams(binaryLabState);
-  const canReveal = active && canRevealSky(binaryLabState) && !binaryLabState.revealed;
-  syncBinaryModeSurfaceVisibility(active);
-  if (refs.didBinaryControls) refs.didBinaryControls.hidden = !active;
-  if (refs.didHypothesisSelect) refs.didHypothesisSelect.disabled = !active;
-  if (refs.didRevealSkyBtn) refs.didRevealSkyBtn.disabled = !canReveal;
-  if (refs.skyBlackboxHint) refs.skyBlackboxHint.hidden = skyVisible;
-  refs.skyCanvas.style.visibility = skyVisible ? "visible" : "hidden";
-  lockParameterPanel(!canEdit);
+  const status = resolveBinaryLabUiStatus(refs, binaryLabState);
+  syncBinaryModeSurfaceVisibility(status.active);
+  syncBinaryLabControls(refs, status);
+  syncBinaryLabSky(refs, status);
+  lockParameterPanel(!status.canEdit);
   // After unlocking, re-apply feature toggle states so that controls disabled
   // by their parent feature (e.g. moon inputs when moon is off) stay disabled.
-  if (canEdit) {
+  if (status.canEdit) {
     syncAllEnableStates(refs);
   }
+}
+
+function resolveBinaryLabUiStatus(refs: UiRefs, binaryLabState: BinaryLabState): BinaryLabUiStatus {
+  const active = isBinaryModeActive(refs);
+  return {
+    active,
+    skyVisible: !active || binaryLabState.skyVisible,
+    canEdit: !active || canEditParams(binaryLabState),
+    canReveal: active && canRevealSky(binaryLabState) && !binaryLabState.revealed,
+  };
+}
+
+const syncBinaryLabControls = (refs: UiRefs, status: BinaryLabUiStatus): void => {
+  setOptionalHidden(refs.didBinaryControls, !status.active);
+  setOptionalDisabled(refs.didHypothesisSelect, !status.active);
+  setOptionalDisabled(refs.didRevealSkyBtn, !status.canReveal);
+};
+
+function setOptionalHidden(el: HTMLElement | null | undefined, hidden: boolean): void {
+  if (el) el.hidden = hidden;
+}
+
+function setOptionalDisabled(
+  el: HTMLButtonElement | HTMLSelectElement | null | undefined,
+  disabled: boolean,
+): void {
+  if (el) el.disabled = disabled;
 }
 
 function setScenarioApplyBusy(refs: UiRefs, busy: boolean, statusEl?: HTMLElement | null): void {
@@ -152,6 +184,8 @@ export async function withScenarioApplyGuard(
   statusEl: HTMLElement | null | undefined,
   run: () => Promise<void>,
 ): Promise<void> {
+  // UI changes can arrive while a runtime rebuild is still preparing. Keep the
+  // current rebuild serialized and remember only the latest requested follow-up.
   if (guard.applying) {
     guard.pendingRun = run;
     return;
@@ -175,33 +209,63 @@ export async function withScenarioApplyGuard(
 async function applyPresetById(deps: ScenarioFlowDeps, id: string): Promise<void> {
   const { state, refs } = deps;
   const preset = getPresetById(id);
-  state.scenarioDefaults = stripUnsupportedPhotometryForV4Runtime(preset.params);
+  const previousDefaults = state.scenarioDefaults;
+  const previousDescription = refs.presetDesc.textContent;
+  state.scenarioDefaults = cloneParamsForV4Runtime(preset.params);
   refs.presetDesc.textContent = preset.description;
-  await applyScenarioParams(deps, state.scenarioDefaults);
+  try {
+    await applyScenarioParams(deps, state.scenarioDefaults);
+  } catch (error) {
+    state.scenarioDefaults = previousDefaults;
+    refs.presetDesc.textContent = previousDescription;
+    throw error;
+  }
 }
 
 async function applyRealSystemById(deps: ScenarioFlowDeps, id: string): Promise<void> {
   const { state, refs } = deps;
   const entry = getRealSystemById(id);
   if (!entry) return;
-  state.scenarioDefaults = stripUnsupportedPhotometryForV4Runtime(buildParamsFromRealSystem(id));
+  const previousDefaults = state.scenarioDefaults;
+  const previousMeta = refs.realSystemMeta?.textContent ?? "";
+  state.scenarioDefaults = cloneParamsForV4Runtime(buildParamsFromRealSystem(id));
   if (refs.realSystemMeta) refs.realSystemMeta.textContent = formatRealSystemMeta(entry);
-  await applyScenarioParams(deps, state.scenarioDefaults);
+  try {
+    await applyScenarioParams(deps, state.scenarioDefaults);
+  } catch (error) {
+    state.scenarioDefaults = previousDefaults;
+    if (refs.realSystemMeta) refs.realSystemMeta.textContent = previousMeta;
+    throw error;
+  }
 }
 
 async function applyBinaryLabScenario(deps: ScenarioFlowDeps): Promise<void> {
   const { state, refs } = deps;
-  state.scenarioDefaults = stripUnsupportedPhotometryForV4Runtime(
-    buildBinaryLabParams(DEFAULT_BINARY_LAB_CONFIG_V4),
-  );
+  const previousDefaults = state.scenarioDefaults;
+  const previousParams = state.params;
+  const previousDidactics = state.didacticsRuntime;
+  const previousBinaryState = state.binaryLabState;
+  const previousDescription = refs.presetDesc.textContent;
+  state.scenarioDefaults = cloneParamsForV4Runtime(buildBinaryLabParams(DEFAULT_BINARY_LAB_CONFIG_V4));
   state.params = ensureDidacticsConfig(cloneParams(state.scenarioDefaults));
   state.didacticsRuntime = initDidacticsRuntime(state.params, deps.getTimeSec());
   state.binaryLabState = createBinaryLabState(DEFAULT_BINARY_LAB_CONFIG_V4.binaryLab);
   if (refs.realSystemSelect) refs.realSystemSelect.value = "";
   if (refs.realSystemMeta) refs.realSystemMeta.textContent = "";
   if (refs.didHypothesisSelect) refs.didHypothesisSelect.value = "";
-  refs.presetDesc.textContent = "Binary lab (detached eclipsing): black-box flow with hypothesis gating.";
-  await applyScenarioParams(deps, state.scenarioDefaults);
+  refs.presetDesc.textContent = getLabSystemByControlValue(BINARY_MODE_VALUE).description;
+  try {
+    await applyScenarioParams(deps, state.scenarioDefaults);
+  } catch (error) {
+    state.scenarioDefaults = previousDefaults;
+    state.params = previousParams;
+    state.didacticsRuntime = previousDidactics;
+    state.binaryLabState = previousBinaryState;
+    refs.presetDesc.textContent = previousDescription;
+    loadParamsIntoUI(state.params, refs);
+    syncBinaryLabUiState(refs, state.binaryLabState);
+    throw error;
+  }
 }
 
 export async function applyScenarioParams(
@@ -210,6 +274,15 @@ export async function applyScenarioParams(
   options: ApplyScenarioParamsOptions = {},
 ): Promise<void> {
   const { state, refs } = deps;
+  const previous = {
+    params: state.params,
+    didacticsRuntime: state.didacticsRuntime,
+    noise: state.noise,
+    comparisonCurveSeries: state.comparisonCurveSeries,
+    comparisonInset: state.comparisonInset,
+    comparisonGhosts: state.comparisonGhosts,
+    comparisonBadges: state.comparisonBadges,
+  };
   state.params = ensureDidacticsConfig(cloneParams(nextParams));
   state.comparisonCurveSeries = undefined;
   state.comparisonInset = undefined;
@@ -228,9 +301,24 @@ export async function applyScenarioParams(
     syncQuickControlsFromInputs(refs);
   }
   state.noise = syncNoiseStateFromParams(state.noise, state.params);
-  await deps.rebuildSimulationFromParams();
-  deps.resetSimTimeAndLC({ resetNoise: options.resetNoise ?? true });
-  syncBinaryLabUiState(refs, state.binaryLabState);
+  try {
+    await deps.rebuildSimulationFromParams();
+    deps.resetSimTimeAndLC({ resetNoise: options.resetNoise ?? true });
+    syncBinaryLabUiState(refs, state.binaryLabState);
+  } catch (error) {
+    state.params = previous.params;
+    state.didacticsRuntime = previous.didacticsRuntime;
+    state.noise = previous.noise;
+    state.comparisonCurveSeries = previous.comparisonCurveSeries;
+    state.comparisonInset = previous.comparisonInset;
+    state.comparisonGhosts = previous.comparisonGhosts;
+    state.comparisonBadges = previous.comparisonBadges;
+    loadParamsIntoUI(state.params, refs);
+    syncAllEnableStates(refs);
+    syncQuickControlsFromInputs(refs);
+    syncSliderMirrorsFromInputs();
+    throw error;
+  }
 }
 
 export async function applyActiveScenarioForMode(deps: ScenarioFlowDeps): Promise<void> {
@@ -251,4 +339,15 @@ export async function applyActiveScenarioForMode(deps: ScenarioFlowDeps): Promis
   if (refs.realSystemSelect) refs.realSystemSelect.value = "";
   if (refs.realSystemMeta) refs.realSystemMeta.textContent = "";
   await applyPresetById(deps, refs.presetSelect.value);
+}
+
+function syncBinaryLabSky(refs: UiRefs, status: BinaryLabUiStatus): void {
+  if (refs.skyBlackboxHint) refs.skyBlackboxHint.hidden = status.skyVisible;
+  refs.skyCanvas.classList.toggle("skyCanvas--hidden", !status.skyVisible);
+  const skySummary = document.getElementById("skySummary");
+  if (status.active && skySummary) {
+    skySummary.textContent = status.skyVisible
+      ? "Detached-binary sky-plane geometry revealed; the current component positions are shown above."
+      : "Detached-binary sky-plane geometry is hidden until a hypothesis is selected and the learner reveals the sky.";
+  }
 }

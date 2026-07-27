@@ -1,0 +1,157 @@
+name: Native Apple
+
+on:
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - ".github/workflows/native-apple.yml"
+      - ".github/workflows/native-macos-dmg.yml"
+      - "contracts/capabilities-v1/**"
+      - "contracts/education-v4/**"
+      - "contracts/science-v5/**"
+      - "contracts/workspace-v1/**"
+      - "native-apple/**"
+      - "scripts/select-swift-toolchain.sh"
+      - "src/config/real-systems.snapshot.json"
+  push:
+    branches: ["main", "dev"]
+    paths:
+      - ".github/workflows/native-apple.yml"
+      - ".github/workflows/native-macos-dmg.yml"
+      - "contracts/capabilities-v1/**"
+      - "contracts/education-v4/**"
+      - "contracts/science-v5/**"
+      - "contracts/workspace-v1/**"
+      - "native-apple/**"
+      - "scripts/select-swift-toolchain.sh"
+      - "src/config/real-systems.snapshot.json"
+  workflow_dispatch:
+
+concurrency:
+  group: native-apple-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  swift-package-core:
+    name: Swift package / portable core
+    runs-on: macos-26
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Toolchain evidence
+        run: |
+          source scripts/select-swift-toolchain.sh
+          xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Test portable Swift package
+        run: swift test --package-path native-apple/Packages/OtherlightCore
+      - name: Check Swift formatting
+        run: swift format lint --strict --recursive native-apple
+
+  swift-package-science:
+    name: Swift package / macOS science
+    runs-on: macos-26
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Toolchain evidence
+        run: |
+          source scripts/select-swift-toolchain.sh
+          xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Test macOS-only scientific package
+        run: swift test --package-path native-apple/Packages/OtherlightScience
+
+  app-test:
+    name: ${{ matrix.destination.name }}
+    runs-on: macos-26
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        destination:
+          - name: macOS
+            value: "platform=macOS"
+          - name: iPhone 17 Pro / iOS 26.5
+            value: "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5"
+          - name: iPad Pro 13-inch (M5) / iOS 26.5
+            value: "platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.5"
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Toolchain evidence
+        run: |
+          source scripts/select-swift-toolchain.sh
+          xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Test shared Apple target
+        env:
+          OTHERLIGHT_DESTINATION: ${{ matrix.destination.value }}
+          OTHERLIGHT_DERIVED_DATA_PATH: ${{ runner.temp }}/Otherlight-${{ strategy.job-index }}
+        run: |
+          xcodebuild test \
+            -project native-apple/Otherlight.xcodeproj \
+            -scheme Otherlight \
+            -configuration Debug \
+            -destination "$OTHERLIGHT_DESTINATION" \
+            -derivedDataPath "$OTHERLIGHT_DERIVED_DATA_PATH" \
+            CODE_SIGNING_ALLOWED=NO
+
+  ios-generic-archive:
+    name: Generic iOS archive / unsigned metadata gate
+    runs-on: macos-26
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DERIVED_DATA: ${{ runner.temp }}/Otherlight-iOS-archive
+      ARCHIVE_PATH: ${{ runner.temp }}/Otherlight-iOS.xcarchive
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Toolchain evidence
+        run: |
+          source scripts/select-swift-toolchain.sh
+          xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Archive generic iOS app without signing
+        run: |
+          xcodebuild archive \
+            -project native-apple/Otherlight.xcodeproj \
+            -scheme Otherlight \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -archivePath "$ARCHIVE_PATH" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Verify app metadata, privacy manifest, and mobile dependencies
+        run: |
+          app="$ARCHIVE_PATH/Products/Applications/Otherlight.app"
+          test -d "$app"
+          test -f "$app/Info.plist"
+          test -f "$app/PrivacyInfo.xcprivacy"
+          plutil -lint "$app/Info.plist"
+          plutil -lint "$app/PrivacyInfo.xcprivacy"
+          test "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = "com.sebastianspicker.Otherlight"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")" = "0.3.0"
+          test "$(plutil -extract CFBundleVersion raw "$app/Info.plist")" = "1"
+          if [ -d "$DERIVED_DATA/SourcePackages" ] && find "$DERIVED_DATA/SourcePackages" -iname '*arrow*' -print -quit | grep -q .; then
+            echo "Arrow must not resolve in mobile SourcePackages" >&2
+            exit 1
+          fi
