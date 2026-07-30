@@ -29,15 +29,17 @@
   },
   "knip": {
     "entry": [
-      "scripts/assemble-apple-screenshot-tour.mjs"
+      "scripts/assemble-apple-screenshot-tour.mjs",
+      "demo/app.js"
     ]
   },
   "scripts": {
     "dev": "vite",
     "start": "vite preview",
     "build": "vite build",
+    "build:demo": "node scripts/build-pages-demo.mjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist coverage test-results playwright-report blob-report .vite .vitest .vitest-attachments .nyc_output .ruff_cache .build docs/audit .science-cache science_backend/.pytest_cache science_backend/.ruff_cache science_backend/science_backend/__pycache__ science_backend/tests/__pycache__ science_backend/build science_backend/dist science_backend/*.egg-info native-apple/Packages/*/.build native-apple/Packages/*/.swiftpm && rm -f .DS_Store docs/.DS_Store",
+    "clean": "rm -rf dist pages-dist coverage test-results playwright-report blob-report .vite .vitest .vitest-attachments .nyc_output .ruff_cache .build docs/audit .science-cache science_backend/.pytest_cache science_backend/.ruff_cache science_backend/science_backend/__pycache__ science_backend/tests/__pycache__ science_backend/build science_backend/dist science_backend/*.egg-info native-apple/Packages/*/.build native-apple/Packages/*/.swiftpm && rm -f .DS_Store docs/.DS_Store",
     "typecheck": "tsc -p tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc -p tsconfig.test.json --noEmit",
     "typecheck:compat": "tsc6 -p tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc6 -p tsconfig.test.json --noEmit",
     "deadcode": "knip",

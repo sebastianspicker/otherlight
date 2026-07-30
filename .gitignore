@@ -2,6 +2,7 @@
 node_modules/
 .pnpm-store/
 dist/
+pages-dist/
 dist-ssr/
 .vite/
 .vitest/

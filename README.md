@@ -8,6 +8,10 @@ repository contains three related applications:
 - an optional Python service for bounded V5 radial-velocity calculations;
 - an experimental SwiftUI Education application for macOS, iPhone, and iPad.
 
+Explore the [structured static demo](https://sebastianspicker.github.io/otherlight/).
+It is a simulated, non-executing tour built from sanitized repository fixtures
+and maintained browser captures; it does not replace the local applications.
+
 The browser Education runtime is the default. The Scientific workspace uses the
 Python service only after it validates the service capability manifest. It does
 not substitute an Education result when the service or requested capability is
