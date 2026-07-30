@@ -1,0 +1,55 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "demo/**"
+      - "docs/screenshots/web/01-education-simulation.png"
+      - "docs/screenshots/web/02-guided-lab.png"
+      - "docs/screenshots/web/07-scientific-result.png"
+      - "docs/screenshots/web/manifest.json"
+      - "public/brand/otherlight-signal-eclipse.svg"
+      - "scripts/build-pages-demo.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Assemble static demo
+        run: node scripts/build-pages-demo.mjs
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages-dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
