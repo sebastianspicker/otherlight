@@ -11,6 +11,11 @@ export type QuickControlsOptions = {
   signal?: AbortSignal;
 };
 
+type QuickRangeBinding = {
+  quick: HTMLInputElement;
+  source: HTMLInputElement;
+};
+
 function copyRangeMeta(quick: HTMLInputElement, source: HTMLInputElement): void {
   const min = source.getAttribute("min");
   const max = source.getAttribute("max");
@@ -30,10 +35,16 @@ function setNumberInputValue(input: HTMLInputElement, next: number): void {
   dispatchInputAndChange(input);
 }
 
+function isPositiveFiniteNumber(value: number | undefined): value is number {
+  if (value === undefined) return false;
+  if (!Number.isFinite(value)) return false;
+  return value > 0;
+}
+
 function safeMuFromOrbit(aInput: HTMLInputElement, periodInput: HTMLInputElement): number | undefined {
   const a = toFiniteNumber(aInput.value, Number.NaN);
   const period = toFiniteNumber(periodInput.value, Number.NaN);
-  if (!(Number.isFinite(a) && a > 0 && Number.isFinite(period) && period > 0)) return undefined;
+  if (!isPositiveFiniteNumber(a) || !isPositiveFiniteNumber(period)) return undefined;
   try {
     return muFromPeriodAndA(period, a);
   } catch {
@@ -47,11 +58,9 @@ function deriveConsistentPeriod(
   nextA: number,
 ): number | undefined {
   const mu = safeMuFromOrbit(aInput, periodInput);
-  if (!(Number.isFinite(mu) && mu !== undefined && mu > 0 && Number.isFinite(nextA) && nextA > 0)) {
-    return undefined;
-  }
+  if (!isPositiveFiniteNumber(mu) || !isPositiveFiniteNumber(nextA)) return undefined;
   const period = 2 * Math.PI * Math.sqrt((nextA * nextA * nextA) / mu);
-  return Number.isFinite(period) && period > 0 ? period : undefined;
+  return isPositiveFiniteNumber(period) ? period : undefined;
 }
 
 function formatDistanceMeters(value: number): string {
@@ -93,6 +102,61 @@ function syncMoonQuickState(r: UiRefs): void {
   r.quickMoonInc.setAttribute("aria-disabled", enabled ? "false" : "true");
 }
 
+function copyQuickRangeMetadata(bindings: readonly QuickRangeBinding[]): void {
+  for (const { quick, source } of bindings) copyRangeMeta(quick, source);
+}
+
+function wireQuickRangeBinding(
+  binding: QuickRangeBinding,
+  notifyChange: () => void,
+  listenerOptions: AddEventListenerOptions | undefined,
+): void {
+  const { quick, source } = binding;
+  quick.addEventListener(
+    "input",
+    () => {
+      setNumberInputValue(source, toFiniteNumber(quick.value, toFiniteNumber(source.value, 0)));
+      notifyChange();
+    },
+    listenerOptions,
+  );
+}
+
+function wireQuickOrbitBinding(
+  quick: HTMLInputElement,
+  aInput: HTMLInputElement,
+  periodInput: HTMLInputElement,
+  notifyChange: () => void,
+  listenerOptions: AddEventListenerOptions | undefined,
+): void {
+  quick.addEventListener(
+    "input",
+    () => {
+      const nextA = toFiniteNumber(quick.value, toFiniteNumber(aInput.value, 0));
+      const nextPeriod = deriveConsistentPeriod(aInput, periodInput, nextA);
+      aInput.value = String(nextA);
+      dispatchInputAndChange(aInput);
+      if (nextPeriod !== undefined) {
+        periodInput.value = String(nextPeriod);
+        dispatchInputAndChange(periodInput);
+      }
+      notifyChange();
+    },
+    listenerOptions,
+  );
+}
+
+function wireRawQuickSynchronizers(
+  rawControls: readonly HTMLInputElement[],
+  syncFromRaw: () => void,
+  listenerOptions: AddEventListenerOptions | undefined,
+): void {
+  for (const control of rawControls) {
+    control.addEventListener("input", syncFromRaw, listenerOptions);
+    control.addEventListener("change", syncFromRaw, listenerOptions);
+  }
+}
+
 export function syncQuickControlsFromInputs(r: UiRefs): void {
   if (!r.quickControlsRootEl) return;
 
@@ -114,53 +178,23 @@ export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOpt
   if (!r.quickControlsRootEl) return;
   const notifyChange = () => options.onQuickControlChange?.();
   const listenerOptions = options.signal ? { signal: options.signal } : undefined;
+  const planetRadiusBinding = { quick: r.quickPlanetR, source: r.planetR };
+  const planetInclinationBinding = { quick: r.quickPlanetInc, source: r.planetInc };
+  const moonRadiusBinding = { quick: r.quickMoonR, source: r.moonR };
+  const moonInclinationBinding = { quick: r.quickMoonInc, source: r.moonInc };
 
-  copyRangeMeta(r.quickPlanetR, r.planetR);
-  copyRangeMeta(r.quickPlanetInc, r.planetInc);
-  copyRangeMeta(r.quickPlanetA, r.planetA);
-  copyRangeMeta(r.quickMoonR, r.moonR);
-  copyRangeMeta(r.quickMoonA, r.moonA);
-  copyRangeMeta(r.quickMoonInc, r.moonInc);
+  copyQuickRangeMetadata([
+    planetRadiusBinding,
+    planetInclinationBinding,
+    { quick: r.quickPlanetA, source: r.planetA },
+    moonRadiusBinding,
+    { quick: r.quickMoonA, source: r.moonA },
+    moonInclinationBinding,
+  ]);
 
-  r.quickPlanetR.addEventListener(
-    "input",
-    () => {
-      setNumberInputValue(
-        r.planetR,
-        toFiniteNumber(r.quickPlanetR.value, toFiniteNumber(r.planetR.value, 0)),
-      );
-      notifyChange();
-    },
-    listenerOptions,
-  );
-
-  r.quickPlanetInc.addEventListener(
-    "input",
-    () => {
-      setNumberInputValue(
-        r.planetInc,
-        toFiniteNumber(r.quickPlanetInc.value, toFiniteNumber(r.planetInc.value, 0)),
-      );
-      notifyChange();
-    },
-    listenerOptions,
-  );
-
-  r.quickPlanetA.addEventListener(
-    "input",
-    () => {
-      const nextA = toFiniteNumber(r.quickPlanetA.value, toFiniteNumber(r.planetA.value, 0));
-      const nextPeriod = deriveConsistentPeriod(r.planetA, r.planetPeriod, nextA);
-      r.planetA.value = String(nextA);
-      dispatchInputAndChange(r.planetA);
-      if (nextPeriod !== undefined) {
-        r.planetPeriod.value = String(nextPeriod);
-        dispatchInputAndChange(r.planetPeriod);
-      }
-      notifyChange();
-    },
-    listenerOptions,
-  );
+  wireQuickRangeBinding(planetRadiusBinding, notifyChange, listenerOptions);
+  wireQuickRangeBinding(planetInclinationBinding, notifyChange, listenerOptions);
+  wireQuickOrbitBinding(r.quickPlanetA, r.planetA, r.planetPeriod, notifyChange, listenerOptions);
 
   r.quickMoonEnabled.addEventListener(
     "change",
@@ -173,42 +207,9 @@ export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOpt
     listenerOptions,
   );
 
-  r.quickMoonR.addEventListener(
-    "input",
-    () => {
-      setNumberInputValue(r.moonR, toFiniteNumber(r.quickMoonR.value, toFiniteNumber(r.moonR.value, 0)));
-      notifyChange();
-    },
-    listenerOptions,
-  );
-
-  r.quickMoonA.addEventListener(
-    "input",
-    () => {
-      const nextA = toFiniteNumber(r.quickMoonA.value, toFiniteNumber(r.moonA.value, 0));
-      const nextPeriod = deriveConsistentPeriod(r.moonA, r.moonPeriod, nextA);
-      r.moonA.value = String(nextA);
-      dispatchInputAndChange(r.moonA);
-      if (nextPeriod !== undefined) {
-        r.moonPeriod.value = String(nextPeriod);
-        dispatchInputAndChange(r.moonPeriod);
-      }
-      notifyChange();
-    },
-    listenerOptions,
-  );
-
-  r.quickMoonInc.addEventListener(
-    "input",
-    () => {
-      setNumberInputValue(
-        r.moonInc,
-        toFiniteNumber(r.quickMoonInc.value, toFiniteNumber(r.moonInc.value, 0)),
-      );
-      notifyChange();
-    },
-    listenerOptions,
-  );
+  wireQuickRangeBinding(moonRadiusBinding, notifyChange, listenerOptions);
+  wireQuickOrbitBinding(r.quickMoonA, r.moonA, r.moonPeriod, notifyChange, listenerOptions);
+  wireQuickRangeBinding(moonInclinationBinding, notifyChange, listenerOptions);
 
   r.quickReflectedLight.addEventListener(
     "change",
@@ -240,10 +241,7 @@ export function wireNormalModeQuickControls(r: UiRefs, options: QuickControlsOpt
     r.moonPhaseEnabled,
     r.dnEnabled,
   ];
-  for (const control of rawControls) {
-    control.addEventListener("input", syncFromRaw, listenerOptions);
-    control.addEventListener("change", syncFromRaw, listenerOptions);
-  }
+  wireRawQuickSynchronizers(rawControls, syncFromRaw, listenerOptions);
 
   syncQuickControlsFromInputs(r);
 }

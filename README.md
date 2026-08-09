@@ -65,7 +65,7 @@ runtime, or relativity runtime.
 - A committed real-system catalog derived from a NASA Exoplanet Archive
   snapshot.
 
-### Scientific service
+### Scientific service capabilities
 
 - Strict V5 forward-job requests.
 - Newtonian point-mass propagation for at most three bodies.
@@ -75,7 +75,7 @@ runtime, or relativity runtime.
 - Arrow IPC result files addressed by SHA-256.
 - Run manifests containing numerical settings and runtime versions.
 
-### Native Apple application
+### Native Apple application capabilities
 
 - One SwiftUI target for macOS 14 or later and iOS/iPadOS 17 or later.
 - Education simulation and Guided Labs.
@@ -119,7 +119,7 @@ and unresolved release checks.
 GitHub Actions tests Node.js 22 and 24. The package is private and is not
 published to npm.
 
-### Scientific service
+### Scientific service requirements
 
 - Python 3.14.6 or another Python 3.14 patch accepted by
   `science_backend/pyproject.toml`.
@@ -216,7 +216,7 @@ pnpm preview
 
 Vite writes the static bundle to `dist/`.
 
-### Scientific service
+### Scientific service operation
 
 Activate the prepared Python environment, then start the loopback service:
 
@@ -242,7 +242,7 @@ GET    /v1/artifacts/{sha256}
 See [`science_backend/README.md`](science_backend/README.md) for request limits,
 extras, failure behavior, and backend checks.
 
-### Native Apple application
+### Native Apple application operation
 
 Build the unsigned macOS Debug application with the pinned toolchain:
 
@@ -355,7 +355,7 @@ a workflow that publishes it. A hosting environment must preserve the CSP and
 security header policy from `vite.config.ts` and must allow loopback connections
 to port `8765` if the Scientific profile is used.
 
-### Scientific service
+### Scientific service deployment
 
 The service is designed for one local user and must remain bound to loopback.
 It stores Arrow files under `.science-cache/` by default. The cache is local

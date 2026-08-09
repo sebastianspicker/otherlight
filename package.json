@@ -15,12 +15,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sebastianspicker/exoplanet-exomoon-simulation.git"
+    "url": "git+https://github.com/sebastianspicker/otherlight.git"
   },
   "bugs": {
-    "url": "https://github.com/sebastianspicker/exoplanet-exomoon-simulation/issues"
+    "url": "https://github.com/sebastianspicker/otherlight/issues"
   },
-  "homepage": "https://github.com/sebastianspicker/exoplanet-exomoon-simulation#readme",
+  "homepage": "https://github.com/sebastianspicker/otherlight#readme",
   "type": "module",
   "packageManager": "pnpm@11.4.0",
   "engines": {
