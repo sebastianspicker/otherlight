@@ -93,6 +93,8 @@ Desktop.ini
 /.codacy/
 /.codegraph/
 /.codex/
+/.repowise/
+/.mcp.json
 /.gemini/
 /.kilo/
 /.serena/
@@ -106,6 +108,7 @@ Desktop.ini
 
 # Private maintenance notes (the public-surface gate also rejects force-staged copies)
 /AUDIT.md
+/AUDIT_LEDGER.md
 /AGENT_AUDIT_REPORT.md
 /DECISIONS.md
 /FINDINGS.md
@@ -125,6 +128,8 @@ Desktop.ini
 /CONVERSATION_EXPORT.md
 /CONVERSATION_EXPORT.json
 /CONVERSATION_EXPORT.jsonl
+/work-in-progress/
+/wip/
 
 # Environment files, credentials, and key material
 .env

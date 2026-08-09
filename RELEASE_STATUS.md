@@ -1,40 +1,39 @@
 # Verification status
 
-Evidence date: 2026-07-24
+Evidence date: 2026-08-09
 
-This document records checks run against the current local working tree. The
-tree contains tracked and untracked changes, so these results do not describe
-an immutable release candidate. Nothing was staged, committed, tagged,
-published, or deployed.
+This document records checks run in the isolated
+`agent/github-polish-full-state-2026-08-09` worktree. The branch captures the
+complete nonignored product state from the source checkout. These checks are
+local evidence, not proof of a signed, published, or deployed release.
 
 ## Browser and TypeScript
 
-| Check                                | Result                                                   |
-| ------------------------------------ | -------------------------------------------------------- |
-| Public-surface hygiene               | Passed, 701 candidate files                              |
-| Source documentation hygiene         | Passed, 586 executable files                             |
-| Native Swift documentation hygiene   | Passed, 35 Swift files                                   |
-| Local documentation links            | Passed, 34 Markdown and HTML files                       |
-| Screenshot gallery and README checks | Passed, 7 tests                                          |
-| ESLint                               | Passed                                                   |
-| Repository Prettier check            | Passed                                                   |
-| TypeScript 7 typecheck               | Passed                                                   |
-| TypeScript 6 compatibility typecheck | Passed                                                   |
-| Vitest                               | Passed, 176 files and 1,008 tests                        |
-| Vite production build                | Passed, 293 modules                                      |
-| Knip                                 | Passed                                                   |
-| jscpd                                | Passed its configured threshold; reported two CSS clones |
-| Playwright E2E                       | 52 passed, 5 failed                                      |
+| Check                                | Result                                                       |
+| ------------------------------------ | ------------------------------------------------------------ |
+| Public-surface hygiene               | Blocked by tracked `.impeccable/design.json`                  |
+| Source documentation hygiene         | Passed, 591 executable files                                 |
+| Native Swift documentation hygiene   | Passed, 35 Swift files                                       |
+| Screenshot gallery and README checks | Passed, 7 tests                                              |
+| ESLint                               | Passed                                                       |
+| Repository Prettier check            | Passed                                                       |
+| TypeScript 7 typecheck               | Passed                                                       |
+| TypeScript 6 compatibility typecheck | Passed                                                       |
+| Vitest                               | Passed, 177 files and 1,010 tests                            |
+| Vite production build                | Passed, 295 modules                                          |
+| Knip                                 | Passed                                                       |
+| jscpd                                | Passed its configured threshold; reported two CSS clones     |
+| Playwright E2E                       | Not rerun; the latest recorded run remains 52 passed, 5 failed |
 
 Four failures are `tests/e2e/responsive.spec.ts:39` under Chromium, Firefox,
 WebKit, and the tablet project. The fifth is the mobile project at
 `tests/e2e/responsive.spec.ts:29`. Each check measured 8px of horizontal
 overflow against a maximum of 1px.
 
-A separate snapshot containing only nonignored project files completed a
-frozen installation, `pnpm ci:verify`, and `pnpm smoke:served`. The initial
-offline-only install could not proceed because 87 packages were absent from
-the local pnpm store; the normal installation retrieved them.
+The public-surface gate rejects the tracked `.impeccable/design.json` file as
+local tool state. This pass does not untrack existing files. The remaining
+browser checks used the dependency tree from the captured source checkout;
+installing a second dependency tree in the worktree was not required.
 
 ## Python backend
 
