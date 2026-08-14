@@ -68,7 +68,7 @@ final class ArrowSwiftIPCWriterTests: XCTestCase {
     XCTAssertEqual(
       manifest.modelVersions,
       [
-        .init(id: "dynamics", version: "newtonian-point-mass-finite-radius-boundary-v2"),
+        .init(id: "dynamics", version: "newtonian-point-mass-certified-dense-boundary-v3"),
         .init(id: "radial_velocity", version: "barycentric-positive-receding-v1"),
       ])
     XCTAssertTrue(manifest.datasets.isEmpty)

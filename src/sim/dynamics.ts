@@ -16,7 +16,7 @@ import {
   type NBodyState,
   type ResolvedNBodyConfig,
 } from "./nbody/types";
-import { cloneState, findClosestEntry, makeCacheKey, storeEntry } from "./nbody/cache";
+import { cloneState, findBaseEntryForTarget, makeCacheKey, storeEntry } from "./nbody/cache";
 import { computeConservationDiagnostics } from "./nbody/diagnostics";
 import { integrateToTimeWithConfig, unpackBodyArrays } from "./nbody/integrator";
 
@@ -175,7 +175,8 @@ function makeResolvedCacheIdentity(resolved: ResolvedNBody): string {
 }
 
 function integrateFromClosestCache(t: number, cfg: ResolvedNBodyConfig): NBodyState {
-  const base = findClosestEntry(cache, t) ?? cache[0];
+  const base = findBaseEntryForTarget(cache, t);
+  if (!base) throw new Error("nbody cache is missing its anchor state.");
   return integrateToTimeWithConfig({ state: base.state, tTarget: t, cfg });
 }
 

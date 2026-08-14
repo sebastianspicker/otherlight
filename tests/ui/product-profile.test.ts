@@ -37,4 +37,23 @@ describe("product profile", () => {
     expect(education.getAttribute("aria-current")).toBe("false");
     expect(scientific.getAttribute("aria-current")).toBe("page");
   });
+
+  it("honors mixed profile tokens and closes details when their profile is hidden", () => {
+    document.body.innerHTML = `
+      <details id="shared" data-product-profile="\n education\t scientific " open>
+        <summary>Shared profile settings</summary>
+      </details>
+      <details id="scientificOnly" data-product-profile="scientific" open>
+        <summary>Scientific profile settings</summary>
+      </details>
+    `;
+    const shared = document.getElementById("shared") as HTMLDetailsElement;
+    const scientificOnly = document.getElementById("scientificOnly") as HTMLDetailsElement;
+
+    syncProductProfileVisibility("education");
+    expect(shared.hidden).toBe(false);
+    expect(shared.open).toBe(true);
+    expect(scientificOnly.hidden).toBe(true);
+    expect(scientificOnly.open).toBe(false);
+  });
 });

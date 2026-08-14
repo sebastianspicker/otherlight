@@ -38,6 +38,22 @@ describe("collectParamWarnings (n-body dtMax)", () => {
   });
 });
 
+describe("collectParamWarnings (n-body Kepler closure)", () => {
+  it("surfaces mass-derived period mismatches outside reference mode", () => {
+    const params = cloneParams(SCENARIO_DEFAULTS);
+    enableNbody(params);
+    params.dynamics!.fidelityProfile = "interactive";
+    const moonOrbit = params.moon!.orbitAroundPlanet as any;
+    moonOrbit.period *= 2;
+
+    const warning = collectParamWarnings(params).find(
+      (item) => item.code === "NBODY_PERIOD_MISMATCH" && item.details?.path === "moon.orbitAroundPlanet",
+    );
+    expect(warning?.details?.path).toBe("moon.orbitAroundPlanet");
+    expect(warning?.details?.relativeError).toBeGreaterThan(0.1);
+  });
+});
+
 describe("collectParamWarnings (Roche limit)", () => {
   it("warns when moon pericenter is inside the fluid Roche limit", () => {
     const params = cloneParams(SCENARIO_DEFAULTS);

@@ -57,6 +57,31 @@ describe("UI mode visibility", () => {
     expect((document.getElementById("sharedDetails") as HTMLDetailsElement).hidden).toBe(false);
   });
 
+  it("closes hidden details and reopens a visible advanced parameter drawer", () => {
+    document.body.innerHTML = `
+      <details id="advancedDrawer" class="advanced-parameter-drawer" data-ui-tier="\n expert\t normal " open>
+        <summary>Advanced</summary>
+      </details>
+    `;
+    const drawer = document.getElementById("advancedDrawer") as HTMLDetailsElement;
+
+    syncUiModeVisibility("expert");
+    expect(drawer.hidden).toBe(false);
+    expect(drawer.open).toBe(true);
+
+    drawer.open = false;
+    syncUiModeVisibility("expert");
+    expect(drawer.open).toBe(true);
+
+    syncUiModeVisibility("normal");
+    expect(drawer.hidden).toBe(false);
+
+    drawer.dataset.uiTier = "expert";
+    syncUiModeVisibility("normal");
+    expect(drawer.hidden).toBe(true);
+    expect(drawer.open).toBe(false);
+  });
+
   it("defaults unknown values to simulation product mode", () => {
     expect(readProductMode("simulation")).toBe("simulation");
     expect(readProductMode("lab")).toBe("lab");
@@ -89,5 +114,22 @@ describe("UI mode visibility", () => {
     expect((document.getElementById("labOnly") as HTMLElement).hidden).toBe(false);
     expect((document.getElementById("both") as HTMLElement).hidden).toBe(false);
     expect((document.getElementById("labDetails") as HTMLDetailsElement).hidden).toBe(false);
+  });
+
+  it("keeps a visible product-mode detail closed while honoring mixed mode tokens", () => {
+    document.body.innerHTML = `
+      <details id="sharedProductDetails" data-product-mode="\n simulation\t lab ">
+        <summary>Shared product settings</summary>
+      </details>
+    `;
+    const details = document.getElementById("sharedProductDetails") as HTMLDetailsElement;
+
+    syncProductModeVisibility("simulation");
+    expect(details.hidden).toBe(false);
+    expect(details.open).toBe(false);
+
+    syncProductModeVisibility("lab");
+    expect(details.hidden).toBe(false);
+    expect(details.open).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ import {
   randomWalkStep,
   type PRNG as PRNGPublic,
 } from "./random";
-import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoise";
+import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
 
 type OneOverFCfg = NonNullable<NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"]>;
 type OneOverFConfig = NonNullable<InstrumentNoiseSystematicsParams["correlatedNoise"]>["oneOverF"];
@@ -245,21 +245,27 @@ const initializeTemperatureRandomWalkIfNeeded = (state: InstrumentNoiseState, dt
 };
 
 const intraPixelTrendFlux = (ip: TrendConfig["intraPixel"], t: number): number => {
-  if (ip?.enabled) {
-    const amp = toFiniteNumber(ip.ampFlux, 0);
-    const ax = toFiniteNumber(ip.ax, 0);
-    const ay = toFiniteNumber(ip.ay, 0);
-    const Px = toFiniteNumber(ip.periodXSec, NaN);
-    const Py = toFiniteNumber(ip.periodYSec, NaN);
-    const phaseY = toFiniteNumber(ip.phaseY, 0);
-    if (Number.isFinite(amp) && amp !== 0 && Number.isFinite(Px) && Px > 0 && Number.isFinite(Py) && Py > 0) {
-      const x = ax * Math.sin((2 * Math.PI * t) / Px);
-      const y = ay * Math.sin((2 * Math.PI * t) / Py + phaseY);
-      return amp * 0.5 * Math.cos(2 * Math.PI * x) * Math.cos(2 * Math.PI * y);
-    }
-  }
-  return 0;
+  if (!ip?.enabled) return 0;
+  const amp = toFiniteNumber(ip.ampFlux, 0);
+  const periodX = toFiniteNumber(ip.periodXSec, NaN);
+  const periodY = toFiniteNumber(ip.periodYSec, NaN);
+  if (!hasUsableIntraPixelSignal(amp, periodX, periodY)) return 0;
+
+  const ax = toFiniteNumber(ip.ax, 0);
+  const ay = toFiniteNumber(ip.ay, 0);
+  const phaseY = toFiniteNumber(ip.phaseY, 0);
+  const x = ax * Math.sin((2 * Math.PI * t) / periodX);
+  const y = ay * Math.sin((2 * Math.PI * t) / periodY + phaseY);
+  return amp * 0.5 * Math.cos(2 * Math.PI * x) * Math.cos(2 * Math.PI * y);
 };
+
+const hasUsableIntraPixelSignal = (amplitude: number, periodX: number, periodY: number): boolean =>
+  Number.isFinite(amplitude) &&
+  amplitude !== 0 &&
+  Number.isFinite(periodX) &&
+  periodX > 0 &&
+  Number.isFinite(periodY) &&
+  periodY > 0;
 
 const driftFamilyTrendFlux = (drift: TrendConfig["driftFamilies"], t: number): number => {
   if (!drift?.enabled) return 0;

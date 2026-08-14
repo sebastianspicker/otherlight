@@ -317,6 +317,17 @@ final class OtherlightTests: XCTestCase {
     ) { error in
       XCTAssertTrue(error.localizedDescription.contains("unsupported"))
     }
+
+    var nullDistanceRequest = request
+    var nullDistanceScenario = try XCTUnwrap(nullDistanceRequest["scenario"] as? [String: Any])
+    var nullDistanceObserver = try XCTUnwrap(nullDistanceScenario["observer"] as? [String: Any])
+    nullDistanceObserver["distanceM"] = NSNull()
+    nullDistanceScenario["observer"] = nullDistanceObserver
+    nullDistanceRequest["scenario"] = nullDistanceScenario
+    workspace["scientific"] = ["request": nullDistanceRequest]
+    XCTAssertThrowsError(
+      try OtherlightWorkspaceDocument(
+        data: JSONSerialization.data(withJSONObject: workspace, options: [.sortedKeys])))
   }
 
   /// Ensures an edit during initial calculation schedules a replacement series request.

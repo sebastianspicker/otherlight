@@ -41,6 +41,16 @@ type IntegratorConfig = DynamicsConfig["integrator"];
 type NBodyPlanetMoonConfig = NonNullable<DynamicsConfig["nbodyPlanetMoon"]>;
 type NBodyPerturberConfig = NonNullable<NonNullable<NBodyPlanetMoonConfig["perturbers"]>[number]>;
 
+/** Matches the strict V5 period-consistency limit for mass-derived N-body initial conditions. */
+export const NBODY_KEPLER_PERIOD_RELATIVE_TOLERANCE = 1e-4;
+
+export type NBodyKeplerPeriodMismatch = {
+  path: string;
+  suppliedPeriod: number;
+  expectedPeriod: number;
+  relativeError: number;
+};
+
 function isFinitePositiveNumber(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x) && x > 0;
 }
@@ -184,6 +194,7 @@ export function resolveNBodyConfig(
 
   const keyInputs = resolveNBodyKeyInputs(params);
   const perturbers = resolvePerturbers(nbody);
+  assertReferenceKeplerPeriodClosure(params);
   const cfg = buildResolvedNBodyConfig(params, nbody, resolvedCfg, perturbers);
 
   return {
@@ -193,6 +204,91 @@ export function resolveNBodyConfig(
       perturbers,
     },
   };
+}
+
+/**
+ * Reports static-orbit periods that disagree with the masses used by the
+ * N-body initial conditions. Callers can surface these as non-fatal UI
+ * warnings outside reference mode; reference mode rejects them below.
+ */
+export function collectNBodyKeplerPeriodMismatches(params: SystemParams): NBodyKeplerPeriodMismatch[] {
+  const nbody = params.dynamics?.nbodyPlanetMoon;
+  if (!nbody?.enabled) return [];
+
+  const resolvedCfg = resolveEnabledNBodyPlanetMoonConfig(nbody, {
+    onInvalid: "disable",
+    masses: {
+      star: params.star?.m,
+      planet: params.planet?.m,
+      moon: params.moon?.m,
+    },
+  });
+  if (!resolvedCfg) return [];
+
+  const mismatches: NBodyKeplerPeriodMismatch[] = [];
+  addKeplerPeriodMismatch(
+    mismatches,
+    staticOrbit(params.planet.orbit),
+    resolvedCfg.muStar + resolvedCfg.muPlanet + resolvedCfg.muMoon,
+    "planet.orbit",
+  );
+  addKeplerPeriodMismatch(
+    mismatches,
+    staticOrbit(params.moon?.orbitAroundPlanet),
+    resolvedCfg.muPlanet + resolvedCfg.muMoon,
+    "moon.orbitAroundPlanet",
+  );
+
+  const extra = Array.isArray(nbody.perturbers) ? nbody.perturbers : [];
+  for (let index = 0; index < extra.length; index++) {
+    const perturber = extra[index];
+    if (!perturber || perturber.enabled === false) continue;
+    const mu = resolvePerturberMu(perturber);
+    if (!isFinitePositive(mu)) continue;
+    addKeplerPeriodMismatch(
+      mismatches,
+      staticOrbit(perturber.orbit),
+      resolvedCfg.muStar + mu,
+      `dynamics.nbodyPlanetMoon.perturbers[${index}].orbit`,
+    );
+  }
+
+  return mismatches;
+}
+
+function staticOrbit(orbit: unknown): ReturnType<typeof resolveOrbitElements> | undefined {
+  return orbit && typeof orbit !== "function"
+    ? (orbit as ReturnType<typeof resolveOrbitElements>)
+    : undefined;
+}
+
+function addKeplerPeriodMismatch(
+  mismatches: NBodyKeplerPeriodMismatch[],
+  orbit: ReturnType<typeof resolveOrbitElements> | undefined,
+  mu: number,
+  path: string,
+): void {
+  if (!orbit || !isFinitePositiveNumber(orbit.a) || !isFinitePositiveNumber(orbit.period)) return;
+
+  const expectedPeriod = 2 * Math.PI * Math.sqrt(orbit.a ** 3 / mu);
+  const relativeError =
+    Number.isFinite(expectedPeriod) && expectedPeriod > 0
+      ? Math.abs(orbit.period - expectedPeriod) / expectedPeriod
+      : Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(relativeError) || relativeError > NBODY_KEPLER_PERIOD_RELATIVE_TOLERANCE) {
+    mismatches.push({ path, suppliedPeriod: orbit.period, expectedPeriod, relativeError });
+  }
+}
+
+function assertReferenceKeplerPeriodClosure(params: SystemParams): void {
+  if (params.dynamics?.fidelityProfile !== "reference") return;
+
+  const mismatch = collectNBodyKeplerPeriodMismatches(params)[0];
+  if (!mismatch) return;
+  throw new Error(
+    `nbody reference: ${mismatch.path}.period is inconsistent with a and the two-body masses ` +
+      `(relative error ${mismatch.relativeError}; limit ${NBODY_KEPLER_PERIOD_RELATIVE_TOLERANCE}).`,
+  );
 }
 
 function resolveNBodyKeyInputs(params: SystemParams): Omit<KeyInputs, "perturbers"> {

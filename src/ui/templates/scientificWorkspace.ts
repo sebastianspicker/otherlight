@@ -1,7 +1,7 @@
 /**
  * Owns scientific Workspace support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
  */
-export function renderScientificWorkspace(): string {
+export function renderScientificWorkspaceHeader(): string {
   return `
     <section
       id="scientificWorkspace"
@@ -29,7 +29,11 @@ export function renderScientificWorkspace(): string {
           </p>
         </aside>
       </header>
+`;
+}
 
+export function renderScientificWorkspaceRunAndScope(): string {
+  return `
       <div class="scientific-workspace__grid">
         <section class="panel scientific-panel scientific-panel--run" aria-labelledby="scienceRunTitle">
           <div class="scientific-panel__heading">
@@ -90,7 +94,11 @@ export function renderScientificWorkspace(): string {
           </p>
         </section>
       </div>
+`;
+}
 
+export function renderScientificWorkspaceResult(): string {
+  return `
       <section class="panel scientific-panel scientific-panel--result" aria-labelledby="scienceResultTitle">
         <div class="scientific-panel__heading">
           <h3 id="scienceResultTitle">Run provenance</h3>
@@ -105,4 +113,8 @@ export function renderScientificWorkspace(): string {
       </section>
     </section>
   `;
+}
+
+export function renderScientificWorkspace(): string {
+  return `${renderScientificWorkspaceHeader()}${renderScientificWorkspaceRunAndScope()}${renderScientificWorkspaceResult()}`;
 }

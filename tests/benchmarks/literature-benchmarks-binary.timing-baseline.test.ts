@@ -16,9 +16,10 @@ import {
 } from "./literature-benchmarks-binary.helpers";
 
 // These are numerical correctness benchmarks, not performance gates. V8
-// coverage instrumentation can multiply their runtime on shared runners;
-// timing regressions belong in tests/perf.
-const BINARY_CORRECTNESS_TIMEOUT_MS = 120_000;
+// coverage instrumentation can multiply their runtime on shared runners.
+// The 1,604-sample timing scans remain correctness checks; timing regressions
+// belong in tests/perf, so preserve their inputs and give V8 a bounded budget.
+const BINARY_CORRECTNESS_TIMEOUT_MS = 240_000;
 
 type BinaryDepths = {
   primary: number;
@@ -329,43 +330,47 @@ it(
   BINARY_CORRECTNESS_TIMEOUT_MS,
 );
 
-it("keeps symmetric detached-binary timing offsets passband-neutral", async () => {
-  const configG = buildSymmetricBinaryBenchmarkConfig("g");
-  const configR = buildSymmetricBinaryBenchmarkConfig("r");
+it(
+  "keeps symmetric detached-binary timing offsets passband-neutral",
+  async () => {
+    const configG = buildSymmetricBinaryBenchmarkConfig("g");
+    const configR = buildSymmetricBinaryBenchmarkConfig("r");
 
-  await withBinarySimulationConfig(configG, ({ fluxAt: fluxAtG }) =>
-    withBinarySimulationConfig(configR, ({ fluxAt: fluxAtR }) => {
-      const period = configG.orbits.binary.period;
-      const primaryMinTimeG = minFluxTimeNear({
-        fluxAt: fluxAtG,
-        centerSec: 0,
-        halfWindowSec: period * 0.08,
-        samples: 401,
-      });
-      const primaryMinTimeR = minFluxTimeNear({
-        fluxAt: fluxAtR,
-        centerSec: 0,
-        halfWindowSec: period * 0.08,
-        samples: 401,
-      });
-      const secondaryMinTimeG = minFluxTimeNear({
-        fluxAt: fluxAtG,
-        centerSec: period / 2,
-        halfWindowSec: period * 0.08,
-        samples: 401,
-      });
-      const secondaryMinTimeR = minFluxTimeNear({
-        fluxAt: fluxAtR,
-        centerSec: period / 2,
-        halfWindowSec: period * 0.08,
-        samples: 401,
-      });
+    await withBinarySimulationConfig(configG, ({ fluxAt: fluxAtG }) =>
+      withBinarySimulationConfig(configR, ({ fluxAt: fluxAtR }) => {
+        const period = configG.orbits.binary.period;
+        const primaryMinTimeG = minFluxTimeNear({
+          fluxAt: fluxAtG,
+          centerSec: 0,
+          halfWindowSec: period * 0.08,
+          samples: 401,
+        });
+        const primaryMinTimeR = minFluxTimeNear({
+          fluxAt: fluxAtR,
+          centerSec: 0,
+          halfWindowSec: period * 0.08,
+          samples: 401,
+        });
+        const secondaryMinTimeG = minFluxTimeNear({
+          fluxAt: fluxAtG,
+          centerSec: period / 2,
+          halfWindowSec: period * 0.08,
+          samples: 401,
+        });
+        const secondaryMinTimeR = minFluxTimeNear({
+          fluxAt: fluxAtR,
+          centerSec: period / 2,
+          halfWindowSec: period * 0.08,
+          samples: 401,
+        });
 
-      expect(Math.abs(primaryMinTimeG)).toBeCloseTo(Math.abs(primaryMinTimeR), 12);
-      expect(Math.abs(secondaryMinTimeG - period / 2)).toBeCloseTo(
-        Math.abs(secondaryMinTimeR - period / 2),
-        12,
-      );
-    }),
-  );
-}, 60_000);
+        expect(Math.abs(primaryMinTimeG)).toBeCloseTo(Math.abs(primaryMinTimeR), 12);
+        expect(Math.abs(secondaryMinTimeG - period / 2)).toBeCloseTo(
+          Math.abs(secondaryMinTimeR - period / 2),
+          12,
+        );
+      }),
+    );
+  },
+  BINARY_CORRECTNESS_TIMEOUT_MS,
+);

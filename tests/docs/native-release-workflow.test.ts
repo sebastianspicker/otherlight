@@ -69,7 +69,7 @@ describe("native Apple workflow contracts", () => {
       "contracts/science-v5/**",
       "contracts/workspace-v1/**",
     ]) {
-      expect(appleWorkflow.match(new RegExp(contractPath.replace(/[/*]/g, "\\$&"), "g"))).toHaveLength(2);
+      expect(appleWorkflow.split(contractPath)).toHaveLength(3);
     }
   });
 

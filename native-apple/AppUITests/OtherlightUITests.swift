@@ -9,8 +9,7 @@ import XCTest
 final class OtherlightUITests: XCTestCase {
   /// Verifies that launching the app exposes the primary simulation workspace.
   func testSimulationWorkspaceLaunches() {
-    let app = XCUIApplication()
-    app.launch()
+    let app = launchWorkspaceApp()
     XCTAssertTrue(app.staticTexts["Simulation"].waitForExistence(timeout: 5))
   }
 
@@ -61,8 +60,7 @@ final class OtherlightUITests: XCTestCase {
 
   /// Verifies that platform-appropriate parameters presentation retains invalid editable draft input.
   func testInvalidDraftKeepsTextAndShowsItsFieldError() {
-    let app = XCUIApplication()
-    app.launch()
+    let app = launchWorkspaceApp()
     openParameters(in: app)
     let planetRadius = app.textFields["planet-radius"]
     XCTAssertTrue(planetRadius.waitForExistence(timeout: 5))
@@ -74,7 +72,7 @@ final class OtherlightUITests: XCTestCase {
     #else
       planetRadius.tap()
       planetRadius.typeText("invalid")
-      app.buttons["Apply"].tap()
+      app.buttons["parameter-apply"].tap()
     #endif
 
     XCTAssertTrue(app.staticTexts["planet-radius-error"].waitForExistence(timeout: 2))
@@ -84,8 +82,14 @@ final class OtherlightUITests: XCTestCase {
   #if os(iOS)
     /// Verifies the compact shell exposes independent Simulation and Guided Labs destinations.
     func testCompactTabsExposeGuidedLabsAndWorkspaceActions() {
-      let app = XCUIApplication()
-      app.launch()
+      let app = launchWorkspaceApp()
+
+      if UIDevice.current.userInterfaceIdiom == .pad {
+        XCTAssertTrue(app.staticTexts["Guided Labs"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["workspace-more-actions"].exists)
+        XCTAssertTrue(app.buttons["parameters-button"].exists)
+        return
+      }
 
       let guidedLabsTab = app.tabBars.buttons["Guided Labs"]
       XCTAssertTrue(guidedLabsTab.waitForExistence(timeout: 5))
@@ -100,6 +104,8 @@ final class OtherlightUITests: XCTestCase {
   /// Opens parameters from the desktop inspector state or the iPad and iPhone sheet control.
   private func openParameters(in app: XCUIApplication) {
     #if os(iOS)
+      XCTAssertTrue(
+        app.descendants(matching: .any)["simulation-dashboard"].waitForExistence(timeout: 8))
       let parameters = app.buttons["parameters-button"]
       XCTAssertTrue(parameters.waitForExistence(timeout: 5))
       parameters.tap()
@@ -111,11 +117,28 @@ final class OtherlightUITests: XCTestCase {
     -> XCUIApplication
   {
     let app = XCUIApplication()
+    configureWorkspaceDefaults(for: app)
     app.launchEnvironment["OTHERLIGHT_SCREENSHOT_MODE"] = "1"
     app.launchEnvironment["OTHERLIGHT_SCREENSHOT_SCENARIO"] = scenario
     app.launchEnvironment["OTHERLIGHT_SCREENSHOT_APPEARANCE"] = appearance
     app.launch()
     return app
+  }
+
+  /// Launches an ordinary workspace test with persisted navigation reset to its simulation default.
+  private func launchWorkspaceApp() -> XCUIApplication {
+    let app = XCUIApplication()
+    configureWorkspaceDefaults(for: app)
+    app.launch()
+    return app
+  }
+
+  /// Supplies the existing preference keys as launch defaults without changing production persistence.
+  private func configureWorkspaceDefaults(for app: XCUIApplication) {
+    app.launchArguments += [
+      "-Otherlight.workspaceSection", "simulation",
+      "-TransitLightCurveLab.workspaceSection", "",
+    ]
   }
 
   /// Stores a stable, named app-surface attachment for extraction from the result bundle.

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Audits TypeScript exports and orphan modules without deleting source files.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

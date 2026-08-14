@@ -3,6 +3,7 @@
  */
 import type { OrbitElements, SystemParams } from "../../core/types";
 import { validateSystemParamsPhysics } from "../../physics/hill";
+import { collectNBodyKeplerPeriodMismatches } from "../nbody/config";
 import type { UiValidationMessage } from "./types";
 
 type PlanetParams = SystemParams["planet"];
@@ -27,6 +28,7 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
     ...collectPlanetWarnings(params, pOrbit),
     ...collectMoonWarnings(params, mOrbit),
     ...collectNBodyDtWarnings(params, pOrbit, mOrbit),
+    ...collectNBodyPeriodWarnings(params),
     ...collectPhotometryDisplayWarnings(params),
     ...collectDynamicsInteractionWarnings(params),
     ...collectPhotometryModelWarnings(params),
@@ -35,6 +37,21 @@ export function collectParamWarnings(params: SystemParams): UiValidationMessage[
 
 const staticOrbit = (orbit: unknown): OrbitElements | undefined => {
   return orbit && typeof orbit !== "function" ? (orbit as OrbitElements) : undefined;
+};
+
+const collectNBodyPeriodWarnings = (params: SystemParams): UiValidationMessage[] => {
+  if (params.dynamics?.fidelityProfile === "reference") return [];
+  return collectNBodyKeplerPeriodMismatches(params).map((mismatch) => ({
+    severity: "warn",
+    code: "NBODY_PERIOD_MISMATCH",
+    message: `${mismatch.path} period disagrees with its N-body masses; mass-derived dynamics will use ${mismatch.expectedPeriod.toPrecision(6)} s.`,
+    details: {
+      path: mismatch.path,
+      suppliedPeriod: mismatch.suppliedPeriod,
+      expectedPeriod: mismatch.expectedPeriod,
+      relativeError: mismatch.relativeError,
+    },
+  }));
 };
 
 const finiteNumber = (value: unknown): value is number => {

@@ -4,12 +4,14 @@
 import type { OrbitElements } from "../../core/types";
 import type { Vec3 } from "../../physics/vec3";
 import {
+  ANCHOR_TIME_SEC,
   NBODY_CACHE_MAX,
   type NBodyCacheEntry,
   type NBodyPerturberResolved,
   type NBodyState,
   type ResolvedNBodyConfig,
 } from "./types";
+import { findAnchorIntervalBase } from "./cacheAnchorSelection";
 
 function cloneVec3(v: Vec3): Vec3 {
   return { x: v.x, y: v.y, z: v.z };
@@ -28,6 +30,7 @@ export function cloneState(s: NBodyState): NBodyState {
       r: cloneVec3(p.r),
       v: cloneVec3(p.v),
     })),
+    minimumEncounterDistance: s.minimumEncounterDistance,
   };
 }
 
@@ -74,23 +77,17 @@ export function makeCacheKey(
   });
 }
 
-export function findClosestEntry(entries: NBodyCacheEntry[], t: number): NBodyCacheEntry | null {
-  if (entries.length === 0) return null;
-  let best = entries[0];
-  let bestDist = Math.abs(t - best.t);
-
-  for (let i = 1; i < entries.length; i++) {
-    const d = Math.abs(t - entries[i].t);
-    if (d < bestDist) {
-      bestDist = d;
-      best = entries[i];
-    }
-  }
-
-  // Mark as recently accessed for LRU eviction.
-  best.lastAccess = Date.now();
-  return best;
+/**
+ * Returns a cache base whose accumulated diagnostics cover only the canonical
+ * anchor interval from zero to the target. This deliberately does not select
+ * a merely nearby entry beyond the target or on the opposite side of zero.
+ */
+export function findBaseEntryForTarget(entries: NBodyCacheEntry[], t: number): NBodyCacheEntry | null {
+  return findAnchorIntervalBase(entries, t);
 }
+
+/** @deprecated Use findBaseEntryForTarget for diagnostic-safe cache selection. */
+export const findClosestEntry = findBaseEntryForTarget;
 
 export function storeEntry(entries: NBodyCacheEntry[], state: NBodyState): void {
   const existingIndex = findStoredEntryIndex(entries, state.t);
@@ -117,16 +114,18 @@ function makeCacheEntry(state: NBodyState): NBodyCacheEntry {
 
 function evictLeastRecentlyUsed(entries: NBodyCacheEntry[]): void {
   if (entries.length <= NBODY_CACHE_MAX) return;
-  entries.splice(leastRecentlyUsedIndex(entries), 1);
+  const index = leastRecentlyUsedIndex(entries);
+  if (index >= 0) entries.splice(index, 1);
 }
 
 function leastRecentlyUsedIndex(entries: NBodyCacheEntry[]): number {
-  let lruIdx = 0;
-  let lruTime = entries[0].lastAccess ?? 0;
+  let lruIdx = -1;
+  let lruTime = Number.POSITIVE_INFINITY;
 
-  for (let i = 1; i < entries.length; i++) {
+  for (let i = 0; i < entries.length; i++) {
+    if (entries[i].t === ANCHOR_TIME_SEC) continue;
     const access = entries[i].lastAccess ?? 0;
-    if (access < lruTime) {
+    if (lruIdx < 0 || access < lruTime) {
       lruTime = access;
       lruIdx = i;
     }

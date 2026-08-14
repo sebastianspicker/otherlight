@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from math import pi, sqrt
 from types import SimpleNamespace
 from typing import cast
@@ -11,6 +10,8 @@ import pytest
 
 from science_backend.contracts import (
     G_SI,
+    MAX_INTEGRATOR_STEPS,
+    MAX_RHS_EVALUATIONS,
     MIN_RELATIVE_TOLERANCE,
     Body,
     ForwardRunRequest,
@@ -20,8 +21,10 @@ from science_backend.errors import (
     CapabilityUnavailableError,
     CollisionDomainError,
     ContractError,
+    WorkBudgetError,
 )
 from science_backend.forward import run_forward
+from science_backend.forward_types import WorkBudget
 
 
 def circular_test_request(
@@ -123,18 +126,31 @@ def test_epoch_defines_initial_state_independently_of_requested_order() -> None:
     )
 
 
-def test_research_mode_never_falls_back_when_scipy_is_unavailable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_research_mode_never_falls_back_when_scipy_is_unavailable() -> None:
     request = circular_test_request(mode="research", fallback=False)
-    import science_backend.forward as forward
+    from science_backend.forward import run_forward_with
 
     def missing_scipy(_: ForwardRunRequest, _cancel_requested=None):
         raise CapabilityUnavailableError("scipy missing")
 
-    monkeypatch.setattr(forward, "_scipy_propagate", missing_scipy)
     with pytest.raises(CapabilityUnavailableError, match="scipy missing"):
-        run_forward(request)
+        run_forward_with(request, scipy_propagator=missing_scipy)
+
+
+def test_work_budget_enforces_distinct_rhs_and_accepted_step_limits() -> None:
+    rhs_budget = WorkBudget.start()
+    rhs_budget.rhs_evaluations = MAX_RHS_EVALUATIONS - 1
+    rhs_budget.record_rhs_evaluation()
+    assert rhs_budget.rhs_evaluations == MAX_RHS_EVALUATIONS
+    with pytest.raises(WorkBudgetError, match=f"{MAX_RHS_EVALUATIONS} RHS evaluations"):
+        rhs_budget.record_rhs_evaluation()
+
+    step_budget = WorkBudget.start()
+    step_budget.accepted_steps = MAX_INTEGRATOR_STEPS - 1
+    step_budget.record_accepted_steps(1)
+    assert step_budget.accepted_steps == MAX_INTEGRATOR_STEPS
+    with pytest.raises(WorkBudgetError, match=f"{MAX_INTEGRATOR_STEPS} accepted steps"):
+        step_budget.record_accepted_steps(1)
 
 
 def test_test_mode_requires_explicit_fallback_opt_in() -> None:
@@ -311,6 +327,10 @@ def test_manifest_records_separate_requested_and_effective_tolerances() -> None:
     assert tolerances["effectiveVelocityToleranceMps"] == 1e-6
     assert tolerances["effectiveRelativeTolerance"] >= MIN_RELATIVE_TOLERANCE
     assert result.manifest.constants["G_SI"] == G_SI
+    assert (
+        result.manifest.model_versions["dynamics"]
+        == "newtonian-point-mass-certified-dense-boundary-v3"
+    )
     assert {
         "backend",
         "engine",
@@ -339,9 +359,7 @@ def test_research_propagation_fails_on_fast_in_and_out_finite_radius_contact() -
         run_forward(request)
 
 
-def test_collision_safety_optimizer_fails_closed_on_failure_or_nonfinite_result() -> (
-    None
-):
+def test_collision_safety_rejects_an_unknown_dense_solution() -> None:
     import science_backend.forward as forward
 
     request = circular_test_request()
@@ -354,60 +372,10 @@ def test_collision_safety_optimizer_fails_closed_on_failure_or_nonfinite_result(
         ],
         t=(0.0, 1.0),
     )
-    for optimizer_result in (
-        SimpleNamespace(success=False, fun=1.0, x=0.5),
-        SimpleNamespace(success=True, fun=float("nan"), x=0.5),
-    ):
-        with pytest.raises(
-            CapabilityUnavailableError, match="collision safety optimizer"
-        ):
-            forward._assert_dense_solution_avoids_contact(
-                tuple(request.bodies),
-                cast(forward.OdeSolution, solution),
-                cast(
-                    Callable[..., forward.OptimizerResult],
-                    lambda *_args, optimizer_result=optimizer_result, **_kwargs: (
-                        optimizer_result
-                    ),
-                ),
-                None,
-            )
-
-
-def test_collision_safety_uses_the_time_of_an_endpoint_minimum() -> None:
-    import science_backend.forward as forward
-
-    dense_solution = lambda time: [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0 if time == 0.0 else 10.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    ]
-    optimizer = lambda *_args, **_kwargs: SimpleNamespace(
-        success=True, fun=25.0, x=0.5
-    )
-
-    minimum_squared, minimum_time = forward._minimum_separation_squared(
-        dense_solution,
-        0,
-        1,
-        0.0,
-        1.0,
-        cast(Callable[..., forward.OptimizerResult], optimizer),
-        None,
-        forward._WorkBudget.start(),
-    )
-
-    assert minimum_squared == 0.0
-    assert minimum_time == 0.0
+    with pytest.raises(CapabilityUnavailableError, match="unknown dense solution"):
+        forward._assert_dense_solution_avoids_contact(
+            tuple(request.bodies), cast(forward.OdeSolution, solution), None
+        )
 
 
 def test_research_propagation_supports_backward_offsets() -> None:

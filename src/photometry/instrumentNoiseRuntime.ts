@@ -2,7 +2,7 @@
  * Owns instrument Noise Runtime support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
  */
 import { clamp, toFiniteNumber } from "../core/units";
-import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoise";
+import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
 import {
   applyCorrelatedNoise,
   applyDeterministicSystematics,

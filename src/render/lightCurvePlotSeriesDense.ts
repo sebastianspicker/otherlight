@@ -1,7 +1,7 @@
 /**
  * Owns light Curve Plot Series Dense support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
  */
-import type { DrawSeriesArgs } from "./lightCurvePlotSeries";
+import type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
 
 export function drawDenseIndexSeries(args: DrawSeriesArgs): void {
   const { ctx, fluxValues, visibleStart, n, xIndexOffset, indexScale, yOffset, yScale } = args;

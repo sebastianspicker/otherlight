@@ -2,7 +2,7 @@
  * Owns forward Scattering Models support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
  */
 import { clamp, isFiniteNumber } from "../core/units";
-import type { ForwardScatteringFluxParams } from "./forwardScattering";
+import type { ForwardScatteringFluxParams } from "./forwardScatteringTypes";
 import type { ForwardScatteringContext } from "./forwardScatteringContext";
 import { approximateCosScatteringAngle, henyeyGreensteinPhase, wrapPi } from "./forwardScatteringGeometry";
 

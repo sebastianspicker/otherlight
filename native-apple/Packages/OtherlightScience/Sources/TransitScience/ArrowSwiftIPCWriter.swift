@@ -76,8 +76,9 @@ public struct ArrowSwiftIPCWriter: ArrowIPCArtifactWriting {
         "Arrow Swift produced a file that does not match radial-velocity-v1")
     }
     for index in expectedTimes.indices {
-      guard let time = batch.columns[0].array.asAny(index) as? Double,
-        let velocity = batch.columns[1].array.asAny(index) as? Double,
+      let arrowIndex = UInt(index)
+      guard let time = batch.columns[0].array.asAny(arrowIndex) as? Double,
+        let velocity = batch.columns[1].array.asAny(arrowIndex) as? Double,
         time == expectedTimes[index], velocity == expectedVelocities[index]
       else {
         throw ScienceContractError.unsupportedExecution(

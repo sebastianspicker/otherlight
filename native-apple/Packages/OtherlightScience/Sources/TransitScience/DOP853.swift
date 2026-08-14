@@ -70,6 +70,71 @@ public struct DOP853DenseOutput: Sendable {
     }
     return value
   }
+
+  /// Certifies one pair's dense trajectory against finite-radius contact without exposing rows.
+  func certifiedCollisionAudit(
+    leftStateOffset: Int,
+    rightStateOffset: Int,
+    contactDistance: Double,
+    cancellation: @escaping DOP853Integrator.Cancellation,
+    elapsedCheck: @escaping @Sendable () throws -> Void,
+    work: inout CertifiedCollisionAuditWork
+  ) throws -> CertifiedCollisionAudit.Result {
+    let relativePower = try relativePowerCoefficients(
+      leftStateOffset: leftStateOffset,
+      rightStateOffset: rightStateOffset)
+    return try CertifiedCollisionAudit.certify(
+      relativePower: relativePower,
+      contactDistance: contactDistance,
+      cancellation: cancellation,
+      elapsedCheck: elapsedCheck,
+      work: &work)
+  }
+
+  /// Converts this output's private alternating rows to the audit's relative position powers.
+  private func relativePowerCoefficients(
+    leftStateOffset: Int, rightStateOffset: Int
+  ) throws -> [[Interval]] {
+    guard coefficients.count == 7, leftStateOffset >= 0, rightStateOffset >= 0,
+      leftStateOffset + 2 < initialState.count, rightStateOffset + 2 < initialState.count,
+      coefficients.allSatisfy({
+        leftStateOffset + 2 < $0.count && rightStateOffset + 2 < $0.count
+      })
+    else {
+      throw ScienceContractError.unsupportedExecution(
+        "collision safety indeterminate during native propagation")
+    }
+
+    return try (0..<3).map { axis in
+      let left = leftStateOffset + axis
+      let right = rightStateOffset + axis
+      let delta = try Interval.subtract(.point(initialState[right]), .point(initialState[left]))
+      let g = try coefficients.map {
+        try Interval.subtract(.point($0[right]), .point($0[left]))
+      }
+      return try [
+        delta,
+        Interval.add(g[0], g[1]),
+        Interval.add(try Interval.negated(g[1]), try Interval.add(g[2], g[3])),
+        Interval.add(
+          try Interval.negated(g[2]),
+          try Interval.add(
+            try Interval.negated(try Interval.multiply(.point(2), g[3])), g[4], g[5])),
+        Interval.add(
+          g[3],
+          try Interval.add(
+            try Interval.negated(try Interval.multiply(.point(2), g[4])),
+            try Interval.negated(try Interval.multiply(.point(3), g[5])), g[6])),
+        Interval.add(
+          g[4],
+          try Interval.add(
+            try Interval.multiply(.point(3), g[5]),
+            try Interval.negated(try Interval.multiply(.point(3), g[6])))),
+        Interval.add(try Interval.negated(g[5]), try Interval.multiply(.point(3), g[6])),
+        try Interval.negated(g[6]),
+      ]
+    }
+  }
 }
 
 /// Reports the terminal state and bounded work consumed by one integration.
@@ -109,8 +174,8 @@ public struct DOP853Integrator: Sendable {
       rhs: rhs, cancellation: cancellation, onAcceptedStep: onAcceptedStep, budget: &budget)
   }
 
-  /// Shares integration implementation with callers that supply an existing work budget.
-  fileprivate func integrate(
+  /// Shares integration implementation with native orchestration that owns one run-wide budget.
+  func integrate(
     initialTime: Double,
     initialState: [Double],
     finalTime: Double,
@@ -318,434 +383,3 @@ public struct DOP853Integrator: Sendable {
 }
 
 /// Carries sampled radial velocities and the work counts from native propagation.
-public struct ScientificForwardPropagation: Sendable {
-  public let sampleTimesSeconds: [Double]
-  public let radialVelocitiesMps: [Double]
-  public let acceptedSteps: Int
-  public let rhsEvaluations: Int
-}
-
-/// Native propagation is usable before Arrow IPC is linked; `run` remains fail-closed.
-public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
-  /// Creates the native propagator, whose direct result publication remains intentionally unavailable.
-  public init() {}
-
-  /// Validates then rejects direct result publication to require Arrow-linked provenance ownership.
-  public func run(_ request: ScientificForwardRequestV5) throws -> LatestScientificResult {
-    try request.validate()
-    throw ScienceContractError.unsupportedExecution(
-      "Use NativeScientificForwardRunner for the Arrow-linked experimental native lane")
-  }
-
-  /// Propagates a strict V5 request and samples radial velocity at its requested cadence.
-  public func propagate(
-    _ request: ScientificForwardRequestV5,
-    cancellation: @escaping DOP853Integrator.Cancellation = { false }
-  ) throws -> ScientificForwardPropagation {
-    try request.validate()
-    let bodies = request.scenario.bodies
-    let dimension = bodies.count * 6
-    let tolerances = bodies.flatMap { _ in
-      [
-        request.scenario.integrator.positionToleranceM,
-        request.scenario.integrator.positionToleranceM,
-        request.scenario.integrator.positionToleranceM,
-        request.scenario.integrator.velocityToleranceMps,
-        request.scenario.integrator.velocityToleranceMps,
-        request.scenario.integrator.velocityToleranceMps,
-      ]
-    }
-    let configuration = try DOP853Configuration(
-      absoluteTolerances: tolerances,
-      relativeTolerance: request.scenario.integrator.relativeTolerance,
-      maximumStep: request.scenario.integrator.maxStepSec)
-    let integrator = DOP853Integrator(configuration: configuration)
-    let initial = bodies.flatMap { $0.state.positionM.values + $0.state.velocityMps.values }
-    let lineOfSight = request.scenario.observer.lineOfSight.values
-    let targetIndex = try requiredIndex(of: request.scenario.observer.targetBodyId, in: bodies)
-    let sampleTimes = (0..<request.sampleCount).map {
-      request.startOffsetSec + Double($0) * request.sampleCadenceSec
-    }
-    var samples = [Double](repeating: 0, count: sampleTimes.count)
-    // This deadline covers collision minimization too, which happens after the integrator has
-    // recorded an accepted step. It is deliberately shared by the independent past/future legs.
-    let workClock = ContinuousClock()
-    let workDeadline = workClock.now.advanced(by: .seconds(ScienceLimits.maximumWallTimeSeconds))
-    let checkRunDeadline: @Sendable () throws -> Void = {
-      guard workClock.now <= workDeadline else {
-        throw ScienceContractError.unsupportedExecution(
-          "scientific run exceeded \(Int(ScienceLimits.maximumWallTimeSeconds)) seconds")
-      }
-    }
-    var budget = ScienceWorkBudget()
-
-    let rhs = makeNewtonianRightHandSide(bodies: bodies, dimension: dimension)
-
-    // Propagate away from the epoch in each direction. This intentionally avoids treating a
-    // negative request window as a preflight for a later forward integration: past and future
-    // samples have independent initial-value solutions and share one explicit work budget.
-    let indexedTimes = sampleTimes.enumerated().map { (time: $0.element, index: $0.offset) }
-    let futureTimes = indexedTimes.filter { $0.time > 0 }.sorted { $0.time < $1.time }
-    let pastTimes = indexedTimes.filter { $0.time < 0 }.sorted { $0.time > $1.time }
-
-    try requireNoCollision(state: initial, bodies: bodies)
-    for sample in indexedTimes where sample.time == 0 {
-      samples[sample.index] = radialVelocity(
-        state: initial, targetIndex: targetIndex, lineOfSight: lineOfSight)
-    }
-
-    /// Integrates one temporal direction and fills the requested dense-output samples.
-    func integrateSamples(_ requestedTimes: [(time: Double, index: Int)]) throws {
-      guard let terminalTime = requestedTimes.last?.time else { return }
-      var nextSample = 0
-      let inspect: DOP853Integrator.AcceptedStep = { dense in
-        try self.requireNoCollision(
-          in: dense, bodies: bodies, cancellation: cancellation, elapsedCheck: checkRunDeadline)
-        let lowerBound = min(dense.startTime, dense.endTime)
-        let upperBound = max(dense.startTime, dense.endTime)
-        while nextSample < requestedTimes.count {
-          let sample = requestedTimes[nextSample]
-          guard sample.time >= lowerBound, sample.time <= upperBound else { break }
-          let state = try dense.state(at: sample.time)
-          samples[sample.index] = self.radialVelocity(
-            state: state, targetIndex: targetIndex, lineOfSight: lineOfSight)
-          nextSample += 1
-        }
-      }
-      _ = try integrator.integrate(
-        initialTime: 0, initialState: initial, finalTime: terminalTime,
-        rhs: rhs, cancellation: cancellation, onAcceptedStep: inspect, budget: &budget)
-      guard nextSample == requestedTimes.count else {
-        throw ScienceContractError.unsupportedExecution(
-          "DOP853 dense output did not cover requested samples")
-      }
-    }
-
-    try integrateSamples(futureTimes)
-    try integrateSamples(pastTimes)
-    return .init(
-      sampleTimesSeconds: sampleTimes, radialVelocitiesMps: samples,
-      acceptedSteps: budget.acceptedSteps, rhsEvaluations: budget.rhsEvaluations)
-  }
-
-  /// Constructs the fixed-size Newtonian derivative used by one propagation request.
-  private func makeNewtonianRightHandSide(
-    bodies: [ScientificBodyV5], dimension: Int
-  ) -> DOP853Integrator.RightHandSide {
-    { _, state in
-      guard state.count == dimension else {
-        throw ScienceContractError.unsupportedExecution("Newtonian RHS state dimension changed")
-      }
-      var derivative = [Double](repeating: 0, count: dimension)
-      for body in bodies.indices {
-        let base = body * 6
-        derivative[base] = state[base + 3]
-        derivative[base + 1] = state[base + 4]
-        derivative[base + 2] = state[base + 5]
-      }
-      for left in bodies.indices {
-        let base = left * 6
-        var acceleration = [0.0, 0.0, 0.0]
-        for right in bodies.indices where right != left {
-          let other = right * 6
-          let dx = state[other] - state[base]
-          let dy = state[other + 1] - state[base + 1]
-          let dz = state[other + 2] - state[base + 2]
-          let distanceSquared = dx * dx + dy * dy + dz * dz
-          let contactDistance = bodies[left].radiusM + bodies[right].radiusM
-          guard distanceSquared.isFinite, distanceSquared > contactDistance * contactDistance else {
-            throw ScienceContractError.unsupportedExecution(
-              "finite-radius collision detected during native propagation")
-          }
-          let inverseDistanceCubed = 1 / (distanceSquared * sqrt(distanceSquared))
-          let scale =
-            ScienceLimits.gravitationalConstant * bodies[right].massKg * inverseDistanceCubed
-          guard scale.isFinite else {
-            throw ScienceContractError.unsupportedExecution(
-              "Newtonian acceleration became non-finite")
-          }
-          acceleration[0] += scale * dx
-          acceleration[1] += scale * dy
-          acceleration[2] += scale * dz
-        }
-        guard acceleration.allSatisfy(\.isFinite) else {
-          throw ScienceContractError.unsupportedExecution(
-            "Newtonian acceleration became non-finite")
-        }
-        derivative[base + 3] = acceleration[0]
-        derivative[base + 4] = acceleration[1]
-        derivative[base + 5] = acceleration[2]
-      }
-      return derivative
-    }
-  }
-
-  /// Finds a referenced body index while keeping missing IDs fail-closed.
-  private func requiredIndex(of id: String, in bodies: [ScientificBodyV5]) throws -> Int {
-    guard let index = bodies.firstIndex(where: { $0.id == id }) else {
-      throw ScienceContractError.invalid(
-        "request.scenario.observer.targetBodyId", "an existing body id")
-    }
-    return index
-  }
-
-  /// Projects the target's velocity onto the fixed observer direction.
-  private func radialVelocity(state: [Double], targetIndex: Int, lineOfSight: [Double]) -> Double {
-    let base = targetIndex * 6
-    // The line of sight points from the system toward the observer. Positive spectroscopic
-    // radial velocity therefore denotes recession, matching the shared backend contract.
-    return
-      -(state[base + 3] * lineOfSight[0] + state[base + 4] * lineOfSight[1] + state[base + 5]
-      * lineOfSight[2])
-  }
-
-  /// Rejects finite-radius contact in a flattened integration state.
-  private func requireNoCollision(state: [Double], bodies: [ScientificBodyV5]) throws {
-    for left in bodies.indices {
-      for right in bodies.indices where right > left {
-        let l = left * 6
-        let r = right * 6
-        let dx = state[r] - state[l]
-        let dy = state[r + 1] - state[l + 1]
-        let dz = state[r + 2] - state[l + 2]
-        let distance = sqrt(dx * dx + dy * dy + dz * dz)
-        guard distance.isFinite, distance > bodies[left].radiusM + bodies[right].radiusM else {
-          throw ScienceContractError.unsupportedExecution(
-            "finite-radius collision detected during native propagation")
-        }
-      }
-    }
-  }
-
-  /// Detects contact between a dense-output segment's endpoints and interior minimum.
-  private func requireNoCollision(
-    in dense: DOP853DenseOutput,
-    bodies: [ScientificBodyV5],
-    cancellation: @escaping DOP853Integrator.Cancellation,
-    elapsedCheck: @escaping @Sendable () throws -> Void
-  ) throws {
-    // Mirror the Python oracle's fail-closed strategy: bounded minimization on each segment of
-    // every accepted dense interval, with endpoints included. Fixed point sampling is unsafe for
-    // a short in-and-out encounter that falls between samples.
-    let intervalStart = min(dense.startTime, dense.endTime)
-    let intervalEnd = max(dense.startTime, dense.endTime)
-    let subdivisions = 16
-    for left in bodies.indices {
-      for right in bodies.indices where right > left {
-        let contactDistance = bodies[left].radiusM + bodies[right].radiusM
-        let contactSquared = contactDistance * contactDistance
-        for segment in 0..<subdivisions {
-          try elapsedCheck()
-          guard !cancellation() else {
-            throw ScienceContractError.unsupportedExecution("scientific run was cancelled")
-          }
-          let lower =
-            intervalStart + (intervalEnd - intervalStart) * Double(segment) / Double(subdivisions)
-          let upper =
-            intervalStart + (intervalEnd - intervalStart) * Double(segment + 1)
-            / Double(subdivisions)
-          let minimumSquared = try minimumPairSeparationSquared(
-            in: dense, left: left, right: right, lowerTime: lower, upperTime: upper,
-            cancellation: cancellation, elapsedCheck: elapsedCheck)
-          guard minimumSquared.isFinite else {
-            throw ScienceContractError.unsupportedExecution(
-              "collision safety search returned a non-finite minimum")
-          }
-          if minimumSquared <= contactSquared {
-            throw ScienceContractError.unsupportedExecution(
-              "finite-radius collision detected during native propagation")
-          }
-        }
-      }
-    }
-  }
-
-  /// Minimizes pair separation over an interval to detect fly-through collisions between samples.
-  private func minimumPairSeparationSquared(
-    in dense: DOP853DenseOutput,
-    left: Int,
-    right: Int,
-    lowerTime: Double,
-    upperTime: Double,
-    cancellation: @escaping DOP853Integrator.Cancellation,
-    elapsedCheck: @escaping @Sendable () throws -> Void
-  ) throws -> Double {
-    /// Evaluates squared pair separation at one dense-output time during minimization.
-    func separationSquared(at time: Double) throws -> Double {
-      try elapsedCheck()
-      guard !cancellation() else {
-        throw ScienceContractError.unsupportedExecution("scientific run was cancelled")
-      }
-      let state = try dense.state(at: time)
-      let leftBase = left * 6
-      let rightBase = right * 6
-      let dx = state[rightBase] - state[leftBase]
-      let dy = state[rightBase + 1] - state[leftBase + 1]
-      let dz = state[rightBase + 2] - state[leftBase + 2]
-      let squared = dx * dx + dy * dy + dz * dz
-      guard squared.isFinite else {
-        throw ScienceContractError.unsupportedExecution(
-          "collision safety search received a non-finite dense state")
-      }
-      return squared
-    }
-
-    var lower = lowerTime
-    var upper = upperTime
-    let endpointMinimum = min(try separationSquared(at: lower), try separationSquared(at: upper))
-    // A bounded golden-section search is deterministic and deliberately refuses to infer a
-    // minimum from a sparse grid. The 16 segments match the vetted backend implementation.
-    let inverseGoldenRatio = (sqrt(5) - 1) / 2
-    var first = upper - inverseGoldenRatio * (upper - lower)
-    var second = lower + inverseGoldenRatio * (upper - lower)
-    var firstValue = try separationSquared(at: first)
-    var secondValue = try separationSquared(at: second)
-    for _ in 0..<64 {
-      try elapsedCheck()
-      guard !cancellation() else {
-        throw ScienceContractError.unsupportedExecution("scientific run was cancelled")
-      }
-      if firstValue <= secondValue {
-        upper = second
-        second = first
-        secondValue = firstValue
-        first = upper - inverseGoldenRatio * (upper - lower)
-        firstValue = try separationSquared(at: first)
-      } else {
-        lower = first
-        first = second
-        firstValue = secondValue
-        second = lower + inverseGoldenRatio * (upper - lower)
-        secondValue = try separationSquared(at: second)
-      }
-    }
-    return min(endpointMinimum, firstValue, secondValue)
-  }
-}
-
-/// Stores the source-derived DOP853 tableau and dense-output coefficients.
-private enum DOP853Coefficients {
-  static let c: [Double] = [
-    0, 5.26001519587677318785587544488e-2, 7.89002279381515978178381316732e-2,
-    1.18350341907227396726757197510e-1, 2.81649658092772603274280243602e-1, 1.0 / 3.0, 0.25,
-    4.0 / 13.0, 0.651282051282051282051282051282, 0.6, 6.0 / 7.0, 1, 1, 0.1, 0.2, 7.0 / 9.0,
-  ]
-  static let a: [[Double]] = [
-    [], [5.26001519587677318785587544488e-2],
-    [1.97250569845378994544595329183e-2, 5.91751709536136983633785987549e-2],
-    [2.95875854768068491816892993775e-2, 0, 8.87627564304205475450678981324e-2],
-    [
-      2.41365134159266685502369798665e-1, 0, -8.84549479328286085344864962717e-1,
-      9.24834003261792003115737966543e-1,
-    ],
-    [
-      3.7037037037037037037037037037e-2, 0, 0, 1.70828608729473871279604482173e-1,
-      1.25467687566822425016691814123e-1,
-    ],
-    [
-      3.7109375e-2, 0, 0, 1.70252211019544039314978060272e-1, 6.02165389804559606850219397283e-2,
-      -1.7578125e-2,
-    ],
-    [
-      3.70920001185047927108779319836e-2, 0, 0, 1.70383925712239993810214054705e-1,
-      1.07262030446373284651809199168e-1, -1.53194377486244017527936158236e-2,
-      8.27378916381402288758473766002e-3,
-    ],
-    [
-      6.24110958716075717114429577812e-1, 0, 0, -3.36089262944694129406857109825,
-      -8.68219346841726006818189891453e-1, 2.75920996994467083049415600797e1,
-      2.01540675504778934086186788979e1, -4.34898841810699588477366255144e1,
-    ],
-    [
-      4.77662536438264365890433908527e-1, 0, 0, -2.48811461997166764192642586468,
-      -5.90290826836842996371446475743e-1, 2.12300514481811942347288949897e1,
-      1.52792336328824235832596922938e1, -3.32882109689848629194453265587e1,
-      -2.03312017085086261358222928593e-2,
-    ],
-    [
-      -9.3714243008598732571704021658e-1, 0, 0, 5.18637242884406370830023853209,
-      1.09143734899672957818500254654, -8.14978701074692612513997267357,
-      -1.85200656599969598641566180701e1, 2.27394870993505042818970056734e1,
-      2.49360555267965238987089396762, -3.0467644718982195003823669022,
-    ],
-    [
-      2.27331014751653820792359768449, 0, 0, -1.05344954667372501984066689879e1,
-      -2.00087205822486249909675718444, -1.79589318631187989172765950534e1,
-      2.79488845294199600508499808837e1, -2.85899827713502369474065508674,
-      -8.87285693353062954433549289258, 1.23605671757943030647266201528e1,
-      6.43392746015763530355970484046e-1,
-    ],
-    [
-      5.42937341165687622380535766363e-2, 0, 0, 0, 0, 4.45031289275240888144113950566,
-      1.89151789931450038304281599044, -5.8012039600105847814672114227,
-      3.1116436695781989440891606237e-1, -1.52160949662516078556178806805e-1,
-      2.01365400804030348374776537501e-1, 4.47106157277725905176885569043e-2,
-    ],
-    [
-      5.61675022830479523392909219681e-2, 0, 0, 0, 0, 0, 2.53500210216624811088794765333e-1,
-      -2.46239037470802489917441475441e-1, -1.24191423263816360469010140626e-1,
-      1.5329179827876569731206322685e-1, 8.20105229563468988491666602057e-3,
-      7.56789766054569976138603589584e-3, -8.298e-3,
-    ],
-    [
-      3.18346481635021405060768473261e-2, 0, 0, 0, 0, 2.83009096723667755288322961402e-2,
-      5.35419883074385676223797384372e-2, -5.49237485713909884646569340306e-2, 0, 0,
-      -1.08347328697249322858509316994e-4, 3.82571090835658412954920192323e-4,
-      -3.40465008687404560802977114492e-4, 1.41312443674632500278074618366e-1,
-    ],
-    [
-      -4.28896301583791923408573538692e-1, 0, 0, 0, 0, -4.69762141536116384314449447206,
-      7.68342119606259904184240953878, 4.06898981839711007970213554331,
-      3.56727187455281109270669543021e-1, 0, 0, 0, -1.39902416515901462129418009734e-3,
-      2.9475147891527723389556272149, -9.15095847217987001081870187138,
-    ],
-  ]
-  static let b = a[12]
-  static let e3: [Double] = {
-    var values = b + [0]
-    values[0] -= 0.244094488188976377952755905512
-    values[8] -= 0.733846688281611857341361741547
-    values[11] -= 0.220588235294117647058823529412e-1
-    return values
-  }()
-  static let e5: [Double] = [
-    1.312004499419488073250102996e-2, 0, 0, 0, 0, -1.225156446376204440720569753,
-    -0.4957589496572501915214079952, 1.664377182454986536961530415, -0.350328848749973681688648729,
-    0.334179118713017479029731884, 8.192320648511571570740572413e-2,
-    -2.235530786388629627033651784e-2, 0,
-  ]
-  static let d: [[Double]] = [
-    [
-      -8.4289382761090128651353491142, 0, 0, 0, 0, 0.56671495351937776962531783590,
-      -3.0689499459498916912797304727, 2.3846676565120698287728149680,
-      2.1170345824450282767155149946, -0.87139158377797299206789907490,
-      2.240437430260788275841771650, 0.63157877876946881815570249290,
-      -8.8990336451333310820698117400e-2, 18.148505520854727256656404962,
-      -9.1946323924783554000451984436, -4.4360363875948939664310572000,
-    ],
-    [
-      10.427508642579134603413151009, 0, 0, 0, 0, 242.28349177525818288430175319,
-      165.20045171727028198505394887, -374.54675472269020279518312152,
-      -22.113666853125306036270938578, 7.7334326684722638389603898808,
-      -30.674084731089398182061213626, -9.3321305264302278729567221706,
-      15.697238121770843886131091075, -31.139403219565177677282850411,
-      -9.3529243588444783865713862664, 35.816841486394083752465898540,
-    ],
-    [
-      19.985053242002433820987653617, 0, 0, 0, 0, -387.03730874935176555105901742,
-      -189.17813819516756882830838328, 527.80815920542364900561016686,
-      -11.573902539959630126141871134, 6.8812326946963000169666922661,
-      -1.0006050966910838403183860980, 0.77771377980534432092869265740,
-      -2.7782057523535084065932004339, -60.196695231264120758267380846,
-      84.320405506677161018159903784, 11.992291136182789328035130030,
-    ],
-    [
-      -25.693933462703749003312586129, 0, 0, 0, 0, -154.18974869023643374053993627,
-      -231.52937917604549567536039109, 357.63911791061412378285349910,
-      93.405324183624310003907691704, -37.458323136451633156875139351,
-      104.09964950896230045147246184, 29.840293426660503123344363579,
-      -43.533456590011143754432175058, 96.324553959188282948394950600,
-      -39.177261675615439165231486172, -149.72683625798562581422125276,
-    ],
-  ]
-}

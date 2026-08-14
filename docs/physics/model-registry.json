@@ -203,6 +203,7 @@
       "validity": "Transmission profiles are inputs; the TypeScript exponential halo is not a radiative-transfer solution.",
       "owners": [
         "src/photometry/transitTransmission.ts",
+        "src/photometry/transitTransmissionTypes.ts",
         "src/photometry/transitTransmissionPoint.ts",
         "src/photometry/atmosphereRT/model.ts",
         "src/photometry/atmosphereRT/gaussianFeatures.ts",
@@ -228,6 +229,7 @@
       "owners": [
         "src/photometry/dayNightVisibility.ts",
         "src/photometry/phaseCurve.ts",
+        "src/photometry/phaseCurveTypes.ts",
         "src/photometry/phaseCurveGeometry.ts",
         "src/photometry/phaseCurveScaling.ts",
         "src/sim/additiveFlux.ts"
@@ -244,6 +246,7 @@
       "validity": "HG is a single-parameter angular approximation; current amplitude and finite-star geometry are not a research radiative-transfer model.",
       "owners": [
         "src/photometry/forwardScattering.ts",
+        "src/photometry/forwardScatteringTypes.ts",
         "src/photometry/forwardScatteringContext.ts",
         "src/photometry/forwardScatteringGeometry.ts",
         "src/photometry/forwardScatteringModels.ts",
@@ -286,6 +289,7 @@
       "owners": [
         "src/photometry/smearing.ts",
         "src/photometry/instrumentNoise.ts",
+        "src/photometry/instrumentNoiseTypes.ts",
         "src/photometry/instrumentNoiseHelpers.ts",
         "src/photometry/instrumentNoiseRuntime.ts",
         "src/photometry/random.ts"
@@ -338,10 +342,10 @@
     {
       "id": "runtime.v5.scientific-forward",
       "status": "bounded-approximation",
-      "claim": "V5 exposes a strict local contract and advertises error-controlled, provenance-complete Newtonian radial-velocity execution only when SciPy and Arrow IPC capabilities are installed.",
+      "claim": "V5 exposes a strict local contract and advertises error-controlled, provenance-complete Newtonian radial-velocity execution only when the pinned DOP853 dense representation and Arrow IPC are available.",
       "equation": "d^2 r_i/dt^2 = G sum_(j != i) m_j (r_j-r_i)/|r_j-r_i|^3; v_r = -v_target dot n",
       "units": "Cartesian state SI; epoch [JD TDB]; radial velocity [m s^-1]",
-      "validity": "Barycentric, non-colliding Newtonian point masses with explicit target, numeric JD TDB epoch, finite radii, split absolute tolerances, and recorded provenance. Capability absence fails closed. Relativity, photometry, timing, atmosphere, astrometry artifacts, and inference are unavailable.",
+      "validity": "Barycentric, non-colliding Newtonian point masses with explicit target, numeric JD TDB epoch, finite radii, split absolute tolerances, and recorded provenance. Accepted dense numerical trajectories are certified outside finite-radius contact with bounded interval arithmetic; unsupported representations and unresolved bounds fail closed. Relativity, photometry, timing, atmosphere, astrometry artifacts, and inference are unavailable.",
       "owners": [
         "src/app/scienceWorkspace.ts",
         "src/science/scenarioAdapter.ts",
@@ -351,7 +355,9 @@
         "src/science/index.ts",
         "science_backend/science_backend/contracts.py",
         "science_backend/science_backend/forward.py",
-        "science_backend/science_backend/api.py"
+        "science_backend/science_backend/api.py",
+        "science_backend/science_backend/dop853_collision_audit.py",
+        "native-apple/Packages/OtherlightScience/Sources/TransitScience/CertifiedCollisionAudit.swift"
       ],
       "tests": [
         "tests/app/science-workspace.test.ts",
@@ -359,6 +365,9 @@
         "tests/science/scenario-adapter.test.ts",
         "science_backend/tests/test_api_contract.py",
         "science_backend/tests/test_forward.py",
+        "science_backend/tests/test_forward_research.py",
+        "science_backend/tests/test_dop853_collision_audit.py",
+        "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
         "science_backend/tests/test_inference_and_service.py"
       ],
       "references": ["wilkinson-2016-fair"]

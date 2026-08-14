@@ -1,0 +1,119 @@
+{
+  "provenance": {
+    "generator": "scipy.integrate.solve_ivp(method='DOP853', dense_output=True)",
+    "source": "science_backend/science_backend/forward_dynamics.py",
+    "strategy": "separate future and reverse-time past legs from the epoch; evaluate solution.sol at serialized samples",
+    "scipyVersion": "1.18.0",
+    "pythonVersion": "3.14.6",
+    "gravitationalConstantM3KgS2": 6.6743e-11,
+    "stateAbsoluteToleranceM": 0.1,
+    "velocityAbsoluteToleranceMps": 1e-7,
+    "relativeTolerance": 1e-12,
+    "maximumStepSec": 2148597.088842502
+  },
+  "scenario": {
+    "schemaVersion": "v5",
+    "id": "scipy-1.18-circular-two-body",
+    "epochJdTdb": 2451545.0,
+    "timeScale": "TDB",
+    "bodies": [
+      {
+        "id": "primary",
+        "kind": "star",
+        "massKg": 2e30,
+        "radiusM": 600000000.0,
+        "state": {
+          "positionM": [-99900099.9000999, 0, 0],
+          "velocityMps": [0, -36.517481752257694, 0]
+        }
+      },
+      {
+        "id": "companion",
+        "kind": "companion",
+        "massKg": 2e27,
+        "radiusM": 70000000.0,
+        "state": {
+          "positionM": [99900099900.0999, 0, 0],
+          "velocityMps": [0, 36517.48175225769, 0]
+        }
+      }
+    ],
+    "observer": {
+      "lineOfSight": [0, 1, 0],
+      "targetBodyId": "primary"
+    },
+    "integrator": {
+      "method": "DOP853",
+      "positionToleranceM": 0.001,
+      "velocityToleranceMps": 0.000001,
+      "relativeTolerance": 1e-12,
+      "maxStepSec": 2148597.088842502
+    }
+  },
+  "cases": [
+    {
+      "name": "forward",
+      "startOffsetSec": 2148597.088842502,
+      "endOffsetSec": 3222895.633263753,
+      "sampleCadenceSec": 2148597.088842502,
+      "samples": [
+        {
+          "timeOffsetSec": 2148597.088842502,
+          "state": [
+            -70640038.0805415, -70640038.0805401, 0, 25.821758978872552, -25.821758978883143, 0,
+            70640038080.5415, 70640038080.54008, 0, -25821.758978872553, 25821.758978883146, 0
+          ],
+          "radialVelocityMps": 25.821758978883143
+        }
+      ]
+    },
+    {
+      "name": "backward",
+      "startOffsetSec": -2148597.088842502,
+      "endOffsetSec": -1074298.544421251,
+      "sampleCadenceSec": 2148597.088842502,
+      "samples": [
+        {
+          "timeOffsetSec": -2148597.088842502,
+          "state": [
+            -70640038.0805415, 70640038.0805401, 0, -25.821758978872552, -25.821758978883143, 0,
+            70640038080.5415, -70640038080.54008, 0, 25821.758978872553, 25821.758978883146, 0
+          ],
+          "radialVelocityMps": 25.821758978883143
+        }
+      ]
+    },
+    {
+      "name": "epoch-crossing",
+      "startOffsetSec": -2148597.088842502,
+      "endOffsetSec": 2148597.088842502,
+      "sampleCadenceSec": 2148597.088842502,
+      "samples": [
+        {
+          "timeOffsetSec": -2148597.088842502,
+          "state": [
+            -70640038.0805415, 70640038.0805401, 0, -25.821758978872552, -25.821758978883143, 0,
+            70640038080.5415, -70640038080.54008, 0, 25821.758978872553, 25821.758978883146, 0
+          ],
+          "radialVelocityMps": 25.821758978883143
+        },
+        {
+          "timeOffsetSec": 0,
+          "state": [
+            -99900099.9000999, 0, 0, 0, -36.517481752257694, 0, 99900099900.0999, 0, 0, 0, 36517.48175225769,
+            0
+          ],
+          "radialVelocityMps": 36.517481752257694
+        },
+        {
+          "timeOffsetSec": 2148597.088842502,
+          "state": [
+            -70640038.0805415, -70640038.0805401, 0, 25.821758978872552, -25.821758978883143, 0,
+            70640038080.5415, 70640038080.54008, 0, -25821.758978872553, 25821.758978883146, 0
+          ],
+          "radialVelocityMps": 25.821758978883143
+        }
+      ]
+    }
+  ]
+}

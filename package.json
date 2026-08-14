@@ -15,12 +15,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sebastianspicker/exoplanet-exomoon-simulation.git"
+    "url": "git+https://github.com/sebastianspicker/otherlight.git"
   },
   "bugs": {
-    "url": "https://github.com/sebastianspicker/exoplanet-exomoon-simulation/issues"
+    "url": "https://github.com/sebastianspicker/otherlight/issues"
   },
-  "homepage": "https://github.com/sebastianspicker/exoplanet-exomoon-simulation#readme",
+  "homepage": "https://github.com/sebastianspicker/otherlight#readme",
   "type": "module",
   "packageManager": "pnpm@11.4.0",
   "engines": {
@@ -46,7 +46,7 @@
     "duplicates": "jscpd --min-lines 10 --min-tokens 100 --threshold 0.25 src",
     "test": "vitest run --exclude 'tests/perf/**/*.test.ts'",
     "test:e2e": "pnpm build && playwright test",
-    "test:coverage": "vitest run --coverage --maxWorkers=2 --exclude 'tests/perf/**/*.test.ts'",
+    "test:coverage": "vitest run --coverage --maxWorkers=1 --no-file-parallelism --exclude 'tests/perf/**/*.test.ts'",
     "test:watch": "vitest",
     "lint": "eslint . && prettier -c .",
     "lint:fix": "eslint . --fix",

@@ -168,13 +168,13 @@ public struct NativeScientificForwardRunner: Sendable {
 
   private static let modelVersions = [
     ScienceModelVersion(
-      id: "dynamics", version: "newtonian-point-mass-finite-radius-boundary-v2"),
+      id: "dynamics", version: "newtonian-point-mass-certified-dense-boundary-v3"),
     ScienceModelVersion(id: "radial_velocity", version: "barycentric-positive-receding-v1"),
   ]
 
   private static let validityDomain = [
     "Newtonian gravitating masses with finite radii used as a contact boundary",
-    "propagation terminates before finite-radius contact; no collision physics",
+    "accepted numerical dense trajectories are certified outside finite-radius contact; no collision physics",
     "observer fixed at effectively infinite direction",
   ]
 }

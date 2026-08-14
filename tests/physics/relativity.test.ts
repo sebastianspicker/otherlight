@@ -309,6 +309,51 @@ describe("solveLightTimeCorrectedResult convergence", () => {
 });
 
 describe("solveLightTimeCorrectedResult diagnostics", () => {
+  it("rejects an invalid observation time without sampling the trajectory", () => {
+    const rAtTime = () => {
+      throw new Error("invalid observation times must short-circuit before sampling");
+    };
+    const out = solveLightTimeCorrectedResult({
+      tObs: Number.NaN,
+      rAtTime,
+      observerDir: { x: 0, y: 0, z: 1 },
+      c: 1,
+    });
+
+    expect(out.tEmit).toBeNaN();
+    expect(out.diagnostics).toEqual({
+      status: "invalid-input",
+      converged: false,
+      iterations: 0,
+      maxIters: 2,
+      tolSec: 1e-6,
+      usedShapiro: false,
+      usedMultiBodyShapiro: false,
+      validityFlags: [],
+    });
+  });
+
+  it("reports a nonfinite next emission time when finite subtraction overflows", () => {
+    const out = solveLightTimeCorrectedResult({
+      tObs: Number.MAX_VALUE,
+      rAtTime: () => ({ x: 0, y: 0, z: Number.MAX_VALUE }),
+      observerDir: { x: 0, y: 0, z: 1 },
+      c: 1,
+      maxIters: 1,
+      tolSec: 0,
+    });
+
+    expect(out.tEmit).toBe(Number.MAX_VALUE);
+    expect(out.diagnostics.status).toBe("nonfinite-next");
+    expect(out.diagnostics.converged).toBe(false);
+    expect(out.diagnostics.delaySec).toBe(-Number.MAX_VALUE);
+    expect(out.diagnostics.residualSec).toBe(Number.MAX_VALUE);
+    expect(out.diagnostics.validityFlags).toEqual([
+      "weak-ltte-iteration-budget",
+      "residual-exceeds-tolerance",
+    ]);
+  });
+
   it("emits explicit validity flags for the weak-field relative Shapiro models", () => {
     const out = solveLightTimeCorrectedResult({
       tObs: 10_000,

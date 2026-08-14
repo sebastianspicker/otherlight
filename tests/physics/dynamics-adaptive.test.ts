@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { SystemParams } from "../../src/core/types";
 import { getNBodyConservationAt, getNBodyStateAt, resetNBodyCache } from "../../src/sim/dynamics";
+import { integrateToTimeWithConfig } from "../../src/sim/nbody/integrator";
+import type { NBodyState, ResolvedNBodyConfig } from "../../src/sim/nbody/types";
 
 beforeEach(() => {
   resetNBodyCache();
@@ -83,5 +85,41 @@ describe("adaptive n-body integrator", () => {
     expect(cons).not.toBeNull();
     expect(Number.isFinite(cons!.energy)).toBe(true);
     expect(Number.isFinite(cons!.angularMomentum)).toBe(true);
+  });
+
+  it("fails closed when dtMin cannot satisfy the adaptive error tolerance", () => {
+    const state: NBodyState = {
+      t: 0,
+      rS: { x: 0, y: 0, z: 0 },
+      vS: { x: 0, y: 0, z: 0 },
+      rP: { x: 1, y: 0, z: 0 },
+      vP: { x: 0, y: 0, z: 0 },
+      rM: { x: 0.5, y: 0, z: 0 },
+      vM: { x: 0, y: 0, z: 0 },
+      perturbers: [],
+    };
+    const cfg: ResolvedNBodyConfig = {
+      muStar: 1,
+      muPlanet: 1e-3,
+      muMoon: 1e-6,
+      dtMaxAbs: 1,
+      softening: 0,
+      throwOnOverlap: false,
+      perturbers: [],
+      relativity: { grOn: false, c: 299792458 },
+      integrator: {
+        mode: "adaptive-verlet",
+        errorTolAbs: 1e-30,
+        dtMin: 1,
+        growthFactor: 1.5,
+        shrinkFactor: 0.5,
+        maxSubsteps: 10,
+      },
+      collision: { enabled: false, minSeparation: 0, onCloseEncounter: "warn" },
+    };
+
+    expect(() => integrateToTimeWithConfig({ state, tTarget: 1, cfg })).toThrow(
+      "cannot meet error tolerance at dtMin",
+    );
   });
 });

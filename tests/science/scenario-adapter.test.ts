@@ -51,6 +51,40 @@ const centreOfMassComponent = (
   return bodies.reduce((sum, body) => sum + body.massKg * body.state[field][axis], 0) / total;
 };
 
+const expectDynamicsFailure = (mutate: (system: SystemParams) => void, message: string): void => {
+  const system = generalSystem();
+  mutate(system);
+  expect(() => buildScientificScenarioV5FromSystemParams({ system, binaryMode: false })).toThrow(
+    new ScienceValidationError(`Cannot build a V5 scientific scenario: ${message}`),
+  );
+};
+
+type ExomoonTimingShape = NonNullable<NonNullable<SystemParams["dynamics"]>["exomoonTimingShape"]>;
+
+const exomoonTimingControls: Array<
+  [
+    keyof Pick<
+      ExomoonTimingShape,
+      | "moonOmegaDot"
+      | "moonIncDot"
+      | "moonOmegaSmallDot"
+      | "moonImpactYDot"
+      | "moonOmega0"
+      | "moonInc0"
+      | "moonOmegaSmall0"
+    >,
+    number,
+  ]
+> = [
+  ["moonOmegaDot", 1e-8],
+  ["moonIncDot", 1e-8],
+  ["moonOmegaSmallDot", 1e-8],
+  ["moonImpactYDot", 1e-4],
+  ["moonOmega0", 0],
+  ["moonInc0", 0],
+  ["moonOmegaSmall0", 0],
+];
+
 describe("V5 SystemParams scenario adapter", () => {
   it("builds a barycentric static star/planet/moon state with a numeric TDB epoch", () => {
     const scenario = buildScientificScenarioV5FromSystemParams({
@@ -106,7 +140,7 @@ describe("V5 SystemParams scenario adapter", () => {
     expect(rounded.bodies).toEqual(exact.bodies);
   });
 
-  it("fails closed for providers, inconsistent periods, missing masses, and unsupported dynamics", () => {
+  it("fails closed for providers, inconsistent periods, and missing masses", () => {
     const providerSystem = generalSystem();
     const staticPlanetOrbit = providerSystem.planet.orbit as OrbitElements;
     providerSystem.planet.orbit = () => staticPlanetOrbit;
@@ -125,11 +159,85 @@ describe("V5 SystemParams scenario adapter", () => {
     expect(() =>
       buildScientificScenarioV5FromSystemParams({ system: missingMass, binaryMode: false }),
     ).toThrow(/moon.m/);
+  });
 
-    const unsupported = generalSystem();
-    unsupported.dynamics = { relativity: { enabled: true } };
-    expect(() =>
-      buildScientificScenarioV5FromSystemParams({ system: unsupported, binaryMode: false }),
-    ).toThrow(ScienceValidationError);
+  it("rejects active browser N-body dynamics and enabled perturbers", () => {
+    expectDynamicsFailure((system) => {
+      system.dynamics = { nbodyPlanetMoon: { enabled: true } };
+    }, "an already-active browser N-body state is unsupported.");
+    expectDynamicsFailure((system) => {
+      system.dynamics = { nbodyPlanetMoon: { perturbers: [{ enabled: true }] } };
+    }, "additional N-body perturbers are unsupported.");
+    expectDynamicsFailure((system) => {
+      system.dynamics = { nbodyPlanetMoon: { perturbers: [{}] } };
+    }, "additional N-body perturbers are unsupported.");
+  });
+
+  it("rejects active relativity and secular dynamics", () => {
+    expectDynamicsFailure((system) => {
+      system.dynamics = { relativity: { enabled: true } };
+    }, "relativistic browser dynamics are unsupported.");
+    expectDynamicsFailure((system) => {
+      system.dynamics = { secular: { enabled: true } };
+    }, "secular browser dynamics are unsupported.");
+  });
+
+  it("rejects time-dependent exomoon orientation and sky-plane drift", () => {
+    for (const [field, value] of exomoonTimingControls) {
+      expectDynamicsFailure((system) => {
+        const timing: ExomoonTimingShape = { enabled: true };
+        timing[field] = value;
+        system.dynamics = { exomoonTimingShape: timing };
+      }, "time-dependent exomoon orientation or sky-plane drift is unsupported.");
+    }
+  });
+
+  it("rejects enabled tides for every body", () => {
+    for (const path of ["star", "planet", "moon"] as const) {
+      expectDynamicsFailure((system) => {
+        system[path]!.tides = { enabled: true };
+      }, `${path}.tides is unsupported.`);
+    }
+  });
+
+  it("rejects nonzero and nonfinite J2 for every body", () => {
+    for (const path of ["star", "planet", "moon"] as const) {
+      for (const j2 of [0.001, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+        expectDynamicsFailure((system) => {
+          system[path]!.gravityHarmonics = { J2: j2 };
+        }, `${path}.gravityHarmonics.J2 is unsupported.`);
+      }
+    }
+  });
+
+  it("allows disabled browser dynamics and zero-valued unsupported controls", () => {
+    const system = generalSystem();
+    system.dynamics = {
+      nbodyPlanetMoon: { enabled: false, perturbers: [{ enabled: false }] },
+      relativity: { enabled: false },
+      secular: { enabled: false },
+      exomoonTimingShape: {
+        enabled: true,
+        moonOmegaDot: 0,
+        moonIncDot: 0,
+        moonOmegaSmallDot: 0,
+        moonImpactYDot: 0,
+      },
+    };
+    for (const path of ["star", "planet", "moon"] as const) {
+      system[path]!.tides = { enabled: false };
+      system[path]!.gravityHarmonics = { J2: 0 };
+    }
+
+    expect(() => buildScientificScenarioV5FromSystemParams({ system, binaryMode: false })).not.toThrow();
+  });
+
+  it("allows nonzero exomoon timing controls when timing is disabled", () => {
+    const system = generalSystem();
+    const timing: ExomoonTimingShape = { enabled: false };
+    for (const [field, value] of exomoonTimingControls) timing[field] = value;
+    system.dynamics = { exomoonTimingShape: timing };
+
+    expect(() => buildScientificScenarioV5FromSystemParams({ system, binaryMode: false })).not.toThrow();
   });
 });

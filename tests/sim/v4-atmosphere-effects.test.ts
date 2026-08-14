@@ -6,6 +6,11 @@ import { cloneParams, SCENARIO_DEFAULTS } from "../../src/app/scenario";
 import { migrateSystemParamsToV4 } from "../../src/sim/v4";
 import { createSimulationV4 } from "../../src/sim/v4/runtime";
 
+// These correctness scans synchronously evaluate 1,201 orbital samples. V8
+// coverage is substantially slower, so use a bounded budget above the normal
+// runner default without weakening assertions or changing the sample grid.
+const ATMOSPHERE_EFFECTS_TIMEOUT_MS = 120_000;
+
 function findExtremeSample(args: {
   periodSec: number;
   metric: (step: ReturnType<ReturnType<typeof createSimulationV4>["step"]>) => number;
@@ -85,135 +90,143 @@ it("legacy atmosphereTransmission changes the native V4 transit depth", async ()
 
 // These dense spectral scans remain bounded but cross Vitest's 5 s default
 // under V8 coverage instrumentation on slower runners.
-it("band weighting changes the V4 atmosphereRT transit signal when molecular features are present", async () => {
-  const featureWeighted = cloneParams(SCENARIO_DEFAULTS);
-  delete featureWeighted.moon;
-  featureWeighted.planet.orbit = {
-    a: 1.2e10,
-    e: 0,
-    inc: Math.PI / 2,
-    Omega: 0,
-    omega: 0,
-    period: 3.2e5,
-    t0: 0,
-  };
-  featureWeighted.star.photometry = {
-    ...featureWeighted.star.photometry,
-    phaseCurve: undefined,
-    moonPhaseCurve: undefined,
-    forwardScattering: undefined,
-    ringScattering: undefined,
-    stellarVariability: undefined,
-    atmosphereTransmission: undefined,
-    spectralBandpass: {
-      enabled: true,
-      lambdaNm: [500, 589, 760],
-      weights: [0.2, 0.7, 0.1],
-    },
-    atmosphereRT: {
-      enabled: true,
-      target: "planet",
-      lambdaRefNm: 589,
-      layers: [{ r0: featureWeighted.planet.r, H: 1.5e7, tau0: 0.8, alpha: 0.25 }],
-      molecularFeatures: {
+it(
+  "band weighting changes the V4 atmosphereRT transit signal when molecular features are present",
+  async () => {
+    const featureWeighted = cloneParams(SCENARIO_DEFAULTS);
+    delete featureWeighted.moon;
+    featureWeighted.planet.orbit = {
+      a: 1.2e10,
+      e: 0,
+      inc: Math.PI / 2,
+      Omega: 0,
+      omega: 0,
+      period: 3.2e5,
+      t0: 0,
+    };
+    featureWeighted.star.photometry = {
+      ...featureWeighted.star.photometry,
+      phaseCurve: undefined,
+      moonPhaseCurve: undefined,
+      forwardScattering: undefined,
+      ringScattering: undefined,
+      stellarVariability: undefined,
+      atmosphereTransmission: undefined,
+      spectralBandpass: {
         enabled: true,
-        centerNm: [589],
-        widthNm: [12],
-        strength: [1.8],
+        lambdaNm: [500, 589, 760],
+        weights: [0.2, 0.7, 0.1],
       },
-    },
-  };
-
-  const continuumWeighted = cloneParams(featureWeighted);
-  continuumWeighted.star.photometry = {
-    ...continuumWeighted.star.photometry,
-    spectralBandpass: {
-      enabled: true,
-      lambdaNm: [500, 589, 760],
-      weights: [0.1, 0.1, 0.8],
-    },
-  };
-
-  const featureRuntime = createSimulationV4(migrateSystemParamsToV4(featureWeighted));
-  const continuumRuntime = createSimulationV4(migrateSystemParamsToV4(continuumWeighted));
-  await featureRuntime.prepare();
-  await continuumRuntime.prepare();
-
-  const center = findExtremeSample({
-    periodSec: featureWeighted.planet.orbit.period,
-    metric: (step) => step.flux.transitFactor,
-    mode: "min",
-    stepAt: (tSec) => featureRuntime.step(tSec),
-  });
-  const featureStep = featureRuntime.step(center.tSec);
-  const continuumStep = continuumRuntime.step(center.tSec);
-
-  expect(Math.abs(featureStep.flux.transitFactor - continuumStep.flux.transitFactor)).toBeGreaterThan(1e-5);
-}, 30_000);
-
-it("adds the configured atmosphereRT refraction term into the V4 plotted total flux", async () => {
-  const refractive = cloneParams(SCENARIO_DEFAULTS);
-  delete refractive.moon;
-  refractive.planet.orbit = {
-    a: 1.2e10,
-    e: 0,
-    inc: Math.PI / 2,
-    Omega: 0,
-    omega: 0,
-    period: 3.2e5,
-    t0: 0,
-  };
-  refractive.star.photometry = {
-    ...refractive.star.photometry,
-    phaseCurve: undefined,
-    moonPhaseCurve: undefined,
-    forwardScattering: undefined,
-    ringScattering: undefined,
-    stellarVariability: undefined,
-    atmosphereTransmission: undefined,
-    spectralBandpass: {
-      enabled: true,
-      lambdaNm: [450, 550, 750],
-      weights: [0.25, 0.5, 0.25],
-    },
-    atmosphereRT: {
-      enabled: true,
-      target: "planet",
-      lambdaRefNm: 550,
-      layers: [{ r0: refractive.planet.r, H: 1.2e7, tau0: 0.35 }],
-      refraction: {
+      atmosphereRT: {
         enabled: true,
-        amp: 0.0016,
-        width: 4.5e7,
-        chromaticSlope: 0.6,
+        target: "planet",
+        lambdaRefNm: 589,
+        layers: [{ r0: featureWeighted.planet.r, H: 1.5e7, tau0: 0.8, alpha: 0.25 }],
+        molecularFeatures: {
+          enabled: true,
+          centerNm: [589],
+          widthNm: [12],
+          strength: [1.8],
+        },
       },
-    },
-  };
+    };
 
-  const baseline = cloneParams(refractive);
-  baseline.star.photometry = {
-    ...baseline.star.photometry,
-    atmosphereRT: {
-      ...baseline.star.photometry!.atmosphereRT!,
-      refraction: { ...baseline.star.photometry!.atmosphereRT!.refraction!, enabled: false },
-    },
-  };
+    const continuumWeighted = cloneParams(featureWeighted);
+    continuumWeighted.star.photometry = {
+      ...continuumWeighted.star.photometry,
+      spectralBandpass: {
+        enabled: true,
+        lambdaNm: [500, 589, 760],
+        weights: [0.1, 0.1, 0.8],
+      },
+    };
 
-  const refractiveRuntime = createSimulationV4(migrateSystemParamsToV4(refractive));
-  const baselineRuntime = createSimulationV4(migrateSystemParamsToV4(baseline));
-  await refractiveRuntime.prepare();
-  await baselineRuntime.prepare();
+    const featureRuntime = createSimulationV4(migrateSystemParamsToV4(featureWeighted));
+    const continuumRuntime = createSimulationV4(migrateSystemParamsToV4(continuumWeighted));
+    await featureRuntime.prepare();
+    await continuumRuntime.prepare();
 
-  const peak = findExtremeSample({
-    periodSec: refractive.planet.orbit.period,
-    metric: (step) => step.flux.refraction ?? 0,
-    mode: "max",
-    stepAt: (tSec) => refractiveRuntime.step(tSec),
-  });
-  const refractiveStep = refractiveRuntime.step(peak.tSec);
-  const baselineStep = baselineRuntime.step(peak.tSec);
+    const center = findExtremeSample({
+      periodSec: featureWeighted.planet.orbit.period,
+      metric: (step) => step.flux.transitFactor,
+      mode: "min",
+      stepAt: (tSec) => featureRuntime.step(tSec),
+    });
+    const featureStep = featureRuntime.step(center.tSec);
+    const continuumStep = continuumRuntime.step(center.tSec);
 
-  expect(refractiveStep.flux.refraction).toBeGreaterThan(0);
-  expect(refractiveStep.flux.decomposition?.refraction).toBe(refractiveStep.flux.refraction);
-  expect(refractiveStep.flux.total).toBeGreaterThan(baselineStep.flux.total);
-}, 30_000);
+    expect(Math.abs(featureStep.flux.transitFactor - continuumStep.flux.transitFactor)).toBeGreaterThan(1e-5);
+  },
+  ATMOSPHERE_EFFECTS_TIMEOUT_MS,
+);
+
+it(
+  "adds the configured atmosphereRT refraction term into the V4 plotted total flux",
+  async () => {
+    const refractive = cloneParams(SCENARIO_DEFAULTS);
+    delete refractive.moon;
+    refractive.planet.orbit = {
+      a: 1.2e10,
+      e: 0,
+      inc: Math.PI / 2,
+      Omega: 0,
+      omega: 0,
+      period: 3.2e5,
+      t0: 0,
+    };
+    refractive.star.photometry = {
+      ...refractive.star.photometry,
+      phaseCurve: undefined,
+      moonPhaseCurve: undefined,
+      forwardScattering: undefined,
+      ringScattering: undefined,
+      stellarVariability: undefined,
+      atmosphereTransmission: undefined,
+      spectralBandpass: {
+        enabled: true,
+        lambdaNm: [450, 550, 750],
+        weights: [0.25, 0.5, 0.25],
+      },
+      atmosphereRT: {
+        enabled: true,
+        target: "planet",
+        lambdaRefNm: 550,
+        layers: [{ r0: refractive.planet.r, H: 1.2e7, tau0: 0.35 }],
+        refraction: {
+          enabled: true,
+          amp: 0.0016,
+          width: 4.5e7,
+          chromaticSlope: 0.6,
+        },
+      },
+    };
+
+    const baseline = cloneParams(refractive);
+    baseline.star.photometry = {
+      ...baseline.star.photometry,
+      atmosphereRT: {
+        ...baseline.star.photometry!.atmosphereRT!,
+        refraction: { ...baseline.star.photometry!.atmosphereRT!.refraction!, enabled: false },
+      },
+    };
+
+    const refractiveRuntime = createSimulationV4(migrateSystemParamsToV4(refractive));
+    const baselineRuntime = createSimulationV4(migrateSystemParamsToV4(baseline));
+    await refractiveRuntime.prepare();
+    await baselineRuntime.prepare();
+
+    const peak = findExtremeSample({
+      periodSec: refractive.planet.orbit.period,
+      metric: (step) => step.flux.refraction ?? 0,
+      mode: "max",
+      stepAt: (tSec) => refractiveRuntime.step(tSec),
+    });
+    const refractiveStep = refractiveRuntime.step(peak.tSec);
+    const baselineStep = baselineRuntime.step(peak.tSec);
+
+    expect(refractiveStep.flux.refraction).toBeGreaterThan(0);
+    expect(refractiveStep.flux.decomposition?.refraction).toBe(refractiveStep.flux.refraction);
+    expect(refractiveStep.flux.total).toBeGreaterThan(baselineStep.flux.total);
+  },
+  ATMOSPHERE_EFFECTS_TIMEOUT_MS,
+);

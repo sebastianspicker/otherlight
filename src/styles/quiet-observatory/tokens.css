@@ -208,33 +208,8 @@ pre {
     --signal: #d39a32;
     --signal-soft: #3a3018;
     --world-soft: #1c2a42;
-    --bg-1: var(--shell);
-    --bg-2: var(--shell);
-    --bg-3: var(--shell-deep);
-    --panel: var(--surface);
-    --panel-strong: var(--surface);
-    --panel2: var(--surface-soft);
-    --text-secondary: var(--text-2);
-    --muted: var(--text-3);
-    --stroke: var(--border);
-    --stroke2: var(--border-soft);
-    --accent: var(--action);
-    --accent-dim: var(--action-soft);
     --accent-2: #ffd27a;
-    --accent-2-dim: var(--signal-soft);
-    --instrument-bg: var(--shell);
     --instrument-bg-deep: #10171b;
-    --instrument-surface: var(--surface);
-    --instrument-surface-raised: var(--surface);
-    --instrument-surface-soft: var(--surface-soft);
-    --instrument-text: var(--text);
-    --instrument-text-secondary: var(--text-2);
-    --instrument-text-muted: var(--text-3);
-    --instrument-accent: var(--action);
-    --instrument-accent-hover: var(--action-hover);
-    --instrument-accent-soft: var(--action-soft);
-    --instrument-border: var(--border);
-    --instrument-border-soft: var(--border-soft);
 
     color-scheme: dark;
   }

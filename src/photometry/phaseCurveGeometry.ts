@@ -5,7 +5,7 @@ import type { DayNightVisibilityParams } from "../core/types";
 import { vIsFinite, vLen } from "../physics/vec3";
 import type { ReflectedPhaseModel, ThermalPhaseModel } from "./dayNightVisibility";
 import { phaseAngleRadFromBodyPos } from "./dayNightVisibility";
-import type { BodyPhaseFluxParams, NormalizedPhaseCurveModel } from "./phaseCurve";
+import type { BodyPhaseFluxParams, NormalizedPhaseCurveModel } from "./phaseCurveTypes";
 
 export function bodyPhaseAlpha(params: BodyPhaseFluxParams): number | undefined {
   if (!vIsFinite(params.rBody) || !vIsFinite(params.observerDir)) return undefined;

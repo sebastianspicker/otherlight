@@ -3,6 +3,8 @@
 
 import { expect, it } from "vitest";
 import { LightCurvePlot } from "../../src/render/canvas2d";
+import { drawComparisonInset } from "../../src/render/lightCurvePlotAnnotations";
+import type { TimeScaleInfo } from "../../src/render/lightCurvePlotAxes";
 import type {
   LightCurveHistoryState,
   ResolvedLightCurvePlotOptions,
@@ -33,6 +35,99 @@ function visibleTimeDomain(
   const { state, opts } = plotInternals(plot);
   return getVisibleTimeDomain(state, opts, start, end);
 }
+
+it("draws only finite, in-range comparison inset samples with balanced canvas state", () => {
+  const operations: string[] = [];
+  const points: Array<[number, number]> = [];
+  let strokeStyle = "";
+  const ctx = {
+    save: () => operations.push("save"),
+    restore: () => operations.push("restore"),
+    beginPath: () => operations.push("beginPath"),
+    moveTo: (x: number, y: number) => {
+      operations.push("moveTo");
+      points.push([x, y]);
+    },
+    lineTo: (x: number, y: number) => {
+      operations.push("lineTo");
+      points.push([x, y]);
+    },
+    stroke: () => operations.push("stroke"),
+    fillRect: (x: number, y: number, w: number, h: number) => operations.push(`fillRect:${x},${y},${w},${h}`),
+    strokeRect: (x: number, y: number, w: number, h: number) =>
+      operations.push(`strokeRect:${x},${y},${w},${h}`),
+    fillText: (text: string) => operations.push(`fillText:${text}`),
+    get strokeStyle() {
+      return strokeStyle;
+    },
+    set strokeStyle(value: string) {
+      strokeStyle = value;
+      operations.push(`strokeStyle:${value}`);
+    },
+  } as unknown as CanvasRenderingContext2D;
+  const timeInfo: TimeScaleInfo = {
+    haveTime: true,
+    allFiniteTime: true,
+    tMin: 0,
+    tMax: 10,
+    tSpan: 10,
+    timeScale: 1,
+    xTimeOffset: 0,
+    plotW: 1000,
+    marginLeft: 10,
+  };
+
+  drawComparisonInset({
+    ctx,
+    inset: {
+      title: "A/B delta",
+      series: [
+        {
+          label: "first",
+          color: "#first",
+          samples: [
+            { t: -1, flux: 0 },
+            { t: 0, flux: 1 },
+            { t: 10, flux: 2 },
+            { t: 11, flux: 3 },
+            { t: 5, flux: Number.NaN },
+          ],
+        },
+        { label: "second", color: "#second", samples: [{ t: 5, flux: 1.5 }] },
+      ],
+    },
+    marginLeft: 10,
+    marginTop: 20,
+    plotW: 1000,
+    plotH: 1000,
+    timeInfo,
+  });
+
+  expect(operations).toContain("fillRect:760,924,240,86");
+  expect(operations).toContain("strokeRect:760,924,240,86");
+  expect(operations).toContain("fillText:A/B delta");
+  expect(operations.filter((operation) => operation === "save")).toHaveLength(3);
+  expect(operations.filter((operation) => operation === "restore")).toHaveLength(3);
+  expect(operations.filter((operation) => operation === "stroke")).toHaveLength(2);
+  expect(operations.filter((operation) => operation === "strokeStyle:#first")).toHaveLength(1);
+  expect(operations.filter((operation) => operation === "strokeStyle:#second")).toHaveLength(1);
+  expect(points).toHaveLength(3);
+  expect(points[0][0]).toBe(760);
+  expect(points[1][0]).toBe(1000);
+  expect(points[2][0]).toBe(880);
+
+  operations.length = 0;
+  drawComparisonInset({
+    ctx,
+    inset: { title: "no time", series: [{ label: "ignored", color: "#000", samples: [{ t: 0, flux: 1 }] }] },
+    marginLeft: 10,
+    marginTop: 20,
+    plotW: 1000,
+    plotH: 1000,
+    timeInfo: { ...timeInfo, haveTime: false },
+  });
+  expect(operations).toEqual([]);
+});
 
 it("is exported as a constructor function", () => {
   expect(typeof LightCurvePlot).toBe("function");

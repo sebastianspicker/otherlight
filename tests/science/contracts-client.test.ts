@@ -201,6 +201,64 @@ describe("V5 scientific contract", () => {
     ).toThrow(/less than one/);
   });
 
+  it.each([
+    ["whitespace", "   ", false],
+    ["128 ASCII code points", "a".repeat(128), true],
+    ["129 ASCII code points", "a".repeat(129), false],
+    ["128 combining code points", "e\u0301".repeat(64), true],
+    ["130 combining code points", "e\u0301".repeat(65), false],
+    ["128 emoji code points", "😀".repeat(128), true],
+    ["129 emoji code points", "😀".repeat(129), false],
+  ])("enforces V5 identifier bounds for scenario.id: %s", (_label, id, isValid) => {
+    const candidate = { ...scenario, id };
+    if (isValid) {
+      expect(() => assertScientificScenarioV5(candidate)).not.toThrow();
+    } else {
+      expect(() => assertScientificScenarioV5(candidate)).toThrow(/scenario.id/);
+    }
+  });
+
+  it.each([
+    ["whitespace", "   ", false],
+    ["128 ASCII code points", "a".repeat(128), true],
+    ["129 ASCII code points", "a".repeat(129), false],
+    ["128 combining code points", "e\u0301".repeat(64), true],
+    ["130 combining code points", "e\u0301".repeat(65), false],
+    ["128 emoji code points", "😀".repeat(128), true],
+    ["129 emoji code points", "😀".repeat(129), false],
+  ])("enforces V5 identifier bounds for body.id: %s", (_label, id, isValid) => {
+    const bodies = scenario.bodies.map((body, index) => (index === 0 ? { ...body, id } : body));
+    const candidate = { ...scenario, bodies, observer: { ...scenario.observer, targetBodyId: id } };
+    if (isValid) {
+      expect(() => assertScientificScenarioV5(candidate)).not.toThrow();
+    } else {
+      expect(() => assertScientificScenarioV5(candidate)).toThrow(/scenario\.bodies\[0\]\.id/);
+    }
+  });
+
+  it.each([
+    ["whitespace", "   ", false],
+    ["128 ASCII code points", "a".repeat(128), true],
+    ["129 ASCII code points", "a".repeat(129), false],
+    ["128 combining code points", "e\u0301".repeat(64), true],
+    ["130 combining code points", "e\u0301".repeat(65), false],
+    ["128 emoji code points", "😀".repeat(128), true],
+    ["129 emoji code points", "😀".repeat(129), false],
+  ])("enforces V5 identifier bounds for observer.targetBodyId: %s", (_label, id, isValid) => {
+    const candidate = isValid
+      ? {
+          ...scenario,
+          bodies: scenario.bodies.map((body, index) => (index === 0 ? { ...body, id } : body)),
+          observer: { ...scenario.observer, targetBodyId: id },
+        }
+      : { ...scenario, observer: { ...scenario.observer, targetBodyId: id } };
+    if (isValid) {
+      expect(() => assertScientificScenarioV5(candidate)).not.toThrow();
+    } else {
+      expect(() => assertScientificScenarioV5(candidate)).toThrow(/scenario.observer.targetBodyId/);
+    }
+  });
+
   it("accepts only the implemented radial-velocity HTTP output", () => {
     expect(() => assertScienceJobRequest({ ...forwardRequest, outputs: ["photometry"] })).toThrow(
       /radial-velocity/,

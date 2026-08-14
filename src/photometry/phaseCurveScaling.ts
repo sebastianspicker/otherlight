@@ -3,7 +3,11 @@
  */
 import { clamp01, isFiniteNumber } from "../core/units";
 import { vLen } from "../physics/vec3";
-import type { BodyPhaseFluxParams, NormalizedPhaseCurveModel, NormalizedThermalInertia } from "./phaseCurve";
+import type {
+  BodyPhaseFluxParams,
+  NormalizedPhaseCurveModel,
+  NormalizedThermalInertia,
+} from "./phaseCurveTypes";
 
 type PhaseCurveScales = {
   reflScale: number;

@@ -40,7 +40,7 @@ it("keeps tauScale aligned with lambda samples after lambda filtering", () => {
   expect(f).toBeGreaterThan(0.99);
 });
 
-it("caps oversized legacy spectral grids at the transit solver boundary", () => {
+it("retains a tail opacity feature when an oversized legacy spectral grid is budgeted", () => {
   const lambdaNm = Array.from({ length: MAX_SPECTRAL_SAMPLES + 24 }, (_, i) => 500 + i);
   const tauScale = lambdaNm.map((_, i) => (i < MAX_SPECTRAL_SAMPLES ? 0 : 8));
 
@@ -66,7 +66,7 @@ it("caps oversized legacy spectral grids at the transit solver boundary", () => 
     },
   };
 
-  const truncated: SystemParams = {
+  const prefixOnly: SystemParams = {
     ...base,
     star: {
       ...base.star,
@@ -88,9 +88,61 @@ it("caps oversized legacy spectral grids at the transit solver boundary", () => 
     planetSky: { x: 0.12, y: 0, z: 1 },
   };
 
+  const fullGridFlux = computeTransitFlux(base, [], kin as any);
+  const prefixOnlyFlux = computeTransitFlux(prefixOnly, [], kin as any);
+
+  // The tail has strong absorption. Sampling only the first 256 values would make these equal.
+  expect(fullGridFlux).toBeLessThan(prefixOnlyFlux - 1e-4);
+});
+
+it("is invariant to spectral sample order when wavelength and tau pairs are reversed", () => {
+  const lambdaNm = Array.from({ length: MAX_SPECTRAL_SAMPLES + 48 }, (_, index) => 450 + index * 2);
+  const tauScale = lambdaNm.map((_, index) => (index % 29 === 0 ? 6 : index % 7 === 0 ? 0.5 : 1));
+  const base: SystemParams = {
+    star: {
+      r: 1,
+      photometry: {
+        gridRes: 64,
+        atmosphereTransmission: {
+          enabled: true,
+          kind: "exponential-halo",
+          target: "planet",
+          tau0: 3,
+          H: 0.15,
+          lambdaNm,
+          tauScale,
+        },
+      },
+    },
+    planet: {
+      r: 0.14,
+      orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 1, t0: 0 },
+    },
+  };
+  const reversed: SystemParams = {
+    ...base,
+    star: {
+      ...base.star,
+      photometry: {
+        ...base.star.photometry,
+        atmosphereTransmission: {
+          ...base.star.photometry!.atmosphereTransmission!,
+          lambdaNm: [...lambdaNm].reverse(),
+          tauScale: [...tauScale].reverse(),
+        },
+      },
+    },
+  };
+  const kin = {
+    planetOrbit: base.planet.orbit as any,
+    rBary: { x: 0, y: 0, z: 0 },
+    rPlanetAbs: { x: 0, y: 0, z: 0 },
+    planetSky: { x: 0.1, y: 0, z: 1 },
+  };
+
   expect(computeTransitFlux(base, [], kin as any)).toBeCloseTo(
-    computeTransitFlux(truncated, [], kin as any),
-    8,
+    computeTransitFlux(reversed, [], kin as any),
+    12,
   );
 });
 

@@ -22,6 +22,24 @@ function loadQuietObservatoryCss(): string {
     .join("\n");
 }
 
+/** Reads the public-alpha import hub with its local structural modules. */
+function loadPublicAlphaCss(): string {
+  const hub = readOptional(join(root, "src/styles/public-alpha.css"));
+  const moduleDir = join(root, "src/styles/public-alpha");
+  if (!existsSync(moduleDir)) return hub;
+  return [
+    hub,
+    ...[
+      "foundations.css",
+      "header-context.css",
+      "workspace.css",
+      "figures-controls.css",
+      "responsive.css",
+      "dark-theme.css",
+    ].map((name) => readFileSync(join(moduleDir, name), "utf8")),
+  ].join("\n");
+}
+
 /** Structural cascade + final instrument + Quiet Observatory modules. */
 function loadStyleCascade(): string {
   const core = [
@@ -114,7 +132,7 @@ describe("Quiet Observatory hybrid surface markers", () => {
   });
 
   it("does not require full-dark-only public chrome as the product default", () => {
-    const publicAlpha = readFileSync(join(root, "src/styles/public-alpha.css"), "utf8");
+    const publicAlpha = loadPublicAlphaCss();
     const design = JSON.parse(
       readFileSync(join(root, "docs/design/quiet-observatory.tokens.json"), "utf8"),
     ) as {

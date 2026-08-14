@@ -40,6 +40,103 @@ function makeSystem(): SystemParams {
   };
 }
 
+function phaseOnlySystem(
+  reflAmp: number,
+  thermAmp: number,
+  constant: number,
+  rtEnabled: boolean,
+): SystemParams {
+  return {
+    observer: { dir: { x: 0, y: 0, z: 1 } },
+    star: {
+      r: 1,
+      photometry: {
+        phaseCurve: {
+          enabled: true,
+          reflAmp,
+          thermAmp,
+          constant,
+          physicalScaling: false,
+        },
+        spectralBandpass: {
+          enabled: true,
+          lambdaNm: [450, 700],
+          weights: [0.5, 0.5],
+        },
+        atmosphereRT: {
+          enabled: true,
+          target: "planet",
+          lambdaRefNm: 550,
+          scattering: { enabled: true, gain: 1.5, g: 0.6 },
+        },
+      },
+    },
+    planet: {
+      r: 0.1,
+      orbit: { a: 1, e: 0, inc: 0, Omega: 0, omega: 0, period: 10, t0: 0 },
+    },
+    dynamics: {
+      fidelityProfile: "interactive",
+      physicsFeatures: { atmosphereRT: rtEnabled },
+    },
+  };
+}
+
+const phaseOnlyKinematics = {
+  rBary: { x: 0, y: 0, z: 0 },
+  rPlanetAbs: { x: 1, y: 0, z: 0 },
+  planetSky: { x: 0, y: 0, z: 1 },
+};
+
+function phaseOnlyFlux(system: SystemParams): number {
+  return computeAdditiveFluxComponents(system, 0, { x: 0, y: 0, z: 1 }, {
+    ...phaseOnlyKinematics,
+    planetOrbit: system.planet.orbit as any,
+  } as any).fluxPlanetOnly;
+}
+
+it("gates atmospheric scattering on the atmosphereRT feature flag", () => {
+  const disabled = phaseOnlySystem(0.02, 0, 0, false);
+  const noScattering: SystemParams = {
+    ...disabled,
+    star: {
+      ...disabled.star,
+      photometry: {
+        ...disabled.star.photometry,
+        atmosphereRT: {
+          ...disabled.star.photometry!.atmosphereRT!,
+          scattering: { ...disabled.star.photometry!.atmosphereRT!.scattering!, enabled: false },
+        },
+      },
+    },
+  };
+
+  expect(phaseOnlyFlux(disabled)).toBeCloseTo(phaseOnlyFlux(noScattering), 12);
+});
+
+it("atmospheric scattering scales reflected phase light but not thermal or constant flux", () => {
+  const reflected = phaseOnlySystem(0.02, 0, 0, true);
+  const thermalOnly = phaseOnlySystem(0, 0.02, 0, true);
+  const constantOnly = phaseOnlySystem(0, 0, 0.02, true);
+  const withoutScattering = (system: SystemParams): SystemParams => ({
+    ...system,
+    star: {
+      ...system.star,
+      photometry: {
+        ...system.star.photometry,
+        atmosphereRT: {
+          ...system.star.photometry!.atmosphereRT!,
+          scattering: { ...system.star.photometry!.atmosphereRT!.scattering!, enabled: false },
+        },
+      },
+    },
+  });
+
+  expect(phaseOnlyFlux(reflected)).toBeGreaterThan(phaseOnlyFlux(withoutScattering(reflected)));
+  expect(phaseOnlyFlux(thermalOnly)).toBeCloseTo(phaseOnlyFlux(withoutScattering(thermalOnly)), 12);
+  expect(phaseOnlyFlux(constantOnly)).toBeCloseTo(phaseOnlyFlux(withoutScattering(constantOnly)), 12);
+});
+
 it("keeps forward scattering separate from phase and emission terms", () => {
   const base = makeSystem();
   const kin = {

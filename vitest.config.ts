@@ -6,6 +6,12 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     environment: "node",
     environmentMatchGlobs: [["**/tests/ui/**/*.test.ts", "jsdom"]],
+    // Scientific simulations are CPU-bound. Bound normal runs so parallel
+    // Codex/CI work cannot fan out into one worker per logical CPU.
+    maxWorkers: 2,
+    // Ordinary integration assertions may synchronously evaluate a full orbit.
+    // Longer benchmark-specific limits remain explicit in their test files.
+    testTimeout: 30_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
