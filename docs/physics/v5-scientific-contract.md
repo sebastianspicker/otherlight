@@ -85,9 +85,13 @@ $\lVert\mathbf r_j-\mathbf r_i\rVert>R_i+R_j$. During DOP853 propagation, each
 pair has a terminal event at
 $\lVert\mathbf r_j-\mathbf r_i\rVert-(R_i+R_j)=0$. Contact or a close encounter
 that reaches this boundary fails the run. The derivative rejects any stage
-inside contact, and accepted DOP853 steps are audited using their dense solution
-for an in-and-out pass that would have the same event sign at both step ends. A
-collision-domain violation cannot produce a result with
+inside contact. Every accepted DOP853 dense polynomial is also converted to an
+outward-rounded interval Bernstein form and recursively subdivided until the
+whole step is proven outside contact. The proof is bounded; an unsupported
+dense-output representation, exhausted proof budget, or unresolved interval
+fails closed instead of sampling or minimizing heuristically. This certifies
+the numerical interpolant within its declared tolerances, not an exact physical
+trajectory. A collision-domain violation cannot produce a result with
 `scientificResult = true`. There is no impact, merger, fragmentation, tide,
 softening, rotational multipole, radiation-force, relativity, or light-time
 model beyond this finite-radius validity boundary.

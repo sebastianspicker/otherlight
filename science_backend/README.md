@@ -55,13 +55,13 @@ All routes are under `/v1`.
 
 The only successful HTTP output is `radial-velocity`. A request contains a V5 scenario with two or three finite-radius bodies, barycentric SI Cartesian position and velocity, a positive TDB Julian Date epoch, a target body, a unit line-of-sight vector, DOP853 tolerances, a finite sampling interval, and a seed. The velocity sign is positive for recession. Unknown fields and malformed contracts are rejected.
 
-`GET /capabilities` reports no supported jobs unless the required SciPy integration and minimization entry points and PyArrow IPC writer are available. The service reports these unavailable lanes: photometry research, relativistic timing, parameter inference adapters, atmospheric radiative transfer, and stellar-atmosphere grids.
+`GET /capabilities` reports no supported jobs unless SciPy 1.18.0 exposes the exact DOP853 dense representation required by the collision certificate and the PyArrow IPC writer is available. Version or representation drift fails closed. The service reports these unavailable lanes: photometry research, relativistic timing, parameter inference adapters, atmospheric radiative transfer, and stellar-atmosphere grids.
 
 ## Limits and failure behavior
 
 The default service has one worker, admits at most eight running or queued jobs, and retains the newest 128 terminal job records. A full queue returns `429` with code `job-capacity-exhausted` and `Retry-After: 1`. Evicted terminal jobs return `404`; artifacts remain in the independent content-addressed cache.
 
-Forward jobs are bounded to three bodies, 100,000 samples, 500,000 accepted integration steps, 8,000,000 right-hand-side evaluations, and 60 seconds. Sample times must be finite, unique, and representable as a strictly increasing IEEE-754 grid. Body centres must be non-overlapping initially; a later finite-radius contact fails the job. The service does not model impacts, mergers, tides, rotational multipoles, relativity, radiation forces, softening, or time-scale conversion.
+Forward jobs are bounded to three bodies, 100,000 samples, 500,000 accepted integration steps, 8,000,000 right-hand-side evaluations, and 60 seconds. Sample times must be finite, unique, and representable as a strictly increasing IEEE-754 grid. Body centres must be non-overlapping initially. Each accepted DOP853 dense numerical trajectory is certified outside finite-radius contact with bounded, outward-rounded interval arithmetic; contact or an indeterminate proof fails the job. This is a certificate for the numerical interpolant within its declared tolerances, not the exact physical trajectory. The service does not model impacts, mergers, tides, rotational multipoles, relativity, radiation forces, softening, or time-scale conversion.
 
 The contract requires initial barycentre residuals no larger than `max(1e-3 m, 1e-12 * position scale)` for position and `max(1e-9 m/s, 1e-12 * velocity scale)` for velocity. It accepts only positive masses and radii, and it requires a target body identifier present in the scenario.
 
@@ -74,7 +74,7 @@ From the repository root with the development environment active:
 ```bash
 python -m ruff format --check science_backend
 python -m ruff check science_backend
-python -m pyright science_backend
+python -m pyright --pythonpath "$VIRTUAL_ENV/bin/python" science_backend
 PYTHONPATH=science_backend python -m pytest science_backend/tests
 ```
 

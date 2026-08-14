@@ -18,6 +18,8 @@ export type NBodyState = {
   rM: Vec3;
   vM: Vec3;
   perturbers: NBodyPerturberState[];
+  /** Minimum continuous pair separation audited along the integration path to this state. */
+  minimumEncounterDistance?: number;
 };
 
 export type NBodyPerturberResolved = {

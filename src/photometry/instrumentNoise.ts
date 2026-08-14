@@ -27,7 +27,7 @@
 //     - Deterministic additive systematics/correlated terms may drive fluxPreNoise negative.
 // - Must never throw for normal invalid UI inputs; treat as safe no-op and return input flux.
 
-import { createMulberry32, type PRNG as PRNGPublic } from "./random";
+import { createMulberry32 } from "./random";
 import { applyDetrend, applyElectronNoise, computeDt, isGapSample } from "./instrumentNoiseHelpers";
 import {
   clampMeasuredFlux,
@@ -37,37 +37,9 @@ import {
   updateNoiseMemoryFlags,
 } from "./instrumentNoiseRuntime";
 
-// NOTE: Type lives in core to avoid core -> photometry dependency cycles.
-// Keep re-export for backwards compatibility with existing imports.
-import type { InstrumentNoiseSystematicsParams } from "../core/instrumentNoiseTypes";
-export type { InstrumentNoiseSystematicsParams } from "../core/instrumentNoiseTypes";
-
-export type InstrumentNoiseState = {
-  /** Seed used to (re-)initialize the RNG when requested. */
-  seed: number;
-  rng: PRNGPublic;
-  /** Last sample time [s] seen by applyInstrumentNoiseAndSystematics(). */
-  lastT?: number;
-  /** OU/AR(1) red-noise state (flux units). */
-  ar1?: { x: number };
-  /** 1/f-ish OU bank states. */
-  ar1Bank?: Array<{ x: number; tau: number; weight: number }>;
-  /** Temperature random-walk state (flux units). */
-  tempRW?: number;
-  /** Cached config signature for rebuilding OU bank when user changes settings. */
-  oneOverFSignature?: string;
-  /** Track last correlated-enabled and temperature-enabled for reset-on-disable behavior. */
-  _wasCorrelatedEnabled?: boolean;
-  _wasTempEnabled?: boolean;
-  /** Observer-atmosphere OU state for cloud optical-depth fluctuations. */
-  observerCloudTau?: number;
-  /** Observer-atmosphere OU state for seeing-loss fluctuations. */
-  observerSeeingLoss?: number;
-  /** Observer-atmosphere OU state for telluric optical-depth fluctuations. */
-  observerTelluricTau?: number;
-  /** Measured-flux history for bounded detrending. */
-  detrendHistory?: Array<{ tSec: number; flux: number }>;
-};
+// Keep public type re-exports for backwards compatibility with existing imports.
+import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
+export type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
 
 export function createInstrumentNoiseState(seed = 1): InstrumentNoiseState {
   const rng = createMulberry32(seed);

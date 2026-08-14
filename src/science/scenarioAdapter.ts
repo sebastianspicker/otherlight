@@ -137,31 +137,40 @@ function splitRelativePair(
   ];
 }
 
-function assertSupportedDynamics(system: SystemParams): void {
-  const dynamics = system.dynamics;
+function assertNoActiveNBodyOrPerturbers(dynamics: SystemParams["dynamics"]): void {
   if (dynamics?.nbodyPlanetMoon?.enabled)
     adapterError("an already-active browser N-body state is unsupported.");
   if (dynamics?.nbodyPlanetMoon?.perturbers?.some((body) => body.enabled !== false)) {
     adapterError("additional N-body perturbers are unsupported.");
   }
+}
+
+function assertNoRelativityOrSecularDynamics(dynamics: SystemParams["dynamics"]): void {
   if (dynamics?.relativity?.enabled) adapterError("relativistic browser dynamics are unsupported.");
   if (dynamics?.secular?.enabled) adapterError("secular browser dynamics are unsupported.");
+}
+
+type ExomoonTimingShape = NonNullable<SystemParams["dynamics"]>["exomoonTimingShape"];
+
+function hasActiveExomoonTimingEvolution(timing: ExomoonTimingShape): boolean {
+  return [timing?.moonOmegaDot, timing?.moonIncDot, timing?.moonOmegaSmallDot, timing?.moonImpactYDot].some(
+    (value) => typeof value === "number" && value !== 0,
+  );
+}
+
+function hasInitialExomoonOrientation(timing: ExomoonTimingShape): boolean {
+  return [timing?.moonOmega0, timing?.moonInc0, timing?.moonOmegaSmall0].some((value) => value !== undefined);
+}
+
+function assertNoTimeDependentExomoonTiming(dynamics: SystemParams["dynamics"]): void {
   const timing = dynamics?.exomoonTimingShape;
-  const activeTimingEvolution = [
-    timing?.moonOmegaDot,
-    timing?.moonIncDot,
-    timing?.moonOmegaSmallDot,
-    timing?.moonImpactYDot,
-  ].some((value) => typeof value === "number" && value !== 0);
-  if (
-    timing?.enabled &&
-    (activeTimingEvolution ||
-      timing.moonOmega0 !== undefined ||
-      timing.moonInc0 !== undefined ||
-      timing.moonOmegaSmall0 !== undefined)
-  ) {
+  if (!timing?.enabled) return;
+  if (hasActiveExomoonTimingEvolution(timing) || hasInitialExomoonOrientation(timing)) {
     adapterError("time-dependent exomoon orientation or sky-plane drift is unsupported.");
   }
+}
+
+function assertNoBodyTidesOrJ2(system: SystemParams): void {
   for (const [path, body] of [
     ["star", system.star],
     ["planet", system.planet],
@@ -173,6 +182,14 @@ function assertSupportedDynamics(system: SystemParams): void {
       adapterError(`${path}.gravityHarmonics.J2 is unsupported.`);
     }
   }
+}
+
+function assertSupportedDynamics(system: SystemParams): void {
+  const dynamics = system.dynamics;
+  assertNoActiveNBodyOrPerturbers(dynamics);
+  assertNoRelativityOrSecularDynamics(dynamics);
+  assertNoTimeDependentExomoonTiming(dynamics);
+  assertNoBodyTidesOrJ2(system);
 }
 
 function observerLineOfSight(system: SystemParams): Vector3 {

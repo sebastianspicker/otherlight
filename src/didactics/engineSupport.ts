@@ -178,150 +178,182 @@ export function buildCheckStatusText(
  * Map the current lesson, check results, and numeric signals to a structured
  * {@link DidacticInterpretation} with a headline, observation sentence, and next action.
  */
+type InterpretationEvaluation = ReturnType<typeof evaluateChecks>;
+
+function interpretKepler(
+  evalResult: InterpretationEvaluation,
+  signals: NumericSignals,
+): DidacticInterpretation {
+  if (!Number.isFinite(signals.bPlanet)) {
+    return {
+      headline: "There is no front-of-star planet transit yet.",
+      observation: "The current observer/chord geometry does not produce a valid planet impact parameter.",
+      nextAction: "Raise the planet inclination until the planet crosses the visible stellar disk.",
+    };
+  }
+  if (evalResult.stepId === "kepler-step-1") {
+    return signals.bPlanet <= 0.2
+      ? {
+          headline: "You reached a near-central transit.",
+          observation: `The planet impact parameter is ${signals.bPlanet.toFixed(2)}, so the chord stays close to the stellar center.`,
+          nextAction: "Keep this geometry and now compare the physical depth against (Rp/R*)^2.",
+        }
+      : {
+          headline: "The transit is still too grazing.",
+          observation: `The current impact parameter is ${signals.bPlanet.toFixed(2)}, so the chord is still too far from the center.`,
+          nextAction: "Increase planet inclination to push the chord inward.",
+        };
+  }
+  return Math.abs(signals.depthObserved - signals.depthApprox) <= 0.2
+    ? {
+        headline: "Geometry and depth now tell the same story.",
+        observation: `The physical depth ${signals.depthObserved.toFixed(3)} is close to the geometric estimate ${signals.depthApprox.toFixed(3)}.`,
+        nextAction:
+          "Use ingress and egress to explain why central transits best match the simple radius-ratio formula.",
+      }
+    : {
+        headline: "The depth still disagrees with the simple radius-ratio estimate.",
+        observation: `Observed depth ${signals.depthObserved.toFixed(3)} differs from the geometric estimate ${signals.depthApprox.toFixed(3)}.`,
+        nextAction:
+          "Inspect whether the chord is grazing or whether limb darkening is changing the occulted brightness.",
+      };
+}
+
+function interpretExomoon(
+  evalResult: InterpretationEvaluation,
+  signals: NumericSignals,
+): DidacticInterpretation {
+  if (evalResult.stepId === "exomoon-step-1") {
+    return Number.isFinite(signals.bMoon) && signals.bMoon <= 1.1
+      ? {
+          headline: "The moon is now in front-of-star geometry.",
+          observation: `The moon impact parameter is ${signals.bMoon.toFixed(2)}, so the moon can contribute its own transit feature.`,
+          nextAction:
+            "Now separate the moon timing from the planet timing so the moon feature becomes readable.",
+        }
+      : {
+          headline: "The moon is still missing the stellar disk.",
+          observation: "Its projected chord is still too tilted or too far from the visible stellar disk.",
+          nextAction: "Reduce moon inclination until the moon also crosses in front of the star.",
+        };
+  }
+  return Number.isFinite(signals.moonLeadLagSec) && Math.abs(signals.moonLeadLagSec) >= 600
+    ? {
+        headline: "The moon signal is no longer buried inside the planet dip.",
+        observation: `The moon transit center is offset from the planet by ${signals.moonLeadLagSec.toFixed(0)} s.`,
+        nextAction:
+          "Compare moon-on versus moon-off to identify which shoulder or dip belongs to the moon alone.",
+      }
+    : {
+        headline: "The moon signal still overlaps too strongly with the planet transit.",
+        observation:
+          "The moon and planet are still transiting too close together in time to separate cleanly.",
+        nextAction: "Increase moon spacing so the moon leads or trails the planet more clearly.",
+      };
+}
+
+function interpretBinary(
+  evalResult: InterpretationEvaluation,
+  signals: NumericSignals,
+): DidacticInterpretation {
+  if (evalResult.stepId === "binary-step-1") {
+    return signals.combinedFluxDrop >= 0.01
+      ? {
+          headline: "The combined light curve now shows a readable stellar eclipse.",
+          observation: `The total binary flux drops by ${(signals.combinedFluxDrop * 100).toFixed(1)}% from the combined baseline.`,
+          nextAction:
+            "Use the eclipse chord and the reveal-sky step to decide whether the event is central or grazing.",
+        }
+      : {
+          headline: "The binary eclipse is still too shallow to teach from cleanly.",
+          observation:
+            "The combined stellar flux has not dropped enough yet to make the eclipse morphology obvious.",
+          nextAction: "Stay near eclipse and compare the black-box curve to the revealed geometry.",
+        };
+  }
+  return Number.isFinite(signals.bPlanet) && signals.bPlanet <= 0.4
+    ? {
+        headline: "The binary eclipse chord is close to central.",
+        observation: `The projected impact parameter proxy is ${signals.bPlanet.toFixed(2)}, so the occulting chord is no longer grazing.`,
+        nextAction:
+          "Relate the deeper eclipse to both geometry and the luminosity contrast between the two stars.",
+      }
+    : {
+        headline: "The binary eclipse is still geometrically grazing.",
+        observation: `The projected chord remains too far from the center (b ≈ ${Number.isFinite(signals.bPlanet) ? signals.bPlanet.toFixed(2) : "n/a"}).`,
+        nextAction:
+          "Use the reveal-sky step to compare your flux-only hypothesis against the actual eclipse chord.",
+      };
+}
+
+function interpretCurveReading(signals: NumericSignals): DidacticInterpretation {
+  return signals.depthObserved > 0
+    ? {
+        headline: "The curve landmarks are readable.",
+        observation:
+          "The physical curve contains a visible drop and recovery, so ingress, mid-transit, and egress can be named from evidence rather than guesswork.",
+        nextAction:
+          "Use the event jumps and describe exactly what changes first on the curve and on the stellar disk at each landmark.",
+      }
+    : {
+        headline: "There is no readable transit landmark yet.",
+        observation:
+          "Without an active physical transit, the light curve does not yet support landmark-based reading.",
+        nextAction: "Restore a visible transit before trying to identify ingress, mid-transit, and egress.",
+      };
+}
+
+function interpretLimbDarkening(signals: NumericSignals): DidacticInterpretation {
+  return signals.depthObserved > 0
+    ? {
+        headline: "You have a visible transit to study limb darkening.",
+        observation:
+          "The lesson surface is ready: ingress, egress, and depth can now be compared against the geometric prediction.",
+        nextAction:
+          "Switch to expert mode and increase u1/u2, then compare ingress/egress shape rather than only depth.",
+      }
+    : {
+        headline: "There is no useful transit shape to study yet.",
+        observation:
+          "Without an active transit, limb-darkening changes will not produce a readable ingress/egress signature.",
+        nextAction: "Restore a visible transit first, then strengthen limb darkening in expert mode.",
+      };
+}
+
+function interpretDefault(signals: NumericSignals): DidacticInterpretation {
+  return signals.rvStar > 0.01
+    ? {
+        headline: "The system now shows a measurable dynamical signal.",
+        observation: `|RV*| is ${signals.rvStar.toFixed(3)} m/s and TDV ratio is ${Number.isFinite(signals.tdvRatio) ? signals.tdvRatio.toFixed(4) : "n/a"}.`,
+        nextAction:
+          "Compare this setup against an unperturbed one to separate timing effects from pure photometry.",
+      }
+    : {
+        headline: "The perturbation is still too subtle.",
+        observation:
+          "The current setup has not yet produced a strong enough RV or timing deviation to teach from clearly.",
+        nextAction: "Increase perturber mass or shorten the relevant orbital timescale in expert mode.",
+      };
+}
+
 export function buildInterpretation(
   lesson: LessonSpec,
-  evalResult: ReturnType<typeof evaluateChecks>,
+  evalResult: InterpretationEvaluation,
   signals: NumericSignals,
 ): DidacticInterpretation {
   switch (lesson.id) {
     case "kepler-geometry":
-      if (!Number.isFinite(signals.bPlanet)) {
-        return {
-          headline: "There is no front-of-star planet transit yet.",
-          observation:
-            "The current observer/chord geometry does not produce a valid planet impact parameter.",
-          nextAction: "Raise the planet inclination until the planet crosses the visible stellar disk.",
-        };
-      }
-      if (evalResult.stepId === "kepler-step-1") {
-        return signals.bPlanet <= 0.2
-          ? {
-              headline: "You reached a near-central transit.",
-              observation: `The planet impact parameter is ${signals.bPlanet.toFixed(2)}, so the chord stays close to the stellar center.`,
-              nextAction: "Keep this geometry and now compare the physical depth against (Rp/R*)^2.",
-            }
-          : {
-              headline: "The transit is still too grazing.",
-              observation: `The current impact parameter is ${signals.bPlanet.toFixed(2)}, so the chord is still too far from the center.`,
-              nextAction: "Increase planet inclination to push the chord inward.",
-            };
-      }
-      return Math.abs(signals.depthObserved - signals.depthApprox) <= 0.2
-        ? {
-            headline: "Geometry and depth now tell the same story.",
-            observation: `The physical depth ${signals.depthObserved.toFixed(3)} is close to the geometric estimate ${signals.depthApprox.toFixed(3)}.`,
-            nextAction:
-              "Use ingress and egress to explain why central transits best match the simple radius-ratio formula.",
-          }
-        : {
-            headline: "The depth still disagrees with the simple radius-ratio estimate.",
-            observation: `Observed depth ${signals.depthObserved.toFixed(3)} differs from the geometric estimate ${signals.depthApprox.toFixed(3)}.`,
-            nextAction:
-              "Inspect whether the chord is grazing or whether limb darkening is changing the occulted brightness.",
-          };
+      return interpretKepler(evalResult, signals);
     case "exomoon-transit-lab":
-      if (evalResult.stepId === "exomoon-step-1") {
-        return Number.isFinite(signals.bMoon) && signals.bMoon <= 1.1
-          ? {
-              headline: "The moon is now in front-of-star geometry.",
-              observation: `The moon impact parameter is ${signals.bMoon.toFixed(2)}, so the moon can contribute its own transit feature.`,
-              nextAction:
-                "Now separate the moon timing from the planet timing so the moon feature becomes readable.",
-            }
-          : {
-              headline: "The moon is still missing the stellar disk.",
-              observation:
-                "Its projected chord is still too tilted or too far from the visible stellar disk.",
-              nextAction: "Reduce moon inclination until the moon also crosses in front of the star.",
-            };
-      }
-      return Number.isFinite(signals.moonLeadLagSec) && Math.abs(signals.moonLeadLagSec) >= 600
-        ? {
-            headline: "The moon signal is no longer buried inside the planet dip.",
-            observation: `The moon transit center is offset from the planet by ${signals.moonLeadLagSec.toFixed(0)} s.`,
-            nextAction:
-              "Compare moon-on versus moon-off to identify which shoulder or dip belongs to the moon alone.",
-          }
-        : {
-            headline: "The moon signal still overlaps too strongly with the planet transit.",
-            observation:
-              "The moon and planet are still transiting too close together in time to separate cleanly.",
-            nextAction: "Increase moon spacing so the moon leads or trails the planet more clearly.",
-          };
+      return interpretExomoon(evalResult, signals);
     case "binary-eclipse-lab":
-      if (evalResult.stepId === "binary-step-1") {
-        return signals.combinedFluxDrop >= 0.01
-          ? {
-              headline: "The combined light curve now shows a readable stellar eclipse.",
-              observation: `The total binary flux drops by ${(signals.combinedFluxDrop * 100).toFixed(1)}% from the combined baseline.`,
-              nextAction:
-                "Use the eclipse chord and the reveal-sky step to decide whether the event is central or grazing.",
-            }
-          : {
-              headline: "The binary eclipse is still too shallow to teach from cleanly.",
-              observation:
-                "The combined stellar flux has not dropped enough yet to make the eclipse morphology obvious.",
-              nextAction: "Stay near eclipse and compare the black-box curve to the revealed geometry.",
-            };
-      }
-      return Number.isFinite(signals.bPlanet) && signals.bPlanet <= 0.4
-        ? {
-            headline: "The binary eclipse chord is close to central.",
-            observation: `The projected impact parameter proxy is ${signals.bPlanet.toFixed(2)}, so the occulting chord is no longer grazing.`,
-            nextAction:
-              "Relate the deeper eclipse to both geometry and the luminosity contrast between the two stars.",
-          }
-        : {
-            headline: "The binary eclipse is still geometrically grazing.",
-            observation: `The projected chord remains too far from the center (b ≈ ${Number.isFinite(signals.bPlanet) ? signals.bPlanet.toFixed(2) : "n/a"}).`,
-            nextAction:
-              "Use the reveal-sky step to compare your flux-only hypothesis against the actual eclipse chord.",
-          };
+      return interpretBinary(evalResult, signals);
     case "curve-reading-lab":
-      return signals.depthObserved > 0
-        ? {
-            headline: "The curve landmarks are readable.",
-            observation:
-              "The physical curve contains a visible drop and recovery, so ingress, mid-transit, and egress can be named from evidence rather than guesswork.",
-            nextAction:
-              "Use the event jumps and describe exactly what changes first on the curve and on the stellar disk at each landmark.",
-          }
-        : {
-            headline: "There is no readable transit landmark yet.",
-            observation:
-              "Without an active physical transit, the light curve does not yet support landmark-based reading.",
-            nextAction:
-              "Restore a visible transit before trying to identify ingress, mid-transit, and egress.",
-          };
+      return interpretCurveReading(signals);
     case "limb-darkening-lab":
-      return signals.depthObserved > 0
-        ? {
-            headline: "You have a visible transit to study limb darkening.",
-            observation:
-              "The lesson surface is ready: ingress, egress, and depth can now be compared against the geometric prediction.",
-            nextAction:
-              "Switch to expert mode and increase u1/u2, then compare ingress/egress shape rather than only depth.",
-          }
-        : {
-            headline: "There is no useful transit shape to study yet.",
-            observation:
-              "Without an active transit, limb-darkening changes will not produce a readable ingress/egress signature.",
-            nextAction: "Restore a visible transit first, then strengthen limb darkening in expert mode.",
-          };
+      return interpretLimbDarkening(signals);
     default:
-      return signals.rvStar > 0.01
-        ? {
-            headline: "The system now shows a measurable dynamical signal.",
-            observation: `|RV*| is ${signals.rvStar.toFixed(3)} m/s and TDV ratio is ${Number.isFinite(signals.tdvRatio) ? signals.tdvRatio.toFixed(4) : "n/a"}.`,
-            nextAction:
-              "Compare this setup against an unperturbed one to separate timing effects from pure photometry.",
-          }
-        : {
-            headline: "The perturbation is still too subtle.",
-            observation:
-              "The current setup has not yet produced a strong enough RV or timing deviation to teach from clearly.",
-            nextAction: "Increase perturber mass or shorten the relevant orbital timescale in expert mode.",
-          };
+      return interpretDefault(signals);
   }
 }
 

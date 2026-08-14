@@ -1,0 +1,202 @@
+/* Styles public-alpha scientific figures, diagnostics, controls, and forms. */
+.vizStack {
+  gap: 16px;
+}
+
+.scientific-figure {
+  margin: 0;
+}
+
+.figure-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.figure-heading h2 {
+  margin: 0;
+}
+
+.figure-key {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.scientific-figure figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.lesson-progress {
+  margin: 8px 0 4px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#didPhaseTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.didactic-intro {
+  margin-bottom: 8px;
+}
+
+canvas {
+  border-color: #2c4553;
+  border-radius: 6px;
+  background: #09151d;
+  box-shadow: none;
+}
+
+#skyCanvas {
+  height: auto;
+  min-height: 300px;
+  aspect-ratio: 16 / 9;
+}
+
+#lcCanvas,
+#ocCanvas {
+  height: auto;
+  min-height: 180px;
+  aspect-ratio: 4 / 1;
+}
+
+.scientific-figure--compact #ocCanvas {
+  min-height: 150px;
+}
+
+fieldset {
+  padding: 12px;
+}
+
+fieldset:hover {
+  border-color: var(--stroke);
+}
+
+legend {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#paramForm label,
+.inline,
+.help,
+details > summary {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+  min-height: 36px;
+  border-color: var(--stroke);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+}
+
+input[type="number"]:hover,
+input[type="text"]:hover,
+select:hover,
+textarea:hover {
+  border-color: #71878f;
+}
+
+button {
+  min-height: 36px;
+  border-color: var(--stroke);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+button:hover {
+  border-color: #71878f;
+  background: #f3f6f7;
+}
+
+#btnStart,
+#btnApplyParams {
+  border-color: #087f73;
+  background: #087f73;
+  color: #fff;
+}
+
+#btnStart:hover,
+#btnApplyParams:hover {
+  border-color: #065f57;
+  background: #065f57;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+  background: #fff7f6;
+}
+
+.field-error {
+  display: block;
+  margin-top: 4px;
+  color: #8f1d14;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-error-summary {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e7a7a1;
+  border-radius: 6px;
+  background: #fff0ee;
+  color: #701b14;
+}
+
+.param-dirty {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+
+dialog {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 4px 8px rgb(19 36 43 / 20%);
+}
+
+dialog::backdrop {
+  background: rgb(9 21 29 / 55%);
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#sliderRoot .row {
+  background: #f3f6f7;
+  border-color: var(--stroke2);
+}
+
+#sliderRoot .name {
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: normal;
+}

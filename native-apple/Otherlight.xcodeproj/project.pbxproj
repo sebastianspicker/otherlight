@@ -29,6 +29,11 @@
 		A10000000000000000000015 /* SimulationHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* SimulationHistory.swift */; };
 		A10000000000000000000016 /* SimulationHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* SimulationHistoryTests.swift */; };
 		A10000000000000000000017 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* PrivacyInfo.xcprivacy */; };
+		A10000000000000000000018 /* EducationSessionPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* EducationSessionPolicies.swift */; };
+		A10000000000000000000019 /* OtherlightWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* OtherlightWorkspaceShell.swift */; };
+		A1000000000000000000001A /* OtherlightWorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* OtherlightWorkspaceToolbar.swift */; };
+		A1000000000000000000001B /* SimulationDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001A /* SimulationDashboard.swift */; };
+		A1000000000000000000001C /* GuidedLabsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* GuidedLabsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +52,11 @@
 		A20000000000000000000014 /* SimulationHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/SimulationHistory.swift; sourceTree = "<group>"; };
 		A20000000000000000000015 /* SimulationHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationHistoryTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000016 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A20000000000000000000017 /* EducationSessionPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/EducationSessionPolicies.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* OtherlightWorkspaceShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/OtherlightWorkspaceShell.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* OtherlightWorkspaceToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/OtherlightWorkspaceToolbar.swift; sourceTree = "<group>"; };
+		A2000000000000000000001A /* SimulationDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SimulationDashboard.swift; sourceTree = "<group>"; };
+		A2000000000000000000001B /* GuidedLabsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/GuidedLabsView.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000012 /* real-systems.snapshot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../src/config/real-systems.snapshot.json; sourceTree = SOURCE_ROOT; };
 		A2000000000000000000000B /* OtherlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherlightTests.swift; sourceTree = "<group>"; };
@@ -66,7 +76,7 @@
 
 /* Begin PBXGroup section */
 		A40000000000000000000001 = {isa = PBXGroup; children = (A40000000000000000000002 /* App */, A40000000000000000000003 /* AppTests */, A40000000000000000000004 /* AppUITests */, A40000000000000000000005 /* Products */); sourceTree = "<group>"; };
-		A40000000000000000000002 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003, A20000000000000000000004, A20000000000000000000005, A20000000000000000000006, A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A2000000000000000000000A, A20000000000000000000010, A20000000000000000000011, A20000000000000000000012, A20000000000000000000013, A20000000000000000000014, A20000000000000000000016); };
+		A40000000000000000000002 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003, A20000000000000000000004, A20000000000000000000005, A20000000000000000000006, A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A2000000000000000000000A, A20000000000000000000010, A20000000000000000000011, A20000000000000000000012, A20000000000000000000013, A20000000000000000000014, A20000000000000000000016, A20000000000000000000017, A20000000000000000000018, A20000000000000000000019, A2000000000000000000001A, A2000000000000000000001B); };
 		A40000000000000000000003 /* AppTests */ = {isa = PBXGroup; path = AppTests; sourceTree = "<group>"; children = (A2000000000000000000000B, A20000000000000000000015); };
 		A40000000000000000000004 /* AppUITests */ = {isa = PBXGroup; path = AppUITests; sourceTree = "<group>"; children = (A2000000000000000000000C); };
 		A40000000000000000000005 /* Products */ = {isa = PBXGroup; children = (A2000000000000000000000D, A2000000000000000000000E, A2000000000000000000000F); name = Products; sourceTree = "<group>"; };
@@ -89,7 +99,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A60000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000A, A10000000000000000000010, A10000000000000000000013, A10000000000000000000015); runOnlyForDeploymentPostprocessing = 0; };
+		A60000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000A, A10000000000000000000010, A10000000000000000000013, A10000000000000000000015, A10000000000000000000018, A10000000000000000000019, A1000000000000000000001A, A1000000000000000000001B, A1000000000000000000001C); runOnlyForDeploymentPostprocessing = 0; };
 		A60000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B, A10000000000000000000016); runOnlyForDeploymentPostprocessing = 0; };
 		A60000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000C); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */

@@ -139,7 +139,7 @@
 
   .context-toolbar,
   .command-strip {
-    margin: 0 -8px;
+    margin: 0;
     padding: 10px 8px;
   }
 

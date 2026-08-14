@@ -24,8 +24,6 @@
 // - planetPhaseFlux(...) is a backwards-compatible wrapper.
 // - This file does NOT re-implement phase angle or phase functions; it delegates to dayNightVisibility.ts.
 
-import type { DayNightVisibilityParams, PhaseCurveParams, ThermalModelAdvancedParams } from "../core/types";
-import type { Vec3 } from "../physics/vec3";
 import { clamp01, isFiniteNumber } from "../core/units";
 
 import type { ReflectedPhaseModel, ThermalPhaseModel } from "./dayNightVisibility";
@@ -36,42 +34,18 @@ import {
 } from "./dayNightVisibility";
 import { bodyPhaseAlpha, clampWeightsFor, reflectedModelFor, thermalModelFor } from "./phaseCurveGeometry";
 import { effectiveThermalInertia, phaseCurvePhysicalScales, thermalAdvancedBoost } from "./phaseCurveScaling";
-
-/**
- * Phase-curve configuration (phenomenological).
- *
- * All flux amplitudes are in stellar baseline units (dimensionless):
- * - reflAmp: reflected-light amplitude knob (no automatic radius/albedo scaling).
- * - thermAmp: thermal emission amplitude knob (no automatic radius/temperature scaling).
- * - constant: additive constant floor in stellar units.
- *
- * Backwards-compatibility:
- * - Fields mirror coretypes.PhaseCurveParams to keep JSON presets stable.
- */
-export type PhaseCurveModel = PhaseCurveParams;
-
-export type NormalizedThermalInertia = {
-  enabled: boolean;
-  albedo: number;
-  emissivity: number;
-  tauSec: number;
-  redistribution: number;
-};
-
-export type NormalizedPhaseCurveModel = {
-  enabled: boolean;
-  reflAmp: number;
-  thermAmp: number;
-  reflOffset: number;
-  thermOffset: number;
-  lambertian: boolean;
-  constant: number;
-  reflModel?: ReflectedPhaseModel;
-  thermalModel?: ThermalPhaseModel;
-  clamp: boolean;
-  physicalScaling: boolean;
-  thermalInertia: NormalizedThermalInertia;
-};
+import type {
+  BodyPhaseFluxParams,
+  NormalizedPhaseCurveModel,
+  NormalizedThermalInertia,
+  PhaseCurveModel,
+} from "./phaseCurveTypes";
+export type {
+  BodyPhaseFluxParams,
+  NormalizedPhaseCurveModel,
+  NormalizedThermalInertia,
+  PhaseCurveModel,
+} from "./phaseCurveTypes";
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {
   return isFiniteNumber(value) ? value : fallback;
@@ -178,7 +152,7 @@ function inertiaResponse(period: number, inertia: NormalizedThermalInertia): { l
   };
 }
 
-function shouldUseThermalInertia(
+export function shouldUseThermalInertia(
   model: ThermalPhaseModel,
   inertia: NormalizedThermalInertia | undefined,
   period: number | undefined,
@@ -188,7 +162,7 @@ function shouldUseThermalInertia(
   );
 }
 
-function thermalInertiaFluxTerm(
+export function thermalInertiaFluxTerm(
   params: ThermalFluxTermParams,
   amp: number,
   inertia: NormalizedThermalInertia,
@@ -204,22 +178,11 @@ function thermalInertiaFluxTerm(
   return Number.isFinite(ww) ? amp * ww : 0;
 }
 
-function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number): number {
+export function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number): number {
   const aEff = applyPhaseOffset(params.alpha, -phaseOffsetOrZero(params.thermOffset));
   const ww = phaseWeightWithClamp(aEff, params.model, params.clamp !== false);
   return Number.isFinite(ww) ? amp * ww : 0;
 }
-
-export type BodyPhaseFluxParams = {
-  rBody: Vec3;
-  rBodyRadius?: number;
-  rStarRadius?: number;
-  observerDir: Vec3;
-  orbitPeriodSec?: number;
-  model?: PhaseCurveModel;
-  dayNightVisibility?: DayNightVisibilityParams;
-  thermalModelAdvanced?: ThermalModelAdvancedParams;
-};
 
 /**
  * Thermal emission contribution (stellar units):
@@ -228,7 +191,7 @@ export type BodyPhaseFluxParams = {
  * - For model="constant", W=1.
  * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
  */
-function thermalFluxTerm(params: ThermalFluxTermParams): number {
+export function thermalFluxTerm(params: ThermalFluxTermParams): number {
   if (!Number.isFinite(params.alpha)) return 0;
   if (!positiveFinite(params.thermAmp)) return 0;
 
@@ -259,7 +222,10 @@ export function bodyPhaseFlux(params: BodyPhaseFluxParams): number {
 
   const refl = reflectedFluxTerm({
     alpha,
-    reflAmp: norm.reflAmp * scales.reflScale,
+    reflAmp:
+      norm.reflAmp *
+      scales.reflScale *
+      (isFiniteNumber(params.reflectedFluxScale) ? Math.max(0, params.reflectedFluxScale) : 1),
     model: reflectedModelFor(norm, dn),
     reflOffset: norm.reflOffset,
     clamp: clampWeights,

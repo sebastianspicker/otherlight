@@ -5,6 +5,9 @@ GENERATE_INFOPLIST_FILE = NO
 INFOPLIST_FILE = App/Info.plist
 MACOSX_DEPLOYMENT_TARGET = 14.0
 IPHONEOS_DEPLOYMENT_TARGET = 17.0
+// Swift packages are built for the active host architecture. Keep Debug builds
+// aligned across Apple SDKs while Release retains Universal 2 archive settings.
+ONLY_ACTIVE_ARCH = YES
 CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Otherlight.entitlements
 ENABLE_APP_SANDBOX[sdk=macosx*] = YES
 ALWAYS_SEARCH_USER_PATHS = NO

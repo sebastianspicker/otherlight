@@ -19,26 +19,35 @@ type ScenarioControl = {
   };
 };
 
-const scenarioControls = (
-  (scenarioJson as { ui?: { controls?: ScenarioControl[] } }).ui?.controls ?? []
-).flatMap((control) => {
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function scenarioNumericRange(
+  min: unknown,
+  max: unknown,
+  step: unknown,
+): ScenarioNumericControlRange | undefined {
+  if (!isFiniteNumber(min)) return undefined;
+  if (!isFiniteNumber(max)) return undefined;
+  if (!isFiniteNumber(step)) return undefined;
+  if (!(max > min && step > 0)) return undefined;
+  return { min, max, step };
+}
+
+function scenarioControlRangeEntry(
+  control: ScenarioControl,
+): readonly [string, ScenarioNumericControlRange] | undefined {
   const { id, ui } = control;
-  if (typeof id !== "string" || ui?.kind !== "slider") return [];
+  if (typeof id !== "string" || ui?.kind !== "slider") return undefined;
   const { min, max, step } = ui;
-  if (
-    typeof min !== "number" ||
-    !Number.isFinite(min) ||
-    typeof max !== "number" ||
-    !Number.isFinite(max) ||
-    !(max > min) ||
-    typeof step !== "number" ||
-    !Number.isFinite(step) ||
-    !(step > 0)
-  ) {
-    return [];
-  }
-  return [[id, { min, max, step }] as const];
-});
+  const range = scenarioNumericRange(min, max, step);
+  return range ? [id, range] : undefined;
+}
+
+const scenarioControls = ((scenarioJson as { ui?: { controls?: ScenarioControl[] } }).ui?.controls ?? [])
+  .map(scenarioControlRangeEntry)
+  .filter((entry): entry is readonly [string, ScenarioNumericControlRange] => entry !== undefined);
 
 const normalRangesById = new Map<string, ScenarioNumericControlRange>(scenarioControls);
 

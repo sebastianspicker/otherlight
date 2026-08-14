@@ -24,58 +24,14 @@
 // Notes:
 // - The constant cell area cancels in the ratio, so we can omit multiplying by it for numerical stability.
 
-import type { BrightnessPatch, LimbDarkeningLaw } from "../core/types";
+import type { LimbDarkeningLaw } from "../core/types";
 import { clamp01, isFiniteNonNegative, isFiniteNumber, isFinitePositive } from "../core/units";
 import { clampGridRes, MAX_TRANSIT_GRID_RES } from "./occulterCircle";
 import { intensityNonNegative } from "./limbDarkening";
 import { patchFactorAt, sanitizeBrightnessPatches, type PatchCombineMode, type PatchPre } from "./patches";
 import { transmissionAtPoint } from "./transitTransmissionPoint";
-
-export type TransmissionOcculter = {
-  /** Sky-plane offset of occulter center relative to star center (same units as rStar). */
-  dx: number;
-  dy: number;
-
-  /**
-   * Reference opaque radius (solid body).
-   * Optional for purely fuzzy occulters; if present, can be used by helper transmission models.
-   */
-  r0?: number;
-
-  /**
-   * Transmission function T(rho) (typically in [0,1]), rho >= 0.
-   *
-   * If omitted:
-   * - If r0 is finite and >0: defaults to a hard opaque disk (T=0 inside r0, else 1).
-   * - Else: defaults to no effect (T=1).
-   */
-  transmission?: (rho: number) => number;
-};
-
-export type FluxStarWithTransmissionParams = {
-  rStar: number;
-  occulters: TransmissionOcculter[];
-  /** Optional limb-darkening law. If omitted, intensity is uniform across the disk. */
-  limbDarkening?: LimbDarkeningLaw;
-  /** Optional projected brightness patches (spots/faculae), multiplicative in intensity. */
-  brightnessPatches?: BrightnessPatch[];
-  /** Patch combination policy. Default: "multiply" (backwards compatible). */
-  patchCombineMode?: PatchCombineMode;
-  /** Grid resolution ~ number of samples across the stellar diameter. */
-  gridRes?: number;
-  /**
-   * Numerical safety.
-   * If true (default): clamp transmission values and final flux to [0,1].
-   */
-  clamp01?: boolean;
-  /**
-   * Optional early-exit threshold:
-   * - If T_total falls below this value at a point, short-circuit remaining occulters for that point
-   *   (strictly safe when transmission is clamped to [0,1]).
-   * - Default: 0 (no early-exit beyond exact zero).
-   */
-  earlyExitTMin?: number;
-};
+import type { FluxStarWithTransmissionParams, TransmissionOcculter } from "./transitTransmissionTypes";
+export type { FluxStarWithTransmissionParams, TransmissionOcculter } from "./transitTransmissionTypes";
 
 function intensityAtMu(mu: number, ld: LimbDarkeningLaw | undefined): number {
   if (!ld) return 1;

@@ -19,6 +19,17 @@ All notable changes to this project are documented in this file.
 - Expanded browser journeys for Chromium, Firefox, WebKit, tablet landscape, mobile smoke, URL
   recovery, validation, history, and focus behavior.
 
+### Fixed in Unreleased
+
+- Made N-body close-encounter diagnostics independent of cache query order by retaining the epoch
+  anchor, selecting only interval-contained cache bases, and carrying path minima forward.
+- Kept the Python base and service-only installations importable without scientific extras; the
+  service now starts fail-closed and advertises unavailable forward execution when they are absent.
+- Aligned Debug Apple builds with the active architecture so macOS, iPhone, and iPad targets consume
+  the same Swift package module slice while Release archives retain their platform contracts.
+- Excluded the nested backend virtual environment from root linting and documented the interpreter
+  path required by local Pyright checks.
+
 ### Removed in Unreleased
 
 - Removed the unsupported V2 migration script/test surface and superseded root screenshot gallery;

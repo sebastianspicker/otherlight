@@ -42,6 +42,7 @@ semgrep-results.*
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
 .ruff_cache/
 .pyright/
 .venv/
@@ -88,16 +89,26 @@ Desktop.ini
 .eslintcache
 
 # Local development, analyzer, and repository-tool state
+.agents/
 /.agents/
+.claude/
 /.claude/
 /.codacy/
+.codegraph/
 /.codegraph/
+.codex/
 /.codex/
 /.gemini/
+.kilo/
 /.kilo/
+.serena/
 /.serena/
 /.impeccable/
+.repowise/
+/.mcp.json
 /AGENTS.md
+/CLAUDE.md
+/GEMINI.md
 .github/codex/
 .github/instructions/
 .github/prompts/
@@ -106,6 +117,10 @@ Desktop.ini
 
 # Private maintenance notes (the public-surface gate also rejects force-staged copies)
 /AUDIT.md
+/AUDIT_LEDGER.md
+/remediation-ledger.md
+/plan.md
+/progress.md
 /AGENT_AUDIT_REPORT.md
 /DECISIONS.md
 /FINDINGS.md
@@ -130,7 +145,13 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+!.env.*.example
 !.env.sample
+!.env.template
+secrets.local.*
+credentials.local.*
+.netrc
+.npmrc.local
 .envrc
 .direnv/
 *.pem
@@ -141,9 +162,27 @@ Desktop.ini
 *.pfx
 *.jks
 *.keystore
+*.kdbx
+*.ppk
 *.mobileprovision
 credentials.json
 secrets.json
 .secret*
 *.secret
 *.secrets
+
+# Local build, test, and database products
+target/
+.build/
+.coverage
+coverage.xml
+htmlcov/
+*.db-shm
+*.db-wal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
+*.local.db
+*.local.sqlite
+*.local.sqlite3

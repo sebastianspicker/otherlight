@@ -1,18 +1,16 @@
 /** Owns portable workspace documents and URL-history restoration for one bootstrap instance. */
 
 import { buildScientificForwardRequestFromSystemParams } from "../science";
-import { migrateSystemParamsToV4, toSystemParamsV2FromV4 } from "../sim/v4";
+import { migrateSystemParamsToV4 } from "../sim/v4";
 import { readUiMode, syncUiModeVisibility } from "../ui/mode";
 import { readProductMode, syncProductModeVisibility } from "../ui/productMode";
 import { parseProductViewState } from "../ui/productViewState";
 import type { UiRefs } from "../ui/refs";
 import {
   encodeWorkspaceDocument,
-  parseWorkspaceDocumentJson,
   workspaceGuidedLabState,
   type WorkspaceDocumentV1,
 } from "../workspace/workspaceDocument";
-import { syncDidacticsControlsFromParams } from "./didactics";
 import {
   applyProductLessonSelection,
   applyProductViewControlState,
@@ -20,10 +18,9 @@ import {
 } from "./bootstrapProductSetup";
 import type { BootstrapProfileController } from "./bootstrapProfile";
 import { runWithErrorHandling } from "./runWithErrorHandling";
+import { restoreWorkspace, workspaceProductControls } from "./bootstrapWorkspaceRestore";
 import {
-  applyScenarioParams,
   isBinaryModeActive,
-  withScenarioApplyGuard,
   type ScenarioApplyGuard,
   type ScenarioFlowDeps,
   type ScenarioFlowState,
@@ -53,20 +50,6 @@ type BootstrapPersistenceArgs = {
   warnEl: HTMLElement | null;
   signal: AbortSignal;
 };
-
-function productControls(refs: UiRefs) {
-  return {
-    productProfileSelect: refs.productProfileSelect,
-    productModeSelect: refs.productModeSelect,
-    uiModeSelect: refs.uiModeSelect,
-    simModeSelect: refs.simModeSelect,
-    runtimeModeSelect: refs.runtimeModeSelect,
-    presetSelect: refs.presetSelect,
-    presetDesc: refs.presetDesc,
-    realSystemSelect: refs.realSystemSelect,
-    realSystemMeta: refs.realSystemMeta,
-  };
-}
 
 function scientificWorkspaceRequest(refs: UiRefs, state: PersistenceState) {
   if (refs.productProfileSelect.value !== "scientific") return undefined;
@@ -126,79 +109,10 @@ function saveWorkspace(args: BootstrapPersistenceArgs): void {
   args.setAppStatus("Workspace saved as a portable .otherlight document.");
 }
 
-function restoreScientificControls(workspace: WorkspaceDocumentV1): void {
-  if (!workspace.scientific) return;
-  const duration = document.getElementById("scienceDurationHours") as HTMLInputElement | null;
-  const cadence = document.getElementById("scienceCadenceSec") as HTMLInputElement | null;
-  const seed = document.getElementById("scienceSeed") as HTMLInputElement | null;
-  if (!duration || !cadence || !seed) {
-    throw new Error("Scientific workspace controls are unavailable.");
-  }
-  duration.valueAsNumber = workspace.scientific.request.endOffsetSec / 3_600;
-  cadence.valueAsNumber = workspace.scientific.request.sampleCadenceSec;
-  seed.valueAsNumber = workspace.scientific.request.seed;
-}
-
-async function restoreWorkspace(args: BootstrapPersistenceArgs, text: string): Promise<void> {
-  // Parse before changing controls or runtime state so malformed files leave the live workspace intact.
-  const workspace = parseWorkspaceDocumentJson(text);
-  if (workspace.scientific && workspace.scientific.request.startOffsetSec !== 0) {
-    throw new Error("This website can restore Scientific workspaces only when startOffsetSec is zero.");
-  }
-  await withScenarioApplyGuard(args.applyGuard, args.refs, args.warnEl, async () => {
-    const parsed = { state: workspace.productContext, corrections: [] as string[] };
-    args.setRestoringHistory(true);
-    try {
-      applyProductViewControlState(productControls(args.refs), parsed);
-      args.profileController.syncFromControl();
-      restoreScientificControls(workspace);
-      syncProductModeVisibility(readProductMode(args.refs.productModeSelect.value));
-      syncUiModeVisibility(readUiMode(args.refs.uiModeSelect.value));
-      args.syncModeNavigation();
-      await applyScenarioParams(args.scenarioDeps, toSystemParamsV2FromV4(workspace.education.scenario), {
-        syncUi: true,
-        resetNoise: true,
-      });
-      const guided = workspace.education.guidedLab;
-      if (guided) {
-        const learning = { ...guided.learning, passedStepIds: [...guided.learning.passedStepIds] };
-        args.state.params.didactics = {
-          ...(args.state.params.didactics ?? {}),
-          activeLessonId: learning.lessonId,
-          hintLevel: guided.hintLevel,
-          learningState: learning,
-        };
-        args.state.didacticsRuntime = { learning, responses: { ...guided.responses } };
-        syncDidacticsControlsFromParams(args.state.params, args.refs, args.currentLessonSimMode());
-        applyProductLessonSelection(args.refs.didLessonSelect, learning.lessonId, parsed.corrections);
-        if (guided.binaryLab) {
-          args.state.binaryLabState = {
-            ...args.state.binaryLabState,
-            revealed: guided.binaryLab.revealed,
-            skyVisible: guided.binaryLab.revealed || !args.state.binaryLabState.hideSkyUntilReveal,
-            ...(guided.binaryLab.hypothesis === undefined ? {} : { hypothesis: guided.binaryLab.hypothesis }),
-          };
-        }
-      }
-      args.syncBinaryUi();
-      args.renderDidacticsSurface();
-      args.invalidate();
-      args.setAppStatus(
-        parsed.corrections.length > 0
-          ? `Workspace restored with corrections. ${parsed.corrections.join(" ")}`
-          : "Workspace restored. Transient histories and playback time were reset.",
-      );
-    } finally {
-      args.setRestoringHistory(false);
-    }
-    args.writeProductHistory("replace");
-  });
-}
-
 function restoreBrowserHistory(args: BootstrapPersistenceArgs): void {
   const parsed = parseProductViewState(new URLSearchParams(window.location.search));
   args.setRestoringHistory(true);
-  applyProductViewControlState(productControls(args.refs), parsed);
+  applyProductViewControlState(workspaceProductControls(args.refs), parsed);
   args.profileController.syncFromControl();
   syncProductModeVisibility(readProductMode(args.refs.productModeSelect.value));
   syncUiModeVisibility(readUiMode(args.refs.uiModeSelect.value));

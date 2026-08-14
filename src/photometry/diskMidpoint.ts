@@ -243,18 +243,32 @@ const diskCellContribution = (
   return intensity * row.cellArea;
 };
 
+const integrateUnoccultedDisk = (setup: DiskMidpointSetup, intensityAt: IntensityAtFn): number => {
+  let total = 0;
+  for (let iy = 0; iy < setup.ny; iy++) {
+    const row = diskRowAt(setup, iy);
+    if (!row) continue;
+    for (let ix = 0; ix < setup.nx; ix++) {
+      const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
+      total += diskCellContribution(setup, row, x, intensityAt);
+    }
+  }
+  return total;
+};
+
 const integrateCircularDiskRow = (
   setup: DiskMidpointSetup,
   row: DiskRow,
   gates: OcculterRowGate[] | null,
   intensityAt: IntensityAtFn,
   sums: DiskSums,
+  accumulateTotal: boolean,
 ): void => {
   for (let ix = 0; ix < setup.nx; ix++) {
     const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
     const dI = diskCellContribution(setup, row, x, intensityAt);
     if (dI === 0) continue;
-    sums.total += dI;
+    if (accumulateTotal) sums.total += dI;
     if (pointBlockedByRowGates(x, row.y, gates)) sums.blocked += dI;
   }
 };
@@ -265,16 +279,15 @@ const integrateShapeDiskRow = (
   occ: ShapeOcculterPre[],
   intensityAt: IntensityAtFn,
   sums: DiskSums,
+  accumulateTotal: boolean,
 ): void => {
   for (let ix = 0; ix < setup.nx; ix++) {
     const x = -row.xMaxStar + (ix + 0.5) * row.dxCell;
     const dI = diskCellContribution(setup, row, x, intensityAt);
     if (dI === 0) continue;
-    sums.total += dI;
+    if (accumulateTotal) sums.total += dI;
     const frac = occ.length > 0 ? pointOccultedFraction(x, row.y, occ) : 0;
     if (frac > 0) sums.blocked += dI * frac;
-    if (shouldEarlyExit(sums, setup.earlyExitFluxEps)) sums.earlyExit = true;
-    if (sums.earlyExit) break;
   }
 };
 
@@ -292,7 +305,8 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
   const setup = diskMidpointSetup(params);
   const occ = precomputeOcculters(params.occulters);
   const hasOcculters = occ.length > 0;
-  const sums: DiskSums = { total: 0, blocked: 0, earlyExit: false };
+  const boundedTotal = setup.earlyExitFluxEps > 0 ? integrateUnoccultedDisk(setup, intensityAt) : undefined;
+  const sums: DiskSums = { total: boundedTotal ?? 0, blocked: 0, earlyExit: false };
 
   for (let iy = 0; iy < setup.ny; iy++) {
     const row = diskRowAt(setup, iy);
@@ -303,6 +317,7 @@ export function integrateDiskMidpoint(params: IntegrateDiskMidpointParams): Inte
       hasOcculters ? rowOcculterGates(row.y, occ) : null,
       intensityAt,
       sums,
+      boundedTotal === undefined,
     );
     sums.earlyExit ||= shouldEarlyExit(sums, setup.earlyExitFluxEps);
     if (sums.earlyExit) break;
@@ -323,12 +338,14 @@ export function integrateDiskMidpointShapes(
   requireDiskMidpointInputs(rStar, intensityAt, "integrateDiskMidpointShapes");
   const setup = diskMidpointSetup(params);
   const occ = precomputeOcculterShapes(sanitizeOcculterShapes(rStar, params.occulters));
-  const sums: DiskSums = { total: 0, blocked: 0, earlyExit: false };
+  const boundedTotal = setup.earlyExitFluxEps > 0 ? integrateUnoccultedDisk(setup, intensityAt) : undefined;
+  const sums: DiskSums = { total: boundedTotal ?? 0, blocked: 0, earlyExit: false };
 
   for (let iy = 0; iy < setup.ny; iy++) {
     const row = diskRowAt(setup, iy);
     if (!row) continue;
-    integrateShapeDiskRow(setup, row, occ, intensityAt, sums);
+    integrateShapeDiskRow(setup, row, occ, intensityAt, sums, boundedTotal === undefined);
+    sums.earlyExit ||= shouldEarlyExit(sums, setup.earlyExitFluxEps);
     if (sums.earlyExit) break;
   }
 

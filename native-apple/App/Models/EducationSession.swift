@@ -6,11 +6,7 @@ import TransitCore
 import TransitEducation
 import TransitVisualization
 
-/// Coordinates UI drafts with the asynchronous runtime while keeping the last valid frame visible.
-///
-/// Calculations are generation-tagged, and occlusion or inactive scenes suspend playback and
-/// invalidate pending deliveries. Invalid edits remain visible with field errors while the accepted
-/// scenario and its last valid frame continue to drive the simulation.
+/// Coordinates accepted simulation state, education progress, and playback for the workspace.
 @MainActor @Observable
 final class EducationSession {
   /// Names editable draft fields so validation errors remain attached to user input.
@@ -20,7 +16,7 @@ final class EducationSession {
     case moonPhase
   }
 
-  /// Represents the visible calculation state without discarding the last valid frame.
+  /// Represents visible calculation state without discarding the last valid frame.
   enum DisplayState: Equatable {
     case loading, ready, empty
     case error(String)
@@ -72,95 +68,68 @@ final class EducationSession {
 
   /// Seeds editable text and playback time from the default scenario without starting work.
   init() {
-    let planet = ScenarioCatalog.default.planet.radiusMetres
-    let moon = ScenarioCatalog.default.moon?.radiusMetres ?? 0
-    let phase = ScenarioCatalog.default.moon?.orbit.meanAnomalyAtEpochRadians ?? 0
-    draftPlanetRadiusMetres = Self.draftText(planet)
-    draftMoonRadiusMetres = Self.draftText(moon)
-    draftMoonPhaseRadians = Self.draftText(phase)
+    let draft = EducationDraftPolicy.values(for: ScenarioCatalog.default)
+    draftPlanetRadiusMetres = draft.planet
+    draftMoonRadiusMetres = draft.moon
+    draftMoonPhaseRadians = draft.phase
     simulationTimeSeconds = PlaybackClockPolicy.transitFocus(for: ScenarioCatalog.default)
   }
 
   /// Starts the session after a mounted SwiftUI view takes ownership.
-  /// Keeping initialization side-effect free prevents discarded view values from launching work.
   func start() {
     guard !hasStarted else { return }
     hasStarted = true
     requestCalculation(refreshSeries: true)
   }
 
-  /// Lists built-in and bundled scenarios for the picker without exposing snapshot internals.
   var scenarioOptions: [(id: String, title: String)] {
-    [
-      (ScenarioCatalog.default.identifier, "Default system"),
-      (ScenarioCatalog.keplerPlanetOnly.identifier, "Kepler planet only"),
-      (ScenarioCatalog.limbDarkeningVariation.identifier, "Limb-darkening variation"),
-    ] + BundledRealSystems.labels.map { ($0.0, $0.1) }
+    EducationScenarioPolicy.options()
   }
 
-  /// Evaluates the selected lesson against the latest accepted simulation step.
   var currentLessonReport: LessonReport? {
-    frame.map { LessonEvaluator.report(for: selectedLessonID, step: $0.currentStep) }
+    GuidedLearningProjection.lessonReport(lessonID: selectedLessonID, frame: frame)
   }
 
-  /// Returns the phase sequence for the selected guided lesson.
   var guidedPhases: [GuidedLabPhase] { GuidedLearning.phases(for: selectedLessonID) }
 
-  /// Clamps restored navigation state to the current lesson's available phases.
   var guidedPhaseIndex: Int {
-    min(max(preservedLearningPhaseIndex ?? 0, 0), max(guidedPhases.count - 1, 0))
+    GuidedLearningProjection.phaseIndex(preservedLearningPhaseIndex, phases: guidedPhases)
   }
 
-  /// Returns the selected phase when the current index remains valid.
   var currentGuidedPhase: GuidedLabPhase? {
-    let phases = guidedPhases
-    guard phases.indices.contains(guidedPhaseIndex) else { return nil }
-    return phases[guidedPhaseIndex]
+    GuidedLearningProjection.currentPhase(phases: guidedPhases, index: guidedPhaseIndex)
   }
 
-  /// Evaluates current guided responses and phase progress for completion gating.
   var currentGuidedRubric: GuidedRubricResult { GuidedLearning.rubric(session: guidedSession()) }
 
-  /// Returns the hint text aligned with the selected lesson and hint level.
   var guidedHintText: String {
-    GuidedLearning.hint(for: guidedHintLevel, lessonID: selectedLessonID)
+    GuidedLearningProjection.hint(level: hintLevel, lessonID: selectedLessonID)
   }
 
-  /// Requires nonblank responses for every prompt before phase advancement.
   var guidedPhaseReady: Bool {
-    guard let phase = currentGuidedPhase, !phase.prompts.isEmpty else { return true }
-    return phase.prompts.allSatisfy {
-      !guidedResponse(for: $0.responseKey).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
+    GuidedLearningProjection.isPhaseReady(currentGuidedPhase, responses: guidedLabResponses)
   }
 
-  /// Allows completion only after both the simulation lesson and guided rubric succeed.
   var canCompleteGuidedLesson: Bool {
-    currentLessonReport?.isComplete == true && currentGuidedRubric.score == 1
+    GuidedLearningProjection.canComplete(report: currentLessonReport, rubric: currentGuidedRubric)
   }
 
-  /// Renders the current guided state into exportable lesson-report Markdown.
   var guidedReportMarkdown: String { GuidedLearning.markdownReport(session: guidedSession()) }
 
-  /// Counts all recorded transit events for concise history status.
-  var transitEventCount: Int { transitEventHistory.events.values.reduce(0) { $0 + $1.count } }
+  var transitEventCount: Int { EducationHistoryPolicy.eventCount(in: transitEventHistory) }
 
-  /// Counts events for the body currently selected by the timing UI.
   var selectedTransitEventCount: Int {
-    transitEventHistory.events[selectedTransitBody, default: []].count
+    EducationHistoryPolicy.eventCount(in: transitEventHistory, body: selectedTransitBody)
   }
 
-  /// Returns the selected body's newest O-C residual for display.
   var selectedTransitLatestResidualMilliseconds: Double? {
     transitEventHistory.latestResidualMilliseconds(for: selectedTransitBody)
   }
 
-  /// Returns the selected body's RMS O-C residual for display.
   var selectedTransitRMSMilliseconds: Double? {
     transitEventHistory.rmsResidualMilliseconds(for: selectedTransitBody)
   }
 
-  /// Builds an export document from accepted state so drafts never leak into files.
   var exportDocument: ExportDocument {
     ExportDocument(
       frame: frame, planetRadius: scenario.planet.radiusMetres,
@@ -172,14 +141,7 @@ final class EducationSession {
 
   /// Selects a known scenario and resets dependent histories before recalculation.
   func selectScenario(id: String) {
-    let next: EducationScenarioV4?
-    switch id {
-    case ScenarioCatalog.default.identifier: next = ScenarioCatalog.default
-    case ScenarioCatalog.keplerPlanetOnly.identifier: next = ScenarioCatalog.keplerPlanetOnly
-    case ScenarioCatalog.limbDarkeningVariation.identifier:
-      next = ScenarioCatalog.limbDarkeningVariation
-    default: next = try? BundledRealSystems.scenario(id: id)
-    }
+    let next = EducationScenarioPolicy.scenario(id: id)
     guard let next else { return }
     scenario = next
     selectedScenarioID = next.identifier
@@ -189,7 +151,7 @@ final class EducationSession {
     requestCalculation(refreshSeries: true)
   }
 
-  /// Validates the text draft without replacing invalid user input or accepted simulation state.
+  /// Validates draft text without replacing invalid input or accepted simulation state.
   func applyDraft() {
     draftValidationErrors = [:]
     guard let planet = parseDraft(draftPlanetRadiusMetres, field: .planetRadius) else {
@@ -221,12 +183,10 @@ final class EducationSession {
 
   /// Restores editable draft text from the accepted scenario and clears field errors.
   func resetDraft() {
-    let planet = scenario.planet.radiusMetres
-    let moon = scenario.moon?.radiusMetres ?? 0
-    let phase = scenario.moon?.orbit.meanAnomalyAtEpochRadians ?? 0
-    draftPlanetRadiusMetres = Self.draftText(planet)
-    draftMoonRadiusMetres = Self.draftText(moon)
-    draftMoonPhaseRadians = Self.draftText(phase)
+    let draft = EducationDraftPolicy.values(for: scenario)
+    draftPlanetRadiusMetres = draft.planet
+    draftMoonRadiusMetres = draft.moon
+    draftMoonPhaseRadians = draft.phase
     draftValidationErrors = [:]
     displayState = frame == nil ? .empty : .ready
   }
@@ -253,7 +213,7 @@ final class EducationSession {
     requestCalculation(refreshSeries: false)
   }
 
-  /// Stops playback and restores the transit-focused time without rebuilding the series.
+  /// Stops playback and restores transit-focused time without rebuilding the series.
   func resetSimulation() {
     playbackTask?.cancel()
     playbackTask = nil
@@ -272,7 +232,7 @@ final class EducationSession {
     if speed == .paused, isRunning { toggleRunning() }
   }
 
-  /// Changes the control-detail tier without changing the simulation state.
+  /// Changes the control-detail tier without changing simulation state.
   func setInterfaceTier(_ tier: InterfaceTier) { interfaceTier = tier }
 
   /// Clamps scene zoom to safe view bounds.
@@ -319,17 +279,18 @@ final class EducationSession {
     lastLessonScore = currentGuidedRubric.score
   }
 
-  /// Exposes the comparison observation through its lesson-specific response key.
   var guidedComparisonObservation: String {
-    guidedResponse(for: comparisonResponseKey)
+    guidedResponse(
+      for: GuidedLearningProjection.comparisonResponseKey(lessonID: selectedLessonID))
   }
 
   /// Stores the comparison observation under the current lesson's stable key.
   func setGuidedComparisonObservation(_ observation: String) {
-    setGuidedResponse(observation, for: comparisonResponseKey)
+    setGuidedResponse(
+      observation, for: GuidedLearningProjection.comparisonResponseKey(lessonID: selectedLessonID))
   }
 
-  /// Changes the guided hint depth without affecting answered prompts.
+  /// Changes guided hint depth without affecting answered prompts.
   func setHintLevel(_ level: HintLevel) { hintLevel = level }
 
   /// Moves within valid guided phases and records completion when advancing from a ready phase.
@@ -353,30 +314,19 @@ final class EducationSession {
 
   /// Encodes accepted education state into a validated versioned workspace document model.
   func workspace(section: WorkspaceSection) -> OtherlightWorkspacePayload {
-    let guidedLab = GuidedLabWorkspace(
-      learning: .init(
-        lessonID: selectedLessonID,
-        stepIndex: preservedLearningStepIndex,
-        phaseIndex: guidedPhaseIndex,
-        passedStepIDs: durablePassedStepIDs,
-        lastScore: lastLessonScore),
+    EducationWorkspacePayloadPolicy.make(
+      section: section,
+      scenario: scenario,
+      selectedScenarioID: selectedScenarioID,
+      selectedLessonID: selectedLessonID,
+      interfaceTier: interfaceTier,
+      learningStepIndex: preservedLearningStepIndex,
+      learningPhaseIndex: guidedPhaseIndex,
+      passedStepIDs: durablePassedStepIDs,
+      lastScore: lastLessonScore,
       responses: guidedLabResponses,
       hintLevel: hintLevel,
       binaryLab: binaryLab)
-    return OtherlightWorkspacePayload(
-      productContext: .init(
-        profile: .education,
-        mode: section == .simulation ? .simulation : .lab,
-        ui: interfaceTier == .essential ? .essential : .advanced,
-        source: BundledRealSystems.labels.contains(where: { $0.0 == selectedScenarioID })
-          ? .real : .preset,
-        scenario: selectedScenarioID,
-        lab: "transit-exomoon",
-        lesson: selectedLessonID,
-        runtime: .interactive),
-      education: .init(
-        scenario: BrowserV4Export.scenario(from: scenario, lessonID: selectedLessonID),
-        guidedLab: guidedLab))
   }
 
   /// Restores a validated education workspace and schedules a fresh accepted frame.
@@ -425,7 +375,7 @@ final class EducationSession {
     requestCalculation(refreshSeries: true)
   }
 
-  /// Suspends delivery and playback while AppKit reports the window as occluded.
+  /// Suspends delivery and playback while the host reports the window as occluded.
   func setOccluded(_ occluded: Bool) {
     guard isOccluded != occluded else { return }
     let wasActive = isRenderingActive
@@ -433,7 +383,7 @@ final class EducationSession {
     updateRenderingActivity(wasActive: wasActive)
   }
 
-  /// Applies SwiftUI scene lifecycle changes to calculation and playback activity.
+  /// Applies scene lifecycle changes to calculation and playback activity.
   func setSceneActive(_ active: Bool) {
     guard isSceneActive != active else { return }
     let wasActive = isRenderingActive
@@ -492,7 +442,7 @@ final class EducationSession {
         previousTick = now
         nextTick = policy.nextTick(after: nextTick, now: now)
         guard let self, self.isRunning, self.isRenderingActive else { return }
-        self.advancePlayback(byRealSeconds: Self.seconds(elapsed))
+        self.advancePlayback(byRealSeconds: EducationHistoryPolicy.seconds(elapsed))
         self.requestCalculation(refreshSeries: false, announcesWork: false)
       }
     }
@@ -503,18 +453,10 @@ final class EducationSession {
     simulationTimeSeconds = PlaybackClockPolicy(scenario: scenario).advancedTime(
       from: simulationTimeSeconds, elapsedSeconds: elapsedSeconds, speed: playbackSpeed)
   }
-
   /// Exposes the policy's playback bounds for presentation and test consistency.
   static func playbackBounds(for scenario: EducationScenarioV4) -> ClosedRange<Double> {
     PlaybackClockPolicy(scenario: scenario).bounds
   }
-
-  /// Converts a monotonic duration to seconds for cadence reporting and playback.
-  private static func seconds(_ duration: Duration) -> Double {
-    let components = duration.components
-    return Double(components.seconds) + Double(components.attoseconds) / 1e18
-  }
-
   /// Synchronizes pause state with runtime activity revisions to reject stale resumes.
   private func updateRenderingActivity(wasActive: Bool) {
     let isActive = isRenderingActive
@@ -579,7 +521,7 @@ final class EducationSession {
       return
     }
     acceptedFramesInCadenceWindow += 1
-    let elapsed = Self.seconds(start.duration(to: now))
+    let elapsed = EducationHistoryPolicy.seconds(start.duration(to: now))
     guard elapsed >= 1 else { return }
     presentationUpdatesPerSecond = Double(acceptedFramesInCadenceWindow - 1) / elapsed
     acceptedFramesInCadenceWindow = 1
@@ -592,62 +534,32 @@ final class EducationSession {
 
   /// Formats live playback status with cadence only after it has been measured.
   private var runningStatus: String {
-    guard presentationUpdatesPerSecond > 0 else { return "Running · \(playbackSpeed.title)" }
-    return String(
-      format: "Running · %@ · %.0f updates/s", playbackSpeed.title, presentationUpdatesPerSecond)
-  }
-
-  /// Derives a lesson-scoped storage key so comparison responses cannot collide.
-  private var comparisonResponseKey: String { "\(selectedLessonID).comparison" }
-
-  /// Maps the UI hint level into the guided-learning contract value.
-  private var guidedHintLevel: GuidedHintLevel {
-    switch hintLevel {
-    case .l1: .l1
-    case .l2: .l2
-    case .l3: .l3
-    }
+    EducationHistoryPolicy.playbackStatus(
+      speed: playbackSpeed, updatesPerSecond: presentationUpdatesPerSecond)
   }
 
   /// Merges restored and newly completed IDs without losing durable progress ordering.
   private var durablePassedStepIDs: [String] {
-    var identifiers = preservedPassedStepIDs ?? []
-    for identifier in completedLessonIDs.sorted() where !identifiers.contains(identifier) {
-      identifiers.append(identifier)
-    }
-    return identifiers
-  }
-
-  /// Names a completed phase uniquely within the selected lesson.
-  private func phaseCompletionID(_ phase: GuidedLabPhase) -> String {
-    "\(selectedLessonID)-\(phase.id)"
+    GuidedLearningProjection.durablePassedStepIDs(
+      preservedPassedStepIDs, completed: completedLessonIDs)
   }
 
   /// Builds the evaluator input from current prompts, phase progress, and comparison text.
   private func guidedSession() -> GuidedLabSession {
-    var responses: [String: String] = [:]
-    for prompt in guidedPhases.flatMap(\.prompts) {
-      responses[prompt.responseKey] = guidedResponse(for: prompt.responseKey)
-    }
-    let passedPhases = Set(
-      guidedPhases.compactMap { phase in
-        durablePassedStepIDs.contains(phaseCompletionID(phase)) ? phase.id : nil
-      })
-    var session = GuidedLabSession(
-      lessonID: selectedLessonID, phaseIndex: guidedPhaseIndex,
-      passedPhaseIDs: passedPhases, responses: responses)
-    let comparison = guidedComparisonObservation.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !comparison.isEmpty {
-      session.setComparison(
-        .init(leftLabel: "Baseline", rightLabel: "Current", observation: comparison))
-    }
-    return session
+    GuidedLearningProjection.session(
+      lessonID: selectedLessonID,
+      phaseIndex: guidedPhaseIndex,
+      phases: guidedPhases,
+      passedStepIDs: durablePassedStepIDs,
+      responses: guidedLabResponses,
+      comparison: guidedComparisonObservation)
   }
 
   /// Records the current phase exactly once after its readiness condition succeeds.
   private func markCurrentGuidedPhasePassed() {
     guard let phase = currentGuidedPhase else { return }
-    let identifier = phaseCompletionID(phase)
+    let identifier = GuidedLearningProjection.phaseCompletionID(
+      lessonID: selectedLessonID, phase: phase)
     var passed = preservedPassedStepIDs ?? []
     if !passed.contains(identifier) { passed.append(identifier) }
     preservedPassedStepIDs = passed
@@ -664,24 +576,14 @@ final class EducationSession {
     lightCurveHistory.append(
       timeSeconds: candidate.currentStep.timeSeconds, flux: candidate.currentStep.flux)
     let currentTime = candidate.currentStep.timeSeconds
-    for step in candidate.series.timingDiagnosticSteps {
-      if let center = step.transitTiming.planetTransitCenterSec {
-        transitEventHistory.append(
-          .init(body: .planet, centerSeconds: center, observedFlux: step.flux, series: .raw),
-          currentTimeSeconds: currentTime)
-      }
-      if let center = step.transitTiming.moonTransitCenterSec {
-        transitEventHistory.append(
-          .init(body: .moon, centerSeconds: center, observedFlux: step.flux, series: .raw),
-          currentTimeSeconds: currentTime)
-      }
+    for event in EducationHistoryPolicy.events(from: candidate) {
+      transitEventHistory.append(event, currentTimeSeconds: currentTime)
     }
   }
 
   /// Parses finite user text while attaching a field-specific recovery error on failure.
   private func parseDraft(_ text: String, field: DraftField) -> Double? {
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard let value = Double(trimmed), value.isFinite else {
+    guard let value = EducationDraftPolicy.finiteNumber(from: text) else {
       draftValidationErrors[field] = "Enter a finite number."
       return nil
     }
@@ -694,8 +596,4 @@ final class EducationSession {
     calculationStatus = "Parameters need attention"
   }
 
-  /// Formats accepted numeric values with stable edit-friendly precision.
-  private static func draftText(_ value: Double) -> String {
-    String(format: "%.15g", value)
-  }
 }

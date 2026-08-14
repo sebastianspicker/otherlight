@@ -4,7 +4,7 @@
 import { clamp, isFiniteNumber } from "../core/units";
 import type { Vec3 } from "../physics/vec3";
 import { vDot } from "../physics/vec3";
-import type { ForwardScatteringFluxParams, ForwardScatteringModel } from "./forwardScattering";
+import type { ForwardScatteringFluxParams, ForwardScatteringModel } from "./forwardScatteringTypes";
 import { normalizedObserverDirection } from "./forwardScatteringObserver";
 
 export type ForwardScatteringContext = {

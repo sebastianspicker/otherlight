@@ -1,0 +1,91 @@
+/* Establishes the public-alpha tokens, document base, accessibility, and app shell. */
+:root {
+  --ink: #081923;
+  --deep-ocean: #123142;
+  --lab-paper: #eef3f4;
+  --signal-teal: #087f73;
+  --earth-blue: #315fba;
+  --starlight-gold: #c48a1f;
+  --bg-1: var(--lab-paper);
+  --bg-2: var(--lab-paper);
+  --bg-3: #e4ebed;
+  --panel: #fff;
+  --panel-strong: #fff;
+  --panel2: #f7fafb;
+  --text: #12242c;
+  --text-secondary: #3a525c;
+  --muted: #5a717b;
+  --stroke: #c5d2d8;
+  --stroke2: #d7e1e6;
+  --focus: var(--signal-teal);
+  --accent: var(--signal-teal);
+  --accent-dim: #e6f5f3;
+  --accent-2: #8a5a00;
+  --accent-2-dim: #fbf3e3;
+  --danger: #b42318;
+  --success: #147a45;
+  --shadow: none;
+  --shadow-sm: 0 8px 24px rgb(8 25 35 / 8%);
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --font-body: system-ui, -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;
+  --font-heading: var(--font-body);
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --z-sticky: 20;
+  --z-dialog-backdrop: 40;
+  --z-dialog: 50;
+
+  color-scheme: light;
+}
+
+body {
+  min-width: 320px;
+  background: #d8e0e4;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body::before,
+body::after {
+  display: none;
+  content: none;
+  background: none;
+  opacity: 0;
+}
+
+#app {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  background: var(--lab-paper);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

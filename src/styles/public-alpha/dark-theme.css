@@ -1,0 +1,59 @@
+/* System dark retains the light-lab hierarchy instead of introducing a product theme toggle. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Quiet Observatory owns the shell and action alias groups imported after this layer. */
+    --focus: #2aab9c;
+    --danger: #ff8d84;
+    --success: #68d59b;
+    --shadow-sm: 0 8px 24px rgb(0 0 0 / 28%);
+
+    color-scheme: dark;
+  }
+
+  body {
+    background: #10171b;
+  }
+
+  #app {
+    background: var(--lab-paper);
+  }
+
+  /* Keep identity band ink; only remap lab surfaces. */
+  .mode-nav__item[aria-current="page"],
+  .profile-nav__item[aria-current="page"] {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  #appStatus {
+    border-color: rgb(42 171 156 / 28%);
+    background: #163431;
+    color: #d7f2ef;
+  }
+
+  .runtime-toolbar,
+  .panel.sidebar,
+  .panel.sidebar > .panel,
+  fieldset,
+  #sliderRoot .row,
+  .scientific-workspace__header {
+    background: var(--panel);
+  }
+
+  button:hover {
+    border-color: #5a717b;
+    background: var(--panel-strong);
+  }
+
+  input[aria-invalid="true"],
+  .fatal-error,
+  .param-error-summary {
+    border-color: #b65c55;
+    background: #3a1d1b;
+    color: #ffd9d5;
+  }
+
+  .field-error {
+    color: #ffb1aa;
+  }
+}

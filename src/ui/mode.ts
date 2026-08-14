@@ -1,8 +1,8 @@
 /**
  * Owns mode support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
  */
-import { setHidden } from "../core/dom";
 import type { SystemParams } from "../core/types";
+import { syncModeVisibility } from "./modeVisibility";
 
 export type UiMode = "normal" | "expert";
 
@@ -33,13 +33,7 @@ export function syncUiModeVisibility(mode: UiMode, root: ParentNode = document):
 
   const tieredEls = Array.from(root.querySelectorAll<HTMLElement>("[data-ui-tier]"));
   for (const el of tieredEls) {
-    const tiers = (el.dataset.uiTier ?? "")
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter((token) => token.length > 0);
-    const visible = tiers.length === 0 || tiers.includes(mode);
-    setHidden(el, !visible);
-    if (!visible && el instanceof HTMLDetailsElement) el.open = false;
+    const visible = syncModeVisibility(el, el.dataset.uiTier ?? "", mode);
     if (visible && el instanceof HTMLDetailsElement && el.classList.contains("advanced-parameter-drawer")) {
       el.open = true;
     }

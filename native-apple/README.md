@@ -55,7 +55,7 @@ scripts/build-run-macos.sh build
 scripts/build-run-macos.sh run
 ```
 
-The script defaults to `DERIVED_DATA_PATH=/private/tmp/otherlight-derived-data`. Override that variable if another writable derived-data location is required.
+The script defaults to `DERIVED_DATA_PATH=/private/tmp/otherlight-derived-data` and builds the active host architecture so local Swift-package modules and the app target use the same triple. Override `DERIVED_DATA_PATH` for another writable build location or `MACOS_BUILD_ARCH` with `arm64` or `x86_64` when an explicit local architecture is required. Release archives retain their separate universal-build contract.
 
 The maintained screenshot-tour commands require the exact Xcode installation:
 
@@ -100,7 +100,7 @@ The archive, package, notarization, and verification scripts reject symlink inpu
 | Toolchain selector fails                         | Select Xcode 26.6 or set `TOOLCHAINS=org.swift.633202606251a`.                                                                                               |
 | Package tests cannot start the sandbox           | Retry the package command with `--disable-sandbox`.                                                                                                          |
 | `build-run-macos.sh` cannot find the app bundle  | Check `DERIVED_DATA_PATH` and the `Otherlight` scheme build output.                                                                                          |
-| macOS cannot resolve local packages for `x86_64` | The current local app build has only `arm64` package modules. The Universal 2 application build remains unverified.                                          |
+| Debug cannot resolve local packages for `x86_64` | Keep Debug builds on the active architecture. Universal `arm64 x86_64` output is a separate Release archive contract.                                        |
 | Simulator destination is unavailable             | Install iOS 26.5 and use the exact iPhone 17 Pro or iPad Pro 13-inch (M5) destination names.                                                                 |
 | Archive or DMG script refuses an output          | The target output already exists or is a symlink. Choose a new explicit path or move the prior output.                                                       |
 | Notarization or verification fails               | Confirm the Developer ID signature, notarization profile, team identifier, version, build number, universal `arm64 x86_64` binary, and sandbox entitlements. |

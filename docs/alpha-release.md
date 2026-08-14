@@ -92,7 +92,7 @@ Run the Python checks in the prepared backend environment:
 ```bash
 python -m ruff format --check science_backend
 python -m ruff check science_backend
-python -m pyright science_backend
+python -m pyright --pythonpath "$VIRTUAL_ENV/bin/python" science_backend
 PYTHONPATH=science_backend python -m pytest science_backend/tests
 ```
 

@@ -1,7 +1,7 @@
 /**
  * Owns product Profile support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
  */
-import { setHidden } from "../core/dom";
+import { syncModeVisibility } from "./modeVisibility";
 
 export type ProductProfile = "education" | "scientific";
 
@@ -13,13 +13,7 @@ export function syncProductProfileVisibility(profile: ProductProfile, root: Pare
   if (root instanceof Document) root.documentElement.dataset.productProfile = profile;
 
   for (const el of Array.from(root.querySelectorAll<HTMLElement>("[data-product-profile]"))) {
-    const profiles = (el.dataset.productProfile ?? "")
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter(Boolean);
-    const visible = profiles.length === 0 || profiles.includes(profile);
-    setHidden(el, !visible);
-    if (!visible && el instanceof HTMLDetailsElement) el.open = false;
+    syncModeVisibility(el, el.dataset.productProfile ?? "", profile);
   }
 }
 

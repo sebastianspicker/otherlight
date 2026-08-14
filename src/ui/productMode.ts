@@ -1,7 +1,7 @@
 /**
  * Owns product Mode support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
  */
-import { setHidden } from "../core/dom";
+import { syncModeVisibility } from "./modeVisibility";
 
 export type ProductMode = "simulation" | "lab";
 
@@ -14,12 +14,6 @@ export function syncProductModeVisibility(mode: ProductMode, root: ParentNode = 
 
   const modeEls = Array.from(root.querySelectorAll<HTMLElement>("[data-product-mode]"));
   for (const el of modeEls) {
-    const modes = (el.dataset.productMode ?? "")
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter((token) => token.length > 0);
-    const visible = modes.length === 0 || modes.includes(mode);
-    setHidden(el, !visible);
-    if (!visible && el instanceof HTMLDetailsElement) el.open = false;
+    syncModeVisibility(el, el.dataset.productMode ?? "", mode);
   }
 }

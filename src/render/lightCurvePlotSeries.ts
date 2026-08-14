@@ -2,6 +2,8 @@
  * Owns light Curve Plot Series support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
  */
 import { drawDenseFiniteTimeSeries, drawDenseIndexSeries } from "./lightCurvePlotSeriesDense";
+import type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
+export type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
 
 export function computeTickLayout(
   lo: number,
@@ -53,23 +55,6 @@ function broadFixedDigitsForRange(range: number): number {
   if (range < 100) return 1;
   return 0;
 }
-
-export type DrawSeriesArgs = {
-  ctx: CanvasRenderingContext2D;
-  fluxValues: number[];
-  timeValues: number[];
-  visibleStart: number;
-  n: number;
-  xIndexOffset: number;
-  indexScale: number;
-  yOffset: number;
-  yScale: number;
-  xTimeOffset: number;
-  timeScale: number;
-  plotW: number;
-  haveTime: boolean;
-  allFiniteTime: boolean;
-};
 
 export function drawLightCurveSeries(args: DrawSeriesArgs): void {
   setupSeriesStroke(args.ctx);
