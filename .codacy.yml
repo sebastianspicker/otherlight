@@ -7,6 +7,9 @@ exclude_paths:
   - "science_backend/.venv/**"
   - "test-results/**"
 engines:
+  lizard:
+    exclude_paths:
+      - "pnpm-lock.yaml"
   metric:
     exclude_paths:
       - "pnpm-lock.yaml"

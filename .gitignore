@@ -93,7 +93,10 @@ Desktop.ini
 /.agents/
 .claude/
 /.claude/
-/.codacy/
+/.codacy/*
+!/.codacy/codacy.config.json
+!/.codacy/codacy.yaml
+!/.codacy/codacy.yml
 .codegraph/
 /.codegraph/
 .codex/

@@ -98,10 +98,21 @@ const inputGroup = (input: HTMLInputElement): string => {
   return normalizedText(legend) || "Parameters";
 };
 
+const delimitedText = (
+  rawLabel: string,
+  open: "[" | "(",
+  close: "]" | ")",
+  requireTrailing: boolean,
+): string | undefined => {
+  const start = rawLabel.indexOf(open);
+  if (start < 0) return undefined;
+  const end = rawLabel.indexOf(close, start + 1);
+  if (end < 0 || (requireTrailing && rawLabel.slice(end + 1).trim())) return undefined;
+  return normalizedText(rawLabel.slice(start + 1, end)) || undefined;
+};
+
 const inputUnit = (rawLabel: string): string | undefined => {
-  const unitMatch = rawLabel.match(/\[([^\]]+)\]|\(([^)]+)\)\s*$/);
-  const unit = unitMatch?.[1] ?? unitMatch?.[2];
-  return normalizedText(unit) || undefined;
+  return delimitedText(rawLabel, "[", "]", false) ?? delimitedText(rawLabel, "(", ")", true);
 };
 
 const inputHelp = (input: HTMLInputElement): string | undefined => {

@@ -119,4 +119,18 @@ describe("scientific parameter validation", () => {
     expect(input.getAttribute("aria-describedby")).toBe("planetR-error");
     expect(document.getElementById("planetR-error")?.textContent).toContain("Planet radius");
   });
+
+  it("extracts bracketed and trailing parenthesized units from accessible labels", () => {
+    const input = document.createElement("input");
+    input.id = "customParameter";
+    input.setAttribute("aria-label", "Radius [R☉] guidance");
+
+    expect(getParamUiMeta(input).unit).toBe("R☉");
+
+    input.setAttribute("aria-label", "Cadence (seconds)");
+    expect(getParamUiMeta(input).unit).toBe("seconds");
+
+    input.setAttribute("aria-label", "Cadence (seconds) guidance");
+    expect(getParamUiMeta(input).unit).toBeUndefined();
+  });
 });

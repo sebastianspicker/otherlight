@@ -120,8 +120,7 @@ async function captureScenario(page, fileName, scenario) {
   return capture(page, fileName, { scenario, appearance: "dark" });
 }
 
-async function captureDesktop(browser) {
-  const captures = new Map();
+async function captureEducationScenarios(browser, captures) {
   let { page } = await openScenarioPage(browser);
   await page.locator("#presetSelect").selectOption("kepler-planet-only");
   await waitForScenario(page);
@@ -167,8 +166,10 @@ async function captureDesktop(browser) {
     await captureScenario(page, "04-binary-revealed.png", "binary-revealed"),
   );
   await page.close();
+}
 
-  ({ page } = await openScenarioPage(browser, { scientificCapability: "unavailable" }));
+async function captureScientificCapabilityScenarios(browser, captures) {
+  let { page } = await openScenarioPage(browser, { scientificCapability: "unavailable" });
   await page.locator("#presetSelect").selectOption("kepler-planet-only");
   await waitForScenario(page);
   await page.locator("#profileScientificBtn").click();
@@ -193,50 +194,58 @@ async function captureDesktop(browser) {
     captureMode: "scripted-mocked-scientific-capability",
   });
   await page.close();
+}
 
+async function captureScientificResult(browser, captures) {
   if (captureLiveScientificResult) {
-    ({ page } = await openScenarioPage(browser));
-    await page.locator("#presetSelect").selectOption("kepler-planet-only");
-    await waitForScenario(page);
-    await page.locator("#profileScientificBtn").click();
-    await page.locator("#scienceRunBtn").waitFor({ state: "visible" });
-    await page.waitForFunction(() => !document.querySelector("#scienceRunBtn")?.hasAttribute("disabled"));
-    await page.locator("#scienceDurationHours").fill("0.05");
-    await page.locator("#scienceCadenceSec").fill("30");
-    await page.locator("#scienceSeed").fill("7");
-    await page.locator("#scienceRunBtn").click();
-    await page.locator("#scienceArtifactLink").waitFor({ state: "visible", timeout: 120_000 });
-    const [resultText, artifactHref] = await Promise.all([
-      page.locator("#scienceResult").textContent(),
-      page.locator("#scienceArtifactLink").getAttribute("href"),
-    ]);
-    if (!resultText || !artifactHref) {
-      throw new Error("Live Scientific result did not expose provenance and Arrow artifact");
+    const { page } = await openScenarioPage(browser);
+    try {
+      await page.locator("#presetSelect").selectOption("kepler-planet-only");
+      await waitForScenario(page);
+      await page.locator("#profileScientificBtn").click();
+      await page.locator("#scienceRunBtn").waitFor({ state: "visible" });
+      await page.waitForFunction(() => !document.querySelector("#scienceRunBtn")?.hasAttribute("disabled"));
+      await page.locator("#scienceDurationHours").fill("0.05");
+      await page.locator("#scienceCadenceSec").fill("30");
+      await page.locator("#scienceSeed").fill("7");
+      await page.locator("#scienceRunBtn").click();
+      await page.locator("#scienceArtifactLink").waitFor({ state: "visible", timeout: 120_000 });
+      const [resultText, artifactHref] = await Promise.all([
+        page.locator("#scienceResult").textContent(),
+        page.locator("#scienceArtifactLink").getAttribute("href"),
+      ]);
+      if (!resultText || !artifactHref) {
+        throw new Error("Live Scientific result did not expose provenance and Arrow artifact");
+      }
+      const artifactBytes = Buffer.from(
+        await page.evaluate(
+          async (href) => Array.from(new Uint8Array(await (await fetch(href)).arrayBuffer())),
+          artifactHref,
+        ),
+      );
+      await page.locator("#scientificWorkspace").screenshot({
+        path: path.join(screenshotDir, "07-scientific-result.png"),
+      });
+      captures.set("07-scientific-result.png", {
+        scenario: "scientific-result",
+        appearance: "dark",
+        viewport: page.viewportSize(),
+        capturedAt: new Date().toISOString(),
+        captureMode: "live-scientific-backend",
+        browser: { engine: browser.browserType().name(), version: browser.version() },
+        scientificEvidence: scientificEvidenceFromResult(resultText, artifactBytes),
+      });
+      console.log("[capture] 07-scientific-result.png (live backend)");
+    } finally {
+      await page.close();
     }
-    const artifactBytes = Buffer.from(
-      await page.evaluate(
-        async (href) => Array.from(new Uint8Array(await (await fetch(href)).arrayBuffer())),
-        artifactHref,
-      ),
-    );
-    await page.locator("#scientificWorkspace").screenshot({
-      path: path.join(screenshotDir, "07-scientific-result.png"),
-    });
-    captures.set("07-scientific-result.png", {
-      scenario: "scientific-result",
-      appearance: "dark",
-      viewport: page.viewportSize(),
-      capturedAt: new Date().toISOString(),
-      captureMode: "live-scientific-backend",
-      browser: { engine: browser.browserType().name(), version: browser.version() },
-      scientificEvidence: scientificEvidenceFromResult(resultText, artifactBytes),
-    });
-    console.log("[capture] 07-scientific-result.png (live backend)");
-  } else {
-    let scientificFixture;
-    ({ page, scientificFixture } = await openScenarioPage(browser, {
-      scientificCapability: "fixture-result",
-    }));
+    return;
+  }
+
+  const { page, scientificFixture } = await openScenarioPage(browser, {
+    scientificCapability: "fixture-result",
+  });
+  try {
     await page.locator("#presetSelect").selectOption("kepler-planet-only");
     await waitForScenario(page);
     await page.locator("#profileScientificBtn").click();
@@ -249,11 +258,14 @@ async function captureDesktop(browser) {
       captureMode: "scripted-contract-result",
       scientificEvidence: scientificFixtureEvidence(scientificFixture),
     });
-    await page.close();
     console.log("[capture] 07-scientific-result.png (deterministic contract replay)");
+  } finally {
+    await page.close();
   }
+}
 
-  ({ page } = await openScenarioPage(browser, { colorScheme: "dark" }));
+async function captureDarkEducationScenario(browser, captures) {
+  const { page } = await openScenarioPage(browser, { colorScheme: "dark" });
   await page.locator("#presetSelect").selectOption("kepler-planet-only");
   await waitForScenario(page);
   captures.set(
@@ -261,6 +273,14 @@ async function captureDesktop(browser) {
     await captureScenario(page, "10-dark-education.png", "education-dark-hero"),
   );
   await page.close();
+}
+
+async function captureDesktop(browser) {
+  const captures = new Map();
+  await captureEducationScenarios(browser, captures);
+  await captureScientificCapabilityScenarios(browser, captures);
+  await captureScientificResult(browser, captures);
+  await captureDarkEducationScenario(browser, captures);
   return captures;
 }
 
