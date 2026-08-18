@@ -2,13 +2,14 @@
 
 Evidence date: 2026-08-14
 
-This document records checks run against a dirty local working tree. The
-results do not describe an immutable release candidate. Nothing was staged,
-committed, tagged, published, or deployed.
+This document records checks run against a dirty local working tree on
+2026-08-14. The results are historical evidence, not an immutable release
+candidate or a statement of the current working tree. Nothing was staged,
+committed, tagged, published, or deployed in that audit.
 
-## Current candidate evidence
+## 2026-08-14 candidate evidence
 
-The current TypeScript gates passed lint, formatting, Knip, clone detection,
+The TypeScript gates then passed lint, formatting, Knip, clone detection,
 TypeScript 6 and 7 checks, 1,119 tests, production build, served-bundle smoke,
 coverage thresholds, and the scientific, literature, calibration, didactics,
 performance, physics, and migration suites. The static demo also built as a
@@ -16,11 +17,12 @@ self-contained Pages artifact with its checked fixture captures and manifest.
 No Pages deployment workflow exists.
 
 The production dependency audit initially reproduced one high-severity Nano
-ID advisory. The workspace override and lockfile now resolve Nano ID 3.3.18,
-and the pinned audit reports no known vulnerabilities. This was a transitive
+ID advisory. The workspace override and lockfile resolved Nano ID 3.3.18, and
+the pinned audit reported no known vulnerabilities. This was a transitive
 PostCSS/Vite path; no direct application import was found.
 
-The following lanes remain environment- or owner-blocked in this checkout:
+The following lanes were environment- or owner-blocked in the inspected
+checkout:
 
 - all 57 Playwright cases stop at browser launch because the pinned browser
   executables are absent;
@@ -37,9 +39,9 @@ The following lanes remain environment- or owner-blocked in this checkout:
 
 ## Historical evidence (2026-08-12)
 
-The detailed snapshot below predates the current candidate. Its browser,
-Python, native, Codacy, and archive results remain historical evidence and
-must not be treated as rerun proof for this working tree.
+The detailed snapshot below predates the 2026-08-14 audit snapshot. Its
+browser, Python, native, Codacy, and archive results remain historical evidence
+and must not be treated as rerun proof for a current working tree.
 
 ## Browser and TypeScript
 
