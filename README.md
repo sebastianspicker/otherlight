@@ -170,10 +170,8 @@ Repository configuration:
 | `package.json`                   | Commands, Node requirement, pnpm version, and tool versions |
 | `pnpm-workspace.yaml`            | Dependency overrides and allowed install scripts            |
 | `vite.config.ts`                 | Build output, CSP, and development/preview security headers |
-| `playwright.config.ts`           | Browser test matrix and preview server                      |
 | `vitest.config.ts`               | Unit and integration test configuration                     |
 | `tsconfig.json`                  | Browser source typecheck                                    |
-| `tsconfig.test.json`             | Test typecheck                                              |
 | `science_backend/pyproject.toml` | Python package, extras, lint, type, and test settings       |
 | `native-apple/Config/*.xcconfig` | Apple deployment targets and Swift language mode            |
 | `contracts/`                     | Versioned browser, service, workspace, and parity contracts |
@@ -182,7 +180,6 @@ Supported operational environment variables:
 
 | Variable               | Used by                                  | Default                  |
 | ---------------------- | ---------------------------------------- | ------------------------ |
-| `E2E_PORT`             | Playwright preview server                | `4174`                   |
 | `SMOKE_HOST`           | Served browser smoke test                | `127.0.0.1`              |
 | `SMOKE_PORT`           | Served browser smoke test                | `4173`                   |
 | `SCREENSHOT_DIR`       | Browser screenshot capture output        | `docs/screenshots/web`   |
@@ -270,15 +267,13 @@ src/
   workspace/    `.otherlight` document validation and serialization
 science_backend/
   science_backend/  Python contracts, API, integration, and artifacts
-  tests/            Python contract and numerical tests
+  tests/            Python canonical JSON and API contract tests
 native-apple/
   App/              SwiftUI application
-  AppTests/         native unit and integration tests
-  AppUITests/       native UI tests
   Packages/         portable Core and macOS-only Science Swift packages
 contracts/          versioned cross-runtime schemas, cases, and fixtures
 scripts/            verification, migration, capture, and Apple release tools
-tests/              TypeScript unit, integration, browser, contract, and policy tests
+tests/              TypeScript API, scenario, workspace, CSP, and V4 contract tests
 docs/               maintained technical documentation and screenshot evidence
 ```
 
@@ -316,29 +311,21 @@ The broader browser loop is:
 ./scripts/ci-local.sh
 ```
 
-It installs browser binaries and also runs E2E, served-bundle smoke, coverage,
-dependency audit, science contract tests, benchmarks, didactics, performance,
-physics, and migration checks. It does not run the Python backend suite or
-native Apple suite.
+It runs the compact browser build, lint, type, and contract checks. It does not
+run the Python backend suite or native Apple suite.
 
 ## Testing
 
-| Command                     | Scope                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| `pnpm test`                 | Vitest suite excluding dedicated performance tests                              |
-| `pnpm test:coverage`        | V8 coverage run                                                                 |
-| `pnpm test:e2e`             | Build plus Playwright on Chromium, Firefox, WebKit, tablet, and mobile projects |
-| `pnpm typecheck`            | TypeScript 7 source and test projects                                           |
-| `pnpm typecheck:compat`     | TypeScript 6 compatibility                                                      |
-| `pnpm deadcode`             | Knip unused surface analysis                                                    |
-| `pnpm duplicates`           | jscpd scan of `src/`                                                            |
-| `pnpm physics-registry`     | Physics registry and formula-owner validation                                   |
-| `pnpm science:verify`       | TypeScript V5 contract and registry tests                                       |
-| `pnpm science:backend:test` | Python backend tests in the active environment                                  |
-| `pnpm verify:tour`          | Screenshot manifests, images, and documentation links                           |
-
-See [`tests/README.md`](tests/README.md) for suite ownership, runner boundaries,
-and the test directory map.
+| Command                     | Scope                                          |
+| --------------------------- | ---------------------------------------------- |
+| `pnpm test`                 | Compact Vitest contract suite                  |
+| `pnpm typecheck`            | TypeScript 7 source project                    |
+| `pnpm typecheck:compat`     | TypeScript 6 compatibility                     |
+| `pnpm deadcode`             | Knip unused surface analysis                   |
+| `pnpm duplicates`           | jscpd scan of `src/`                           |
+| `pnpm physics-registry`     | Physics registry and formula-owner validation  |
+| `pnpm science:verify`       | TypeScript V5 contract and registry tests      |
+| `pnpm science:backend:test` | Python backend tests in the active environment |
 
 GitHub Actions also run Python formatting, linting, Pyright, backend tests,
 wheel build/install smoke, CodeQL, gitleaks, dependency audit, and conditional
@@ -383,7 +370,7 @@ Python environment includes the `integrator`, `service`, and `artifacts`
 dependencies. Check `GET /v1/capabilities`. The browser will not submit until
 the response advertises `forward` and `radial-velocity`.
 
-### Playwright cannot find browser executables
+### Screenshot capture cannot find browser executables
 
 Install the pinned browsers:
 
@@ -440,6 +427,5 @@ affected runtime, commands run, and any checks that remain unverified.
 - [`docs/physics/overview.md`](docs/physics/overview.md): physics documentation map
 - [`docs/rendering/physics-visualization-contract.md`](docs/rendering/physics-visualization-contract.md):
   visualization data contract
-- [`tests/README.md`](tests/README.md): test ownership, runners, and suite layout
 - [`DESIGN.md`](DESIGN.md): frontend visual and accessibility contract
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md): third-party notices

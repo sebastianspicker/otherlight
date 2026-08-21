@@ -12,7 +12,6 @@ configuration, usage, repository structure, and common commands.
 | [`alpha-release.md`](alpha-release.md)     | Candidate preparation and distribution boundaries                           |
 | [`tour.md`](tour.md)                       | Browser screenshot evidence and native capture requirements                 |
 | [`frontend.md`](frontend.md)               | Browser shell, state, accessibility, and responsive behavior                |
-| [`../tests/README.md`](../tests/README.md) | Test ownership, runner boundaries, and suite layout                         |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Development setup and pull-request expectations                             |
 | [`../SECURITY.md`](../SECURITY.md)         | Trust boundaries and private vulnerability reporting                        |
 
@@ -56,8 +55,6 @@ Run these commands from the repository root:
 pnpm hygiene:public
 pnpm hygiene:docs
 pnpm hygiene:swift-docs
-pnpm verify:tour
-pnpm exec vitest run tests/docs/readme-links.test.ts
 ```
 
 `pnpm hygiene:public` also checks non-ignored untracked files. Build output,

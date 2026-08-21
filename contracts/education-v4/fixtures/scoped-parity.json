@@ -1,7 +1,7 @@
 {
   "contractVersion": "education-v4/1",
   "generator": "scripts/export-native-parity-fixtures.mjs",
-  "sourceRevision": "77555e131da9931c9974011dbe10c505273d4814+dirty",
+  "sourceRevision": "7dcd7259a397f7e47ab9d89dd1d18c40dad77434+dirty",
   "comparisonPolicy": {
     "exactFields": ["scenario.version", "scenario.mode", "renderSignals.events", "warningFlags"],
     "floating": {

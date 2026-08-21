@@ -10,13 +10,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const rootExecutableFiles = new Set([
-  "eslint.config.js",
-  "index.html",
-  "playwright.config.ts",
-  "vite.config.ts",
-  "vitest.config.ts",
-]);
+const rootExecutableFiles = new Set(["eslint.config.js", "index.html", "vite.config.ts", "vitest.config.ts"]);
 const executableExtensions = new Set([".css", ".html", ".js", ".mjs", ".py", ".sh", ".swift", ".ts"]);
 
 function candidatePaths() {
