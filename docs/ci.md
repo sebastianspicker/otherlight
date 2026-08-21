@@ -10,15 +10,13 @@ publish its analysis results.
 `.github/workflows/ci.yml` runs on pull requests and pushes to `main` and `dev`.
 Its jobs are:
 
-| Job             | Environment                  | Checks                                                                            |
-| --------------- | ---------------------------- | --------------------------------------------------------------------------------- |
-| `lint`          | Ubuntu 24.04, Node 22        | Public-surface and documentation hygiene, ESLint, Prettier, Knip, and duplication |
-| `typecheck`     | Ubuntu 24.04, Node 22        | TypeScript 7 and TypeScript 6 compatibility projects                              |
-| `python`        | Ubuntu 24.04, Python 3.14.6  | Ruff, Pyright, pytest, wheel build, clean wheel install and import                |
-| `test`          | Ubuntu 24.04, Node 22 and 24 | Vitest unit and integration suites                                                |
-| `build`         | Ubuntu 24.04, Node 22        | Vite production build                                                             |
-| `e2e`           | Ubuntu 24.04, Node 22        | Playwright Chromium, Firefox, WebKit, tablet, and mobile projects                 |
-| `quality-gates` | Ubuntu 24.04, Node 22        | Literature, calibration, didactics, performance, physics, and migration checks    |
+| Job         | Environment                  | Checks                                                                            |
+| ----------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| `lint`      | Ubuntu 24.04, Node 22        | Public-surface and documentation hygiene, ESLint, Prettier, Knip, and duplication |
+| `typecheck` | Ubuntu 24.04, Node 22        | TypeScript 7 and TypeScript 6 compatibility projects                              |
+| `python`    | Ubuntu 24.04, Python 3.14.6  | Ruff, Pyright, pytest, wheel build, clean wheel install and import                |
+| `test`      | Ubuntu 24.04, Node 22 and 24 | Vitest unit and integration suites                                                |
+| `build`     | Ubuntu 24.04, Node 22        | Vite production build                                                             |
 
 Each Node job installs dependencies with:
 
@@ -81,10 +79,10 @@ Run the broader local loop:
 ./scripts/ci-local.sh
 ```
 
-The script performs a frozen install, installs Playwright browsers, runs
-browser E2E tests, probes the served build, records coverage, runs the moderate
-dependency audit, and executes the scientific contract and project quality
-gates. It does not run the Python backend checks or native Apple checks.
+The script performs a frozen install, runs the compact verification suite,
+probes the served build, runs the moderate dependency audit, and executes the
+scientific contract checks. It does not run the Python backend checks or native
+Apple checks.
 
 Run those separately:
 
@@ -101,8 +99,8 @@ swift test --package-path native-apple/Packages/OtherlightCore
 swift test --package-path native-apple/Packages/OtherlightScience
 ```
 
-The local dependency audit requires network access. Playwright installation may
-also download browser binaries.
+The local dependency audit requires network access. Screenshot capture may
+download its pinned browser binary separately.
 
 ## Changing automation
 

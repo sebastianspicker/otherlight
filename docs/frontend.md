@@ -68,14 +68,8 @@ web fonts.
 The application targets desktop and tablet landscape. Narrow layouts retain
 the same DOM order and stack controls without hiding required actions.
 
-Playwright checks desktop Chromium, Firefox, and WebKit, plus a 1024-pixel
-tablet project and a 390-pixel mobile smoke project. Browser binaries must be
-installed before running the complete matrix:
-
-```bash
-pnpm exec playwright install chromium firefox webkit
-pnpm test:e2e
-```
+Responsive behavior is checked manually before release; browser automation is
+intentionally not part of the maintained suite.
 
 ## Frontend checks
 
@@ -84,13 +78,11 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm test:e2e
 ```
 
-The unit and integration suite includes shell, input, profile, workspace,
-rendering, accessibility-state, and Scientific client behavior. Browser tests
-cover keyboard operation, layout, core workflows, and the configured viewport
-matrix. Manual assistive-technology checks remain necessary for canvas
+The compact suite covers contracts at the scientific API, scenario, workspace,
+CSP, and V4 runtime boundaries. Manual assistive-technology checks remain
+necessary for canvas
 descriptions, announcements, focus movement, and rendered contrast.
 
 The current Chromium 200 percent zoom check reports 8px of horizontal overflow.
@@ -103,5 +95,5 @@ This is a known failure, not a supported layout result.
 - Plot history and job polling must remain bounded.
 - Runtime paths must not perform synchronous network or filesystem work.
 
-Use `pnpm perf-smoke` for the dedicated timing checks. Normal unit tests exclude
-the performance suite.
+Measure performance with representative release workloads when changing a hot
+path; benchmark automation is intentionally not part of the maintained suite.

@@ -11,7 +11,7 @@
       "title": "Shareable product route state",
       "website": {
         "status": "available",
-        "evidence": ["tests/ui/product-view-state.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -35,7 +35,7 @@
       "title": "Portable .otherlight workspace document",
       "website": {
         "status": "available",
-        "evidence": ["tests/workspace/workspace-document.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -59,7 +59,7 @@
       "title": "Preset and committed real-system catalog",
       "website": {
         "status": "available",
-        "evidence": ["tests/app/presets-edge-cases.test.ts", "tests/app/real-systems.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -85,7 +85,7 @@
       "title": "Start, pause, reset, speed, transit jump, and zoom",
       "website": {
         "status": "available",
-        "evidence": ["tests/app/actions.test.ts", "tests/e2e/app.spec.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -112,10 +112,7 @@
       "title": "Interactive and deterministic reference runtime modes",
       "website": {
         "status": "available",
-        "evidence": [
-          "tests/sim/v4-reference-client.test.ts",
-          "tests/sim/v4-runtime.reference-aggregation.test.ts"
-        ]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -139,7 +136,7 @@
       "title": "Essential and advanced parameter editing",
       "website": {
         "status": "available",
-        "evidence": ["tests/ui/params-consistency.test.ts", "tests/ui/param-validation.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -163,7 +160,7 @@
       "title": "Detached-binary preview photometry",
       "website": {
         "status": "available",
-        "evidence": ["tests/sim/v4-native-binary-photometry.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -187,7 +184,7 @@
       "title": "Atmosphere and scattering preview photometry",
       "website": {
         "status": "available",
-        "evidence": ["tests/sim/v4-atmosphere-effects.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -211,7 +208,7 @@
       "title": "Synthetic instrument-noise preview",
       "website": {
         "status": "available",
-        "evidence": ["tests/photometry/instrumentNoise.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -285,7 +282,7 @@
       "title": "Sky, light-curve, O-C, summaries, overlays, and tracking",
       "website": {
         "status": "available",
-        "evidence": ["tests/app/visualizationScene.test.ts", "tests/render/lightCurvePlot.core.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -309,7 +306,7 @@
       "title": "Phased responses, hints, checks, comparison, rubric, and report",
       "website": {
         "status": "available",
-        "evidence": ["tests/didactics/didactics-acceptance.test.ts", "tests/didactics/hint-levels.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -336,7 +333,7 @@
       "title": "Binary hypothesis and guarded reveal workflow",
       "website": {
         "status": "available",
-        "evidence": ["tests/didactics/binary-lab-state.test.ts", "tests/e2e/app.spec.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -360,7 +357,7 @@
       "title": "Light-curve history, clear, undo, and CSV",
       "website": {
         "status": "available",
-        "evidence": ["tests/app/bootstrap.characterization.test.ts", "tests/e2e/app.spec.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
@@ -384,7 +381,7 @@
       "title": "O-C body, unit, trend, statistics, clear, undo, and CSV",
       "website": {
         "status": "available",
-        "evidence": ["tests/app/oc-plot.test.ts", "tests/app/transit-history.test.ts"]
+        "evidence": ["tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",

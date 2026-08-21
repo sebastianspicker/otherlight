@@ -49,6 +49,7 @@ __pycache__/
 science_backend/build/
 science_backend/dist/
 science_backend/*.egg-info/
+/science_backend/uv.lock
 .science-cache/
 *.arrow
 *.feather
@@ -191,3 +192,16 @@ htmlcov/
 *.local.db
 *.local.sqlite
 *.local.sqlite3
+
+# Generated test and coverage output (local only)
+/coverage/
+/htmlcov/
+/.coverage
+/.coverage.*
+/.pytest_cache/
+/test-results/
+/playwright-report/
+/blob-report/
+/coverage.xml
+/junit.xml
+/junit-*.xml

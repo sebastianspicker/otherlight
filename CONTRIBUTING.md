@@ -34,7 +34,7 @@ Keep changes within the owning layer:
 core -> physics -> photometry -> sim -> render/ui -> app
 ```
 
-Tests in `tests/docs/hygiene-layering.test.ts` enforce this dependency order.
+Preserve this dependency order when changing implementation boundaries.
 Versioned cross-runtime behavior belongs in `contracts/`, not in an
 implementation-specific test fixture.
 

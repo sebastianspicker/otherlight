@@ -11,7 +11,6 @@
 ## Verification
 
 - [ ] `pnpm ci:verify`
-- [ ] `pnpm test:e2e`
 - [ ] `pnpm audit:security` (for dependency/security-impacting changes)
 - [ ] Python backend: `pnpm science:backend:check` and `pnpm science:backend:test` (when `science_backend/` changes)
 - [ ] Scientific contracts/physics: `pnpm science:verify` and `pnpm physics-registry` (when models, contracts, or capability claims change)

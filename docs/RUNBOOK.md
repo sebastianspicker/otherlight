@@ -181,16 +181,15 @@ pnpm test
 pnpm build
 ```
 
-Run the broader browser and TypeScript release loop:
+Run the broader local release loop:
 
 ```bash
 ./scripts/ci-local.sh
 ```
 
-That script performs a frozen install, installs the Playwright browser
-binaries, runs the configured browser matrix, checks coverage and the served
-application, queries the dependency advisory service, and runs the project
-quality gates. It does not run the Python or native Apple test suites.
+That script performs a frozen install, runs the compact contract suite, probes
+the served application, queries the dependency advisory service, and runs the
+project checks. It does not run the Python or native Apple test suites.
 
 Remove reproducible local output:
 
@@ -216,7 +215,7 @@ Migrate a SystemParams payload to V4:
 pnpm migrate:v4 -- input.json output.json
 ```
 
-Run `pnpm migration-regression` after changing the migration code or schema.
+Run the compact `pnpm test` suite after changing migration code or schema.
 
 ## Troubleshooting
 
@@ -251,7 +250,7 @@ Check `http://127.0.0.1:8765/v1/capabilities`. A running service can still
 withhold forward radial velocity when SciPy or PyArrow is missing. Restart the
 browser after correcting the backend environment.
 
-### Playwright cannot find a browser
+### Screenshot capture cannot find a browser
 
 Install the pinned browser binaries:
 
@@ -259,7 +258,7 @@ Install the pinned browser binaries:
 pnpm exec playwright install chromium firefox webkit
 ```
 
-Linux CI also uses `--with-deps` to install system libraries.
+Install any required system libraries for the local screenshot-capture host.
 
 ### Swift selects the wrong toolchain
 

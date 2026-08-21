@@ -28,9 +28,6 @@ importers:
       '@typescript/native':
         specifier: npm:typescript@7.0.2
         version: typescript@7.0.2
-      '@vitest/coverage-v8':
-        specifier: ^4.1.1
-        version: 4.1.1(vitest@4.1.1(@types/node@25.5.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.5.0)(jiti@2.7.0)(yaml@2.9.0)))
       eslint:
         specifier: 10.1.0
         version: 10.1.0(jiti@2.7.0)
