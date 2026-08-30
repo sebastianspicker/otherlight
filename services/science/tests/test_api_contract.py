@@ -99,7 +99,7 @@ def forward_payload() -> dict:
 
 
 CONTRACT_CASES = json.loads(
-    (Path(__file__).parents[2] / "contracts/science-v5/contract-cases.json").read_text()
+    (Path(__file__).parents[3] / "contracts/science-v5/contract-cases.json").read_text()
 )
 
 

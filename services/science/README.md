@@ -9,9 +9,9 @@ The package requires Python `>=3.14.6,<3.15`.
 From the repository root, create an environment and install the development set:
 
 ```bash
-python3.14 -m venv science_backend/.venv
-source science_backend/.venv/bin/activate
-python -m pip install -e './science_backend[dev]'
+python3.14 -m venv services/science/.venv
+source services/science/.venv/bin/activate
+python -m pip install -e './services/science[dev]'
 ```
 
 Optional dependency sets are deliberately separated:
@@ -27,7 +27,7 @@ Optional dependency sets are deliberately separated:
 Install only the HTTP execution dependencies with:
 
 ```bash
-python -m pip install -e './science_backend[integrator,service,artifacts]'
+python -m pip install -e './services/science[integrator,service,artifacts]'
 ```
 
 ## Run locally
@@ -72,10 +72,10 @@ Errors use a JSON object with `code` and `message`. Invalid contracts return `42
 From the repository root with the development environment active:
 
 ```bash
-python -m ruff format --check science_backend
-python -m ruff check science_backend
-python -m pyright --pythonpath "$VIRTUAL_ENV/bin/python" science_backend
-PYTHONPATH=science_backend python -m pytest science_backend/tests
+python -m ruff format --check services/science
+python -m ruff check services/science
+python -m pyright --pythonpath "$VIRTUAL_ENV/bin/python" services/science
+PYTHONPATH=services/science python -m pytest services/science/tests
 ```
 
 ## Troubleshooting

@@ -1,7 +1,7 @@
 {
   "provenance": {
     "generator": "scipy.integrate.solve_ivp(method='DOP853', dense_output=True)",
-    "source": "science_backend/science_backend/forward_dynamics.py",
+    "source": "services/science/science_backend/forward_dynamics.py",
     "strategy": "separate future and reverse-time past legs from the epoch; evaluate solution.sol at serialized samples",
     "scipyVersion": "1.18.0",
     "pythonVersion": "3.14.6",

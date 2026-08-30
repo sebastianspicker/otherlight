@@ -17,11 +17,11 @@ from science_backend.contracts import (
 
 CASES = json.loads(
     (
-        Path(__file__).parents[2] / "contracts/science-v5/canonical-json-cases.json"
+        Path(__file__).parents[3] / "contracts/science-v5/canonical-json-cases.json"
     ).read_text()
 )
 CONTRACT_CASES = json.loads(
-    (Path(__file__).parents[2] / "contracts/science-v5/contract-cases.json").read_text()
+    (Path(__file__).parents[3] / "contracts/science-v5/contract-cases.json").read_text()
 )
 
 
