@@ -10,7 +10,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const rootExecutableFiles = new Set(["eslint.config.js", "index.html", "vite.config.ts", "vitest.config.ts"]);
+const rootExecutableFiles = new Set(["eslint.config.js"]);
 const executableExtensions = new Set([".css", ".html", ".js", ".mjs", ".py", ".sh", ".swift", ".ts"]);
 
 function candidatePaths() {
@@ -27,10 +27,10 @@ function isAuthoredExecutable(path) {
   if (rootExecutableFiles.has(path)) return true;
   const extension = extname(path);
   if (!executableExtensions.has(extension)) return false;
-  if (path.startsWith("src/")) return extension === ".css" || extension === ".ts";
-  if (path.startsWith("tests/")) return extension === ".ts";
+  if (path.startsWith("apps/browser/src/")) return extension === ".css" || extension === ".ts";
+  if (path.startsWith("apps/browser/tests/")) return extension === ".ts";
   return (
-    path.startsWith("scripts/") || path.startsWith("science_backend/") || path.startsWith("native-apple/")
+    path.startsWith("scripts/") || path.startsWith("services/science/") || path.startsWith("apps/apple/")
   );
 }
 
@@ -92,7 +92,7 @@ function hasModuleDocumentation(path) {
     .replace(/^\/[/*]+\s*/, "")
     .replace(/\s*\*\/$/, "")
     .trim();
-  return !/^(?:(?:src|tests|scripts|science_backend|native-apple)\/\S+|[\w.-]+\.(?:css|html|js|mjs|ts))$/.test(
+  return !/^(?:(?:apps\/browser\/(?:src|tests)|apps\/apple|scripts|services\/science)\/\S+|[\w.-]+\.(?:css|html|js|mjs|ts))$/.test(
     commentText,
   );
 }

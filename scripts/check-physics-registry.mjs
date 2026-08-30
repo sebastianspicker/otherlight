@@ -28,36 +28,29 @@ const requiredFields = [
   "references",
 ];
 const requiredOwners = [
-  "src/core/units.ts",
-  "src/physics/kepler.ts",
-  "src/physics/frames.ts",
-  "src/physics/barycenter.ts",
-  "src/physics/hillRadius.ts",
-  "src/physics/exomoonTiming.ts",
-  "src/physics/relativityPrecessionFormula.ts",
-  "src/physics/relativityTiming.ts",
-  "src/physics/relativityShapiro.ts",
-  "src/sim/nbody/integrator.ts",
-  "src/sim/nbody/diagnosticsEnergy.ts",
-  "src/sim/transitTimingSolve.ts",
-  "src/photometry/transitUniform.ts",
-  "src/photometry/transitLimbDarkened.ts",
-  "src/photometry/transitTransmission.ts",
-  "src/photometry/transitShapes.ts",
-  "src/photometry/limbDarkening.ts",
-  "src/photometry/atmosphereRT/model.ts",
-  "src/photometry/dayNightVisibility.ts",
-  "src/photometry/phaseCurve.ts",
-  "src/photometry/forwardScattering.ts",
-  "src/photometry/stellarBandFlux.ts",
-  "src/photometry/stellarVariability.ts",
-  "src/photometry/smearing.ts",
-  "src/photometry/instrumentNoise.ts",
-  "src/photometry/random.ts",
-  "src/sim/v4/nativeSnapshot.ts",
-  "src/sim/v4/nativePhotometry.ts",
-  "src/sim/v4/nativeModel.ts",
-  "src/sim/v4/nativeEngine.ts",
+  "apps/browser/src/domain/model/units.ts",
+  "apps/browser/src/domain/orbits/kepler.ts",
+  "apps/browser/src/domain/orbits/frames.ts",
+  "apps/browser/src/domain/orbits/barycenter.ts",
+  "apps/browser/src/domain/orbits/hillRadius.ts",
+  "apps/browser/src/domain/orbits/exomoonTiming.ts",
+  "apps/browser/src/domain/simulation/transitTimingSolve.ts",
+  "apps/browser/src/domain/photometry/transitLimbDarkened.ts",
+  "apps/browser/src/domain/photometry/transitTransmission.ts",
+  "apps/browser/src/domain/photometry/limbDarkening.ts",
+  "apps/browser/src/domain/photometry/atmosphereRT/model.ts",
+  "apps/browser/src/domain/photometry/dayNightVisibility.ts",
+  "apps/browser/src/domain/photometry/phaseCurve.ts",
+  "apps/browser/src/domain/photometry/forwardScattering.ts",
+  "apps/browser/src/domain/photometry/stellarBandFlux.ts",
+  "apps/browser/src/domain/photometry/stellarVariability.ts",
+  "apps/browser/src/domain/photometry/smearing.ts",
+  "apps/browser/src/domain/photometry/instrumentNoise.ts",
+  "apps/browser/src/domain/photometry/random.ts",
+  "apps/browser/src/domain/simulation/v4/nativeSnapshot.ts",
+  "apps/browser/src/domain/simulation/v4/nativePhotometry.ts",
+  "apps/browser/src/domain/simulation/v4/nativeModel.ts",
+  "apps/browser/src/domain/simulation/v4/nativeEngine.ts",
 ];
 
 const errors = [];
@@ -109,10 +102,10 @@ for (const [index, model] of (registry.models ?? []).entries()) {
 for (const requiredOwner of requiredOwners) {
   if (!owners.has(requiredOwner)) errors.push(`formula owner is not registered: ${requiredOwner}`);
 }
-for (const formulaOwner of await sourceFiles("src/physics")) {
+for (const formulaOwner of await sourceFiles("apps/browser/src/domain/orbits")) {
   if (!owners.has(formulaOwner)) errors.push(`physics source is not registered: ${formulaOwner}`);
 }
-for (const formulaOwner of await sourceFiles("src/photometry")) {
+for (const formulaOwner of await sourceFiles("apps/browser/src/domain/photometry")) {
   if (!owners.has(formulaOwner)) errors.push(`photometry source is not registered: ${formulaOwner}`);
 }
 

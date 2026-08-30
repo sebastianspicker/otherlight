@@ -175,7 +175,7 @@ function swiftSourcePaths() {
     encoding: "utf8",
   })
     .split("\0")
-    .filter((path) => path.startsWith("native-apple/") && path.endsWith(".swift"))
+    .filter((path) => path.startsWith("apps/apple/") && path.endsWith(".swift"))
     .filter((path) => existsSync(resolve(repoRoot, path)))
     .sort();
 }

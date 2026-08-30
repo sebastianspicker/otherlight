@@ -4,7 +4,7 @@ exclude_paths:
   - "coverage/**"
   - "dist/**"
   - "node_modules/**"
-  - "science_backend/.venv/**"
+  - "services/science/.venv/**"
   - "test-results/**"
 engines:
   lizard:
@@ -17,5 +17,5 @@ engines:
       - "coverage/**"
       - "dist/**"
       - "node_modules/**"
-      - "science_backend/.venv/**"
+      - "services/science/.venv/**"
       - "test-results/**"

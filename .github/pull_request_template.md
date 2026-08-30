@@ -12,14 +12,14 @@
 
 - [ ] `pnpm ci:verify`
 - [ ] `pnpm audit:security` (for dependency/security-impacting changes)
-- [ ] Python backend: `pnpm science:backend:check` and `pnpm science:backend:test` (when `science_backend/` changes)
+- [ ] Python backend: `pnpm science:backend:check` and `pnpm science:backend:test` (when `services/science/` changes)
 - [ ] Scientific contracts/physics: `pnpm science:verify` and `pnpm physics-registry` (when models, contracts, or capability claims change)
-- [ ] Swift package: `source scripts/select-swift-toolchain.sh && swift test --package-path native-apple/Packages/OtherlightCore` (when `native-apple/` changes)
+- [ ] Swift package: `pnpm native:core:test` (when `apps/apple/` changes)
 - [ ] Native Apple app: run the documented Xcode unit-test and UI `build-for-testing` commands for each changed platform (when app/project code changes)
 - [ ] UI smoke: `pnpm dev` and check preset switching + light curve render
 - [ ] Screenshots are updated when the public UI changes; root `screenshots/` capture output is not included
 - [ ] `contracts/capabilities-v1/manifest.json` is reviewed when website/native Apple behavior or evidence changes
-- [ ] `pnpm hygiene:public` passes; generated reports, scientific data artifacts, and private maintenance/handoff artifacts are absent
+- [ ] `pnpm hygiene:public` passes; generated reports, local scientific artifacts, and credentials are absent
 
 ## Runtime / science notes
 

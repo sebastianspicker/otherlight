@@ -13,7 +13,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_LIMIT = 20;
 const DEFAULT_FETCH_TIMEOUT_MS = 15_000;
 const MAX_NASA_RESPONSE_BYTES = 10 * 1024 * 1024;
-const SNAPSHOT_OUTPUT_PATH = "src/config/real-systems.snapshot.json";
+const SNAPSHOT_OUTPUT_PATH = "apps/browser/src/application/catalog/real-systems.snapshot.json";
 
 export const NASA_TAP_QUERY = [
   "select",
@@ -299,7 +299,7 @@ export function snapshotOutputPath() {
 
 export async function writeSnapshotFile(snapshot) {
   const text = `${JSON.stringify(snapshot, null, 2)}\n`;
-  await fs.writeFile("src/config/real-systems.snapshot.json", text, "utf8");
+  await fs.writeFile(SNAPSHOT_OUTPUT_PATH, text, "utf8");
 }
 
 async function main() {
