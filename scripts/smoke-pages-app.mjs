@@ -9,6 +9,7 @@ const port = Number.parseInt(process.env.SMOKE_PAGES_PORT ?? "4174", 10);
 const basePath = "/otherlight/";
 const origin = `http://${host}:${port}`;
 const pagesUrl = `${origin}${basePath}`;
+const previewStopTimeoutMs = 5_000;
 
 if (!Number.isInteger(port) || port < 1 || port > 65_535) {
   throw new Error(`SMOKE_PAGES_PORT must be a valid TCP port, received ${port}`);
@@ -31,12 +32,50 @@ function run(command, args, options = {}) {
 function startPreview() {
   const logs = [];
   const child = spawn("pnpm", ["preview:pages", "--host", host, "--port", String(port), "--strictPort"], {
+    detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
   const capture = (buffer) => logs.push(buffer.toString());
   child.stdout.on("data", capture);
   child.stderr.on("data", capture);
   return { child, logs };
+}
+
+function previewHasExited(child) {
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
+function signalPreview(child, signal) {
+  if (previewHasExited(child) || child.pid === undefined) return;
+  try {
+    if (process.platform === "win32") child.kill(signal);
+    else process.kill(-child.pid, signal);
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ESRCH") throw error;
+  }
+}
+
+function waitForPreviewExit(child, timeoutMs) {
+  if (previewHasExited(child)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const onExit = () => finish(true);
+    const timer = globalThis.setTimeout(() => finish(false), timeoutMs);
+    const finish = (exited) => {
+      globalThis.clearTimeout(timer);
+      child.off("exit", onExit);
+      resolve(exited);
+    };
+    child.once("exit", onExit);
+  });
+}
+
+async function stopPreview(child) {
+  signalPreview(child, "SIGTERM");
+  if (await waitForPreviewExit(child, previewStopTimeoutMs)) return;
+  signalPreview(child, "SIGKILL");
+  if (!(await waitForPreviewExit(child, previewStopTimeoutMs))) {
+    throw new Error("Pages preview process group did not stop after SIGKILL.");
+  }
 }
 
 function findAssetPaths(html, attribute) {
@@ -60,7 +99,7 @@ function assertNoOriginRootAssetReference(source, label) {
 
 async function fetchUntilReady(server, logs) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    if (server.exitCode !== null) {
+    if (previewHasExited(server)) {
       throw new Error(`Pages preview exited before becoming ready:\n${logs.join("")}`);
     }
     try {
@@ -164,8 +203,5 @@ try {
   const brandResponse = await fetchAsset(brandPath, "Browser brand");
   assertContentType(brandResponse, /image\/svg\+xml/i, "Browser brand");
 } finally {
-  if (server.exitCode === null) {
-    server.kill("SIGTERM");
-    await new Promise((resolve) => server.once("exit", resolve));
-  }
+  await stopPreview(server);
 }
