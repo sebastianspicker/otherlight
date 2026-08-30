@@ -322,7 +322,7 @@ final class TransitScienceTests: XCTestCase {
   private func scipyParityFixture() throws -> SciPyParityFixture {
     let url = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
-      .appendingPathComponent("../../../../../contracts/science-v5/scipy-dop853-native-parity.json")
+      .appendingPathComponent("../../../../../../contracts/science-v5/scipy-dop853-native-parity.json")
       .standardizedFileURL
     return try JSONDecoder().decode(SciPyParityFixture.self, from: Data(contentsOf: url))
   }
@@ -353,7 +353,7 @@ final class TransitScienceTests: XCTestCase {
   private var fixtureURL: URL {
     URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
-      .appendingPathComponent("../../../../../contracts/science-v5/contract-cases.json")
+      .appendingPathComponent("../../../../../../contracts/science-v5/contract-cases.json")
       .standardizedFileURL
   }
 

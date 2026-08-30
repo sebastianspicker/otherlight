@@ -57,7 +57,7 @@
 		A2000000000000000000001A /* SimulationDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SimulationDashboard.swift; sourceTree = "<group>"; };
 		A2000000000000000000001B /* GuidedLabsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/GuidedLabsView.swift; sourceTree = "<group>"; };
 		A20000000000000000000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A20000000000000000000012 /* real-systems.snapshot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../src/config/real-systems.snapshot.json; sourceTree = SOURCE_ROOT; };
+		A20000000000000000000012 /* real-systems.snapshot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../browser/src/application/catalog/real-systems.snapshot.json; sourceTree = SOURCE_ROOT; };
 		A2000000000000000000000B /* OtherlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherlightTests.swift; sourceTree = "<group>"; };
 		A2000000000000000000000D /* Otherlight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Otherlight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000000000000000000000E /* OtherlightTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = OtherlightTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };

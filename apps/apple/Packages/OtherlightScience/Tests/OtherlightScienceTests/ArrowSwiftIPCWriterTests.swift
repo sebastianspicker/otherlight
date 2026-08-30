@@ -90,7 +90,7 @@ final class ArrowSwiftIPCWriterTests: XCTestCase {
   private func sharedFixture() throws -> ArrowSharedFixture {
     let root = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
-      .appendingPathComponent("../../../../../contracts/science-v5/contract-cases.json")
+      .appendingPathComponent("../../../../../../contracts/science-v5/contract-cases.json")
       .standardizedFileURL
     return try JSONDecoder().decode(ArrowSharedFixture.self, from: Data(contentsOf: root))
   }

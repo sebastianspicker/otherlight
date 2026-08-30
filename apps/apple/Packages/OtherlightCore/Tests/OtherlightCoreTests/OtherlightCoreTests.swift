@@ -77,7 +77,7 @@ final class OtherlightCoreTests: XCTestCase {
   /// Compares imported browser V4 scenarios against their scoped parity fixture.
   func testBrowserV4FixtureImportAndScopedKinematicsParity() throws {
     let fixtureURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-      .appendingPathComponent("../../../../../contracts/education-v4/fixtures/scoped-parity.json")
+      .appendingPathComponent("../../../../../../contracts/education-v4/fixtures/scoped-parity.json")
       .standardizedFileURL
     let fixture = try JSONDecoder().decode(ParityFixture.self, from: Data(contentsOf: fixtureURL))
     XCTAssertEqual(
@@ -142,7 +142,7 @@ final class OtherlightCoreTests: XCTestCase {
   /// Converts a real-system catalogue snapshot into a physically positive native scenario.
   func testRealSystemSnapshotImport() throws {
     let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent(
-      "../../../../../src/config/real-systems.snapshot.json"
+      "../../../../../browser/src/application/catalog/real-systems.snapshot.json"
     ).standardizedFileURL
     let snapshot = try JSONDecoder().decode(RealSystemSnapshotDTO.self, from: Data(contentsOf: url))
     XCTAssertFalse(snapshot.systems.isEmpty)

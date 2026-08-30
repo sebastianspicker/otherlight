@@ -107,7 +107,7 @@ final class TransitScienceContractsTests: XCTestCase {
   private func sharedFixture() throws -> ScientificContractFixture {
     let url = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
-      .appendingPathComponent("../../../../../contracts/science-v5/contract-cases.json")
+      .appendingPathComponent("../../../../../../contracts/science-v5/contract-cases.json")
       .standardizedFileURL
     return try JSONDecoder().decode(ScientificContractFixture.self, from: Data(contentsOf: url))
   }
