@@ -1,6 +1,7 @@
 /**
  * Owns header support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
  */
+import { runtimeAssetUrl } from "../../runtime/deployment";
 
 /** Browser file-picker compatibility: the current extension, legacy extension, and plain JSON. */
 export const WORKSPACE_FILE_ACCEPT = ".otherlight,.transitlab,application/json";
@@ -9,12 +10,12 @@ export const WORKSPACE_FILE_ACCEPT = ".otherlight,.transitlab,application/json";
  * Thin identity band: brand, calculation profile, and education mode tabs only.
  * Workspace open/save and scenario/runtime controls live in the command strip.
  */
-export function renderHeaderTemplate(): string {
+export function renderHeaderTemplate(baseUrl = import.meta.env.BASE_URL): string {
   return `
     <header class="app-header">
       <div class="product-heading">
         <div class="brand-lockup">
-          <img class="brand-mark" src="/brand/otherlight-signal-eclipse.svg" alt="" aria-hidden="true" />
+          <img class="brand-mark" src="${runtimeAssetUrl("brand/otherlight-signal-eclipse.svg", baseUrl)}" alt="" aria-hidden="true" />
           <div>
             <h1>Otherlight</h1>
             <p class="brand-descriptor">Exoplanet learning &amp; scientific modeling</p>

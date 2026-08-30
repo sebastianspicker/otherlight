@@ -10,6 +10,7 @@ import {
   type ScienceJobStatus,
 } from "../../infrastructure/science";
 import { toEducationScenarioV4 } from "../../application/browserScenarioAdapter";
+import { isGitHubPagesRuntime } from "../runtime/deployment";
 
 type ScienceWorkspaceClient = Pick<
   ReturnType<typeof createScienceBackendClient>,
@@ -21,6 +22,8 @@ type ScienceWorkspaceArgs = {
   isBinaryMode: () => boolean;
   signal: AbortSignal;
   client?: ScienceWorkspaceClient;
+  createClient?: () => ScienceWorkspaceClient;
+  isGitHubPages?: boolean;
 };
 
 export type ScienceWorkspaceController = {
@@ -165,6 +168,18 @@ function clearRunResult(elements: ScienceWorkspaceElements): void {
   elements.artifactLink.hidden = true;
   elements.artifactLink.removeAttribute("href");
   elements.result.textContent = "No scientific result has been accepted yet.";
+}
+
+function renderGitHubPagesUnavailable(elements: ScienceWorkspaceElements): void {
+  elements.capabilityStatus.textContent = "Unavailable on GitHub Pages";
+  elements.refreshButton.disabled = true;
+  elements.runButton.disabled = true;
+  elements.cancelButton.disabled = true;
+  elements.artifactLink.hidden = true;
+  elements.artifactLink.removeAttribute("href");
+  elements.result.textContent = "Scientific artifacts are available only from a local V5 run.";
+  elements.runStatus.textContent =
+    "Scientific V5 jobs are unavailable on GitHub Pages. To run them locally, start the loopback science service with pnpm science:backend:serve.";
 }
 
 function renderCompletedRun(
@@ -316,9 +331,16 @@ async function cancelScienceJob({ args, client, elements, state }: ScienceWorksp
 
 export function wireScienceWorkspace(args: ScienceWorkspaceArgs): ScienceWorkspaceController {
   const elements = getElements();
+  if (args.isGitHubPages ?? isGitHubPagesRuntime()) {
+    renderGitHubPagesUnavailable(elements);
+    return {
+      refreshCapabilities: async () => renderGitHubPagesUnavailable(elements),
+      cancelCurrentJob: async () => {},
+    };
+  }
   const context: ScienceWorkspaceContext = {
     args,
-    client: args.client ?? createScienceBackendClient(),
+    client: args.client ?? args.createClient?.() ?? createScienceBackendClient(),
     elements,
     state: createScienceWorkspaceState(elements),
   };

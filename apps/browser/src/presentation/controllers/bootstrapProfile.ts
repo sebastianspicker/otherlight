@@ -8,6 +8,7 @@ import {
 } from "../ui/productProfile";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { wireScienceWorkspace } from "./scienceWorkspace";
+import { isGitHubPagesRuntime } from "../runtime/deployment";
 
 type BootstrapProfileArgs = {
   select: HTMLSelectElement;
@@ -27,10 +28,12 @@ export type BootstrapProfileController = {
 export function wireBootstrapProfile(args: BootstrapProfileArgs): BootstrapProfileController {
   const educationButton = document.getElementById("profileEducationBtn") as HTMLButtonElement | null;
   const scientificButton = document.getElementById("profileScientificBtn") as HTMLButtonElement | null;
+  const isGitHubPages = isGitHubPagesRuntime();
   const scienceWorkspace = wireScienceWorkspace({
     getSystem: args.getScientificSystem,
     isBinaryMode: args.isBinaryMode,
     signal: args.signal,
+    isGitHubPages,
   });
   const syncFromControl = (announce = false): void => {
     const profile = readProductProfile(args.select.value);
@@ -42,7 +45,9 @@ export function wireBootstrapProfile(args: BootstrapProfileArgs): BootstrapProfi
     if (!announce) return;
     args.setStatus(
       profile === "scientific"
-        ? "Scientific workspace selected. V4 education execution is paused; check the local V5 backend."
+        ? isGitHubPages
+          ? "Scientific workspace selected. V5 jobs are unavailable on GitHub Pages; run the local loopback service to use them."
+          : "Scientific workspace selected. V4 education execution is paused; check the local V5 backend."
         : "Education workspace selected. Interactive V4 preview is ready.",
     );
   };

@@ -6,9 +6,11 @@ It provides interactive Education simulations, Guided Labs, plots, exports,
 and `.otherlight` workspaces. An optional local science service executes a
 bounded radial-velocity V5 request when its dependencies are available.
 
-The static [demo](https://sebastianspicker.github.io/otherlight/) is a
-non-executing tour. It does not run the simulator or contact the science
-service.
+The [hosted Browser](https://sebastianspicker.github.io/otherlight/) runs the
+Education simulation, Guided Labs, plots, exports, and workspace handling in
+the browser. GitHub Pages cannot run the Apple application or Python science
+service, so the hosted Scientific profile explains how to use that capability
+locally and never attempts a scientific request.
 
 ## Products and shared contracts
 
@@ -44,6 +46,18 @@ Build and preview the Browser bundle:
 pnpm build
 pnpm preview
 ```
+
+Build and preview the GitHub Pages variant at `/otherlight/`:
+
+```bash
+pnpm build:pages
+pnpm preview:pages
+```
+
+The Pages variant uses the repository base path and disables loopback science
+actions. Ordinary development and production builds retain the local science
+boundary. See [docs/RUNBOOK.md](docs/RUNBOOK.md) for the local Pages smoke test
+and later activation steps.
 
 ## Local science service
 

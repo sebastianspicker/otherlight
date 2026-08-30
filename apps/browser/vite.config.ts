@@ -1,9 +1,11 @@
 /** Configures production bundling and CSP headers, including the explicit loopback V5 boundary. */
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { defineConfig, type HtmlTagDescriptor } from "vite";
+import { defineConfig, type ConfigEnv, type HtmlTagDescriptor, type UserConfig } from "vite";
 
-type AppCspMode = "serve" | "build";
+type AppCspMode = "serve" | "build" | "github-pages";
+
+export const GITHUB_PAGES_BASE = "/otherlight/";
 
 const SCIENCE_LOOPBACK_SOURCES = "http://127.0.0.1:8765 http://localhost:8765";
 
@@ -30,13 +32,15 @@ function appCspDirectives(mode: AppCspMode): string[] {
     ];
   }
 
+  const connectSources = mode === "github-pages" ? "'self'" : `'self' ${SCIENCE_LOOPBACK_SOURCES}`;
+
   return [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob:",
-    `connect-src 'self' ${SCIENCE_LOOPBACK_SOURCES}`,
+    `connect-src ${connectSources}`,
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
@@ -68,20 +72,23 @@ function appCspMetaTag(mode: AppCspMode): HtmlTagDescriptor {
       "http-equiv": "Content-Security-Policy",
       content: appCspMetaForMode(mode),
     },
-    injectTo: "head",
+    injectTo: "head-prepend",
   };
 }
 
-export default defineConfig(({ command }) => {
+export function appViteConfigFor({ command, mode }: ConfigEnv): UserConfig {
   const cspMode: AppCspMode = command === "serve" ? "serve" : "build";
+  const isGithubPages = mode === "github-pages";
+  const staticCspMode = isGithubPages ? "github-pages" : cspMode;
 
   return {
     root: browserRoot,
+    base: isGithubPages ? GITHUB_PAGES_BASE : "/",
     plugins: [
       {
         name: "app-csp-meta",
         transformIndexHtml() {
-          return [appCspMetaTag(cspMode)];
+          return [appCspMetaTag(staticCspMode)];
         },
       },
     ],
@@ -94,7 +101,9 @@ export default defineConfig(({ command }) => {
       headers: appSecurityHeadersForMode("serve"),
     },
     preview: {
-      headers: appSecurityHeadersForMode("build"),
+      headers: appSecurityHeadersForMode(isGithubPages ? "github-pages" : "build"),
     },
   };
-});
+}
+
+export default defineConfig(appViteConfigFor);

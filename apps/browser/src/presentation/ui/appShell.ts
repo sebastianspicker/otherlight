@@ -7,6 +7,7 @@ import { renderSidebarTemplate } from "./templates/sidebar";
 import { renderVisualizationTemplate } from "./templates/visualization";
 import { renderReadouts } from "./templates/sidebarRuntime";
 import { renderScientificWorkspace } from "./templates/scientificWorkspace";
+import { runtimeAssetUrl } from "../runtime/deployment";
 
 export { renderCommandStrip } from "./templates/commandStrip";
 export {
@@ -25,26 +26,26 @@ export function renderAppShell(root: HTMLElement | null = null): void {
   replaceChildrenFromTrustedHtml(host, appShellInnerHtml());
 }
 
-export function createAppDocumentHtml(): string {
+export function createAppDocumentHtml(baseUrl = import.meta.env.BASE_URL): string {
   return `
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="referrer" content="strict-origin-when-cross-origin" />
       <title>Otherlight: Exoplanet learning &amp; scientific modeling</title>
-      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      <link rel="icon" href="${runtimeAssetUrl("favicon.svg", baseUrl)}" type="image/svg+xml" />
     </head>
     <body>
-      ${appShellInnerHtml()}
+      ${appShellInnerHtml(baseUrl)}
     </body>
   `;
 }
 
-function appShellInnerHtml(): string {
+function appShellInnerHtml(baseUrl = import.meta.env.BASE_URL): string {
   return `
     <a href="#main" class="skip-link">Skip to main content</a>
     <div id="app" class="app">
-      ${renderHeaderTemplate()}
+      ${renderHeaderTemplate(baseUrl)}
       ${renderCommandStrip()}
       <section id="fatalError" class="fatal-error" role="alert" tabindex="-1" hidden>
         <h2>Otherlight could not start</h2>

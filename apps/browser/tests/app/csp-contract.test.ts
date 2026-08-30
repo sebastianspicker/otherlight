@@ -26,6 +26,17 @@ describe("app CSP contract", () => {
     expect(buildCsp).not.toContain("wss:");
   });
 
+  it("disables the loopback science service in the Pages artifact", () => {
+    const pagesCsp = appCspForMode("github-pages");
+
+    expect(pagesCsp).toContain("connect-src 'self'");
+    expect(pagesCsp).not.toContain("127.0.0.1");
+    expect(pagesCsp).not.toContain("localhost");
+    expect(pagesCsp).not.toContain("ws:");
+    expect(pagesCsp).not.toContain("wss:");
+    expect(appCspMetaForMode("github-pages")).toBe(pagesCsp.replace("; frame-ancestors 'none'", ""));
+  });
+
   it("delivers anti-framing through response headers instead of an ineffective meta directive", () => {
     expect(appCspMetaForMode("build")).not.toContain("frame-ancestors");
     expect(appSecurityHeadersForMode("build")).toMatchObject({

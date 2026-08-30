@@ -16,6 +16,27 @@ architecture and physics-registry checks, linting, TypeScript checks, Vitest,
 and the production Vite build. It uses `apps/browser/` as the Browser project
 root.
 
+## GitHub Pages lane
+
+The Pages workflow runs for `main`; manual dispatches are honored only when
+`main` is selected. Its verification job has read-only repository access and
+performs a frozen pnpm 11.4 install on Node 22, the standard Browser
+verification, and the Pages-specific build and smoke checks. The deployment
+job alone receives `pages:write` and `id-token:write`.
+
+Local equivalents are:
+
+```bash
+pnpm build:pages
+pnpm smoke:pages
+```
+
+The artifact is the Vite Browser output in `dist/`, configured for
+`/otherlight/`. The retained static tour under `apps/demo/` and its
+`pages-dist/` build are not published. GitHub Pages hosts only static assets:
+Education features run client-side, while Apple functionality and the local
+Python scientific executor remain unavailable.
+
 ## Science lane
 
 The service is verified separately with its Python environment:

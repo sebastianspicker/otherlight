@@ -92,6 +92,11 @@ export function renderScientificWorkspaceRunAndScope(): string {
             retrieval, astrometry artifacts, and inference are unavailable in this alpha. Compatibility
             preview corrections never enter a Scientific result.
           </p>
+          <p class="help scientific-panel__footnote">
+            <a href="https://github.com/sebastianspicker/otherlight/blob/main/docs/physics/model-status.md">
+              Read the repository model-status documentation
+            </a>
+          </p>
         </section>
       </div>
 `;
