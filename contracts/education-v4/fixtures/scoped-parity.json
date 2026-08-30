@@ -1,7 +1,7 @@
 {
   "contractVersion": "education-v4/1",
   "generator": "scripts/export-native-parity-fixtures.mjs",
-  "sourceRevision": "7dcd7259a397f7e47ab9d89dd1d18c40dad77434+dirty",
+  "sourceRevision": "a9dc8c5e0a4d76490fb86bce4432e42581a905f0+dirty",
   "comparisonPolicy": {
     "exactFields": ["scenario.version", "scenario.mode", "renderSignals.events", "warningFlags"],
     "floating": {
@@ -671,6 +671,15 @@
             "moonIncDot": 0,
             "moonOmegaSmallDot": 0,
             "moonImpactYDot": 0
+          },
+          "nbodyPlanetMoon": {
+            "enabled": false,
+            "muStar": 132716453210000000000,
+            "muPlanet": 126686890590000000,
+            "muMoon": 398602544600000,
+            "dtMax": 60,
+            "softening": 0,
+            "perturbers": []
           },
           "relativity": {
             "enabled": false,

@@ -1,10 +1,9 @@
-# Education V4 native parity contract
+# Education V4 contract
 
-This directory is the checked-in bridge between the existing TypeScript
-Education runtime and the shared native Apple implementation.
+This directory owns the canonical Education scenario shared by Browser
+workspaces and native parity checks.
 
-- `scenario.schema.json` describes the canonical V4 scenario envelope used by
-  the scoped native alpha.
+- `scenario.schema.json` describes the complete canonical V4 scenario envelope.
 - `step.schema.json` describes the deterministic output subset compared across
   TypeScript and Swift.
 - `fixture-manifest.schema.json` describes a complete fixture file.

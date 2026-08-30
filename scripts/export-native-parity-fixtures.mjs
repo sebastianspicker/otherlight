@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const browserRoot = path.join(root, "apps/browser");
 const output = path.join(root, "contracts/education-v4/fixtures/scoped-parity.json");
 const scopedPresetIds = ["default", "kepler-planet-only", "limb-darkening-variation"];
 
@@ -29,7 +30,7 @@ function sourceRevision() {
   const revision = checkedGit(["rev-parse", "HEAD"]);
   const changed = spawnSync(
     "git",
-    ["diff", "--quiet", "HEAD", "--", "src", "scripts/export-native-parity-fixtures.mjs"],
+    ["diff", "--quiet", "HEAD", "--", "apps/browser/src", "scripts/export-native-parity-fixtures.mjs"],
     {
       cwd: root,
       stdio: "ignore",
@@ -50,18 +51,21 @@ function finiteJson(value, label = "manifest") {
 
 async function main() {
   const vite = await createServer({
-    root,
+    root: browserRoot,
+    configFile: path.join(browserRoot, "vite.config.ts"),
     appType: "custom",
     logLevel: "error",
     server: { middlewareMode: true },
   });
   try {
-    const { PRESETS } = await vite.ssrLoadModule("/src/app/presets.ts");
-    const { createSimulationV4, migrateSystemParamsToV4 } = await vite.ssrLoadModule("/src/sim/v4/index.ts");
+    const { PRESETS } = await vite.ssrLoadModule("/src/application/presets.ts");
+    const { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } = await vite.ssrLoadModule(
+      "/src/domain/simulation/v4/index.ts",
+    );
     const scenarios = scopedPresetIds.map((id) => {
       const preset = PRESETS.find((candidate) => candidate.id === id);
       if (!preset) throw new Error(`Missing scoped preset: ${id}`);
-      const scenario = migrateSystemParamsToV4(preset.params);
+      const scenario = mapBrowserScenarioDraftToEducationScenarioV4(preset.params);
       scenario.runtime = { mode: "realtime", executionMode: "interactive", referenceSubsteps: 5 };
       const periodSec = scenario.bodies.planets[0]?.orbit.period ?? scenario.orbits.binary.period;
       const sampleTimesSec = [0, periodSec / 8, periodSec / 4, periodSec / 2];

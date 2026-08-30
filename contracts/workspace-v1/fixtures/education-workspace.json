@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "workspace-v1",
+  "productContext": {
+    "profile": "education",
+    "mode": "lab",
+    "ui": "essential",
+    "source": "preset",
+    "scenario": "detached-binary",
+    "lab": "binary-lab",
+    "lesson": "eclipse-geometry",
+    "runtime": "interactive"
+  },
+  "education": {
+    "scenario": {
+      "version": "4",
+      "mode": "detached-binary-lab",
+      "bodies": {
+        "stars": [
+          { "id": "star-a", "r": 695700000 },
+          { "id": "star-b", "r": 660915000 }
+        ],
+        "planets": [],
+        "moons": []
+      },
+      "orbits": {
+        "binary": {
+          "a": 2400000000,
+          "e": 0,
+          "inc": 1.5707963267948966,
+          "Omega": 0,
+          "omega": 0,
+          "period": 63569,
+          "t0": 0
+        },
+        "hierarchy": []
+      }
+    }
+  }
+}
