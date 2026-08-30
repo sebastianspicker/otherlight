@@ -1,60 +1,39 @@
-# Adding a Planet or Moon
+# Adding an Education body
 
-This simulator uses SI units internally (meters, kilograms, seconds). The UI exposes some angles in degrees, but the model always stores radians.
+Adding a body changes the canonical Education model and may affect V4
+serialization, workspace restoration, fixtures, rendering, and the V5 compiler.
+Start by deciding whether it belongs to the supported Education model, the V5
+science subset, or both. Do not make an unsupported scientific feature appear
+available through a UI control.
 
-## Add or update a planet
+## Browser placement
 
-Edit the default scenario (or create a new preset based on it):
+- Add data shape and invariants under `apps/browser/src/domain/model/`.
+- Add orbital, simulation, or photometry behaviour under the relevant
+  `domain/` module.
+- Add authoring defaults or presets under `application/`.
+- Add controls and rendering under `presentation/`.
+- Keep workspace and V5 serialization in `infrastructure/`.
 
-1. Update the planet body:
-   - `planet.r` (meters)
-   - `planet.m` (kg, optional but needed for Hill/Roche and N-body)
-2. Update the planet orbit (Kepler mode):
-   - `planet.orbit.a` (meters)
-   - `planet.orbit.e` (0..1)
-   - `planet.orbit.inc` (radians)
-   - `planet.orbit.Omega`, `planet.orbit.omega` (radians)
-   - `planet.orbit.period` (seconds)
-   - `planet.orbit.t0` (seconds)
+The V4 authoring boundary is
+`apps/browser/src/application/browserScenarioAdapter.ts`. Update the V4
+schemas and fixtures under `contracts/education-v4/` when the serialized shape
+intentionally changes.
 
-Files to edit:
+## Science eligibility
 
-- `src/config/scenario.default.json` (defaults and UI ranges)
-- `src/app/presets.ts` (optional: add a didactic preset)
+The V5 compiler accepts a deliberately limited subset of Education V4. Extend
+`apps/browser/src/infrastructure/science/educationScenarioCompiler.ts` only
+with a corresponding strict V5 contract, Python implementation, and independent
+validation. Otherwise reject the feature at compilation time.
 
-If you adjust UI ranges, keep clamps in `src/ui/params/common.ts`, `src/ui/params/read.ts`, and `src/ui/params/nbody.ts` consistent with the new scale.
-
-## Add or update a moon
-
-1. Enable and size the moon:
-   - `moon.r` (meters)
-   - `moon.m` (kg, optional but needed for Hill/Roche and N-body)
-2. Set the moon's orbit around the planet:
-   - `moon.orbitAroundPlanet.a` (meters)
-   - `moon.orbitAroundPlanet.e` (0..1)
-   - `moon.orbitAroundPlanet.inc` (radians)
-   - `moon.orbitAroundPlanet.Omega`, `moon.orbitAroundPlanet.omega` (radians)
-   - `moon.orbitAroundPlanet.period` (seconds)
-   - `moon.orbitAroundPlanet.t0` (seconds)
-
-Files to edit:
-
-- `src/config/scenario.default.json` (defaults and UI ranges)
-- `src/app/presets.ts` (optional: add a didactic preset)
-
-Notes:
-
-- Hill/Roche warnings require both masses.
-- The compatibility kernel can use N-body when
-  `dynamics.nbodyPlanetMoon.enabled = true` and its mass parameters are set.
-  The V4 browser runtime rejects this toggle because it does not execute the
-  integrator. Research propagation uses the separate V5 Cartesian-state contract.
-
-## Verification (recommended)
-
-After edits:
+## Checks
 
 ```bash
-pnpm lint
+pnpm typecheck
 pnpm test
+pnpm architecture:check
+pnpm physics-registry
 ```
+
+Run the service checks as well if V5 contracts or the compiler changed.

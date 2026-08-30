@@ -10,8 +10,8 @@
       "equation": "mu = G M",
       "units": "G [m^3 kg^-1 s^-2], mu [m^3 s^-2]",
       "validity": "G is measured and uncertain; the astronomical unit and nominal solar radius are exact definitions. Kilogram mass estimates and mean planetary radii are not IAU nominal constants.",
-      "owners": ["src/core/units.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "owners": ["apps/browser/src/domain/model/units.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["codata-2022", "iau-2012-b2", "iau-2015-b3"]
     },
     {
@@ -21,8 +21,8 @@
       "equation": "M = E - e sin(E); r = a(1 - e cos(E))",
       "units": "a,r [m], M,E [rad], t [s]",
       "validity": "Osculating two-body ellipse with 0 <= e < 1; no parabolic or hyperbolic branch.",
-      "owners": ["src/physics/kepler.ts", "src/sim/orbits.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "owners": ["apps/browser/src/domain/orbits/kepler.ts", "apps/browser/src/domain/simulation/orbits.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -32,8 +32,8 @@
       "equation": "r_I = Rz(Omega) Rx(i) Rz(omega) r_PQW",
       "units": "angles [rad], position [m]",
       "validity": "Right-handed Euclidean inertial coordinates; observer direction must be finite and non-zero.",
-      "owners": ["src/physics/frames.ts", "src/physics/vec3.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "owners": ["apps/browser/src/domain/orbits/frames.ts", "apps/browser/src/domain/orbits/vec3.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -43,24 +43,9 @@
       "equation": "r_p = r_b - m_m r_rel/(m_p+m_m); r_m = r_b + m_p r_rel/(m_p+m_m)",
       "units": "mass [kg], position [m]",
       "validity": "Finite positive masses; missing masses deliberately disable the split in the educational compatibility path.",
-      "owners": ["src/physics/barycenter.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "owners": ["apps/browser/src/domain/orbits/barycenter.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
-    },
-    {
-      "id": "dynamics.nbody.newton-plummer",
-      "status": "bounded-approximation",
-      "claim": "The compatibility integrator applies pairwise Newtonian gravity with optional Plummer softening and velocity-Verlet stepping.",
-      "equation": "a_i += mu_j r_ji/(r_ji^2+eps^2)^(3/2); U_ij = -G m_i m_j/sqrt(r_ij^2+eps^2)",
-      "units": "position,eps [m], acceleration [m s^-2], energy [J]",
-      "validity": "Classical weak-field point masses; softened runs do not represent physical finite bodies. Research V5 must use explicit error-controlled integration and zero softening by default.",
-      "owners": [
-        "src/sim/nbody/integrator.ts",
-        "src/sim/nbody/diagnosticsEnergy.ts",
-        "src/sim/nbody/diagnostics.ts"
-      ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
-      "references": ["hairer-2003-geometric"]
     },
     {
       "id": "dynamics.satellite.hill-stability",
@@ -69,8 +54,12 @@
       "equation": "R_H,a = a_p (m_p/(3M_*))^(1/3); a_E,pro = 0.4895(1-1.0305e_p-0.2738e_s)R_H,a; a_E,retro = 0.9309(1-1.0764e_p-0.9812e_s+0.9446e_pe_s)R_H,a",
       "units": "radius [m], mass [kg]",
       "validity": "Hierarchical restricted elliptic three-body diagnostic. The cited fit sampled planet/star mass ratio 10^-3, 0 <= e_p <= 0.9 and 0 <= e_s <= 0.5. Runtime fit messages allow only a 5% rounding band around that sampled mass ratio and emit HILL_FIT_OUT_OF_DOMAIN otherwise; do not interpret the fit as a proof for arbitrary masses, inclinations, resonances, or integration times.",
-      "owners": ["src/physics/hillRadius.ts", "src/physics/hill.ts", "src/sim/validation/warnings.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "owners": [
+        "apps/browser/src/domain/orbits/hillRadius.ts",
+        "apps/browser/src/domain/orbits/hill.ts",
+        "apps/browser/src/domain/simulation/validation/warnings.ts"
+      ],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["domingos-2006"]
     },
     {
@@ -81,58 +70,13 @@
       "units": "time [s]",
       "validity": "Synthetic event-series diagnostic; phenomenological orientation drifts are educational unless produced by integrated dynamics.",
       "owners": [
-        "src/physics/exomoonTiming.ts",
-        "src/sim/transitTiming.ts",
-        "src/sim/transitTimingSolve.ts",
-        "src/sim/orbitTimingKey.ts"
+        "apps/browser/src/domain/orbits/exomoonTiming.ts",
+        "apps/browser/src/domain/simulation/transitTiming.ts",
+        "apps/browser/src/domain/simulation/transitTimingSolve.ts",
+        "apps/browser/src/domain/simulation/orbitTimingKey.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["kipping-2009-ttv", "kipping-2009-tdv"]
-    },
-    {
-      "id": "relativity.precession.schwarzschild-1pn",
-      "status": "bounded-approximation",
-      "claim": "The Kepler path applies the weak-field Schwarzschild apsidal advance per orbit.",
-      "equation": "Delta omega = 6 pi mu/[a(1-e^2)c^2]",
-      "units": "angle [rad orbit^-1]",
-      "validity": "Test particle, weak field, isolated central spherical mass.",
-      "owners": [
-        "src/physics/relativityPrecessionFormula.ts",
-        "src/physics/relativityPrecession.ts",
-        "src/physics/relativityPrecessionInputs.ts",
-        "src/physics/relativityPrecessionResolve.ts"
-      ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
-      "references": ["will-2014"]
-    },
-    {
-      "id": "relativity.timing.roemer-shapiro",
-      "status": "bounded-approximation",
-      "claim": "The compatibility path solves differential Roemer and weak-field point-mass Shapiro propagation delays at retarded time.",
-      "equation": "Delta_R = -r dot n/c; Delta_S = -2 mu ln[(r+z)/r]/c^3",
-      "units": "delay [s]",
-      "validity": "Observer at infinity for the relative geometry; Shapiro value has an arbitrary additive reference and assumes weak-field point masses.",
-      "owners": [
-        "src/physics/relativityTiming.ts",
-        "src/physics/relativityShapiro.ts",
-        "src/physics/relativity.ts",
-        "src/sim/kinematics.ts",
-        "src/sim/kinematicsHelpers.ts",
-        "src/sim/kinematicsShapiro.ts"
-      ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
-      "references": ["shapiro-1964", "will-2014"]
-    },
-    {
-      "id": "relativity.nbody.star-centric-1pn-preview",
-      "status": "educational",
-      "claim": "The compatibility N-body integrator can add the test-particle Schwarzschild 1PN acceleration relative to the star.",
-      "equation": "a_1PN = mu/(c^2 r^3) { [4mu/r-v^2] r + 4(r dot v)v }",
-      "units": "acceleration [m s^-2]",
-      "validity": "Dominant central spherical mass and weak field. The compatibility Verlet step estimates the end velocity to first order for this velocity-dependent force, and optional softening changes the point-mass expression; this path is not research-grade.",
-      "owners": ["src/sim/nbody/integrator.ts", "src/sim/nbody/config.ts"],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
-      "references": ["will-2014"]
     },
     {
       "id": "photometry.transit.opaque-disks",
@@ -142,27 +86,20 @@
       "units": "relative flux [1]",
       "validity": "Distant-observer projected geometry; grid tolerances must resolve the smallest structure. Current midpoint integrations do not return an a-posteriori error estimate and therefore are not research-validated.",
       "owners": [
-        "src/photometry/transitUniform.ts",
-        "src/photometry/transitUniformSpots.ts",
-        "src/photometry/transitLimbDarkened.ts",
-        "src/photometry/transitShapes.ts",
-        "src/photometry/diskMidpoint.ts",
-        "src/photometry/mutualEvents.ts",
-        "src/photometry/occulterCircle.ts",
-        "src/photometry/occulterEllipse.ts",
-        "src/photometry/occulterSanitize.ts",
-        "src/photometry/occulterSanitizeCircle.ts",
-        "src/photometry/occulterSanitizeEllipse.ts",
-        "src/photometry/occulterSanitizeGeometry.ts",
-        "src/photometry/occulterSanitizeRing.ts",
-        "src/photometry/occulterSanitizeShape.ts",
-        "src/photometry/occulterShapeGuards.ts",
-        "src/sim/occulters.ts",
-        "src/sim/occultersBody.ts",
-        "src/sim/occultersBodyRings.ts",
-        "src/sim/occultersBodySilhouette.ts"
+        "apps/browser/src/domain/photometry/transitLimbDarkened.ts",
+        "apps/browser/src/domain/photometry/diskMidpoint.ts",
+        "apps/browser/src/domain/photometry/occulterCircle.ts",
+        "apps/browser/src/domain/photometry/occulterEllipse.ts",
+        "apps/browser/src/domain/photometry/occulterTypes.ts",
+        "apps/browser/src/domain/photometry/occulterSanitize.ts",
+        "apps/browser/src/domain/photometry/occulterSanitizeCircle.ts",
+        "apps/browser/src/domain/photometry/occulterSanitizeEllipse.ts",
+        "apps/browser/src/domain/photometry/occulterSanitizeGeometry.ts",
+        "apps/browser/src/domain/photometry/occulterSanitizeRing.ts",
+        "apps/browser/src/domain/photometry/occulterSanitizeShape.ts",
+        "apps/browser/src/domain/photometry/occulterShapeGuards.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["mandel-agol-2002"]
     },
     {
@@ -173,17 +110,16 @@
       "units": "specific-intensity ratio [1]",
       "validity": "Research use requires externally sourced passband- and atmosphere-specific coefficients; hand-derived fallbacks are educational.",
       "owners": [
-        "src/photometry/limbDarkening.ts",
-        "src/photometry/limbDarkeningBands.ts",
-        "src/photometry/limbDarkeningEvaluation.ts",
-        "src/photometry/limbDarkeningLookup.ts",
-        "src/photometry/limbDarkeningLookupCommon.ts",
-        "src/photometry/limbDarkeningLookupDirect.ts",
-        "src/photometry/limbDarkeningLookupNormalized.ts",
-        "src/sim/limbDarkeningBridge.ts",
-        "src/sim/optionalLimbDarkening.ts"
+        "apps/browser/src/domain/photometry/limbDarkening.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningBands.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningEvaluation.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningLookup.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningLookupCommon.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningLookupDirect.ts",
+        "apps/browser/src/domain/photometry/limbDarkeningLookupNormalized.ts",
+        "apps/browser/src/domain/simulation/limbDarkeningBridge.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]
     },
     {
@@ -194,17 +130,16 @@
       "units": "relative flux [1]",
       "validity": "Transmission profiles are inputs; the TypeScript exponential halo is not a radiative-transfer solution.",
       "owners": [
-        "src/photometry/transitTransmission.ts",
-        "src/photometry/transitTransmissionTypes.ts",
-        "src/photometry/transitTransmissionPoint.ts",
-        "src/photometry/atmosphereRT/model.ts",
-        "src/photometry/atmosphereRT/gaussianFeatures.ts",
-        "src/photometry/atmosphereRT/numeric.ts",
-        "src/photometry/atmosphereRT/spectralFeatureArrays.ts",
-        "src/sim/transitFlux.ts",
-        "src/sim/v4/nativePhotometry.ts"
+        "apps/browser/src/domain/photometry/transitTransmission.ts",
+        "apps/browser/src/domain/photometry/transitTransmissionTypes.ts",
+        "apps/browser/src/domain/photometry/transitTransmissionPoint.ts",
+        "apps/browser/src/domain/photometry/atmosphereRT/model.ts",
+        "apps/browser/src/domain/photometry/atmosphereRT/gaussianFeatures.ts",
+        "apps/browser/src/domain/photometry/atmosphereRT/numeric.ts",
+        "apps/browser/src/domain/photometry/atmosphereRT/spectralFeatureArrays.ts",
+        "apps/browser/src/domain/simulation/v4/nativePhotometry.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["molliere-2019"]
     },
     {
@@ -215,14 +150,13 @@
       "units": "relative flux [1]",
       "validity": "Phenomenological broadband teaching model; not a temperature-map, energy-balance, or atmospheric emission solution.",
       "owners": [
-        "src/photometry/dayNightVisibility.ts",
-        "src/photometry/phaseCurve.ts",
-        "src/photometry/phaseCurveTypes.ts",
-        "src/photometry/phaseCurveGeometry.ts",
-        "src/photometry/phaseCurveScaling.ts",
-        "src/sim/additiveFlux.ts"
+        "apps/browser/src/domain/photometry/dayNightVisibility.ts",
+        "apps/browser/src/domain/photometry/phaseCurve.ts",
+        "apps/browser/src/domain/photometry/phaseCurveTypes.ts",
+        "apps/browser/src/domain/photometry/phaseCurveGeometry.ts",
+        "apps/browser/src/domain/photometry/phaseCurveScaling.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["sobolev-1975"]
     },
     {
@@ -233,14 +167,14 @@
       "units": "phase function [sr^-1]",
       "validity": "HG is a single-parameter angular approximation; current amplitude and finite-star geometry are not a research radiative-transfer model.",
       "owners": [
-        "src/photometry/forwardScattering.ts",
-        "src/photometry/forwardScatteringTypes.ts",
-        "src/photometry/forwardScatteringContext.ts",
-        "src/photometry/forwardScatteringGeometry.ts",
-        "src/photometry/forwardScatteringModels.ts",
-        "src/photometry/forwardScatteringObserver.ts"
+        "apps/browser/src/domain/photometry/forwardScattering.ts",
+        "apps/browser/src/domain/photometry/forwardScatteringTypes.ts",
+        "apps/browser/src/domain/photometry/forwardScatteringContext.ts",
+        "apps/browser/src/domain/photometry/forwardScatteringGeometry.ts",
+        "apps/browser/src/domain/photometry/forwardScatteringModels.ts",
+        "apps/browser/src/domain/photometry/forwardScatteringObserver.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["henyey-greenstein-1941"]
     },
     {
@@ -251,16 +185,15 @@
       "units": "relative flux [1]",
       "validity": "Blackbody/surrogate filters, hand-derived limb coefficients, harmonic variability, and sinusoidal granulation are not atmosphere or PSD synthesis.",
       "owners": [
-        "src/photometry/stellarBandFlux.ts",
-        "src/photometry/stellarSurface.ts",
-        "src/photometry/stellarVariability.ts",
-        "src/photometry/stellarVariabilityComponents.ts",
-        "src/photometry/patches.ts",
-        "src/photometry/patchFactors.ts",
-        "src/photometry/patchGeometry.ts",
-        "src/photometry/patchTypes.ts"
+        "apps/browser/src/domain/photometry/stellarBandFlux.ts",
+        "apps/browser/src/domain/photometry/stellarVariability.ts",
+        "apps/browser/src/domain/photometry/stellarVariabilityComponents.ts",
+        "apps/browser/src/domain/photometry/patches.ts",
+        "apps/browser/src/domain/photometry/patchFactors.ts",
+        "apps/browser/src/domain/photometry/patchGeometry.ts",
+        "apps/browser/src/domain/photometry/patchTypes.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]
     },
     {
@@ -271,14 +204,14 @@
       "units": "relative flux or electrons as explicitly configured",
       "validity": "Preview systematics are synthetic and mutable-state order dependent; they are not calibrated mission pipelines.",
       "owners": [
-        "src/photometry/smearing.ts",
-        "src/photometry/instrumentNoise.ts",
-        "src/photometry/instrumentNoiseTypes.ts",
-        "src/photometry/instrumentNoiseHelpers.ts",
-        "src/photometry/instrumentNoiseRuntime.ts",
-        "src/photometry/random.ts"
+        "apps/browser/src/domain/photometry/smearing.ts",
+        "apps/browser/src/domain/photometry/instrumentNoise.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseTypes.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseHelpers.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseRuntime.ts",
+        "apps/browser/src/domain/photometry/random.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["howell-2006"]
     },
     {
@@ -289,13 +222,10 @@
       "units": "radial velocity [m s^-1], linear sky offset [m]",
       "validity": "The observer vector points from system to observer. V4 astrometry is not angular and has no distance/parallax calibration. The V5 backend requires an explicit RV target and projects photocentre offsets onto the sky plane.",
       "owners": [
-        "src/sim/stateSampler.ts",
-        "src/sim/observables.ts",
-        "src/sim/systemState.ts",
-        "src/sim/v4/nativeEngineTiming.ts",
-        "science_backend/science_backend/forward.py"
+        "apps/browser/src/domain/simulation/v4/nativeEngineTiming.ts",
+        "services/science/science_backend/forward.py"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -304,19 +234,18 @@
       "claim": "V4 constructs independently parameterized Kepler snapshots and composes a deterministic preview flux bundle.",
       "equation": "F_total = F_stellar,visible + F_additive",
       "units": "state SI; relative flux [1]",
-      "validity": "V4 does not execute configured N-body or shared LTTE/Shapiro solvers and must not label those capabilities available.",
+      "validity": "V4 executes independently parameterized Kepler snapshots only and must not label unavailable solvers as capabilities.",
       "owners": [
-        "src/sim/v4/nativeSnapshot.ts",
-        "src/sim/v4/nativeSnapshotHelpers.ts",
-        "src/sim/v4/nativeModel.ts",
-        "src/sim/v4/nativeEngine.ts",
-        "src/sim/v4/nativeEngineTiming.ts",
-        "src/sim/v4/binaryBaseline.ts",
-        "src/sim/v4/runtime.ts",
-        "src/sim/v4/runtimeAggregation.ts",
-        "src/sim/v4/runtimeNormalization.ts"
+        "apps/browser/src/domain/simulation/v4/nativeSnapshot.ts",
+        "apps/browser/src/domain/simulation/v4/nativeSnapshotHelpers.ts",
+        "apps/browser/src/domain/simulation/v4/nativeModel.ts",
+        "apps/browser/src/domain/simulation/v4/nativeEngine.ts",
+        "apps/browser/src/domain/simulation/v4/nativeEngineTiming.ts",
+        "apps/browser/src/domain/simulation/v4/binaryBaseline.ts",
+        "apps/browser/src/domain/simulation/v4/runtime.ts",
+        "apps/browser/src/domain/simulation/v4/runtimeAggregation.ts"
       ],
-      "tests": ["tests/science/physics-model-contracts.test.ts"],
+      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["mandel-agol-2002"]
     },
     {
@@ -327,25 +256,25 @@
       "units": "Cartesian state SI; epoch [JD TDB]; radial velocity [m s^-1]",
       "validity": "Barycentric, non-colliding Newtonian point masses with explicit target, numeric JD TDB epoch, finite radii, split absolute tolerances, and recorded provenance. Accepted dense numerical trajectories are certified outside finite-radius contact with bounded interval arithmetic; unsupported representations and unresolved bounds fail closed. Relativity, photometry, timing, atmosphere, astrometry artifacts, and inference are unavailable.",
       "owners": [
-        "src/app/scienceWorkspace.ts",
-        "src/science/scenarioAdapter.ts",
-        "src/science/types.ts",
-        "src/science/validation.ts",
-        "src/science/client.ts",
-        "src/science/index.ts",
-        "science_backend/science_backend/contracts.py",
-        "science_backend/science_backend/forward.py",
-        "science_backend/science_backend/api.py",
-        "science_backend/science_backend/dop853_collision_audit.py",
-        "native-apple/Packages/OtherlightScience/Sources/TransitScience/CertifiedCollisionAudit.swift"
+        "apps/browser/src/presentation/controllers/scienceWorkspace.ts",
+        "apps/browser/src/infrastructure/science/educationScenarioCompiler.ts",
+        "apps/browser/src/infrastructure/science/types.ts",
+        "apps/browser/src/infrastructure/science/validation.ts",
+        "apps/browser/src/infrastructure/science/client.ts",
+        "apps/browser/src/infrastructure/science/index.ts",
+        "services/science/science_backend/contracts.py",
+        "services/science/science_backend/forward.py",
+        "services/science/science_backend/api.py",
+        "services/science/science_backend/dop853_collision_audit.py",
+        "apps/apple/Packages/OtherlightScience/Sources/TransitScience/CertifiedCollisionAudit.swift"
       ],
       "tests": [
-        "tests/science/contracts-client.test.ts",
-        "tests/science/scenario-adapter.test.ts",
-        "science_backend/tests/test_api_contract.py",
-        "science_backend/tests/test_dop853_collision_audit.py",
-        "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
-        "science_backend/tests/test_forward_scientific_contract.py"
+        "apps/browser/tests/science/contracts-client.test.ts",
+        "apps/browser/tests/science/education-scenario-compiler.test.ts",
+        "services/science/tests/test_api_contract.py",
+        "services/science/tests/test_dop853_collision_audit.py",
+        "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
+        "services/science/tests/test_forward_scientific_contract.py"
       ],
       "references": ["wilkinson-2016-fair"]
     }

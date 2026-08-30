@@ -1,174 +1,80 @@
 # Contributing
 
-## Development setup
+## Before editing
 
-Browser changes require Node.js 22.13.0 or later, Corepack, and pnpm 11.4.0.
+Inspect the affected application, service, or contract first. Preserve
+unrelated work in the checkout. Changes to a Browser boundary or a versioned
+contract require the relevant focused tests and the architecture check.
+
+The repository is organised around products and explicit cross-language
+contracts. Read [docs/architecture.md](docs/architecture.md) before moving
+Browser code between layers or changing V4, V5, or workspace-v1 data.
+
+## Setup
 
 ```bash
 corepack enable
 corepack install
 pnpm install --frozen-lockfile
+```
+
+The Browser needs Node 22.13 or later and pnpm 11.4.
+
+## Browser work
+
+```bash
 pnpm dev
-```
-
-Scientific service changes require Python 3.14:
-
-```bash
-python3.14 -m venv science_backend/.venv
-source science_backend/.venv/bin/activate
-python -m pip install -e './science_backend[dev]'
-```
-
-Native Apple changes require Swift 6.3.3. Xcode project, simulator, archive, and
-screenshot checks require Xcode 26.6.
-
-```bash
-source scripts/select-swift-toolchain.sh
-```
-
-## Change scope
-
-Keep changes within the owning layer:
-
-```text
-core -> physics -> photometry -> sim -> render/ui -> app
-```
-
-Preserve this dependency order when changing implementation boundaries.
-Versioned cross-runtime behavior belongs in `contracts/`, not in an
-implementation-specific test fixture.
-
-When changing a numerical model, document:
-
-- equations and assumptions;
-- units and coordinate frames;
-- validity limits;
-- error and fallback behavior;
-- tests or references that support the change.
-
-Update `docs/physics/model-registry.json` when a model, formula owner, or
-evidence path changes.
-
-## Code requirements
-
-- TypeScript source must not use explicit `any`.
-- Exported numerical, stateful, validation, I/O, cache, and scheduling
-  boundaries require concise API documentation.
-- Every executable source file requires a short module-purpose comment or
-  docstring.
-- Native Swift declarations require concise documentation comments.
-- Catch blocks must make fallback behavior explicit.
-- Runtime queues and polling loops must remain bounded.
-- Scientific errors must not silently fall back to Education results.
-
-Follow the existing formatter and naming conventions. Do not add dependencies
-without discussing the requirement first.
-
-## Tests
-
-Run the narrowest relevant test while editing, then the broad gate:
-
-```bash
-pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm ci:verify
+pnpm architecture:check
 ```
 
-The complete browser loop is:
+Place new Browser code according to its dependency direction:
+
+- `domain/` has no browser, HTTP, persistence, or presentation imports.
+- `application/` coordinates domain operations and authoring state.
+- `infrastructure/` owns workspace and local-service adapters.
+- `presentation/` owns UI, canvas, and controller effects.
+- `composition/` wires the application at startup.
+
+Do not introduce a new internal package merely to express these boundaries.
+
+## Service work
 
 ```bash
-./scripts/ci-local.sh
+python3.14 -m venv services/science/.venv
+source services/science/.venv/bin/activate
+python -m pip install -e './services/science[dev]'
+pnpm science:backend:check
+pnpm science:backend:test
 ```
 
-It installs Playwright browsers and runs E2E, served-bundle smoke, coverage,
-dependency audit, science contract checks, benchmarks, didactics, performance,
-physics, and migration checks. Run Python and Apple checks separately.
+Keep the service loopback-only. Its HTTP behaviour is a V5 contract; update
+the schemas and Browser/Apple consumers together when it intentionally
+changes.
 
-### Scientific service
+## Apple work
 
 ```bash
-source science_backend/.venv/bin/activate
-python -m ruff format --check science_backend
-python -m ruff check science_backend
-python -m pyright science_backend
-PYTHONPATH=science_backend python -m pytest science_backend/tests
-python -m build --wheel science_backend
+pnpm native:core:test
+pnpm native:science:test
 ```
 
-### Native Apple application
+Use the Apple project instructions in [apps/apple/README.md](apps/apple/README.md)
+for Xcode and platform-specific checks.
 
-```bash
-source scripts/select-swift-toolchain.sh
-swift format lint --strict --recursive native-apple
-swift test --package-path native-apple/Packages/OtherlightCore
-swift test --package-path native-apple/Packages/OtherlightScience
-
-DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer \
-  xcodebuild test \
-  -project native-apple/Otherlight.xcodeproj \
-  -scheme Otherlight \
-  -destination 'platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO
-```
-
-Use `--disable-sandbox` only when SwiftPM fails because the host blocks its
-process sandbox.
-
-## Documentation and screenshots
-
-Documentation must describe the current source and commands. Remove obsolete
-instructions when behavior changes.
-
-Run:
+## Full local gate
 
 ```bash
 pnpm hygiene:public
 pnpm hygiene:docs
 pnpm hygiene:swift-docs
-pnpm verify:tour
+pnpm architecture:check
+pnpm physics-registry
+pnpm ci:verify
 ```
 
-For browser-visible changes:
-
-```bash
-pnpm capture:tour:web
-```
-
-This command uses the local Vite capture server and deterministic Scientific
-contract state. Use `pnpm capture:tour:web:live` only while a verified local
-Scientific service is running. Use `pnpm capture:tour:web:static` when a normal
-capture server cannot bind.
-
-Native screenshots require the exact Xcode and simulator destinations:
-
-```bash
-DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer \
-  pnpm capture:tour:apple --preflight
-```
-
-Do not replace maintained screenshots without updating their manifest and
-running `pnpm verify:tour`.
-
-## Pull requests
-
-Describe:
-
-- the affected runtime or contract;
-- user-visible behavior changes;
-- commands run and their results;
-- checks not run and why;
-- compatibility or migration effects;
-- screenshots for visible changes.
-
-Keep local caches, reports, credentials, signing material, environment files,
-and build products out of the public change.
-
-Use clear commit subjects. Conventional Commit prefixes are accepted but not
-required.
-
-## Security
-
-Do not include vulnerability details in a public issue or pull request. Follow
-[`SECURITY.md`](SECURITY.md) for private reporting.
+Run targeted service and Apple checks in addition to this gate when their code
+or contracts changed. Do not commit generated output, local caches, credentials,
+or private evidence.

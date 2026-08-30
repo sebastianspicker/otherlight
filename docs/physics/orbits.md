@@ -1,45 +1,16 @@
-# Orbits and Kepler Elements
+# Orbits and coordinates
 
-The simulator uses standard Keplerian elements:
+Browser Education uses the domain orbit utilities in
+`apps/browser/src/domain/orbits/` and the V4 simulation model in
+`apps/browser/src/domain/simulation/v4/`. They support the interactive
+scenarios described by the model registry.
 
-- a: semi-major axis
-- e: eccentricity
-- inc: inclination
-- $\Omega$: longitude of ascending node
-- $\omega$: argument of periapsis
-- period: orbital period
-- t0: reference epoch for mean anomaly
+The V5 service accepts barycentric Cartesian SI state, not Browser authoring
+parameters or orbital-element providers. The Browser compiler derives this
+state from the supported static Education V4 subset and checks period and mass
+consistency before submission. Its coordinate, epoch, and observer conventions
+are specified in [v5-scientific-contract.md](v5-scientific-contract.md).
 
-Mean motion:
-
-- $n = 2\pi/\mathrm{period}$
-- $M(t) = n(t - t_0)$
-
-Kepler's equation (elliptic):
-
-- $M = E - e\sin E$
-
-True anomaly and radius:
-
-- $\nu = \operatorname{atan2}\!\left(\sqrt{1 - e^2}\,\sin E,\ \cos E - e\right)$
-- $r = a(1 - e\cos E)$
-
-Position in the orbital plane (PQW frame):
-
-- $\mathbf{r}_{\mathrm{PQW}} = (r\cos\nu,\ r\sin\nu,\ 0)$
-
-Rotation to inertial coordinates:
-
-- Apply $\Omega$, inc, $\omega$ rotations (see `src/physics/frames.ts`).
-
-Runtime note:
-
-- These Kepler elements drive both the default interactive browser runtime and
-  the stricter `scientific-browser` validation profile. Both are V4 educational
-  Kepler previews; neither is the V5 scientific backend contract.
-- The difference is not the orbital parametrization itself but the surrounding runtime contract, diagnostics, and feature gating applied after the orbital state is built.
-
-Related code:
-
-- `src/physics/kepler.ts`
-- `src/sim/orbits.ts`
+Do not infer an ICRS mapping, time-scale conversion, or research-grade
+ephemeris from the Browser coordinate utilities. Those claims require an
+explicit external contract and evidence.

@@ -11,21 +11,21 @@
       "title": "Shareable product route state",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "Native route restoration exists but has not passed the required Xcode 26.6 gate."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -35,21 +35,21 @@
       "title": "Portable .otherlight workspace document",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "The native document boundary is implemented but full cross-language and Xcode tests remain open."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -59,23 +59,23 @@
       "title": "Preset and committed real-system catalog",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
         "evidence": [
-          "native-apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift"
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift"
         ],
         "reason": "The native catalog is narrower than the website catalog."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -85,24 +85,24 @@
       "title": "Start, pause, reset, speed, transit jump, and zoom",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
         "evidence": [
-          "native-apple/AppTests/OtherlightTests.swift",
-          "native-apple/AppTests/SimulationHistoryTests.swift"
+          "apps/apple/AppTests/OtherlightTests.swift",
+          "apps/apple/AppTests/SimulationHistoryTests.swift"
         ],
         "reason": "Speed and scene zoom are implemented; the documented Xcode UI gate remains pending."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -112,7 +112,7 @@
       "title": "Interactive and deterministic reference runtime modes",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -136,21 +136,21 @@
       "title": "Essential and advanced parameter editing",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "Native validation now preserves invalid drafts, but only three parameters are exposed."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -160,7 +160,7 @@
       "title": "Detached-binary preview photometry",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -184,7 +184,7 @@
       "title": "Atmosphere and scattering preview photometry",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -208,7 +208,7 @@
       "title": "Synthetic instrument-noise preview",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -227,76 +227,26 @@
       }
     },
     {
-      "id": "education.nbody-runtime",
-      "area": "education",
-      "title": "Active N-body runtime",
-      "website": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "The shipped V4 runtime does not execute the maintained compatibility N-body integrator."
-      },
-      "macos": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "N-body dynamics have not been ported to Swift."
-      },
-      "iphone": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "N-body dynamics are not implemented in the shared Apple application."
-      },
-      "ipad": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "N-body dynamics are not implemented in the shared Apple application."
-      }
-    },
-    {
-      "id": "education.relativity-runtime",
-      "area": "education",
-      "title": "Active relativity runtime",
-      "website": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "The shipped V4 runtime does not execute the maintained compatibility LTTE, Shapiro, or 1PN solvers."
-      },
-      "macos": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Relativity preview calculations have not been ported to Swift."
-      },
-      "iphone": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Relativity preview calculations are not implemented in the shared Apple application."
-      },
-      "ipad": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Relativity preview calculations are not implemented in the shared Apple application."
-      }
-    },
-    {
       "id": "education.visualization",
       "area": "education",
       "title": "Sky, light-curve, O-C, summaries, overlays, and tracking",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "The native app exposes the three basic plots but not the complete overlays or tracking controls."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -306,24 +256,24 @@
       "title": "Phased responses, hints, checks, comparison, rubric, and report",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
         "evidence": [
-          "native-apple/AppTests/OtherlightTests.swift",
-          "native-apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/GuidedLearningTests.swift"
+          "apps/apple/AppTests/OtherlightTests.swift",
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/GuidedLearningTests.swift"
         ],
         "reason": "The phased workflow is implemented; the documented Xcode UI gate remains pending."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -333,7 +283,7 @@
       "title": "Binary hypothesis and guarded reveal workflow",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "unavailable",
@@ -357,21 +307,21 @@
       "title": "Light-curve history, clear, undo, and CSV",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/SimulationHistoryTests.swift"],
+        "evidence": ["apps/apple/AppTests/SimulationHistoryTests.swift"],
         "reason": "Bounded history, clear, undo, and accepted-frame CSV are implemented; the documented Xcode app-test gate remains pending."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -381,21 +331,21 @@
       "title": "O-C body, unit, trend, statistics, clear, undo, and CSV",
       "website": {
         "status": "available",
-        "evidence": ["tests/contracts/capability-manifest.test.ts"]
+        "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/SimulationHistoryTests.swift"],
+        "evidence": ["apps/apple/AppTests/SimulationHistoryTests.swift"],
         "reason": "Actual diagnostic event history, body selection, statistics, clear, undo, and CSV are implemented; website unit and trend controls are not yet complete."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["native-apple/AppTests/OtherlightTests.swift"],
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
         "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
       }
     },
@@ -406,12 +356,15 @@
       "website": {
         "status": "available",
         "availability": "capability-gated",
-        "evidence": ["tests/science/contracts-client.test.ts", "science_backend/tests/test_api_contract.py"]
+        "evidence": [
+          "apps/browser/tests/science/contracts-client.test.ts",
+          "services/science/tests/test_api_contract.py"
+        ]
       },
       "macos": {
         "status": "unavailable",
         "evidence": [
-          "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift"
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift"
         ],
         "reason": "The reviewed source port is implemented, but the pinned Arrow dependency and full SwiftPM numerical suite have not been compiled on this checkout."
       },
@@ -433,12 +386,12 @@
       "website": {
         "status": "available",
         "availability": "capability-gated",
-        "evidence": ["science_backend/tests/test_api_contract.py"]
+        "evidence": ["services/science/tests/test_api_contract.py"]
       },
       "macos": {
         "status": "unavailable",
         "evidence": [
-          "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
         ],
         "reason": "The exact-revision writer and round-trip tests are implemented, but the pinned dependency has not yet passed the required clean SwiftPM and Xcode build gates."
       },
@@ -459,14 +412,17 @@
       "title": "Engine-neutral manifest and canonical request hash",
       "website": {
         "status": "experimental",
-        "evidence": ["tests/science/contracts-client.test.ts", "tests/science/canonical-json.test.ts"],
+        "evidence": [
+          "apps/browser/tests/science/contracts-client.test.ts",
+          "apps/browser/tests/science/canonical-json.test.ts"
+        ],
         "reason": "V2 writers and compatibility readers are implemented; full Python dependency tests remain pending."
       },
       "macos": {
         "status": "experimental",
         "evidence": [
-          "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
-          "native-apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
         ],
         "reason": "Strict Swift request/result contracts and owned V2 provenance are implemented; the full Arrow-linked SwiftPM suite remains pending."
       },

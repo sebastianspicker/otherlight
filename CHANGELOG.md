@@ -1,91 +1,23 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
-
 ## Unreleased
-
-### Added in Unreleased
-
-- Added peer Simulation and Guided Labs navigation, durable URL context, accessible canvas summaries,
-  scientific input validation, reversible history clearing, fatal-error recovery, and an
-  invalidation-driven paused render scheduler.
-- Added `pnpm hygiene:public` to keep generated output, local tool state, secrets, and workstation
-  paths out of the public candidate tree.
-
-### Changed in Unreleased
-
-- Renamed the browser product to Transit Light-Curve Lab and introduced the Classroom Observatory
-  visual system with a light shell, dark scientific plots, responsive controls, and explicit status.
-- Expanded browser journeys for Chromium, Firefox, WebKit, tablet landscape, mobile smoke, URL
-  recovery, validation, history, and focus behavior.
-
-### Fixed in Unreleased
-
-- Made N-body close-encounter diagnostics independent of cache query order by retaining the epoch
-  anchor, selecting only interval-contained cache bases, and carrying path minima forward.
-- Kept the Python base and service-only installations importable without scientific extras; the
-  service now starts fail-closed and advertises unavailable forward execution when they are absent.
-- Aligned Debug Apple builds with the active architecture so macOS, iPhone, and iPad targets consume
-  the same Swift package module slice while Release archives retain their platform contracts.
-- Excluded the nested backend virtual environment from root linting and documented the interpreter
-  path required by local Pyright checks.
-
-### Removed in Unreleased
-
-- Removed the unsupported V2 migration script/test surface and superseded root screenshot gallery;
-  V4 migration and `docs/screenshots/` are the maintained paths.
-
-## [0.1.0] - 2026-04-20
-
-### Breaking
-
-- Removed legacy wrapper modules `src/sim/observer.ts` and `src/sim/timeObserverContract.ts`.
-- Canonical imports for observer/time contract now use `src/sim/observerContract.ts`.
-- Replaced legacy local verification script names:
-  - removed `pnpm verify-production-ready`
-  - removed `pnpm turbo`
-  - added `pnpm ci:verify` and granular `pnpm ci:*` scripts
-- Removed unused backwards-compatible aliases (`TWOPI`, `HALFPI`, `VEC3_ZERO`, `lerp`, `vAssertFinite`, etc.) — 508 lines of dead code removed.
-- Removed `src/photometry/transitQuadraticLD.ts` (superseded by V4 native photometry pipeline).
-- Removed `src/sim/v4/referenceWorker.ts` (worker handoff retired; replaced by in-thread deterministic `referenceClient.ts`).
-
-### Added
-
-- Added repeatable audit scripts:
-  - `pnpm audit:security`
-  - `pnpm audit:deps`
-  - `pnpm audit:deadcode`
-  - `pnpm audit:full`
-- Added dead-code audit runner: `scripts/audit-dead-code.sh`.
-- Added 10 new test files: unit tests for dom, clone, frames, relativity, forwardScattering, occulterCircle, occulterEllipse, sampling; property-based tests; error recovery tests.
-- Added 34 module boundary layering tests enforcing architectural rules.
-- Added JSDoc to key exported functions (stepSystem, computeTransitFlux, relativity helpers).
-- Added `src/sim/v4/referenceClient.ts`: in-thread deterministic reference runtime replacing the retired worker pipeline.
-- Added visualization split modules: `src/app/visualizationScene.ts`, `src/app/visualizationSignals.ts`.
-- Added render decomposition modules: `src/render/lightCurvePlotAnnotations.ts`, `src/render/lightCurvePlotAxes.ts`.
-- Added `src/app/frameLoopFallback.ts` for fallback frame-loop path.
 
 ### Changed
 
-- Upgraded core toolchain dependencies (ESLint, typescript-eslint, Vite, Vitest).
-- CI workflow now uses `pnpm ci:verify`.
-- Dependency audit workflow now checks the full installed dependency graph, including toolchain packages.
-- GitHub-facing CI/docs/templates were normalized and polished in English.
-- Enforced `@typescript-eslint/no-explicit-any` as error for source code (78 `as any` eliminated).
-- Moved `cloneParams` to `core/clone.ts` and `SCENARIO_DEFAULTS` to `config/defaults.ts` to fix layering violations.
-- Created `sim/limbDarkeningBridge.ts` to fix render/ -> photometry/ violation.
-- Improved error handling visibility: catch blocks documented, `initApp()` rejection surfaced.
-- Converted the dynamic import of `photometry/limbDarkening` in `optionalLimbDarkening.ts` to a static import, eliminating the Vite INEFFECTIVE_DYNAMIC_IMPORT build warning (the module was already statically bundled by five other modules).
-- `scripts/audit-dead-code.sh` orphan allowlist updated: removed stale entries for deleted files `transitQuadraticLD.ts` and `referenceWorker.ts`.
-- `docs/refactor-plan.md` stale absolute path prefixes removed.
+- Reorganised the repository around `apps/browser`, `apps/apple`, `apps/demo`,
+  `services/science`, and `contracts`.
+- Defined the Browser as a modular monolith with domain, application,
+  infrastructure, presentation, and composition layers.
+- Documented the canonical Browser authoring route from `SystemParams` through
+  `EducationScenarioV4` to strict V5 science requests.
 
-### Fixed
+### Compatibility
 
-- Fixed brightness-patch double-counting in `stepSystem()`: patches are now forwarded exclusively via `brightnessPatchesOverride` to the transit integrator. The pre-transit baseline no longer multiplies by `spotFluxFactor`, which previously duplicated the patch attenuation.
-- Kepler solver (`solveKeplerE`) hardened for high-eccentricity orbits (e > 0.95): minimum iteration count raised to 60, derivative regularization added near f'(E) = 0 to prevent divergence.
-- Resolved all 9 dependency vulnerabilities (rollup, flatted, minimatch, ajv) via upgrades and pnpm overrides.
-- Test count increased from 144 to 418 across 93 test files.
+- Education V4, science V5, and `workspace-v1` remain serialized contracts.
+- The Python science service remains loopback-only and capability-gated.
 
-### Security
+## Historical releases
 
-- Security dependency auditing now targets high-severity issues across the installed dependency graph.
+Earlier entries described paths and tooling from the pre-application-layout
+repository. They are retained in Git history; current commands and locations
+are documented in [README.md](README.md) and [docs/architecture.md](docs/architecture.md).
