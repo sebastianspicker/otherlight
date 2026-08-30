@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT/native-apple/Otherlight.xcodeproj"
+PROJECT="$ROOT/apps/apple/Otherlight.xcodeproj"
 SCHEME="Otherlight"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/private/tmp/otherlight-derived-data}"
 MACOS_BUILD_ARCH="${MACOS_BUILD_ARCH:-$(uname -m)}"

@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "pages-dist/**", "node_modules/**", "**/.build/**", "**/.venv/**"],
+    ignores: ["**/dist/**", "pages-dist/**", "node_modules/**", "**/.build/**", "**/.venv/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -17,13 +17,13 @@ export default tseslint.config(
   },
   {
     // Tests and scripts may use `any` for mocking, type coercion, and migration helpers.
-    files: ["tests/**/*.ts", "scripts/**/*.ts"],
+    files: ["apps/browser/tests/**/*.ts", "scripts/**/*.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
   {
-    files: ["demo/**/*.js"],
+    files: ["apps/demo/**/*.js"],
     languageOptions: {
       globals: {
         document: "readonly",

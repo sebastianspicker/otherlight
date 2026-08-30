@@ -1,292 +1,76 @@
 #!/usr/bin/env node
+/** Migrates legacy Browser scenario JSON through the authoritative V4 mapper. */
 /* global console, process */
-
-/**
- * Migrates bounded legacy scenario JSON into the canonical V4 shape while
- * applying safe defaults instead of copying malformed historical values.
- */
-
 import { Buffer } from "node:buffer";
+import { createServer } from "vite";
 
-const DEFAULT_BINARY_ORBIT = {
-  a: 1,
-  e: 0,
-  inc: Math.PI / 2,
-  Omega: 0,
-  omega: 0,
-  period: 1,
-  t0: 0,
-};
-
-// Keep stdin bounded so this CLI cannot accumulate arbitrarily large JSON before parsing it.
 const MAX_STDIN_BYTES = 10 * 1024 * 1024;
+const isObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 
-function isObject(x) {
-  return typeof x === "object" && x !== null;
+function migrateControlPath(controlPath) {
+  if (typeof controlPath !== "string") return controlPath;
+  if (controlPath === "star.photometry" || controlPath.startsWith("star.photometry."))
+    return controlPath.slice("star.".length);
+  if (controlPath === "star" || controlPath.startsWith("star."))
+    return `bodies.stars.0${controlPath.slice("star".length)}`;
+  if (controlPath === "planet" || controlPath.startsWith("planet."))
+    return `bodies.planets.0${controlPath.slice("planet".length)}`;
+  if (controlPath === "moon.orbitAroundPlanet" || controlPath.startsWith("moon.orbitAroundPlanet."))
+    return `bodies.moons.0.orbit${controlPath.slice("moon.orbitAroundPlanet".length)}`;
+  if (controlPath === "moon" || controlPath.startsWith("moon."))
+    return `bodies.moons.0${controlPath.slice("moon".length)}`;
+  return controlPath;
 }
 
-function finiteOrDefault(value, fallback) {
-  return Number.isFinite(value) ? value : fallback;
-}
-
-function finitePositiveOrDefault(value, fallback) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function finiteEccentricityOrDefault(value, fallback) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value < 1 ? value : fallback;
-}
-
-function isNonEmptyString(value) {
-  return typeof value === "string" && value.length > 0;
-}
-
-function sanitizeStaticOrbit(orbit, fallback = DEFAULT_BINARY_ORBIT) {
-  if (typeof orbit === "function" || !orbit || typeof orbit !== "object") return { ...fallback };
-
-  return {
-    a: finitePositiveOrDefault(orbit.a, fallback.a),
-    e: finiteEccentricityOrDefault(orbit.e, fallback.e),
-    inc: finiteOrDefault(orbit.inc, fallback.inc),
-    Omega: finiteOrDefault(orbit.Omega, fallback.Omega),
-    omega: finiteOrDefault(orbit.omega, fallback.omega),
-    period: finitePositiveOrDefault(orbit.period, fallback.period),
-    t0: finiteOrDefault(orbit.t0, fallback.t0),
-  };
-}
-
-function sanitizeBinaryStarPhotometry(photometry, fallback) {
-  const out = {
-    luminosityScale: Number.isFinite(photometry?.luminosityScale)
-      ? Math.max(0, photometry.luminosityScale)
-      : fallback.luminosityScale,
-  };
-  if (Number.isFinite(photometry?.teffK)) out.teffK = photometry.teffK;
-  if (Number.isFinite(photometry?.loggCgs)) out.loggCgs = photometry.loggCgs;
-  if (Number.isFinite(photometry?.metallicityDex)) out.metallicityDex = photometry.metallicityDex;
-  const passband = isNonEmptyString(photometry?.passband)
-    ? photometry.passband
-    : isNonEmptyString(fallback.passband)
-      ? fallback.passband
-      : undefined;
-  if (passband) out.passband = passband;
-  return out;
-}
-
-export function migrateSystemParamsV4(input) {
-  const primary = migratePrimaryStar(input);
-  const secondary = migrateSecondaryStar(input);
-  const binary = sanitizeStaticOrbit(input.planet?.orbit, DEFAULT_BINARY_ORBIT);
-  const moons = migrateMoons(input);
-
-  return {
-    version: "4",
-    mode: "general-lab",
-    runtime: { mode: "realtime", referenceSubsteps: 5, executionMode: "interactive" },
-    observer: input.observer,
-    binaryLab: migratedBinaryLabConfig(),
-    bodies: {
-      stars: [primary, secondary],
-      planets: [migratePlanet(input, binary)],
-      moons,
-    },
-    orbits: {
-      binary,
-      hierarchy: migrateHierarchy(moons),
-    },
-    photometry: input.star?.photometry,
-    dynamics: input.dynamics,
-    didactics: input.didactics,
-  };
-}
-
-function migratePrimaryStar(input) {
-  const fallbackPassband = fallbackStarPassband(input);
-  const primaryPhotometry = sanitizeBinaryStarPhotometry(
-    {
-      ...stellarAtmosphereSeed(input),
-      passband: fallbackPassband,
-      ...input.binaryStars?.primary,
-    },
-    { luminosityScale: 1, passband: fallbackPassband },
-  );
-  return {
-    ...sharedStarFields(input),
-    id: "star-a",
-    r: input.star?.r ?? 1,
-    ...primaryPhotometry,
-  };
-}
-
-function migrateSecondaryStar(input) {
-  const fallbackPassband = fallbackStarPassband(input);
-  return {
-    ...sharedStarFields(input),
-    id: "star-b",
-    r: Math.max(0, (input.star?.r ?? 1) * 0.95),
-    m: 0,
-    ...sanitizeBinaryStarPhotometry(input.binaryStars?.secondary, {
-      luminosityScale: 0,
-      passband: fallbackPassband,
-    }),
-  };
-}
-
-function fallbackStarPassband(input) {
-  return input.star?.photometry?.limbDarkeningModel?.bandpass;
-}
-
-function stellarAtmosphereSeed(input) {
-  const stellar = input.star?.photometry?.limbDarkeningModel?.stellar;
-  return {
-    teffK: stellar?.teffK,
-    loggCgs: stellar?.loggCgs,
-    metallicityDex: stellar?.metallicityDex,
-  };
-}
-
-function sharedStarFields(input) {
-  return {
-    m: input.star?.m,
-    shape: input.star?.shape,
-    rings: input.star?.rings,
-    spin: input.star?.spin,
-    gravityHarmonics: input.star?.gravityHarmonics,
-    tides: input.star?.tides,
-  };
-}
-
-function migratePlanet(input, binary) {
-  return {
-    id: "planet-1",
-    r: input.planet?.r ?? 1,
-    m: input.planet?.m,
-    shape: input.planet?.shape,
-    rings: input.planet?.rings,
-    spin: input.planet?.spin,
-    gravityHarmonics: input.planet?.gravityHarmonics,
-    tides: input.planet?.tides,
-    orbit: binary,
-    parentStarId: "star-a",
-    parentSystem: "star",
-  };
-}
-
-function migrateMoons(input) {
-  if (!input.moon) return [];
-  return [
-    {
-      id: "moon-1",
-      r: input.moon.r,
-      m: input.moon.m,
-      shape: input.moon.shape,
-      rings: input.moon.rings,
-      spin: input.moon.spin,
-      gravityHarmonics: input.moon.gravityHarmonics,
-      tides: input.moon.tides,
-      orbit: sanitizeStaticOrbit(input.moon.orbitAroundPlanet, DEFAULT_BINARY_ORBIT),
-      parentPlanetId: "planet-1",
-    },
-  ];
-}
-
-function migrateHierarchy(moons) {
-  return [
-    { childId: "planet-1", parentId: "star-a", relation: "orbits" },
-    ...moons.map((moon) => ({ childId: moon.id, parentId: moon.parentPlanetId, relation: "orbits" })),
-  ];
-}
-
-function migratedBinaryLabConfig() {
-  return {
-    enabled: true,
-    hideSkyUntilReveal: true,
-    requireHypothesis: true,
-    lockParamsUntilHypothesis: true,
-  };
-}
-
-function migrateControlPath(path) {
-  if (typeof path !== "string") return path;
-  if (path === "star.photometry" || path.startsWith("star.photometry.")) {
-    return path.slice("star.".length);
-  }
-  if (path === "star" || path.startsWith("star.")) return `bodies.stars.0${path.slice("star".length)}`;
-  if (path === "planet" || path.startsWith("planet."))
-    return `bodies.planets.0${path.slice("planet".length)}`;
-  if (path === "moon.orbitAroundPlanet" || path.startsWith("moon.orbitAroundPlanet.")) {
-    return `bodies.moons.0.orbit${path.slice("moon.orbitAroundPlanet".length)}`;
-  }
-  if (path === "moon" || path.startsWith("moon.")) return `bodies.moons.0${path.slice("moon".length)}`;
-  return path;
-}
-
-function migrateScenarioControls(ui) {
-  if (!isObject(ui) || !Array.isArray(ui.controls)) return ui;
-  return {
-    ...ui,
-    controls: ui.controls.map((control) =>
-      isObject(control) ? { ...control, path: migrateControlPath(control.path) } : control,
-    ),
-  };
-}
-
-export function migrateScenarioJsonToV4(input) {
+async function migrate(input) {
   if (!isObject(input)) return input;
-
-  if (!isObject(input.defaults)) {
-    return migrateSystemParamsV4(input);
+  const server = await createServer({
+    root: process.cwd(),
+    configFile: false,
+    server: { middlewareMode: true },
+    appType: "custom",
+    optimizeDeps: { noDiscovery: true },
+  });
+  try {
+    const { mapBrowserScenarioDraftToEducationScenarioV4 } = await server.ssrLoadModule(
+      "/apps/browser/src/domain/simulation/v4/migrateModels.ts",
+    );
+    if (!isObject(input.defaults)) return mapBrowserScenarioDraftToEducationScenarioV4(input);
+    const output = {
+      ...input,
+      defaults: mapBrowserScenarioDraftToEducationScenarioV4(input.defaults),
+    };
+    if (isObject(input.ui) && Array.isArray(input.ui.controls))
+      output.ui = {
+        ...input.ui,
+        controls: input.ui.controls.map((control) =>
+          isObject(control) ? { ...control, path: migrateControlPath(control.path) } : control,
+        ),
+      };
+    if (isObject(input.meta))
+      output.meta = { ...input.meta, version: 4, schema: "EducationScenarioV4+Controls/v4" };
+    return output;
+  } finally {
+    await server.close();
   }
-
-  const out = { ...input };
-  out.defaults = migrateSystemParamsV4(input.defaults);
-  if (input.ui !== undefined) out.ui = migrateScenarioControls(input.ui);
-
-  if (isObject(out.meta)) {
-    const meta = { ...out.meta };
-    meta.version = 4;
-    meta.schema = "SystemParamsV4+Controls/v4";
-    out.meta = meta;
-  }
-
-  return out;
-}
-
-async function readStdin() {
-  const chunks = [];
-  let bytes = 0;
-  for await (const chunk of process.stdin) {
-    bytes += chunk.byteLength;
-    if (bytes > MAX_STDIN_BYTES) {
-      throw new Error(`Input exceeds ${MAX_STDIN_BYTES} bytes.`);
-    }
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  if (args.length > 0) {
-    console.error("Usage: node scripts/migrate-systemparams-v4.mjs < input.json > output.json");
-    process.exit(1);
+  if (process.argv.length > 2) throw new Error("Usage: pnpm migrate:v4 < input.json > output.json");
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of process.stdin) {
+    const buffer = Buffer.from(chunk);
+    bytes += buffer.byteLength;
+    if (bytes > MAX_STDIN_BYTES) throw new Error(`Input exceeds ${MAX_STDIN_BYTES} bytes.`);
+    chunks.push(buffer);
   }
-
-  const raw = await readStdin();
-  if (raw.trim().length === 0) {
-    console.error("Usage: node scripts/migrate-systemparams-v4.mjs < input.json > output.json");
-    process.exit(1);
-  }
-
-  const parsed = JSON.parse(raw);
-  const migrated = migrateScenarioJsonToV4(parsed);
-  const text = `${JSON.stringify(migrated, null, 2)}\n`;
-  process.stdout.write(text);
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (!text.trim()) throw new Error("Usage: pnpm migrate:v4 < input.json > output.json");
+  process.stdout.write(`${JSON.stringify(await migrate(JSON.parse(text)), null, 2)}\n`);
 }
 
-if (process.argv[1] && process.argv[1].includes("migrate-systemparams-v4.mjs")) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
-}
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

@@ -1,34 +1,33 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/transit-light-curve-lab/education-v4/scenario.schema.json",
-  "title": "Scoped Education V4 scenario",
+  "title": "Canonical Education V4 scenario",
   "type": "object",
-  "required": ["version", "mode", "runtime", "bodies", "orbits"],
+  "required": ["version", "mode", "bodies", "orbits"],
   "properties": {
     "version": { "const": "4" },
-    "mode": { "const": "general-lab" },
+    "mode": { "enum": ["general-lab", "detached-binary-lab"] },
     "runtime": {
       "type": "object",
-      "required": ["mode", "executionMode"],
       "properties": {
-        "mode": { "const": "realtime" },
-        "executionMode": { "const": "interactive" },
+        "mode": { "enum": ["realtime", "reference"] },
+        "executionMode": { "enum": ["interactive", "scientific-browser"] },
         "referenceSubsteps": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },
-    "observer": {
-      "type": "object",
-      "required": ["dir"],
-      "properties": { "dir": { "$ref": "#/$defs/vector3" } },
-      "additionalProperties": true
-    },
+    "observer": { "type": "object" },
     "bodies": {
       "type": "object",
       "required": ["stars", "planets", "moons"],
       "properties": {
-        "stars": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/body" } },
-        "planets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/orbitingBody" } },
+        "stars": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/body" }
+        },
+        "planets": { "type": "array", "items": { "$ref": "#/$defs/orbitingBody" } },
         "moons": { "type": "array", "items": { "$ref": "#/$defs/orbitingBody" } }
       },
       "additionalProperties": false
@@ -38,28 +37,31 @@
       "required": ["binary", "hierarchy"],
       "properties": {
         "binary": { "$ref": "#/$defs/orbit" },
-        "hierarchy": { "type": "array", "items": { "type": "object" } }
+        "hierarchy": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["childId", "parentId", "relation"],
+            "properties": {
+              "childId": { "type": "string", "minLength": 1 },
+              "parentId": { "type": "string", "minLength": 1 },
+              "relation": { "const": "orbits" }
+            },
+            "additionalProperties": false
+          }
+        }
       },
       "additionalProperties": false
     },
     "photometry": { "type": "object" },
     "dynamics": { "type": "object" },
-    "didactics": { "type": "object" }
+    "didactics": { "type": "object" },
+    "binaryLab": { "type": "object" }
   },
   "additionalProperties": false,
   "$defs": {
     "finiteNumber": { "type": "number" },
     "positiveNumber": { "type": "number", "exclusiveMinimum": 0 },
-    "vector3": {
-      "type": "object",
-      "required": ["x", "y", "z"],
-      "properties": {
-        "x": { "$ref": "#/$defs/finiteNumber" },
-        "y": { "$ref": "#/$defs/finiteNumber" },
-        "z": { "$ref": "#/$defs/finiteNumber" }
-      },
-      "additionalProperties": false
-    },
     "orbit": {
       "type": "object",
       "required": ["a", "e", "inc", "Omega", "omega", "period", "t0"],
@@ -76,7 +78,7 @@
     },
     "body": {
       "type": "object",
-      "required": ["id", "r", "m"],
+      "required": ["id", "r"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "r": { "$ref": "#/$defs/positiveNumber" },

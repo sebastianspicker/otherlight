@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/sebastianspicker/exoplanet-exomoon-simulation/security/advisories/new
+    url: https://github.com/sebastianspicker/otherlight/security/advisories/new
     about: Report vulnerabilities privately through GitHub Security Advisories.
   - name: Usage and documentation
-    url: https://github.com/sebastianspicker/exoplanet-exomoon-simulation/blob/main/docs/README.md
+    url: https://github.com/sebastianspicker/otherlight/blob/main/docs/README.md
     about: Start with the maintained documentation index before opening a support-style issue.

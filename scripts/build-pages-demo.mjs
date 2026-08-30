@@ -12,11 +12,11 @@ await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(assetDirectory, { recursive: true });
 
 await Promise.all([
-  cp(path.join(repositoryRoot, "demo", "index.html"), path.join(outputDirectory, "index.html")),
-  cp(path.join(repositoryRoot, "demo", "styles.css"), path.join(outputDirectory, "styles.css")),
-  cp(path.join(repositoryRoot, "demo", "app.js"), path.join(outputDirectory, "app.js")),
+  cp(path.join(repositoryRoot, "apps", "demo", "index.html"), path.join(outputDirectory, "index.html")),
+  cp(path.join(repositoryRoot, "apps", "demo", "styles.css"), path.join(outputDirectory, "styles.css")),
+  cp(path.join(repositoryRoot, "apps", "demo", "app.js"), path.join(outputDirectory, "app.js")),
   cp(
-    path.join(repositoryRoot, "public", "brand", "otherlight-signal-eclipse.svg"),
+    path.join(repositoryRoot, "apps", "browser", "public", "brand", "otherlight-signal-eclipse.svg"),
     path.join(assetDirectory, "otherlight-signal-eclipse.svg"),
   ),
   cp(
@@ -30,10 +30,6 @@ await Promise.all([
   cp(
     path.join(repositoryRoot, "docs", "screenshots", "web", "07-scientific-result.png"),
     path.join(assetDirectory, "07-scientific-result.png"),
-  ),
-  cp(
-    path.join(repositoryRoot, "docs", "screenshots", "web", "manifest.json"),
-    path.join(assetDirectory, "screenshot-manifest.json"),
   ),
 ]);
 

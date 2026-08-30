@@ -25,7 +25,7 @@ jobs:
       - name: Archive unsigned Universal 2 app
         run: |
           xcodebuild archive \
-            -project native-apple/Otherlight.xcodeproj \
+            -project apps/apple/Otherlight.xcodeproj \
             -scheme Otherlight \
             -configuration Release \
             -destination "generic/platform=macOS" \

@@ -10,9 +10,9 @@ on:
       - "contracts/education-v4/**"
       - "contracts/science-v5/**"
       - "contracts/workspace-v1/**"
-      - "native-apple/**"
+      - "apps/apple/**"
       - "scripts/select-swift-toolchain.sh"
-      - "src/config/real-systems.snapshot.json"
+      - "apps/browser/src/application/catalog/real-systems.snapshot.json"
   push:
     branches: ["main", "dev"]
     paths:
@@ -22,9 +22,9 @@ on:
       - "contracts/education-v4/**"
       - "contracts/science-v5/**"
       - "contracts/workspace-v1/**"
-      - "native-apple/**"
+      - "apps/apple/**"
       - "scripts/select-swift-toolchain.sh"
-      - "src/config/real-systems.snapshot.json"
+      - "apps/browser/src/application/catalog/real-systems.snapshot.json"
   workflow_dispatch:
 
 concurrency:
@@ -51,9 +51,9 @@ jobs:
           xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
       - name: Test portable Swift package
-        run: swift test --package-path native-apple/Packages/OtherlightCore
+        run: swift test --package-path apps/apple/Packages/OtherlightCore
       - name: Check Swift formatting
-        run: swift format lint --strict --recursive native-apple
+        run: swift format lint --strict --recursive apps/apple
 
   swift-package-science:
     name: Swift package / macOS science
@@ -71,7 +71,7 @@ jobs:
           xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
       - name: Test macOS-only scientific package
-        run: swift test --package-path native-apple/Packages/OtherlightScience
+        run: swift test --package-path apps/apple/Packages/OtherlightScience
 
   app-test:
     name: ${{ matrix.destination.name }}
@@ -104,7 +104,7 @@ jobs:
           OTHERLIGHT_DERIVED_DATA_PATH: ${{ runner.temp }}/Otherlight-${{ strategy.job-index }}
         run: |
           xcodebuild test \
-            -project native-apple/Otherlight.xcodeproj \
+            -project apps/apple/Otherlight.xcodeproj \
             -scheme Otherlight \
             -configuration Debug \
             -destination "$OTHERLIGHT_DESTINATION" \
@@ -117,8 +117,8 @@ jobs:
     timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      DERIVED_DATA: ${{ runner.temp }}/Otherlight-iOS-archive
-      ARCHIVE_PATH: ${{ runner.temp }}/Otherlight-iOS.xcarchive
+      DERIVED_DATA: ${{ github.workspace }}/.build/Otherlight-iOS-archive
+      ARCHIVE_PATH: ${{ github.workspace }}/.build/Otherlight-iOS.xcarchive
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -131,7 +131,7 @@ jobs:
       - name: Archive generic iOS app without signing
         run: |
           xcodebuild archive \
-            -project native-apple/Otherlight.xcodeproj \
+            -project apps/apple/Otherlight.xcodeproj \
             -scheme Otherlight \
             -configuration Release \
             -destination "generic/platform=iOS" \
