@@ -40,7 +40,7 @@ jobs:
         run: pnpm ci:verify
 
       - name: Build GitHub Pages artifact
-        run: pnpm build:pages
+        run: pnpm build:pages:site
 
       - name: Smoke GitHub Pages artifact
         run: pnpm smoke:pages

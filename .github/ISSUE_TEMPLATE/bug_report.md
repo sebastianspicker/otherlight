@@ -11,7 +11,7 @@ Describe the issue in one or two sentences.
 
 ## Actual behavior
 
-What happened?
+What happened? A screenshot or a short recording helps a lot.
 
 ## Expected behavior
 
@@ -22,6 +22,9 @@ What should happen instead?
 1.
 2.
 3.
+
+A minimal scenario (calculation profile, preset, and the parameters you changed)
+makes the issue much easier to reproduce.
 
 ## Environment
 
@@ -53,5 +56,6 @@ What should happen instead?
 
 ## Logs / screenshots
 
-Attach redacted console output, stack traces, screenshots, or short recordings. Do not include
-tokens, private paths, unpublished data, or personal information.
+Attach redacted console output, stack traces, screenshots, or short recordings.
+Please leave out tokens, private paths, unpublished data, and personal
+information.

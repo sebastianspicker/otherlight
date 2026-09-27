@@ -1,0 +1,482 @@
+{
+  "validImports": {
+    "passbandResponse": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "passband-response",
+      "units": { "wavelengthM": "m", "response": "1" },
+      "wavelengthM": [4e-7, 5e-7, 6e-7],
+      "response": [0.1, 0.9, 0.2]
+    },
+    "stellarIntensityGrid": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "stellar-intensity-grid",
+      "units": { "wavelengthM": "m", "mu": "1", "intensityWm3Sr": "W m^-3 sr^-1" },
+      "wavelengthM": [4e-7, 6e-7],
+      "mu": [0, 0.5, 1],
+      "intensityWm3Sr": [
+        [1e12, 1.5e12, 2e12],
+        [1.5e12, 2e12, 2.5e12]
+      ]
+    },
+    "atmosphericTransmission": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "atmospheric-profile",
+      "units": { "wavelengthM": "m", "transmission": "1" },
+      "representation": "transmission",
+      "wavelengthM": [4e-7, 6e-7],
+      "transmission": [0.98, 0.96]
+    },
+    "atmosphericEffectiveRadius": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "atmospheric-profile",
+      "units": { "wavelengthM": "m", "effectiveRadiusM": "m" },
+      "representation": "effective-radius",
+      "wavelengthM": [4e-7, 6e-7],
+      "effectiveRadiusM": [70000000, 71000000]
+    },
+    "scatteringPhaseFunction": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "scattering-phase-function",
+      "units": { "scatteringAngleRad": "rad", "phaseFunctionSrInv": "sr^-1" },
+      "scatteringAngleRad": [0, 1.5707963267948966, 3.141592653589793],
+      "phaseFunctionSrInv": [1, 0.5, 0.1]
+    },
+    "stellarVariabilityPsd": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "stellar-variability-psd",
+      "units": { "frequencyHz": "Hz", "powerSpectralDensityPerHz": "Hz^-1" },
+      "frequencyHz": [0.000001, 0.00001, 0.0001],
+      "powerSpectralDensityPerHz": [1000, 100, 10]
+    }
+  },
+  "validImportContentSha256": {
+    "passbandResponse": "a284c73702bef0485bc847ce4e3eea3513384f67c018b98c79a3577fbb023871",
+    "stellarIntensityGrid": "f8db824918f7788b74553e25527b92413ee6d31115ae4d33f90b86a6a6127110",
+    "atmosphericTransmission": "1578d8dccbd9d53879b09cf18efd4a368cc705a1f564191f4c2691dfe20bd7d6",
+    "atmosphericEffectiveRadius": "67e266d14be6eac5c808accc95c4d06b4fe6b85af772ea2011d81ece6c04493d",
+    "scatteringPhaseFunction": "7aaede96219fdb3aa5d5346623ea23c0528f1cc2dc9c4190de647b74a6ff4513",
+    "stellarVariabilityPsd": "d693aa26966110819d1e40b1536b25be63cbc3adb82cda7bf13387ec54be7db1"
+  },
+  "invalidImports": {
+    "unknownField": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "passband-response",
+      "units": { "wavelengthM": "m", "response": "1" },
+      "wavelengthM": [4e-7, 6e-7],
+      "response": [0.1, 0.2],
+      "url": "https://not-accepted.invalid/data.json"
+    },
+    "wrongUnit": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "stellar-variability-psd",
+      "units": { "frequencyHz": "s^-1", "powerSpectralDensityPerHz": "Hz^-1" },
+      "frequencyHz": [0.000001, 0.00001],
+      "powerSpectralDensityPerHz": [1000, 100]
+    },
+    "nonMonotonic": {
+      "schemaVersion": "science-dataset-v2",
+      "kind": "scattering-phase-function",
+      "units": { "scatteringAngleRad": "rad", "phaseFunctionSrInv": "sr^-1" },
+      "scatteringAngleRad": [0, 2, 1],
+      "phaseFunctionSrInv": [1, 0.5, 0.1]
+    },
+    "oversizeCase": {
+      "source": "validImports.passbandResponse",
+      "axis": "wavelengthM",
+      "sampleCount": 100001
+    }
+  },
+  "validDescriptors": {
+    "dataset": {
+      "schemaVersion": "science-dataset-descriptor-v2",
+      "id": "ds-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "kind": "passband-response",
+      "sampleCount": 3,
+      "mediaType": "application/vnd.otherlight.science-dataset+json; charset=utf-8",
+      "sourceByteSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "job": {
+      "schemaVersion": "science-job-descriptor-v2",
+      "id": "job-v2-fixture",
+      "kind": "transit-timing",
+      "status": "queued",
+      "createdAt": "2026-09-04T00:00:00.000Z",
+      "updatedAt": "2026-09-04T00:00:00.000Z",
+      "datasetIds": ["ds-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]
+    },
+    "artifact": {
+      "schemaVersion": "science-artifact-descriptor-v2",
+      "artifactId": "artifact-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "kind": "radial-velocity",
+      "dataSchemaVersion": "radial-velocity-v1",
+      "rowCount": 3,
+      "byteCount": 128,
+      "mediaType": "application/vnd.apache.arrow.file"
+    },
+    "failedJob": {
+      "schemaVersion": "science-job-descriptor-v2",
+      "id": "job-v2-failed-fixture",
+      "kind": "transit-timing",
+      "status": "failed",
+      "createdAt": "2026-09-04T00:00:00.000Z",
+      "updatedAt": "2026-09-04T00:00:01.000Z",
+      "datasetIds": [],
+      "error": {
+        "code": "timing-geometry-indeterminate",
+        "message": "tangent topology cannot be classified",
+        "retryable": false
+      }
+    },
+    "transitEventsArtifact": {
+      "schemaVersion": "science-artifact-descriptor-v2",
+      "artifactId": "artifact-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "kind": "transit-events",
+      "dataSchemaVersion": "transit-events-v1",
+      "rowCount": 1,
+      "byteCount": 1024,
+      "mediaType": "application/vnd.apache.arrow.file"
+    }
+  },
+  "validRunManifest": {
+    "schemaVersion": "science-run-manifest-v3",
+    "runId": "job-v2-fixture",
+    "inputHashSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "scientificResult": true,
+    "implementation": {
+      "application": {
+        "name": "otherlight-science-backend",
+        "version": "planned-v6-fixture",
+        "build": "planned-v6-fixture"
+      },
+      "engine": {
+        "kind": "python-scipy",
+        "name": "DOP853",
+        "version": "1.18.0"
+      },
+      "runtime": { "name": "Python", "version": "3.14.0" },
+      "artifactWriter": { "name": "PyArrow", "version": "25.0.0" },
+      "platform": { "os": "fixture-os", "architecture": "fixture-architecture" }
+    },
+    "gravitationalConstantM3KgS2": 6.6743e-11,
+    "coordinateSystem": "barycentric-si",
+    "lineOfSightDirection": "system-to-observer",
+    "timeScale": "TDB",
+    "epochJdTdb": 2461236.5,
+    "startedAt": "2026-09-04T00:00:00.000Z",
+    "completedAt": "2026-09-04T00:00:01.000Z",
+    "capabilityManifestVersion": "planned-v6-fixture",
+    "modelVersions": [{ "id": "fixture-model", "version": "v1" }],
+    "numericalTolerances": {
+      "requestedPositionToleranceM": 0.001,
+      "effectivePositionToleranceM": 0.001,
+      "requestedVelocityToleranceMps": 0.000001,
+      "effectiveVelocityToleranceMps": 0.000001,
+      "requestedRelativeTolerance": 1e-12,
+      "effectiveRelativeTolerance": 1e-12,
+      "requestedMaxStepSec": 3600,
+      "effectiveMaxStepSec": 3600,
+      "maxDenseSegments": 500000,
+      "maxRhsEvaluations": 8000000,
+      "maxIsolationNodes": 2000000,
+      "maxIsolationNodesPerSegmentSeries": 4096,
+      "maxIsolationDepth": 64,
+      "maxRootRefinementIterations": 64,
+      "maxEventRows": 10000,
+      "maxWallTimeSec": 60,
+      "rootIsolationHalfWidthSec": 0.001,
+      "artifactsPerJob": 1,
+      "refinementRelativeToleranceMultiplier": 0.1,
+      "refinementPositionToleranceMultiplier": 0.1,
+      "refinementVelocityToleranceMultiplier": 0.1,
+      "refinementMaxStepMultiplier": 0.5
+    },
+    "numericalErrorEstimates": [
+      {
+        "id": "event-root-isolation-half-width-max",
+        "valueSec": 0.001,
+        "method": "bounded-dense-segment-isolation"
+      },
+      {
+        "id": "event-primary-refinement-difference-max",
+        "valueSec": 0.01,
+        "method": "tighter-integration"
+      },
+      {
+        "id": "duration-primary-refinement-difference-max",
+        "valueSec": 0.01,
+        "method": "tighter-integration"
+      }
+    ],
+    "crossLanguageAgreementLimitSec": 0.1,
+    "errorScope": "numerical-implementation-only",
+    "datasets": [
+      {
+        "schemaVersion": "science-dataset-descriptor-v2",
+        "id": "ds-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "kind": "passband-response",
+        "sampleCount": 3,
+        "mediaType": "application/vnd.otherlight.science-dataset+json; charset=utf-8",
+        "sourceByteSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ],
+    "artifacts": [
+      {
+        "schemaVersion": "science-artifact-descriptor-v2",
+        "artifactId": "artifact-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "kind": "transit-events",
+        "dataSchemaVersion": "transit-events-v1",
+        "rowCount": 1,
+        "byteCount": 1024,
+        "mediaType": "application/vnd.apache.arrow.file"
+      }
+    ],
+    "validityDomain": ["fixture-only additive boundary"],
+    "warnings": [],
+    "randomSeed": 42
+  },
+  "validTransitTimingRequest": {
+    "schemaVersion": "science-transit-timing-request-v1",
+    "kind": "transit-timing",
+    "scenario": {
+      "schemaVersion": "v6",
+      "id": "timing-two-body-si",
+      "epochJdTdb": 2461236.5,
+      "timeScale": "TDB",
+      "bodies": [
+        {
+          "id": "star",
+          "kind": "star",
+          "massKg": 1.98847e30,
+          "radiusM": 695700000,
+          "state": {
+            "positionM": [-449303.09236076573, 0, -0.0000030034056651901644],
+            "velocityMps": [0, -0.08945643773768905, 0]
+          }
+        },
+        {
+          "id": "planet",
+          "kind": "planet",
+          "massKg": 5.9722e24,
+          "radiusM": 6371000,
+          "state": {
+            "positionM": [149597421396.90762, 0, 0.9999969965943347],
+            "velocityMps": [0, 29784.91054356226, 0]
+          }
+        }
+      ],
+      "observer": { "lineOfSight": [0, 0, 1], "targetBodyId": "star" },
+      "integrator": {
+        "method": "DOP853",
+        "positionToleranceM": 0.001,
+        "velocityToleranceMps": 0.000001,
+        "relativeTolerance": 1e-12,
+        "maxStepSec": 3600
+      }
+    },
+    "window": { "startOffsetSec": 0, "endOffsetSec": 86400 },
+    "series": [
+      {
+        "seriesId": "planet-star",
+        "starBodyId": "star",
+        "occulterBodyId": "planet",
+        "ephemeris": {
+          "referenceTransitIndex": 0,
+          "referenceMidTransitOffsetSec": 43200,
+          "periodSec": 86400
+        },
+        "referenceDurationT14Sec": 4320
+      }
+    ],
+    "datasetIds": [],
+    "outputs": ["transit-events"],
+    "seed": 42
+  },
+  "validTransitTimingResult": {
+    "schemaVersion": "science-transit-timing-result-v1",
+    "jobId": "job-v2-fixture",
+    "kind": "transit-timing",
+    "artifacts": [
+      {
+        "schemaVersion": "science-artifact-descriptor-v2",
+        "artifactId": "artifact-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "kind": "transit-events",
+        "dataSchemaVersion": "transit-events-v1",
+        "rowCount": 1,
+        "byteCount": 1024,
+        "mediaType": "application/vnd.apache.arrow.file"
+      }
+    ],
+    "runManifest": {
+      "schemaVersion": "science-run-manifest-v3",
+      "runId": "job-v2-fixture",
+      "inputHashSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "scientificResult": true,
+      "implementation": {
+        "application": {
+          "name": "otherlight-science-backend",
+          "version": "planned-v6-fixture",
+          "build": "planned-v6-fixture"
+        },
+        "engine": { "kind": "python-scipy", "name": "DOP853", "version": "1.18.0" },
+        "runtime": { "name": "Python", "version": "3.14.0" },
+        "artifactWriter": { "name": "PyArrow", "version": "25.0.0" },
+        "platform": { "os": "fixture-os", "architecture": "fixture-architecture" }
+      },
+      "gravitationalConstantM3KgS2": 6.6743e-11,
+      "coordinateSystem": "barycentric-si",
+      "lineOfSightDirection": "system-to-observer",
+      "timeScale": "TDB",
+      "epochJdTdb": 2461236.5,
+      "startedAt": "2026-09-04T00:00:00.000Z",
+      "completedAt": "2026-09-04T00:00:01.000Z",
+      "capabilityManifestVersion": "planned-v6-fixture",
+      "modelVersions": [{ "id": "dynamics", "version": "dense-dop853-v1" }],
+      "numericalTolerances": {
+        "requestedPositionToleranceM": 0.001,
+        "effectivePositionToleranceM": 0.001,
+        "requestedVelocityToleranceMps": 0.000001,
+        "effectiveVelocityToleranceMps": 0.000001,
+        "requestedRelativeTolerance": 1e-12,
+        "effectiveRelativeTolerance": 1e-12,
+        "requestedMaxStepSec": 3600,
+        "effectiveMaxStepSec": 3600,
+        "maxDenseSegments": 500000,
+        "maxRhsEvaluations": 8000000,
+        "maxIsolationNodes": 2000000,
+        "maxIsolationNodesPerSegmentSeries": 4096,
+        "maxIsolationDepth": 64,
+        "maxRootRefinementIterations": 64,
+        "maxEventRows": 10000,
+        "maxWallTimeSec": 60,
+        "rootIsolationHalfWidthSec": 0.001,
+        "artifactsPerJob": 1,
+        "refinementRelativeToleranceMultiplier": 0.1,
+        "refinementPositionToleranceMultiplier": 0.1,
+        "refinementVelocityToleranceMultiplier": 0.1,
+        "refinementMaxStepMultiplier": 0.5
+      },
+      "numericalErrorEstimates": [
+        {
+          "id": "event-root-isolation-half-width-max",
+          "valueSec": 0.001,
+          "method": "bounded-dense-segment-isolation"
+        },
+        {
+          "id": "event-primary-refinement-difference-max",
+          "valueSec": 0.01,
+          "method": "tighter-integration"
+        },
+        {
+          "id": "duration-primary-refinement-difference-max",
+          "valueSec": 0.01,
+          "method": "tighter-integration"
+        }
+      ],
+      "crossLanguageAgreementLimitSec": 0.1,
+      "errorScope": "numerical-implementation-only",
+      "datasets": [],
+      "artifacts": [
+        {
+          "schemaVersion": "science-artifact-descriptor-v2",
+          "artifactId": "artifact-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "kind": "transit-events",
+          "dataSchemaVersion": "transit-events-v1",
+          "rowCount": 1,
+          "byteCount": 1024,
+          "mediaType": "application/vnd.apache.arrow.file"
+        }
+      ],
+      "validityDomain": ["dense DOP853 foreground finite-radius timing fixture"],
+      "warnings": [],
+      "randomSeed": 42
+    }
+  },
+  "invalidTransitTimingRequests": {
+    "unknownField": { "source": "validTransitTimingRequest", "set": { "/sampleCadenceSec": 60 } },
+    "outputSet": { "source": "validTransitTimingRequest", "set": { "/outputs/0": "radial-velocity" } },
+    "window": { "source": "validTransitTimingRequest", "set": { "/window/endOffsetSec": 0 } },
+    "ephemeris": {
+      "source": "validTransitTimingRequest",
+      "set": { "/series/0/referenceDurationT14Sec": 86400 }
+    },
+    "unknownOcculter": {
+      "source": "validTransitTimingRequest",
+      "set": { "/series/0/occulterBodyId": "moon" }
+    },
+    "datasetIds": {
+      "source": "validTransitTimingRequest",
+      "set": { "/datasetIds": ["ds-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"] }
+    },
+    "observerTarget": {
+      "source": "validTransitTimingRequest",
+      "set": { "/scenario/observer/targetBodyId": "missing" }
+    },
+    "barycentre": {
+      "source": "validTransitTimingRequest",
+      "set": { "/scenario/bodies/0/state/positionM": [0, 0, 0] }
+    },
+    "initialContact": {
+      "source": "validTransitTimingRequest",
+      "set": {
+        "/scenario/bodies/0/state/positionM": [0, 0, 0],
+        "/scenario/bodies/1/state/positionM": [0, 0, 0]
+      }
+    },
+    "acceptedStepBudget": {
+      "source": "validTransitTimingRequest",
+      "set": { "/scenario/integrator/maxStepSec": 0.1 }
+    },
+    "ephemerisCellBudget": {
+      "source": "validTransitTimingRequest",
+      "set": {
+        "/window/endOffsetSec": 10001,
+        "/series/0/ephemeris/periodSec": 1,
+        "/series/0/referenceDurationT14Sec": 0.5
+      }
+    }
+  },
+  "invalidDescriptors": {
+    "failedJobWithoutError": { "source": "validDescriptors.failedJob", "delete": ["/error"] },
+    "nonFailedJobWithError": {
+      "source": "validDescriptors.job",
+      "set": { "/error": { "code": "internal-error", "message": "unexpected", "retryable": true } }
+    },
+    "artifactDataSchema": {
+      "source": "validDescriptors.transitEventsArtifact",
+      "set": { "/dataSchemaVersion": "radial-velocity-v1" }
+    },
+    "artifactByteCount": { "source": "validDescriptors.transitEventsArtifact", "set": { "/byteCount": 0 } }
+  },
+  "invalidRunManifests": {
+    "unknownField": { "source": "validRunManifest", "set": { "/displayCadenceSec": 60 } },
+    "coordinateConvention": {
+      "source": "validRunManifest",
+      "set": { "/lineOfSightDirection": "observer-to-system" }
+    },
+    "errorCeiling": {
+      "source": "validRunManifest",
+      "set": { "/numericalErrorEstimates/1/valueSec": 0.051 }
+    }
+  },
+  "invalidTransitTimingResults": {
+    "unknownField": { "source": "validTransitTimingResult", "set": { "/sampleCadenceSec": 60 } },
+    "outputArtifact": {
+      "source": "validTransitTimingResult",
+      "set": { "/artifacts/0/kind": "radial-velocity" }
+    },
+    "manifestArtifactLink": {
+      "source": "validTransitTimingResult",
+      "set": {
+        "/runManifest/artifacts/0/artifactId": "artifact-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "/runManifest/artifacts/0/sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    }
+  }
+}

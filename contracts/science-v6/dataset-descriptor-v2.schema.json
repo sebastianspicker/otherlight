@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/otherlight/science-v6/dataset-descriptor-v2.schema.json",
+  "title": "Scientific V2 imported dataset descriptor",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "kind",
+    "sampleCount",
+    "mediaType",
+    "sourceByteSha256",
+    "contentSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "science-dataset-descriptor-v2" },
+    "id": { "type": "string", "pattern": "^ds-[0-9a-f]{64}$" },
+    "kind": {
+      "enum": [
+        "passband-response",
+        "stellar-intensity-grid",
+        "atmospheric-profile",
+        "scattering-phase-function",
+        "stellar-variability-psd"
+      ]
+    },
+    "sampleCount": { "type": "integer", "minimum": 1, "maximum": 100000 },
+    "mediaType": { "const": "application/vnd.otherlight.science-dataset+json; charset=utf-8" },
+    "sourceByteSha256": { "$ref": "#/$defs/sha256" },
+    "contentSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

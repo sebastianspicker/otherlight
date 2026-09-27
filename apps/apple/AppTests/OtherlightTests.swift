@@ -1,6 +1,7 @@
 // Exercises app-level runtime, session lifecycle, and presentation contracts.
 import CoreGraphics
 import Foundation
+import TransitCore
 import TransitEducation
 import TransitScienceContracts
 import UniformTypeIdentifiers
@@ -55,6 +56,30 @@ final class OtherlightTests: XCTestCase {
     XCTAssertEqual(rebuilt.series.key, revisedKey)
     let rebuildMetrics = await runtime.metrics()
     XCTAssertEqual(rebuildMetrics.seriesBuilds, 2)
+  }
+
+  /// Ensures a reference request takes the portable reference path and cannot reuse interactive output.
+  func testRuntimeBuildsModeSensitiveReferenceSeries() async throws {
+    let runtime = SimulationRuntime()
+    let scenario = ScenarioCatalog.default
+    let transit = scenario.epochSeconds + scenario.planet.orbit.periodSeconds / 4
+    let interactiveKey = SeriesKey(
+      revision: 1, scenario: scenario, samples: 16, centerSeconds: transit,
+      runtimeMode: .interactive)
+    let referenceKey = SeriesKey(
+      revision: 1, scenario: scenario, samples: 16, centerSeconds: transit, runtimeMode: .reference)
+
+    let interactive = try await deliveredFrame(
+      from: runtime, request: .init(generation: 1, seriesKey: interactiveKey, timeSeconds: transit))
+    let reference = try await deliveredFrame(
+      from: runtime,
+      request: .init(
+        generation: 2, seriesKey: referenceKey, timeSeconds: transit, runtimeMode: .reference))
+
+    XCTAssertEqual(reference.series.key.runtimeMode, .reference)
+    XCTAssertNotEqual(interactive.series, reference.series)
+    let metrics = await runtime.metrics()
+    XCTAssertEqual(metrics.seriesBuilds, 2)
   }
 
   /// Ensures rapid playback requests collapse behind one sampled-series calculation.
@@ -177,7 +202,141 @@ final class OtherlightTests: XCTestCase {
     XCTAssertEqual(session.draftPlanetRadiusMetres, "not-a-number")
     XCTAssertEqual(session.scenario, acceptedScenario)
     XCTAssertEqual(session.draftValidationErrors[.planetRadius], "Enter a finite number.")
+    XCTAssertEqual(
+      session.displayState, .error("Correct the highlighted parameters before applying them."))
     XCTAssertEqual(session.calculationStatus, "Parameters need attention")
+  }
+
+  /// Ensures reset restores every editable draft field and clears its recoverable validation display.
+  func testResetDraftRestoresEveryEditableFieldAndDisplayState() {
+    let session = EducationSession()
+    session.draftPlanetRadiusMetres = "1"
+    session.draftMoonRadiusMetres = "2"
+    session.draftMoonPhaseRadians = "3"
+    session.draftGridResolution = "4"
+    session.draftLimbDarkeningU1 = "5"
+    session.draftLimbDarkeningU2 = "6"
+    session.draftPlanetPhaseEnabled = true
+    session.draftPlanetPhaseReflectedAmplitude = "7"
+    session.draftPlanetPhaseThermalAmplitude = "8"
+    session.draftPlanetPhaseConstantFlux = "9"
+    session.draftPlanetPhaseReflectedOffsetRadians = "10"
+    session.draftPlanetPhaseThermalOffsetRadians = "11"
+    session.draftPlanetPhaseReflectedModel = .cosine
+    session.draftPlanetPhaseThermalModel = .lambert
+    session.draftMoonPhaseEnabled = true
+    session.draftMoonPhaseReflectedAmplitude = "12"
+    session.draftMoonPhaseThermalAmplitude = "13"
+    session.draftMoonPhaseConstantFlux = "14"
+    session.draftMoonPhaseReflectedOffsetRadians = "15"
+    session.draftMoonPhaseThermalOffsetRadians = "16"
+    session.draftMoonPhaseReflectedModel = .cosine
+    session.draftMoonPhaseThermalModel = .lambert
+    session.applyDraft()
+
+    session.resetDraft()
+
+    let expected = EducationDraftPolicy.values(for: session.scenario)
+    XCTAssertEqual(session.draftPlanetRadiusMetres, expected.planet)
+    XCTAssertEqual(session.draftMoonRadiusMetres, expected.moon)
+    XCTAssertEqual(session.draftMoonPhaseRadians, expected.phase)
+    XCTAssertEqual(session.draftGridResolution, expected.gridResolution)
+    XCTAssertEqual(session.draftLimbDarkeningU1, expected.limbDarkeningU1)
+    XCTAssertEqual(session.draftLimbDarkeningU2, expected.limbDarkeningU2)
+    XCTAssertEqual(session.draftPlanetPhaseEnabled, expected.planetPhase.enabled)
+    XCTAssertEqual(
+      session.draftPlanetPhaseReflectedAmplitude, expected.planetPhase.reflectedAmplitude)
+    XCTAssertEqual(session.draftPlanetPhaseThermalAmplitude, expected.planetPhase.thermalAmplitude)
+    XCTAssertEqual(session.draftPlanetPhaseConstantFlux, expected.planetPhase.constantFlux)
+    XCTAssertEqual(
+      session.draftPlanetPhaseReflectedOffsetRadians, expected.planetPhase.reflectedOffsetRadians)
+    XCTAssertEqual(
+      session.draftPlanetPhaseThermalOffsetRadians, expected.planetPhase.thermalOffsetRadians)
+    XCTAssertEqual(session.draftPlanetPhaseReflectedModel, expected.planetPhase.reflectedModel)
+    XCTAssertEqual(session.draftPlanetPhaseThermalModel, expected.planetPhase.thermalModel)
+    XCTAssertEqual(session.draftMoonPhaseEnabled, expected.moonPhase.enabled)
+    XCTAssertEqual(session.draftMoonPhaseReflectedAmplitude, expected.moonPhase.reflectedAmplitude)
+    XCTAssertEqual(session.draftMoonPhaseThermalAmplitude, expected.moonPhase.thermalAmplitude)
+    XCTAssertEqual(session.draftMoonPhaseConstantFlux, expected.moonPhase.constantFlux)
+    XCTAssertEqual(
+      session.draftMoonPhaseReflectedOffsetRadians, expected.moonPhase.reflectedOffsetRadians)
+    XCTAssertEqual(
+      session.draftMoonPhaseThermalOffsetRadians, expected.moonPhase.thermalOffsetRadians)
+    XCTAssertEqual(session.draftMoonPhaseReflectedModel, expected.moonPhase.reflectedModel)
+    XCTAssertEqual(session.draftMoonPhaseThermalModel, expected.moonPhase.thermalModel)
+    XCTAssertTrue(session.draftValidationErrors.isEmpty)
+    XCTAssertEqual(session.displayState, .empty)
+  }
+
+  /// Ensures supported advanced V4 photometry remains a recoverable draft until Apply succeeds.
+  func testAdvancedPhotometryDraftPreservesInvalidTextAndAppliesSupportedValues() {
+    let session = EducationSession()
+    let acceptedScenario = session.scenario
+    session.draftGridResolution = "not-a-grid"
+
+    session.applyDraft()
+
+    XCTAssertEqual(session.draftGridResolution, "not-a-grid")
+    XCTAssertEqual(session.scenario, acceptedScenario)
+    XCTAssertEqual(session.draftValidationErrors[.gridResolution], "Enter a finite number.")
+
+    session.draftGridResolution = "300"
+    session.draftLimbDarkeningU1 = "0.42"
+    session.draftLimbDarkeningU2 = "0.18"
+    session.draftPlanetPhaseEnabled = true
+    session.draftPlanetPhaseReflectedAmplitude = "0.004"
+    session.draftPlanetPhaseThermalAmplitude = "0.002"
+    session.draftPlanetPhaseConstantFlux = "0.0001"
+    session.draftPlanetPhaseReflectedOffsetRadians = "0.15"
+    session.draftPlanetPhaseThermalOffsetRadians = "-0.2"
+    session.draftPlanetPhaseReflectedModel = .cosine
+    session.draftPlanetPhaseThermalModel = .lambert
+
+    session.applyDraft()
+
+    XCTAssertEqual(session.scenario.gridResolution, 300)
+    XCTAssertEqual(session.scenario.star.limbDarkeningU1, 0.42)
+    XCTAssertEqual(session.scenario.star.limbDarkeningU2, 0.18)
+    XCTAssertEqual(session.scenario.planetPhase?.reflectedAmplitude, 0.004)
+    XCTAssertEqual(session.scenario.planetPhase?.thermalModel, .lambert)
+    XCTAssertEqual(session.scenario.planetPhase?.reflectedOffsetRadians, 0.15)
+  }
+
+  /// Verifies detached-binary V4 gates preserve drafts, guard reveal, unlock controls, and round-trip state.
+  func testDetachedBinaryLabGuardsRevealAndRestoresWorkspaceState() throws {
+    let session = EducationSession()
+    session.selectScenario(id: ScenarioCatalog.detachedBinaryLab.identifier)
+
+    XCTAssertTrue(session.isDetachedBinaryLab)
+    XCTAssertFalse(session.isBinaryLabSkyVisible)
+    XCTAssertTrue(session.isParameterEditingLocked)
+    XCTAssertFalse(session.canRevealBinaryLabSky)
+    let accepted = session.scenario
+    session.draftGridResolution = "not-a-grid"
+    session.applyDraft()
+    XCTAssertEqual(session.draftGridResolution, "not-a-grid")
+    XCTAssertEqual(session.scenario, accepted)
+
+    session.setBinaryLabHypothesis(.primaryEclipseDeepest)
+    XCTAssertFalse(session.isParameterEditingLocked)
+    XCTAssertTrue(session.canRevealBinaryLabSky)
+    session.revealBinaryLabSky()
+    XCTAssertTrue(session.isBinaryLabSkyVisible)
+    session.draftGridResolution = "300"
+    session.draftLimbDarkeningU1 = "0.4"
+    session.draftLimbDarkeningU2 = "0.2"
+    session.applyDraft()
+    XCTAssertEqual(session.scenario.gridResolution, 300)
+    XCTAssertEqual(session.scenario.detachedBinary?.primary.star.limbDarkeningU1, 0.4)
+
+    let document = try OtherlightWorkspaceDocument(
+      workspace: session.workspace(section: .simulation))
+    let restored = EducationSession()
+    try restored.restore(workspace: document.workspace)
+    XCTAssertTrue(restored.isDetachedBinaryLab)
+    XCTAssertTrue(restored.isBinaryLabSkyVisible)
+    XCTAssertEqual(restored.binaryLab?.hypothesis, .primaryEclipseDeepest)
+    XCTAssertEqual(document.workspace.productContext.lab, "binary-eclipse")
   }
 
   /// Ensures accepted workspace state round-trips and unsupported schema versions fail clearly.
@@ -233,6 +392,7 @@ final class OtherlightTests: XCTestCase {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()
+      .deletingLastPathComponent()
     let fixtureURL = repositoryRoot.appendingPathComponent(
       "contracts/education-v4/fixtures/scoped-parity.json")
     let fixture = try XCTUnwrap(
@@ -253,6 +413,22 @@ final class OtherlightTests: XCTestCase {
       data: JSONSerialization.data(withJSONObject: workspace, options: [.sortedKeys]))
 
     XCTAssertEqual(try document.workspace.educationScenario(), ScenarioCatalog.default)
+  }
+
+  /// Ensures a valid reference workspace restores its execution semantics without history state.
+  func testReferenceWorkspaceRoundTripsModeWithoutHistories() throws {
+    let session = EducationSession()
+    session.setRuntimeMode(.reference)
+    let data = try OtherlightWorkspaceDocument(workspace: session.workspace(section: .simulation))
+      .encodedData()
+    let restored = EducationSession()
+    try restored.restore(workspace: OtherlightWorkspaceDocument(data: data).workspace)
+
+    XCTAssertEqual(restored.runtimeMode, .reference)
+    XCTAssertEqual(
+      restored.referenceSubsteps, EducationRuntimeConfiguration.defaultReferenceSubsteps)
+    XCTAssertTrue(restored.lightCurveHistory.samples.isEmpty)
+    XCTAssertEqual(restored.transitEventCount, 0)
   }
 
   /// Ensures scientific profile claims require their matching scientific payload.
@@ -290,6 +466,7 @@ final class OtherlightTests: XCTestCase {
     workspace["productContext"] = productContext
 
     let contractURL = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()

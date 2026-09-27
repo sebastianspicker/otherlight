@@ -115,19 +115,28 @@
         "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "The native alpha currently implements only its bounded interactive engine."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The deterministic reference path and macOS app tests pass; the complete Xcode 26.6 platform and UI acceptance gate remains pending."
       },
       "iphone": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Reference runtime modes are not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The shared reference path passed an iPhone simulator test and launch; the named Xcode 26.6 release gate remains pending."
       },
       "ipad": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Reference runtime modes are not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The reference path is implemented in shared Apple sources; the named Xcode 26.6 iPad simulator and UI gate remains pending."
       }
     },
     {
@@ -140,18 +149,27 @@
       },
       "macos": {
         "status": "experimental",
-        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
-        "reason": "Native validation now preserves invalid drafts, but only three parameters are exposed."
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The portable radius, grid, quadratic limb-darkening, and phase subset preserves invalid drafts and passes app tests; cadence and dynamics controls remain unexposed."
       },
       "iphone": {
         "status": "experimental",
-        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
-        "reason": "No Xcode 26.6 iPhone 17 Pro/iOS 26.5 simulator or device gate has been recorded."
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The portable advanced subset passed the iPhone 17 Pro/iOS 26.5 app-test gate; complete responsive and accessibility review remains pending."
       },
       "ipad": {
         "status": "experimental",
-        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
-        "reason": "No Xcode 26.6 iPad Pro 13-inch (M5)/iOS 26.5 simulator or device gate has been recorded."
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The portable advanced subset passed the iPad Pro 13-inch (M5)/iOS 26.5 app-test gate; complete responsive and accessibility review remains pending."
       }
     },
     {
@@ -163,19 +181,28 @@
         "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary preview photometry has not been ported to Swift."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "Portable detached-binary dynamics and normalized two-star preview photometry pass the macOS app-test gate; complete visual and accessibility review remains pending."
       },
       "iphone": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary preview photometry is not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The shared detached-binary preview passed the iPhone 17 Pro/iOS 26.5 simulator gate; complete responsive and accessibility review remains pending."
       },
       "ipad": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary preview photometry is not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The shared detached-binary preview passed the iPad Pro 13-inch (M5)/iOS 26.5 simulator gate; complete responsive and accessibility review remains pending."
       }
     },
     {
@@ -286,19 +313,22 @@
         "evidence": ["apps/browser/tests/contracts/capability-manifest.test.ts"]
       },
       "macos": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary labs are not implemented in the native alpha."
+        "status": "experimental",
+        "evidence": [
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/OtherlightCoreTests.swift",
+          "apps/apple/AppTests/OtherlightTests.swift"
+        ],
+        "reason": "The hypothesis, parameter-locking, and guarded-reveal workflow passes the macOS app-test gate; complete visual and accessibility review remains pending."
       },
       "iphone": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary black-box labs are not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
+        "reason": "The shared black-box lab passed the iPhone 17 Pro/iOS 26.5 simulator gate; complete responsive and accessibility review remains pending."
       },
       "ipad": {
-        "status": "unavailable",
-        "evidence": [],
-        "reason": "Detached-binary black-box labs are not implemented in the shared Apple application."
+        "status": "experimental",
+        "evidence": ["apps/apple/AppTests/OtherlightTests.swift"],
+        "reason": "The shared black-box lab passed the iPad Pro 13-inch (M5)/iOS 26.5 simulator gate; complete responsive and accessibility review remains pending."
       }
     },
     {
@@ -362,11 +392,13 @@
         ]
       },
       "macos": {
-        "status": "unavailable",
+        "status": "experimental",
         "evidence": [
-          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift"
+          "apps/apple/Packages/OtherlightCore/Tests/OtherlightCoreTests/TransitScienceAuthoringTests.swift",
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
+          "apps/apple/MacAppTests/OtherlightMacTests.swift"
         ],
-        "reason": "The reviewed source port is implemented, but the pinned Arrow dependency and full SwiftPM numerical suite have not been compiled on this checkout."
+        "reason": "Portable V4-to-V5 authoring, native execution, cancellation, stale-result rejection, and validated in-memory publication pass the isolated Mac host tests; live visual and accessibility acceptance remains pending."
       },
       "iphone": {
         "status": "unavailable",
@@ -389,11 +421,12 @@
         "evidence": ["services/science/tests/test_api_contract.py"]
       },
       "macos": {
-        "status": "unavailable",
+        "status": "experimental",
         "evidence": [
-          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
+          "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift",
+          "apps/apple/MacAppTests/OtherlightMacTests.swift"
         ],
-        "reason": "The exact-revision writer and round-trip tests are implemented, but the pinned dependency has not yet passed the required clean SwiftPM and Xcode build gates."
+        "reason": "The Arrow writer and separate explicit product export pass the isolated Mac host tests; live export UI acceptance remains pending."
       },
       "iphone": {
         "status": "unavailable",
@@ -416,7 +449,7 @@
           "apps/browser/tests/science/contracts-client.test.ts",
           "apps/browser/tests/science/canonical-json.test.ts"
         ],
-        "reason": "V2 writers and compatibility readers are implemented; full Python dependency tests remain pending."
+        "reason": "V2 writers and compatibility readers pass Browser and Python tests; end-to-end live scientific provenance review remains pending."
       },
       "macos": {
         "status": "experimental",
@@ -424,7 +457,7 @@
           "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
           "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/ArrowSwiftIPCWriterTests.swift"
         ],
-        "reason": "Strict Swift request/result contracts and owned V2 provenance are implemented; the full Arrow-linked SwiftPM suite remains pending."
+        "reason": "Strict Swift request/result contracts, V2 provenance, validated in-memory publication, and explicit manifest export pass the isolated Mac host tests; live provenance visibility review remains pending."
       },
       "iphone": {
         "status": "unavailable",
@@ -435,6 +468,220 @@
         "status": "unavailable",
         "evidence": [],
         "reason": "Scientific execution is unavailable on iPad Pro 13-inch (M5)/iOS 26.5 until its bounded local contract has independent platform evidence."
+      }
+    },
+    {
+      "id": "science.v6-datasets",
+      "area": "science",
+      "title": "Strict session-scoped V6 scientific datasets",
+      "website": {
+        "status": "experimental",
+        "evidence": [
+          "contracts/science-v6/contract-cases.json",
+          "apps/browser/tests/science/dataset-client.test.ts",
+          "apps/browser/tests/science/dataset-workspace.test.ts",
+          "services/science/tests/test_v6_datasets.py"
+        ],
+        "reason": "The strict local service, Browser client, and operational dataset UI pass automated gates; live responsive and accessibility acceptance remains pending."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/contract-cases.json"],
+        "reason": "The isolated OtherlightMac host exists, but its V6 dataset surface and an independent Swift V6 dataset validator are not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "Scientific dataset import is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "Scientific dataset import is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-transit-timing",
+      "area": "science",
+      "title": "Dense-trajectory V6 transit timing",
+      "website": {
+        "status": "unavailable",
+        "evidence": [
+          "contracts/science-v6/transit-timing-request-v1.schema.json",
+          "contracts/science-v6/transit-timing-result-v1.schema.json",
+          "contracts/science-v6/transit-events-arrow-v1.json",
+          "contracts/science-v6/contract-cases.json"
+        ],
+        "reason": "The strict timing and Arrow contracts exist, but the V6 timing model and cross-language validity fixtures are not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": [
+          "contracts/science-v6/transit-timing-request-v1.schema.json",
+          "contracts/science-v6/transit-timing-result-v1.schema.json",
+          "contracts/science-v6/transit-events-arrow-v1.json"
+        ],
+        "reason": "The strict timing and Arrow contracts exist, but the V6 timing model and its OtherlightMac product integration are not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific timing is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific timing is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-transit-photometry",
+      "area": "science",
+      "title": "Passband-specific V6 transit photometry",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "The V6 photometry integrator and numerical agreement fixtures are not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "The V6 photometry integrator and its OtherlightMac product integration are not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific photometry is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific photometry is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-phase",
+      "area": "science",
+      "title": "Bounded V6 thermal and reflected phase",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/run-manifest-v3.schema.json"],
+        "reason": "The bounded V6 energy-balance phase model is not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/run-manifest-v3.schema.json"],
+        "reason": "The bounded V6 energy-balance phase model is not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific phase execution is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific phase execution is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-scattering",
+      "area": "science",
+      "title": "Finite-star V6 forward scattering",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "The optical-depth-aware V6 scattering model is not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "The optical-depth-aware V6 scattering model is not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific scattering is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific scattering is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-stellar-variability",
+      "area": "science",
+      "title": "Atmosphere-grid and PSD V6 stellar contribution",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "Versioned atmosphere intensities and seeded PSD variability are not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/dataset-import-v2.schema.json"],
+        "reason": "Versioned atmosphere intensities and seeded PSD variability are not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 stellar execution is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 stellar execution is intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-arrow-artifacts",
+      "area": "science",
+      "title": "Separate V6 Arrow artifact set",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/artifact-descriptor-v2.schema.json"],
+        "reason": "The multi-artifact V6 result producer and Browser exporter are not implemented."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/artifact-descriptor-v2.schema.json"],
+        "reason": "The multi-artifact V6 result producer and OtherlightMac exporter are not implemented."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "Scientific Arrow artifacts are intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "Scientific Arrow artifacts are intentionally unavailable in the Education-only iPad app."
+      }
+    },
+    {
+      "id": "science.v6-provenance-v3",
+      "area": "science",
+      "title": "V6 run provenance manifest V3",
+      "website": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/run-manifest-v3.schema.json"],
+        "reason": "The strict manifest contract exists, but no V6 scientific run publishes it."
+      },
+      "macos": {
+        "status": "unavailable",
+        "evidence": ["contracts/science-v6/run-manifest-v3.schema.json"],
+        "reason": "The strict manifest contract exists, but OtherlightMac does not publish V6 runs."
+      },
+      "iphone": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific provenance is intentionally unavailable in the Education-only iPhone app."
+      },
+      "ipad": {
+        "status": "unavailable",
+        "evidence": [],
+        "reason": "V6 scientific provenance is intentionally unavailable in the Education-only iPad app."
       }
     }
   ]

@@ -76,7 +76,7 @@ enum PlaybackSpeed: Double, CaseIterable, Sendable, Hashable {
 }
 
 /// Distinguishes interactive native simulation from reference execution.
-enum NativeRuntimeMode: String, Sendable, Hashable {
+enum NativeRuntimeMode: String, CaseIterable, Sendable, Hashable {
   case interactive, reference
 
   /// Supplies the user-facing mode label.
@@ -98,17 +98,20 @@ struct SeriesKey: Sendable, Hashable {
   let samples: Int
   let centerSeconds: Double
   let runtimeMode: NativeRuntimeMode
+  let referenceSubsteps: Int
 
   /// Captures every input that affects the reusable series cache entry.
   init(
     revision: Int, scenario: EducationScenarioV4, samples: Int, centerSeconds: Double,
-    runtimeMode: NativeRuntimeMode = .interactive
+    runtimeMode: NativeRuntimeMode = .interactive,
+    referenceSubsteps: Int = EducationRuntimeConfiguration.defaultReferenceSubsteps
   ) {
     self.revision = revision
     self.scenario = scenario
     self.samples = samples
     self.centerSeconds = centerSeconds
     self.runtimeMode = runtimeMode
+    self.referenceSubsteps = referenceSubsteps
   }
 }
 
@@ -183,16 +186,19 @@ struct CalculationRequest: Sendable, Equatable {
   let seriesKey: SeriesKey
   let timeSeconds: Double
   let runtimeMode: NativeRuntimeMode
+  let referenceSubsteps: Int
 
   /// Preserves the request identity and runtime mode for stale-result filtering.
   init(
     generation: Int, seriesKey: SeriesKey, timeSeconds: Double,
-    runtimeMode: NativeRuntimeMode = .interactive
+    runtimeMode: NativeRuntimeMode = .interactive,
+    referenceSubsteps: Int = EducationRuntimeConfiguration.defaultReferenceSubsteps
   ) {
     self.generation = generation
     self.seriesKey = seriesKey
     self.timeSeconds = timeSeconds
     self.runtimeMode = runtimeMode
+    self.referenceSubsteps = referenceSubsteps
   }
 }
 
@@ -203,7 +209,23 @@ struct CalculationRequestBuilder: Sendable {
   let scenario: EducationScenarioV4
   let sampleCount: Int
   let timeSeconds: Double
-  let runtimeMode: NativeRuntimeMode = .interactive
+  let runtimeMode: NativeRuntimeMode
+  let referenceSubsteps: Int
+
+  /// Captures the active runtime inputs while retaining the interactive default for existing callers.
+  init(
+    generation: Int, seriesRevision: Int, scenario: EducationScenarioV4, sampleCount: Int,
+    timeSeconds: Double, runtimeMode: NativeRuntimeMode = .interactive,
+    referenceSubsteps: Int = EducationRuntimeConfiguration.defaultReferenceSubsteps
+  ) {
+    self.generation = generation
+    self.seriesRevision = seriesRevision
+    self.scenario = scenario
+    self.sampleCount = sampleCount
+    self.timeSeconds = timeSeconds
+    self.runtimeMode = runtimeMode
+    self.referenceSubsteps = referenceSubsteps
+  }
 
   /// Builds a request whose cache key centers on the scenario's transit focus.
   func build() -> CalculationRequest {
@@ -211,8 +233,9 @@ struct CalculationRequestBuilder: Sendable {
       generation: generation,
       seriesKey: SeriesKey(
         revision: seriesRevision, scenario: scenario, samples: sampleCount,
-        centerSeconds: PlaybackClockPolicy.transitFocus(for: scenario), runtimeMode: runtimeMode),
-      timeSeconds: timeSeconds, runtimeMode: runtimeMode)
+        centerSeconds: PlaybackClockPolicy.transitFocus(for: scenario), runtimeMode: runtimeMode,
+        referenceSubsteps: referenceSubsteps),
+      timeSeconds: timeSeconds, runtimeMode: runtimeMode, referenceSubsteps: referenceSubsteps)
   }
 }
 

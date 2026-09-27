@@ -6,15 +6,19 @@ from collections.abc import Callable
 
 from .contracts import ForwardRunRequest
 from .errors import CapabilityUnavailableError
-from .forward_analytic import circular_two_body_test_propagate
+from .forward_analytic import (
+    circular_two_body_test_propagate,
+    circular_two_body_test_propagate_compact,
+)
 from .forward_dynamics import (
     assert_dense_solution_avoids_contact as _assert_dense_solution_avoids_contact,
 )
 from .forward_dynamics import minimum_separation_squared as _minimum_separation_squared
-from .forward_dynamics import scipy_propagate
+from .forward_dynamics import scipy_propagate, scipy_propagate_compact
 from .forward_manifest import run_manifest
 from .forward_types import (
     CancellationCheck,
+    CompactForwardRunResult,
     DenseSolution,
     ForwardRunResult,
     ForwardSample,
@@ -57,6 +61,23 @@ def run_forward(
     return run_forward_with(request, cancel_requested=cancel_requested)
 
 
+def run_forward_compact(
+    request: ForwardRunRequest, *, cancel_requested: CancellationCheck | None = None
+) -> CompactForwardRunResult:
+    """Run one request while retaining only service-visible sample columns."""
+    if request.execution_mode == "research":
+        samples = scipy_propagate_compact(request, cancel_requested)
+        engine, scientific = "scipy-dop853", True
+    elif request.allow_analytic_two_body_test_fallback:
+        samples = circular_two_body_test_propagate_compact(request, cancel_requested)
+        engine, scientific = "analytic-circular-two-body-test", False
+    else:
+        raise CapabilityUnavailableError(
+            "test mode requires explicit analytic fallback opt-in"
+        )
+    return CompactForwardRunResult(samples, run_manifest(request, engine, scientific))
+
+
 # Compatibility aliases for callers which used the former internal test hooks.
 _WorkBudget = WorkBudget
 
@@ -72,5 +93,6 @@ __all__ = [
     "_assert_dense_solution_avoids_contact",
     "_minimum_separation_squared",
     "run_forward",
+    "run_forward_compact",
     "run_forward_with",
 ]

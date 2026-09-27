@@ -1,21 +1,21 @@
-# Physics Model Status
+# Physics model status
 
-This document is the human-readable companion to
-[`model-registry.json`](./model-registry.json). The registry is authoritative
-for capability status and automated coverage; [`../references.bib`](../references.bib)
-contains the cited bibliography.
+This is the human-readable companion to
+[`model-registry.json`](model-registry.json). The registry is authoritative for
+capability status and automated coverage, and
+[`../references.bib`](../references.bib) holds the cited bibliography.
 
-## Status meanings
+## What the status labels mean
 
-- `research-validated`: the equation and implementation have an explicit
-  validity domain and independent scientific evidence. For immutable constants,
-  this means agreement with the cited reference standard and value class; it
-  does not validate a downstream model or output.
-- `bounded-approximation`: physically derived within a narrow stated domain,
-  but not a general research model.
-- `educational`: a phenomenological preview model that must not enter a
+- `research-validated` — the equation and its implementation have an explicit
+  validity domain and independent scientific evidence. For immutable constants
+  this means agreement with the cited reference standard and value class; it does
+  not validate a downstream model or output.
+- `bounded-approximation` — physically derived within a narrow stated domain, but
+  not a general research model.
+- `educational` — a phenomenological preview model that must not enter a
   research-labelled result.
-- `unavailable`: declared contract only; execution must fail closed.
+- `unavailable` — a declared contract only; execution must fail closed.
 
 ## Current status
 
@@ -35,20 +35,29 @@ contains the cited bibliography.
 | `photometry.stellar.preview`         | educational           | Relative blackbody/harmonic preview                                                                                                                                                                        | Use versioned atmosphere intensities and physical variability PSDs.                                     |
 | `measurement.exposure-noise.preview` | bounded-approximation | Synthetic measured lane                                                                                                                                                                                    | V5 uses electrons, calibrated covariance, and order-independent RNG.                                    |
 | `observables.rv-astrometry.preview`  | bounded-approximation | Positive-receding RV and linear sky-plane offsets                                                                                                                                                          | Require explicit target and distance; validate angular photocentre output independently.                |
-| `runtime.v4.kepler-preview`          | educational           | Active interactive runtime                                                                                                                                                                                 | Keep as preview and reject unsupported scientific capability claims.                                    |
+| `runtime.v4.kepler-preview`          | educational           | Interactive snapshots or deterministic 0.2-second reference supersampling; both use the same bounded Education model                                                                                       | Keep both modes as previews and reject unsupported scientific capability claims.                        |
 | `runtime.v5.scientific-forward`      | bounded-approximation | Capability-gated barycentric Newtonian DOP853 radial velocity with bounded, fail-closed certification of the accepted dense numerical trajectory against finite-radius contact and complete run provenance | Keep every unimplemented observable unavailable; require independent release evidence before promotion. |
 
-## Runtime truth boundary
+## The runtime truth boundary
 
-The shipped V4 path constructs Kepler snapshots and native preview photometry.
-V4 output therefore remains educational even when strict validation is selected.
+The shipped V4 path constructs Kepler snapshots and native preview photometry, so
+V4 output remains educational even when strict validation is selected.
 
-No computed model may move to `research-validated` merely because it agrees
+A computed model never moves to `research-validated` merely because it agrees
 with itself at higher numerical resolution. Promotion requires an analytic
 invariant, convergence evidence, and an independent implementation, published
 table, or published-system benchmark with a physically justified tolerance.
 
-The status is about evidential maturity, not whether an equation is written
-correctly. Kepler, frame rotation, and barycentric split remain physically
-defined and tested within their stated domains, but this alpha deliberately
-does not call those implementations independently research-validated yet.
+Status describes evidential maturity, not whether an equation is written
+correctly. Kepler, frame rotation, and the barycentric split are physically
+defined and tested within their stated domains, but this alpha deliberately does
+not call those implementations independently research-validated yet.
+
+## Runtime retention and scheduling
+
+Fixed-preview caching, asynchronous chromatic Education sampling, and compact V5
+time/RV publication change how much work is repeated and how much memory is
+retained. They do not change model status, integrators, sample counts, collision
+certificates, serialized contracts, or numerical tolerances. Full-state parity
+oracles remain in place, and worker output and compact publication are checked
+against the existing sampling and propagation paths.

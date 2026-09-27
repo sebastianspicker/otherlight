@@ -55,6 +55,134 @@ struct SimulationDashboard: View {
 
 }
 
+/// Renders a portable two-star lab without representing it as a scientific execution surface.
+struct DetachedBinaryLabView: View {
+  let session: EducationSession
+
+  #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+  #endif
+
+  /// Builds the adaptive hypothesis, reveal, sky, and light-curve learning surface.
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        header
+        hypothesisCard
+        if let frame = session.frame {
+          adaptivePlots(frame: frame)
+        } else if case .loading = session.displayState {
+          ProgressView("Calculating the detached-binary Education preview…")
+            .frame(maxWidth: .infinity, minHeight: 360)
+        } else if case .error(let message) = session.displayState {
+          ContentUnavailableView(
+            "Education preview needs attention", systemImage: "exclamationmark.triangle",
+            description: Text(message)
+          )
+          .frame(maxWidth: .infinity, minHeight: 360)
+        }
+      }
+      .padding(20)
+    }
+    .accessibilityIdentifier("detached-binary-lab")
+  }
+
+  /// Labels the bounded mode and its live calculation state without implying scientific execution.
+  private var header: some View {
+    HStack(alignment: .top) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Detached binary lab").font(.title2.weight(.semibold))
+        Text("Education preview · two-star barycentric geometry and luminous-disk overlap.")
+          .foregroundStyle(.secondary)
+      }
+      Spacer()
+      Text(session.calculationStatus).foregroundStyle(.secondary)
+    }
+  }
+
+  /// Requires an explicit learner hypothesis before guarded reveal and locked controls can advance.
+  private var hypothesisCard: some View {
+    GroupBox("Hypothesis and reveal") {
+      VStack(alignment: .leading, spacing: 10) {
+        Picker(
+          "Hypothesis",
+          selection: Binding(
+            get: { session.binaryLab?.hypothesis },
+            set: { if let hypothesis = $0 { session.setBinaryLabHypothesis(hypothesis) } })
+        ) {
+          Text("Choose a hypothesis").tag(BinaryLabWorkspace.Hypothesis?.none)
+          Text("Primary eclipse is deepest")
+            .tag(Optional(BinaryLabWorkspace.Hypothesis.primaryEclipseDeepest))
+          Text("Secondary eclipse dominates")
+            .tag(Optional(BinaryLabWorkspace.Hypothesis.secondaryEclipseDominates))
+          Text("Eccentricity shifts eclipse spacing")
+            .tag(Optional(BinaryLabWorkspace.Hypothesis.eccentricityShiftsEclipseSpacing))
+        }
+        .accessibilityIdentifier("binary-lab-hypothesis")
+
+        if session.isBinaryLabSkyVisible {
+          Label("Sky view revealed", systemImage: "eye")
+            .foregroundStyle(.secondary)
+        } else {
+          Text("The sky view remains hidden until the V4 reveal condition is satisfied.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+          Button("Reveal sky view") { session.revealBinaryLabSky() }
+            .disabled(!session.canRevealBinaryLabSky)
+            .accessibilityIdentifier("binary-lab-reveal")
+        }
+        Label(
+          session.isParameterEditingLocked
+            ? "Parameters are locked until a hypothesis is selected."
+            : "Parameters are unlocked. Use the inspector for primary-star photometry.",
+          systemImage: session.isParameterEditingLocked ? "lock.fill" : "lock.open"
+        )
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  /// Uses a vertical layout on narrow iPhone widths and side-by-side cards where space permits.
+  @ViewBuilder
+  private func adaptivePlots(frame: PresentationFrame) -> some View {
+    #if os(iOS)
+      if horizontalSizeClass == .compact {
+        VStack(spacing: 12) { plotCards(frame: frame) }
+      } else {
+        HStack(spacing: 12) { plotCards(frame: frame) }
+      }
+    #else
+      HStack(spacing: 12) { plotCards(frame: frame) }
+    #endif
+  }
+
+  /// Supplies the same compact-safe plot cards to each platform-specific container.
+  @ViewBuilder
+  private func plotCards(frame: PresentationFrame) -> some View {
+    PlotCard(title: "Sky view") {
+      if session.isBinaryLabSkyVisible {
+        SkyCanvas(
+          scene: frame.scene, starRadiusMetres: frame.starRadiusMetres,
+          planetRadiusMetres: frame.planetRadiusMetres, moonRadiusMetres: frame.moonRadiusMetres,
+          zoomMultiplier: session.sceneZoom)
+      } else {
+        ContentUnavailableView(
+          "Sky view is guarded", systemImage: "eye.slash",
+          description: Text("Choose a hypothesis, then reveal the two-star geometry."))
+      }
+    }
+    .frame(height: 280)
+    PlotCard(title: "Normalized light curve") {
+      LightCurveCanvas(
+        series: frame.series, history: session.lightCurveHistory,
+        markerTimeSeconds: frame.scene.timeSeconds, markerFlux: frame.scene.flux)
+    }
+    .frame(height: 280)
+  }
+}
+
 /// Arranges the sky and light-curve cards vertically whenever a compact width would clip them.
 private struct SimulationPlotRow: View {
   let frame: PresentationFrame

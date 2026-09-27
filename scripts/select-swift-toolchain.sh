@@ -3,26 +3,24 @@
 
 set -euo pipefail
 
-transit_swift_toolchain="org.swift.633202606251a"
+transit_xcode_developer_dir="/Applications/Xcode-26.6.0.app/Contents/Developer"
+
+if [[ -d "$transit_xcode_developer_dir" ]]; then
+  export DEVELOPER_DIR="$transit_xcode_developer_dir"
+fi
+
+# xcodebuild must use the selected Xcode toolchain, never a process-inherited override.
+unset TOOLCHAINS
 
 if ! transit_swift_version_output="$(swift --version 2>&1)"; then
   echo "Unable to resolve Swift from the current developer environment." >&2
   exit 69
 fi
 
-if [[ ! "$transit_swift_version_output" =~ Swift[[:space:]]version[[:space:]]6\.3\.3([[:space:]\(]|$) ]] &&
-  [[ -z "${TOOLCHAINS:-}" ]]; then
-  if transit_candidate_output="$(TOOLCHAINS="$transit_swift_toolchain" swift --version 2>&1)" &&
-    [[ "$transit_candidate_output" =~ Swift[[:space:]]version[[:space:]]6\.3\.3([[:space:]\(]|$) ]]; then
-    export TOOLCHAINS="$transit_swift_toolchain"
-    transit_swift_version_output="$transit_candidate_output"
-  fi
-fi
-
 if [[ ! "$transit_swift_version_output" =~ Swift[[:space:]]version[[:space:]]6\.3\.3([[:space:]\(]|$) ]]; then
   echo "Expected exact Swift 6.3.3 for native Apple work." >&2
   echo "$transit_swift_version_output" >&2
-  echo "Select Xcode 26.6 or set TOOLCHAINS=$transit_swift_toolchain." >&2
+  echo "Select Xcode 26.6; /Applications/Xcode-26.6.0.app is selected automatically when present." >&2
   exit 69
 fi
 

@@ -12,6 +12,14 @@ public struct ScientificForwardPropagation: Sendable {
   let sampledStates: [[Double]]
 }
 
+/// Holds the production artifact inputs without retaining every sampled body state.
+struct ScientificRadialVelocityPropagation: Sendable {
+  let sampleTimesSeconds: [Double]
+  let radialVelocitiesMps: [Double]
+  let acceptedSteps: Int
+  let rhsEvaluations: Int
+}
+
 /// Native propagation is usable before Arrow IPC is linked; `run` remains fail-closed.
 public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
   /// Creates the native propagator, whose direct result publication remains intentionally unavailable.
@@ -29,6 +37,41 @@ public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
     _ request: ScientificForwardRequestV5,
     cancellation: @escaping DOP853Integrator.Cancellation = { false }
   ) throws -> ScientificForwardPropagation {
+    let output = try integrate(
+      request, cancellation: cancellation, retainSampledStates: true)
+    guard let sampledStates = output.sampledStates else {
+      throw ScienceContractError.unsupportedExecution(
+        "DOP853 dense output did not retain requested sample states")
+    }
+    return .init(
+      sampleTimesSeconds: output.sampleTimesSeconds,
+      radialVelocitiesMps: output.radialVelocitiesMps,
+      acceptedSteps: output.acceptedSteps, rhsEvaluations: output.rhsEvaluations,
+      sampledStates: sampledStates)
+  }
+
+  /// Propagates the artifact rows without retaining the full dense state at every sample.
+  func propagateRadialVelocity(
+    _ request: ScientificForwardRequestV5,
+    cancellation: @escaping DOP853Integrator.Cancellation = { false }
+  ) throws -> ScientificRadialVelocityPropagation {
+    let output = try integrate(
+      request, cancellation: cancellation, retainSampledStates: false)
+    return .init(
+      sampleTimesSeconds: output.sampleTimesSeconds,
+      radialVelocitiesMps: output.radialVelocitiesMps,
+      acceptedSteps: output.acceptedSteps, rhsEvaluations: output.rhsEvaluations)
+  }
+
+  /// Shares certification, cancellation, sampling, and budget ordering between public and artifact paths.
+  private func integrate(
+    _ request: ScientificForwardRequestV5,
+    cancellation: @escaping DOP853Integrator.Cancellation,
+    retainSampledStates: Bool
+  ) throws -> (
+    sampleTimesSeconds: [Double], radialVelocitiesMps: [Double], acceptedSteps: Int,
+    rhsEvaluations: Int, sampledStates: [[Double]]?
+  ) {
     try request.validate()
     let bodies = request.scenario.bodies
     let dimension = bodies.count * 6
@@ -54,7 +97,12 @@ public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
       request.startOffsetSec + Double($0) * request.sampleCadenceSec
     }
     var samples = [Double](repeating: 0, count: sampleTimes.count)
-    var sampledStates = [[Double]?](repeating: nil, count: sampleTimes.count)
+    var sampledStates: [[Double]?]
+    if retainSampledStates {
+      sampledStates = .init(repeating: nil, count: sampleTimes.count)
+    } else {
+      sampledStates = []
+    }
     // This deadline covers dense collision certification after each accepted step. It is shared
     // by the independent past/future legs, as is the certificate-node work allowance.
     let workClock = ContinuousClock()
@@ -81,7 +129,7 @@ public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
     for sample in indexedTimes where sample.time == 0 {
       samples[sample.index] = radialVelocity(
         state: initial, targetIndex: targetIndex, lineOfSight: lineOfSight)
-      sampledStates[sample.index] = initial
+      if retainSampledStates { sampledStates[sample.index] = initial }
     }
 
     /// Integrates one temporal direction and fills the requested dense-output samples.
@@ -103,7 +151,7 @@ public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
           let state = try dense.state(at: sample.time)
           samples[sample.index] = self.radialVelocity(
             state: state, targetIndex: targetIndex, lineOfSight: lineOfSight)
-          sampledStates[sample.index] = state
+          if retainSampledStates { sampledStates[sample.index] = state }
           nextSample += 1
         }
       }
@@ -118,15 +166,22 @@ public struct NativeDOP853ForwardPropagator: ScientificForwardPropagating {
 
     try integrateSamples(futureTimes)
     try integrateSamples(pastTimes)
-    guard sampledStates.allSatisfy({ $0 != nil }) else {
-      throw ScienceContractError.unsupportedExecution(
-        "DOP853 dense output did not retain requested sample states")
+    let completeStates: [[Double]]?
+    if retainSampledStates {
+      guard sampledStates.allSatisfy({ $0 != nil }) else {
+        throw ScienceContractError.unsupportedExecution(
+          "DOP853 dense output did not retain requested sample states")
+      }
+      completeStates = sampledStates.map { $0! }
+    } else {
+      completeStates = nil
     }
-    let completeStates = sampledStates.map { $0! }
-    return .init(
+    return (
       sampleTimesSeconds: sampleTimes, radialVelocitiesMps: samples,
-      acceptedSteps: budget.acceptedSteps, rhsEvaluations: budget.rhsEvaluations,
-      sampledStates: completeStates)
+      acceptedSteps: budget.acceptedSteps,
+      rhsEvaluations: budget.rhsEvaluations,
+      sampledStates: completeStates
+    )
   }
 
   /// Constructs the fixed-size Newtonian derivative used by one propagation request.

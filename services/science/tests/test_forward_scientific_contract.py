@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from math import cos, pi, sin, sqrt
 
 import pytest
@@ -16,8 +17,8 @@ from science_backend.contracts import (
     ReducedObservation,
 )
 from science_backend.errors import CapabilityUnavailableError
-from science_backend.forward import run_forward, run_forward_with
-from science_backend.forward_types import ForwardSample
+from science_backend.forward import run_forward, run_forward_compact, run_forward_with
+from science_backend.forward_types import CompactForwardSample, ForwardSample
 from science_backend.inference import run_optional_sampler
 
 
@@ -244,6 +245,30 @@ def test_research_mode_never_uses_the_analytic_fallback() -> None:
             scipy_propagator=missing_scipy,
             analytic_propagator=analytic_fallback,
         )
+
+
+def test_compact_and_rich_collectors_preserve_sample_order_and_radial_velocity() -> (
+    None
+):
+    request = replace(
+        circular_research_request((10.0, -10.0, 0.0)),
+        execution_mode="test",
+        allow_analytic_two_body_test_fallback=True,
+    )
+
+    rich = run_forward(request)
+    compact = run_forward_compact(request)
+
+    assert all(isinstance(sample, CompactForwardSample) for sample in compact.samples)
+    assert tuple(sample.time_offset_s for sample in compact.samples) == (
+        10.0,
+        -10.0,
+        0.0,
+    )
+    assert tuple(
+        sample.radial_velocity_m_s for sample in compact.samples
+    ) == pytest.approx(tuple(sample.radial_velocity_m_s for sample in rich.samples))
+    assert compact.manifest == rich.manifest
 
 
 @pytest.mark.parametrize(

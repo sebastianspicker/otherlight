@@ -47,10 +47,10 @@ cleanup() {
 trap cleanup EXIT
 
 hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT_DIRECTORY" "$DMG_PATH" >/dev/null
-APP_PATH="$MOUNT_DIRECTORY/Otherlight.app"
+APP_PATH="$MOUNT_DIRECTORY/OtherlightMac.app"
 APP_COUNT="$(find "$MOUNT_DIRECTORY" -maxdepth 1 -type d -name '*.app' -print | wc -l | tr -d ' ')"
 if [[ "$APP_COUNT" != "1" || ! -d "$APP_PATH" || -L "$APP_PATH" ]]; then
-  echo "The mounted disk image must contain exactly Otherlight.app." >&2
+  echo "The mounted disk image must contain exactly OtherlightMac.app." >&2
   exit 70
 fi
 
@@ -62,10 +62,10 @@ if ! codesign -dvv "$APP_PATH" 2>&1 | grep -q 'runtime'; then
 fi
 
 INFO_PLIST="$APP_PATH/Contents/Info.plist"
-EXPECTED_BUNDLE_ID="${EXPECTED_BUNDLE_ID:-com.sebastianspicker.Otherlight}"
+EXPECTED_BUNDLE_ID="${EXPECTED_BUNDLE_ID:-com.sebastianspicker.OtherlightMac}"
 EXPECTED_MARKETING_VERSION="${EXPECTED_MARKETING_VERSION:-0.3.0}"
 EXPECTED_BUILD_NUMBER="${EXPECTED_BUILD_NUMBER:-1}"
-EXPECTED_EXECUTABLE="${EXPECTED_EXECUTABLE:-Otherlight}"
+EXPECTED_EXECUTABLE="${EXPECTED_EXECUTABLE:-OtherlightMac}"
 : "${EXPECTED_TEAM_ID:?Set EXPECTED_TEAM_ID to the Apple Developer Team ID.}"
 if [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO_PLIST")" != "$EXPECTED_BUNDLE_ID" ]]; then
   echo "Unexpected bundle identifier." >&2

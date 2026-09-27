@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/otherlight/science-v6/transit-timing-result-v1.schema.json",
+  "title": "Scientific V6 dense-trajectory transit timing result",
+  "type": "object",
+  "required": ["schemaVersion", "jobId", "kind", "artifacts", "runManifest"],
+  "properties": {
+    "schemaVersion": { "const": "science-transit-timing-result-v1" },
+    "jobId": { "type": "string", "pattern": "^job-[a-z0-9][a-z0-9-]{0,126}$" },
+    "kind": { "const": "transit-timing" },
+    "artifacts": {
+      "type": "array",
+      "prefixItems": [{ "$ref": "#/$defs/transitEventsArtifact" }],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "runManifest": { "$ref": "run-manifest-v3.schema.json" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "transitEventsArtifact": {
+      "allOf": [
+        { "$ref": "artifact-descriptor-v2.schema.json" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "transit-events" },
+            "dataSchemaVersion": { "const": "transit-events-v1" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -9,6 +9,7 @@ on:
       - "contracts/capabilities-v1/**"
       - "contracts/education-v4/**"
       - "contracts/science-v5/**"
+      - "contracts/science-v6/**"
       - "contracts/workspace-v1/**"
       - "apps/apple/**"
       - "scripts/select-swift-toolchain.sh"
@@ -21,6 +22,7 @@ on:
       - "contracts/capabilities-v1/**"
       - "contracts/education-v4/**"
       - "contracts/science-v5/**"
+      - "contracts/science-v6/**"
       - "contracts/workspace-v1/**"
       - "apps/apple/**"
       - "scripts/select-swift-toolchain.sh"
@@ -48,10 +50,22 @@ jobs:
       - name: Toolchain evidence
         run: |
           source scripts/select-swift-toolchain.sh
-          xcodebuild -version | grep -Fx "Xcode 26.6"
+          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
       - name: Test portable Swift package
         run: swift test --package-path apps/apple/Packages/OtherlightCore
+      - name: Benchmark interactive, reference, and series workloads
+        run: |
+          source scripts/select-swift-toolchain.sh
+          swift --version > "$RUNNER_TEMP/apple-benchmark.txt"
+          swift run --package-path apps/apple/Packages/OtherlightCore OtherlightBenchmark >> "$RUNNER_TEMP/apple-benchmark.txt"
+      - name: Upload Apple benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-benchmarks
+          path: ${{ runner.temp }}/apple-benchmark.txt
+          if-no-files-found: warn
       - name: Check Swift formatting
         run: swift format lint --strict --recursive apps/apple
 
@@ -68,7 +82,7 @@ jobs:
       - name: Toolchain evidence
         run: |
           source scripts/select-swift-toolchain.sh
-          xcodebuild -version | grep -Fx "Xcode 26.6"
+          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
       - name: Test macOS-only scientific package
         run: swift test --package-path apps/apple/Packages/OtherlightScience
@@ -77,16 +91,42 @@ jobs:
     name: ${{ matrix.destination.name }}
     runs-on: macos-26
     timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     strategy:
       fail-fast: false
       matrix:
         destination:
-          - name: macOS
-            value: "platform=macOS"
           - name: iPhone 17 Pro / iOS 26.5
             value: "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5"
           - name: iPad Pro 13-inch (M5) / iOS 26.5
             value: "platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.5"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Toolchain evidence
+        run: |
+          source scripts/select-swift-toolchain.sh
+          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
+          swift --version | grep -F "Swift version 6.3.3"
+      - name: Test iPhone and iPad Education target
+        env:
+          OTHERLIGHT_DESTINATION: ${{ matrix.destination.value }}
+          OTHERLIGHT_DERIVED_DATA_PATH: ${{ runner.temp }}/Otherlight-${{ strategy.job-index }}
+        run: |
+          env -u TOOLCHAINS xcodebuild test \
+            -project apps/apple/Otherlight.xcodeproj \
+            -scheme Otherlight \
+            -configuration Debug \
+            -destination "$OTHERLIGHT_DESTINATION" \
+            -derivedDataPath "$OTHERLIGHT_DERIVED_DATA_PATH" \
+            CODE_SIGNING_ALLOWED=NO
+
+  macos-science-host-test:
+    name: macOS / OtherlightMac scientific host
+    runs-on: macos-26
+    timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
@@ -96,19 +136,16 @@ jobs:
       - name: Toolchain evidence
         run: |
           source scripts/select-swift-toolchain.sh
-          xcodebuild -version | grep -Fx "Xcode 26.6"
+          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
-      - name: Test shared Apple target
-        env:
-          OTHERLIGHT_DESTINATION: ${{ matrix.destination.value }}
-          OTHERLIGHT_DERIVED_DATA_PATH: ${{ runner.temp }}/Otherlight-${{ strategy.job-index }}
+      - name: Test macOS-only science host
         run: |
-          xcodebuild test \
-            -project apps/apple/Otherlight.xcodeproj \
-            -scheme Otherlight \
+          env -u TOOLCHAINS xcodebuild test \
+            -project apps/apple/OtherlightMac.xcodeproj \
+            -scheme OtherlightMac \
             -configuration Debug \
-            -destination "$OTHERLIGHT_DESTINATION" \
-            -derivedDataPath "$OTHERLIGHT_DERIVED_DATA_PATH" \
+            -destination "platform=macOS" \
+            -derivedDataPath "$RUNNER_TEMP/OtherlightMac" \
             CODE_SIGNING_ALLOWED=NO
 
   ios-generic-archive:
@@ -126,11 +163,11 @@ jobs:
       - name: Toolchain evidence
         run: |
           source scripts/select-swift-toolchain.sh
-          xcodebuild -version | grep -Fx "Xcode 26.6"
+          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
           swift --version | grep -F "Swift version 6.3.3"
       - name: Archive generic iOS app without signing
         run: |
-          xcodebuild archive \
+          env -u TOOLCHAINS xcodebuild archive \
             -project apps/apple/Otherlight.xcodeproj \
             -scheme Otherlight \
             -configuration Release \
@@ -151,7 +188,15 @@ jobs:
           test "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = "com.sebastianspicker.Otherlight"
           test "$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")" = "0.3.0"
           test "$(plutil -extract CFBundleVersion raw "$app/Info.plist")" = "1"
-          if [ -d "$DERIVED_DATA/SourcePackages" ] && find "$DERIVED_DATA/SourcePackages" -iname '*arrow*' -print -quit | grep -q .; then
-            echo "Arrow must not resolve in mobile SourcePackages" >&2
+          if find "$app" -iname '*arrow*' -o -iname '*transitscience*' | grep -q .; then
+            echo "Arrow and TransitScience must not be embedded in the mobile app" >&2
+            exit 1
+          fi
+          if rg -q 'OtherlightScience|productName = TransitScience;|productName = Arrow;' apps/apple/Otherlight.xcodeproj/project.pbxproj; then
+            echo "The mobile Xcode project must not resolve Arrow-backed TransitScience" >&2
+            exit 1
+          fi
+          if [ -d "$DERIVED_DATA/SourcePackages" ] && find "$DERIVED_DATA/SourcePackages" \( -iname '*arrow*' -o -iname '*otherlightscience*' \) -print -quit | grep -q .; then
+            echo "The mobile build resolved a forbidden science dependency" >&2
             exit 1
           fi

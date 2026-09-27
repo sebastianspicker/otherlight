@@ -4,7 +4,7 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 /path/to/Otherlight.dmg" >&2
+  echo "Usage: $0 /path/to/OtherlightMac.dmg" >&2
   exit 64
 fi
 

@@ -4,8 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT/apps/apple/Otherlight.xcodeproj"
-SCHEME="Otherlight"
+PROJECT="$ROOT/apps/apple/OtherlightMac.xcodeproj"
+SCHEME="OtherlightMac"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/private/tmp/otherlight-derived-data}"
 MACOS_BUILD_ARCH="${MACOS_BUILD_ARCH:-$(uname -m)}"
 ACTION="${1:-build}"
@@ -28,7 +28,7 @@ fi
 # shellcheck source=scripts/select-swift-toolchain.sh
 source "$ROOT/scripts/select-swift-toolchain.sh"
 
-xcodebuild \
+env -u TOOLCHAINS xcodebuild \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration Debug \
@@ -38,8 +38,8 @@ xcodebuild \
   ONLY_ACTIVE_ARCH=YES \
   build
 
-APP_PATH="$(find "$DERIVED_DATA_PATH/Build/Products/Debug" -maxdepth 1 -type d -name '*.app' -print -quit)"
-if [[ -z "$APP_PATH" ]]; then
+APP_PATH="$DERIVED_DATA_PATH/Build/Products/Debug/OtherlightMac.app"
+if [[ ! -d "$APP_PATH" || -L "$APP_PATH" ]]; then
   echo "Build succeeded but no app bundle was found under $DERIVED_DATA_PATH." >&2
   exit 70
 fi

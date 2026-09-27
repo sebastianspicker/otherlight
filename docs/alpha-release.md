@@ -1,33 +1,54 @@
-# Alpha release guide
+# Alpha release procedure
 
-An alpha release communicates a bounded product surface, not complete
-scientific validation or distribution readiness. The candidate must identify
-which Browser, service, Apple, and contract capabilities it includes.
+An alpha release is a claim about one specific revision and an explicitly named
+set of Browser, service, Apple, and contract capabilities. It says nothing about
+complete scientific validation or production readiness.
 
-## Required evidence
+## Define the candidate
+
+Before running anything, record the exact commit and pick which surfaces the
+candidate includes:
+
+- the ordinary Browser bundle;
+- the GitHub Pages Browser bundle (plus the static screenshot tour);
+- the Python science service or wheel;
+- the macOS, iPhone, or iPad app;
+- a signed and notarized macOS DMG;
+- any changed V4, V5, workspace-v1, or capability contracts.
+
+## Gather the evidence
+
+Run the Browser and serialized-contract gates from the repository root:
 
 ```bash
+pnpm contracts:check
 pnpm ci:verify
+```
+
+Then run every independent lane the candidate includes:
+
+```bash
 pnpm science:backend:check
 pnpm science:backend:test
 pnpm native:core:test
 pnpm native:science:test
 ```
 
-Record the exact revision, command output, toolchain, and any omitted lane in
-[RELEASE_STATUS.md](../RELEASE_STATUS.md). Validate V4, V5, workspace-v1, and
-capability-registry changes against their consumers before release.
+When you claim CI-equivalent service or Apple evidence, use the locked wheel
+checks and the Xcode destination matrix described in
+[Continuous integration](ci.md). Run `pnpm smoke:pages` for a Pages candidate. A
+macOS distribution also needs the signed archive, DMG, notarization, and
+verification procedure in the [Apple guide](../apps/apple/README.md).
 
-## Boundaries
+Check capability and model claims against
+`contracts/capabilities-v1/manifest.json` and
+`docs/physics/model-registry.json`. Passing tests do not promote scientific
+evidence status.
 
-- Browser Education is a teaching preview within the model limits in the
-  physics registry.
-- The science service is optional, loopback-only, and limited to advertised V5
-  capability.
-- The Apple app is an Education product with a smaller surface than the
-  Browser.
-- Static demo captures are presentation evidence, not runtime execution
-  evidence.
+## Record the qualification
 
-Signing, notarization, hosted deployment, device proof, and publication need
-their own dated evidence; none follows from a successful local Browser build.
+Update [RELEASE_STATUS.md](../RELEASE_STATUS.md) with the candidate revision, the
+date, the included surfaces, the exact checks that passed, toolchains,
+artifacts, and every skipped or externally controlled lane. Static captures and
+fixture replays are presentation or contract evidence, never runtime execution
+evidence.

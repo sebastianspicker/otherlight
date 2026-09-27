@@ -1,4 +1,5 @@
 // Verifies core numerical behavior, compatibility imports, and presentation snapshot contracts.
+import Foundation
 import TransitCore
 import TransitEducation
 import TransitVisualization
@@ -19,6 +20,144 @@ final class OtherlightCoreTests: XCTestCase {
     var engine = try SimulationEngine(scenario: ScenarioCatalog.default)
     let step = try engine.step(at: ScenarioCatalog.default.planet.orbit.periodSeconds / 4)
     XCTAssertLessThan(step.flux, 1)
+  }
+  /// Confirms a detached binary uses barycentric star positions and dims only during disk overlap.
+  func testDetachedBinaryUsesBarycentricGeometryAndLuminousDiskOverlap() throws {
+    let primary = BinaryStar(
+      identifier: "star-a", star: .init(radiusMetres: 4, massKilograms: 3), luminosityScale: 1)
+    let secondary = BinaryStar(
+      identifier: "star-b", star: .init(radiusMetres: 3, massKilograms: 1), luminosityScale: 0.4)
+    let orbit = KeplerOrbit(semiMajorAxisMetres: 5, periodSeconds: 100)
+    let scenario = EducationScenarioV4(
+      identifier: "binary", star: primary.star,
+      planet: .init(radiusMetres: 1, orbit: orbit), gridResolution: 80, mode: .detachedBinaryLab,
+      detachedBinary: .init(primary: primary, secondary: secondary, relativeOrbit: orbit))
+    var engine = try SimulationEngine(scenario: scenario)
+    let step = try engine.step(at: 25)
+
+    XCTAssertEqual(step.skyPoints.count, 2)
+    XCTAssertEqual(step.skyPoints[0].position.z, -1.25, accuracy: 1e-9)
+    XCTAssertEqual(step.skyPoints[1].position.z, 3.75, accuracy: 1e-9)
+    XCTAssertLessThan(step.flux, 1)
+  }
+  /// Ensures the detached-binary validation branch returns before unrelated photometry validation.
+  func testDetachedBinaryValidationReturnsAfterMissingBinaryModel() {
+    var scenario = ScenarioCatalog.default
+    scenario.mode = .detachedBinaryLab
+    scenario.detachedBinary = nil
+    scenario.star.limbDarkeningU1 = .nan
+    scenario.planetPhase = .init(enabled: true, reflectedAmplitude: -1, thermalAmplitude: 0)
+
+    XCTAssertEqual(SimulationEngine.validate(scenario), [.nonPositive(field: "detachedBinary")])
+  }
+  /// Ensures zero luminous components retain the detached-binary normalized baseline fallback.
+  func testDetachedBinaryZeroLuminosityUsesUnityFluxFallback() throws {
+    let orbit = KeplerOrbit(semiMajorAxisMetres: 5, periodSeconds: 100)
+    let primary = BinaryStar(
+      identifier: "star-a", star: .init(radiusMetres: 4, massKilograms: 3), luminosityScale: 0)
+    let secondary = BinaryStar(
+      identifier: "star-b", star: .init(radiusMetres: 3, massKilograms: 1), luminosityScale: 0)
+    let scenario = EducationScenarioV4(
+      identifier: "dark-binary", star: primary.star,
+      planet: .init(radiusMetres: 1, orbit: orbit), mode: .detachedBinaryLab,
+      detachedBinary: .init(primary: primary, secondary: secondary, relativeOrbit: orbit))
+
+    var engine = try SimulationEngine(scenario: scenario)
+    XCTAssertEqual(try engine.step(at: 25).flux, 1, accuracy: 1e-12)
+  }
+  /// Confirms detached-binary V4 input and export retain both stars and the binary mode marker.
+  func testDetachedBinaryV4RoundTrip() throws {
+    let primary = BinaryStar(
+      identifier: "star-a", star: .init(radiusMetres: 4, massKilograms: 3), luminosityScale: 1)
+    let secondary = BinaryStar(
+      identifier: "star-b", star: .init(radiusMetres: 3, massKilograms: 1), luminosityScale: 0.4)
+    let orbit = KeplerOrbit(semiMajorAxisMetres: 12, periodSeconds: 100)
+    let scenario = EducationScenarioV4(
+      identifier: "binary", star: primary.star,
+      planet: .init(radiusMetres: 1, orbit: orbit), mode: .detachedBinaryLab,
+      detachedBinary: .init(primary: primary, secondary: secondary, relativeOrbit: orbit),
+      binaryLab: .default)
+    let dto = BrowserV4Export.scenario(from: scenario)
+    let imported = try BrowserV4Import.scenario(from: dto, identifier: "binary")
+
+    XCTAssertEqual(dto.mode, "detached-binary-lab")
+    XCTAssertEqual(dto.bodies.stars.count, 2)
+    XCTAssertTrue(dto.bodies.planets.isEmpty)
+    XCTAssertEqual(imported.detachedBinary, scenario.detachedBinary)
+    XCTAssertEqual(imported.binaryLab, .default)
+    XCTAssertEqual(dto.binaryLab?.hideSkyUntilReveal, true)
+    XCTAssertEqual(dto.binaryLab?.requireHypothesis, true)
+    XCTAssertEqual(dto.binaryLab?.lockParamsUntilHypothesis, true)
+  }
+  /// Rejects incomplete detached-binary gate objects instead of defaulting missing V4 booleans.
+  func testDetachedBinaryV4RequiresCompleteBinaryLabConfiguration() throws {
+    let encoded = try JSONEncoder().encode(
+      BrowserV4Export.scenario(from: ScenarioCatalog.detachedBinaryLab))
+    var object = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    object["binaryLab"] = ["enabled": true]
+    let incomplete = try JSONSerialization.data(withJSONObject: object)
+
+    XCTAssertThrowsError(try JSONDecoder().decode(BrowserV4ScenarioDTO.self, from: incomplete))
+  }
+  /// Confirms the reference runtime averages the fixed Browser V4 observation window.
+  func testReferenceRuntimeAveragesTemporalSubstepsAndPreservesCenterGeometry() throws {
+    let scenario = ScenarioCatalog.default
+    let transit = scenario.epochSeconds + scenario.planet.orbit.periodSeconds / 4
+    var interactive = try SimulationEngine(scenario: scenario)
+    let expected = try [-0.1, -0.05, 0, 0.05, 0.1].map {
+      try interactive.step(at: transit + $0)
+    }
+    var reference = try ReferenceSimulationEngine(scenario: scenario)
+    let actual = try reference.step(at: transit)
+
+    XCTAssertEqual(actual.skyPoints, expected[2].skyPoints)
+    XCTAssertEqual(actual.transitTiming, expected[2].transitTiming)
+    XCTAssertEqual(
+      actual.flux,
+      expected.map(\.flux).reduce(0, +) / Double(expected.count), accuracy: 1e-12)
+    XCTAssertEqual(
+      actual.fluxComponents.transitFactor,
+      expected.map(\.fluxComponents.transitFactor).reduce(0, +) / Double(expected.count),
+      accuracy: 1e-12)
+  }
+  /// Confirms reference substeps are kept in the Browser V4 supported range.
+  func testReferenceRuntimeBoundsSubsteps() {
+    XCTAssertEqual(EducationRuntimeConfiguration(referenceSubsteps: 0).referenceSubsteps, 1)
+    XCTAssertEqual(EducationRuntimeConfiguration(referenceSubsteps: 100).referenceSubsteps, 25)
+  }
+  /// Confirms the portable advanced photometry subset retains V4 phase fields across conversion.
+  func testAdvancedV4PhotometryRoundTripsSupportedPhaseFields() throws {
+    let phase = PhaseCurve(
+      enabled: true, reflectedAmplitude: 0.004, thermalAmplitude: 0.002, lambertian: false,
+      reflectedOffsetRadians: 0.15, thermalOffsetRadians: -0.2, constantFlux: 0.0001,
+      reflectedModel: .cosine, thermalModel: .lambert, clampsWeights: false,
+      usesPhysicalScaling: false)
+    var scenario = ScenarioCatalog.default
+    scenario.gridResolution = 300
+    scenario.star.limbDarkeningU1 = 0.42
+    scenario.star.limbDarkeningU2 = 0.18
+    scenario.planetPhase = phase
+    scenario.moonPhase = phase
+
+    let dto = BrowserV4Export.scenario(from: scenario)
+    let imported = try BrowserV4Import.scenario(from: dto, identifier: scenario.identifier)
+
+    XCTAssertEqual(imported.gridResolution, 300)
+    XCTAssertEqual(imported.star.limbDarkeningU1, 0.42)
+    XCTAssertEqual(imported.star.limbDarkeningU2, 0.18)
+    XCTAssertEqual(imported.planetPhase, phase)
+    XCTAssertEqual(imported.moonPhase, phase)
+  }
+  /// Rejects invalid portable phase magnitudes before an imported V4 scenario can replace state.
+  func testAdvancedV4PhotometryValidationRejectsNegativePhaseMagnitude() {
+    var scenario = ScenarioCatalog.default
+    scenario.planetPhase?.constantFlux = -0.001
+
+    XCTAssertTrue(
+      SimulationEngine.validate(scenario).contains {
+        $0 == .outOfRange(field: "photometry.phaseCurve.constantFlux", value: -0.001)
+      })
   }
   /// Confirms timing diagnostics can be available outside an active attenuation snapshot.
   func testEighthPeriodHasTimingWithoutTransitAttenuation() throws {
@@ -77,7 +216,9 @@ final class OtherlightCoreTests: XCTestCase {
   /// Compares imported browser V4 scenarios against their scoped parity fixture.
   func testBrowserV4FixtureImportAndScopedKinematicsParity() throws {
     let fixtureURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-      .appendingPathComponent("../../../../../../contracts/education-v4/fixtures/scoped-parity.json")
+      .appendingPathComponent(
+        "../../../../../../contracts/education-v4/fixtures/scoped-parity.json"
+      )
       .standardizedFileURL
     let fixture = try JSONDecoder().decode(ParityFixture.self, from: Data(contentsOf: fixtureURL))
     XCTAssertEqual(

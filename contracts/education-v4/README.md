@@ -9,9 +9,10 @@ workspaces and native parity checks.
 - `fixture-manifest.schema.json` describes a complete fixture file.
 - `pnpm native:fixtures` writes `fixtures/scoped-parity.json`.
 
-TypeScript is the fixture oracle for the `0.3.0-alpha.1` candidate. The scoped
-parity contract is green; changing oracle ownership is a future-version
+TypeScript is the fixture oracle for the `0.3.0-alpha.1` candidate, and the
+scoped parity contract is green. Changing oracle ownership is a future-version
 decision.
-Fixture values must not be edited by hand. Floating-point comparisons use the
-per-field `absolute` and `relative` tolerances in the manifest; identifiers,
-enums, booleans, array order, and warning codes compare exactly.
+
+Do not edit fixture values by hand. Floating-point comparisons use the per-field
+`absolute` and `relative` tolerances in the manifest; identifiers, enums,
+booleans, array order, and warning codes compare exactly.
