@@ -22,7 +22,7 @@ enum WorkspaceSection: String, CaseIterable, Identifiable {
   /// Supplies the SF Symbol associated with this workspace area.
   var systemImage: String {
     switch self {
-    case .simulation: "sparkles"
+    case .simulation: "chart.xyaxis.line"
     case .guidedLabs: "graduationcap"
     }
   }

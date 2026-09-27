@@ -44,7 +44,7 @@ struct OtherlightMacHostView: View {
       session.setSceneActive(phase == .active)
       if phase != .active { scientificRun.cancel() }
     }
-    .tint(Color(red: 8.0 / 255.0, green: 127.0 / 255.0, blue: 115.0 / 255.0))
+    .tint(PlateFigure.pencil)
   }
 }
 
@@ -81,15 +81,14 @@ private struct ScientificProfileView: View {
 
   var body: some View {
     @Bindable var scientificRun = scientificRun
-    VStack(alignment: .leading, spacing: 18) {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Scientific V5").font(.title2.weight(.semibold))
-        Text(
+    VStack(alignment: .leading, spacing: 24) {
+      RunningHead(kind: .scientific)
+      ScreenTitle(
+        kicker: "V5 native execution boundary", title: "Scientific workspace",
+        subtitle:
           "Session-only native DOP853 and Arrow execution. No network, cache, workspace persistence, or Education fallback is used."
-        )
-        .foregroundStyle(.secondary)
-      }
-      GroupBox("Accepted Education authoring") {
+      )
+      EvidenceSection(title: "Accepted Education authoring", key: "input") {
         LabeledContent("Scenario", value: scenario.identifier)
         LabeledContent(
           "Bodies",
@@ -98,13 +97,14 @@ private struct ScientificProfileView: View {
             : scenario.moon == nil ? "star and planet" : "star, planet, and moon")
         LabeledContent("Output", value: "radial velocity only")
       }
-      GroupBox("Native run") {
+      EvidenceSection(title: "Native run", key: "radial velocity only") {
         VStack(alignment: .leading, spacing: 10) {
           runStatus
           HStack {
             Button("Run Scientific V5") {
               scientificRun.start(scenario: scenario)
             }
+            .buttonStyle(InkButtonStyle())
             .disabled(scientificRun.state == .running)
             Button("Cancel") { scientificRun.cancel() }
               .disabled(scientificRun.state != .running)
@@ -112,9 +112,11 @@ private struct ScientificProfileView: View {
           if let publication = scientificRun.publication {
             Divider()
             LabeledContent("Arrow SHA-256", value: publication.result.arrowArtifactId)
+              .font(.plateReadout)
               .textSelection(.enabled)
             LabeledContent("Samples", value: "\(publication.result.runManifest.artifact.rowCount)")
             LabeledContent("Run ID", value: publication.result.runManifest.runId)
+              .font(.plateReadout)
               .textSelection(.enabled)
             HStack {
               Button("Export Arrow…") { prepareArrowExport() }
@@ -126,6 +128,8 @@ private struct ScientificProfileView: View {
       Spacer()
     }
     .padding(24)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .paperGround()
     .navigationTitle("Scientific")
     .fileExporter(
       isPresented: $showsArrowExporter,

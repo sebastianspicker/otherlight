@@ -23,6 +23,13 @@ extension and the `com.sebastianspicker.Otherlight.workspace` UTI; existing
 `.transitlab` documents using
 `com.sebastianspicker.TransitLightCurveLab.workspace` stay import-compatible.
 
+The SwiftUI surfaces follow the shared Plate & Figure design system
+([docs/DESIGN.md](../../docs/DESIGN.md)). Colour roles are named colour sets
+under `App/Assets.xcassets/PlateFigure/` with light and dark variants, and
+`App/Views/PlateFigureStyle.swift` provides the running head, plate frame,
+numbered figure sections, margin notes, and the ink button style. Type uses the
+system serif, sans and monospaced designs so that Dynamic Type keeps working.
+
 `Packages/OtherlightCore` holds the portable simulation, Education,
 visualization, strict scientific-contract types, and the V4-to-V5 authoring
 compiler. The mobile `Otherlight` target links the portable packages only.

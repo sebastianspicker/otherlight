@@ -29,7 +29,7 @@ struct ParameterInspector: View {
             "Education preview. These controls affect only the portable primary-star photometry model."
           )
           .font(.footnote)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(PlateFigure.ink2)
           if session.isParameterEditingLocked {
             Label(
               "Choose a hypothesis in the lab before parameter controls unlock.",
@@ -38,7 +38,7 @@ struct ParameterInspector: View {
             .accessibilityIdentifier("binary-lab-parameters-locked")
           } else {
             Label("Parameter controls unlocked by your hypothesis.", systemImage: "lock.open")
-              .foregroundStyle(.secondary)
+              .foregroundStyle(PlateFigure.ink2)
           }
         }
         if !session.isParameterEditingLocked {
@@ -89,7 +89,7 @@ struct ParameterInspector: View {
               error: session.draftValidationErrors[.gridResolution], identifier: "grid-resolution")
             Text("Higher resolution improves limb coverage but increases calculation cost.")
               .font(.footnote)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(PlateFigure.ink2)
             draftField(
               "Limb darkening u1", text: $session.draftLimbDarkeningU1,
               error: session.draftValidationErrors[.limbDarkeningU1],
@@ -164,7 +164,7 @@ struct ParameterInspector: View {
                 : "Interactive mode evaluates the current observation time directly."
             )
             .font(.footnote)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(PlateFigure.ink2)
           }
         }
       }
@@ -175,11 +175,13 @@ struct ParameterInspector: View {
             : "Apply validates drafts; the latest valid frame remains visible if a calculation fails."
         )
         .font(.footnote)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(PlateFigure.ink2)
       }
     }
     .formStyle(.grouped)
+    .scrollContentBackground(.hidden)
     .padding()
+    .paperGround()
     .frame(minWidth: 260)
   }
 
@@ -193,7 +195,7 @@ struct ParameterInspector: View {
     if let error {
       Text(error)
         .font(.footnote)
-        .foregroundStyle(.red)
+        .foregroundStyle(PlateFigure.fault)
         .accessibilityIdentifier("\(identifier)-error")
     }
   }

@@ -11,23 +11,24 @@ struct SimulationDashboard: View {
   /// Builds the scrollable dashboard from the latest valid presentation frame.
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
-        HStack {
-          VStack(alignment: .leading, spacing: 3) {
-            Text("Simulation").font(.title2.weight(.semibold))
-            Text("Explore transit geometry, flux, and event-derived timing diagnostics.")
-              .foregroundStyle(.secondary)
-          }
+      VStack(alignment: .leading, spacing: 24) {
+        RunningHead(kind: .education)
+        HStack(alignment: .firstTextBaseline) {
+          ScreenTitle(
+            kicker: "Transit experiment", title: "Simulation",
+            subtitle: "Watch the geometry, read the light, and time each transit.")
           Spacer()
-          Text(session.calculationStatus).foregroundStyle(.secondary)
+          Text(session.calculationStatus).font(.callout).foregroundStyle(PlateFigure.ink2)
         }
         if let frame = session.frame {
           SimulationPlotRow(frame: frame, session: session)
-          PlotCard(title: "O-C event history (milliseconds)") {
+          EvidenceSection(number: "Figure 3", title: "O-C history", key: "milliseconds") {
             TransitOCChart(
-              history: session.transitEventHistory, transitBody: session.selectedTransitBody)
+              history: session.transitEventHistory, transitBody: session.selectedTransitBody
+            )
+            .background(PlateFigure.paper)
+            .frame(height: 170)
           }
-          .frame(height: 170)
           TimingHistoryControls(session: session)
           SimulationFrameSummary(
             frame: frame, transitEventCount: session.selectedTransitEventCount,
@@ -48,8 +49,9 @@ struct SimulationDashboard: View {
             .frame(minHeight: 500)
         }
       }
-      .padding(20)
+      .padding(24)
     }
+    .paperGround()
     .accessibilityIdentifier("simulation-dashboard")
   }
 
@@ -66,7 +68,8 @@ struct DetachedBinaryLabView: View {
   /// Builds the adaptive hypothesis, reveal, sky, and light-curve learning surface.
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: 24) {
+        RunningHead(kind: .education)
         header
         hypothesisCard
         if let frame = session.frame {
@@ -82,27 +85,26 @@ struct DetachedBinaryLabView: View {
           .frame(maxWidth: .infinity, minHeight: 360)
         }
       }
-      .padding(20)
+      .padding(24)
     }
+    .paperGround()
     .accessibilityIdentifier("detached-binary-lab")
   }
 
   /// Labels the bounded mode and its live calculation state without implying scientific execution.
   private var header: some View {
-    HStack(alignment: .top) {
-      VStack(alignment: .leading, spacing: 4) {
-        Text("Detached binary lab").font(.title2.weight(.semibold))
-        Text("Education preview · two-star barycentric geometry and luminous-disk overlap.")
-          .foregroundStyle(.secondary)
-      }
+    HStack(alignment: .firstTextBaseline) {
+      ScreenTitle(
+        kicker: "Detached binary lab", title: "Read the light of two stars",
+        subtitle: "Two-star barycentric geometry and luminous-disk overlap.")
       Spacer()
-      Text(session.calculationStatus).foregroundStyle(.secondary)
+      Text(session.calculationStatus).font(.callout).foregroundStyle(PlateFigure.ink2)
     }
   }
 
   /// Requires an explicit learner hypothesis before guarded reveal and locked controls can advance.
   private var hypothesisCard: some View {
-    GroupBox("Hypothesis and reveal") {
+    EvidenceSection(title: "Hypothesis and reveal") {
       VStack(alignment: .leading, spacing: 10) {
         Picker(
           "Hypothesis",
@@ -122,11 +124,11 @@ struct DetachedBinaryLabView: View {
 
         if session.isBinaryLabSkyVisible {
           Label("Sky view revealed", systemImage: "eye")
-            .foregroundStyle(.secondary)
+            .foregroundStyle(PlateFigure.ink2)
         } else {
           Text("The sky view remains hidden until the V4 reveal condition is satisfied.")
             .font(.footnote)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(PlateFigure.ink2)
           Button("Reveal sky view") { session.revealBinaryLabSky() }
             .disabled(!session.canRevealBinaryLabSky)
             .accessibilityIdentifier("binary-lab-reveal")
@@ -138,7 +140,7 @@ struct DetachedBinaryLabView: View {
           systemImage: session.isParameterEditingLocked ? "lock.fill" : "lock.open"
         )
         .font(.footnote)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(PlateFigure.ink2)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -161,7 +163,7 @@ struct DetachedBinaryLabView: View {
   /// Supplies the same compact-safe plot cards to each platform-specific container.
   @ViewBuilder
   private func plotCards(frame: PresentationFrame) -> some View {
-    PlotCard(title: "Sky view") {
+    PlateFrame(label: "Plate 1 · sky plane") {
       if session.isBinaryLabSkyVisible {
         SkyCanvas(
           scene: frame.scene, starRadiusMetres: frame.starRadiusMetres,
@@ -174,7 +176,7 @@ struct DetachedBinaryLabView: View {
       }
     }
     .frame(height: 280)
-    PlotCard(title: "Normalized light curve") {
+    FigureCard(number: "Figure 2", title: "Relative starlight") {
       LightCurveCanvas(
         series: frame.series, history: session.lightCurveHistory,
         markerTimeSeconds: frame.scene.timeSeconds, markerFlux: frame.scene.flux)
@@ -208,7 +210,7 @@ private struct SimulationPlotRow: View {
   /// Supplies identically sized plot cards to either adaptive container.
   @ViewBuilder
   private var plotCards: some View {
-    PlotCard(title: "Sky view") {
+    PlateFrame(label: "Plate 1 · sky plane") {
       SkyCanvas(
         scene: frame.scene,
         starRadiusMetres: frame.starRadiusMetres,
@@ -217,7 +219,7 @@ private struct SimulationPlotRow: View {
         zoomMultiplier: session.sceneZoom)
     }
     .frame(height: 280)
-    PlotCard(title: "Normalized light curve") {
+    FigureCard(number: "Figure 2", title: "Relative starlight") {
       LightCurveCanvas(
         series: frame.series,
         history: session.lightCurveHistory,
@@ -251,7 +253,7 @@ private struct SimulationFrameSummary: View, Equatable {
       Text(timingSummary)
     }
     .font(.caption)
-    .foregroundStyle(.secondary)
+    .foregroundStyle(PlateFigure.ink2)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilitySummary)
   }
@@ -315,7 +317,7 @@ private struct TimingHistoryControls: View {
         Text(
           "\(session.selectedTransitEventCount) \(session.selectedTransitBody.rawValue) events · \(session.lightCurveHistory.samples.count) accepted frames"
         )
-        .foregroundStyle(.secondary)
+        .foregroundStyle(PlateFigure.ink2)
       }
       GridRow {
         Text("Latest O-C")
@@ -339,8 +341,7 @@ private struct TimingHistoryControls: View {
       }
     }
     .font(.caption)
-    .padding(12)
-    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+    .marginNote()
   }
 
   #if os(iOS)
@@ -361,7 +362,7 @@ private struct TimingHistoryControls: View {
         Text(
           "\(session.selectedTransitEventCount) \(session.selectedTransitBody.rawValue) events · \(session.lightCurveHistory.samples.count) accepted frames"
         )
-        .foregroundStyle(.secondary)
+        .foregroundStyle(PlateFigure.ink2)
         LabeledContent(
           "Latest O-C", value: formatted(session.selectedTransitLatestResidualMilliseconds))
         LabeledContent("RMS O-C", value: formatted(session.selectedTransitRMSMilliseconds))
@@ -373,8 +374,7 @@ private struct TimingHistoryControls: View {
         }
       }
       .font(.caption)
-      .padding(12)
-      .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+      .marginNote()
     }
   #endif
 
@@ -385,23 +385,22 @@ private struct TimingHistoryControls: View {
   }
 }
 
-/// Wraps a plot in a consistently styled titled card.
-private struct PlotCard<Content: View>: View {
+/// Sets a plot as a numbered journal figure on paper, with a serif title and no card chrome.
+private struct FigureCard<Content: View>: View {
+  let number: String
   let title: String
   @ViewBuilder let content: Content
 
-  /// Builds the card chrome around its caller-supplied plot content.
+  /// Builds the figure number, title, and caller-supplied plot content.
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(title)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+    VStack(alignment: .leading, spacing: 4) {
+      Text(number).font(.plateCaption).foregroundStyle(PlateFigure.ink2)
+      Text(title).font(.plateHeading).foregroundStyle(PlateFigure.ink)
+        .accessibilityAddTraits(.isHeader)
       content
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
-    .padding(12)
-    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
   }
 }
 

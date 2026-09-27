@@ -111,3 +111,18 @@ SwiftUI surfaces keep the same hierarchy, semantics, colour roles and evidence
 distinctions while using platform-native navigation, controls, Dynamic Type,
 focus behaviour and accessibility APIs. Matching the Browser pixel for pixel is
 not a goal; matching it in behaviour and information is.
+
+In practice:
+
+- Colour roles are named colour sets in `apps/apple/App/Assets.xcassets/PlateFigure/`
+  with the same light and dark values as the Browser tokens. The app tint is blue
+  pencil.
+- The system serif (New York) stands in for STIX Two, and SF and SF Mono stand
+  in for Atkinson Hyperlegible Next and Mono. All three scale with Dynamic Type.
+- `apps/apple/App/Views/PlateFigureStyle.swift` holds the shared surfaces: the
+  running head, Plate 1's dark frame with registration marks, numbered figure
+  sections with a 1-point ink rule instead of cards, ruled margin notes, ruled
+  text fields, and the ink button used for one primary action per screen.
+- Canvas figures draw a closed frame with inward ticks, ink curves, and
+  blue-pencil markers. The sky is a limb-darkened star on the plate.
+- Navigation stays native: split views, inspectors, tab bars, and system forms.
