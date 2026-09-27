@@ -6,6 +6,7 @@
 import {
   DEFAULT_LAB_SYSTEM,
   getLabSystemByControlValue,
+  getLabSystemById,
   isLabSystemId,
   type LabSystemId,
 } from "../domain/model/labs";
@@ -156,4 +157,20 @@ export function productViewStateSearch(
   existing: URLSearchParams | string = new URLSearchParams(),
 ): string {
   return serializeProductViewState(state, existing).toString();
+}
+
+export function productProfileControlValue(view: ProductViewState): string {
+  return view.profile;
+}
+
+export function productUiControlValue(view: ProductViewState): string {
+  return view.ui === "advanced" ? "expert" : "normal";
+}
+
+export function productLabControlValue(view: ProductViewState): string {
+  return getLabSystemById(view.lab).controlValue;
+}
+
+export function productRuntimeControlValue(view: ProductViewState): string {
+  return view.runtime === "reference" ? "reference" : "realtime";
 }

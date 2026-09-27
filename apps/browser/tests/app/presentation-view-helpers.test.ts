@@ -1,9 +1,9 @@
 /** Characterizes extracted presentation-only calculations and event timing lookup. */
 import { describe, expect, it } from "vitest";
 
-import { resolveLessonEventSec } from "../../src/presentation/controllers/didacticsViewNavigation";
-import { resolvePlotScale } from "../../src/presentation/render/lightCurvePlotScale";
-import { buildDecorativeStops, parseHexColor } from "../../src/presentation/render/starDiskColors";
+import { resolveLessonEventSec } from "../../src/presentation/labs/didacticsViewNavigation";
+import { resolvePlotScale } from "../../src/presentation/render/lightCurve/lightCurvePlotScale";
+import { buildDecorativeStops, parseHexColor } from "../../src/presentation/render/sky/starDiskColors";
 
 describe("presentation view helpers", () => {
   it("keeps only finite lesson event times", () => {

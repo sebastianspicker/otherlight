@@ -2,19 +2,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { getPresetById } from "../../src/application/presets";
-import { createSimulationRuntimeV4FromParams } from "../../src/application/v4Runtime";
-import { createBootstrapAppState } from "../../src/presentation/controllers/bootstrapAppState";
+import { getPresetById } from "../../src/application/catalog/presets";
+import { createSimulationRuntimeV4FromParams } from "../../src/application/runtime/v4Runtime";
+import { createBootstrapAppState } from "../../src/composition/appState";
 import {
   resetSimTimeAndLCForContext,
   seekToTimeForContext,
-} from "../../src/presentation/controllers/frameLoopResetSeek";
-import { invalidateFixedPreview } from "../../src/presentation/controllers/fixedPreviewCache";
-import { frameForContext } from "../../src/presentation/controllers/frameLoopFrame";
-import type { FrameLoopContext } from "../../src/presentation/controllers/frameLoopControllerTypes";
-import { buildBandConfigurations, createBandSamplingService } from "../../src/application/chromaticSampling";
-import { styleBandSamples } from "../../src/presentation/controllers/chromaticOverlay";
-vi.mock("../../src/presentation/controllers/frameLoopControllerShared", async (original) => ({
+} from "../../src/presentation/playback/frameLoopResetSeek";
+import { invalidateFixedPreview } from "../../src/presentation/playback/fixedPreviewCache";
+import { frameForContext } from "../../src/presentation/playback/frameLoopFrame";
+import type { FrameLoopContext } from "../../src/presentation/playback/frameLoopControllerTypes";
+import {
+  buildBandConfigurations,
+  createBandSamplingService,
+} from "../../src/application/runtime/chromaticSampling";
+import { styleBandSamples } from "../../src/presentation/playback/chromaticOverlay";
+vi.mock("../../src/presentation/playback/frameLoopControllerShared", async (original) => ({
   ...(await original<object>()),
   drawStepAndReadouts: vi.fn(),
   setRuntimeStatusWarning: vi.fn(),

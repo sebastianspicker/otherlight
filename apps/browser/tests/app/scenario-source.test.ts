@@ -2,8 +2,8 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { syncScenarioSource, wireScenarioSource } from "../../src/presentation/ui/scenarioSource";
-import { renderScenarioSource } from "../../src/presentation/ui/templates/scenarioSource";
+import { syncScenarioSource, wireScenarioSource } from "../../src/presentation/scenario/scenarioSource";
+import { renderScenarioSource } from "../../src/presentation/scenario/templates/scenarioSource";
 
 type DomGlobals = {
   window: typeof window;

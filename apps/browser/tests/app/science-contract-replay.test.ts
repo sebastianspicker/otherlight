@@ -1,6 +1,6 @@
 /** Verifies the deterministic, display-safe V5 contract fixture adapter. */
 import { describe, expect, it } from "vitest";
-import { getScienceContractReplay } from "../../src/presentation/controllers/scienceContractReplay";
+import { getScienceContractReplay } from "../../src/presentation/science/scienceContractReplay";
 
 describe("science contract replay", () => {
   it("validates and projects the shared forward-result fixture without an execution claim", () => {

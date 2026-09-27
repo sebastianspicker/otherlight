@@ -5,9 +5,12 @@ import {
   type BandRequest,
   type BandResponse,
   type ChromaticSampler,
-} from "../../src/application/chromaticSampler";
-import { buildBandConfigurations, createBandSamplingService } from "../../src/application/chromaticSampling";
-import { getPresetById } from "../../src/application/presets";
+} from "../../src/application/runtime/chromaticSampler";
+import {
+  buildBandConfigurations,
+  createBandSamplingService,
+} from "../../src/application/runtime/chromaticSampling";
+import { getPresetById } from "../../src/application/catalog/presets";
 import { createSimulationV4 } from "../../src/domain/simulation/v4";
 import { ChromaticWorkerAdapter } from "../../src/infrastructure/workers/chromaticWorkerAdapter";
 function harness() {

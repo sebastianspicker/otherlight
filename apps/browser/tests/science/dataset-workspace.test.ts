@@ -6,8 +6,8 @@ import {
   type ScienceDatasetCapabilities,
   type ScienceDatasetDescriptor,
 } from "../../src/infrastructure/science";
-import { wireScienceDatasetWorkspace } from "../../src/presentation/controllers/scienceDatasetWorkspace";
-import { renderScientificDatasetWorkspace } from "../../src/presentation/ui/templates/scientificWorkspace";
+import { wireScienceDatasetWorkspace } from "../../src/presentation/science/scienceDatasetWorkspace";
+import { renderScientificDatasetWorkspace } from "../../src/presentation/science/templates/scientificWorkspace";
 
 const descriptor: ScienceDatasetDescriptor = {
   schemaVersion: "science-dataset-descriptor-v2",

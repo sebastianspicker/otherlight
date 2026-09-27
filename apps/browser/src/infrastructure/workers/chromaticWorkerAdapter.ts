@@ -1,6 +1,6 @@
 /** Adapts the application sampler port to an isolated, composition-created module worker. */
-import type { ChromaticSampler, BandRequest, BandResponse } from "../../application/chromaticSampler";
-import type { BandConfiguration } from "../../application/chromaticSampling";
+import type { ChromaticSampler, BandRequest, BandResponse } from "../../application/runtime/chromaticSampler";
+import type { BandConfiguration } from "../../application/runtime/chromaticSampling";
 
 export class ChromaticWorkerAdapter implements ChromaticSampler {
   private worker?: Worker;

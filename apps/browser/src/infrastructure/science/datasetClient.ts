@@ -1,4 +1,5 @@
 /** Implements the strict loopback-only V6 dataset client; this family deliberately has no job API. */
+import { isGitHubPagesRuntime } from "../../application/deployment";
 import { ScienceBackendError, type ScienceFetch } from "./client";
 import {
   MAX_SCIENCE_DATASET_RESPONSE_BYTES,
@@ -129,10 +130,6 @@ export class ScienceDatasetClient {
 
 export function createScienceDatasetClient(options?: ScienceDatasetClientOptions): ScienceDatasetClient {
   return new ScienceDatasetClient(options);
-}
-
-function isGitHubPagesRuntime(): boolean {
-  return import.meta.env.MODE === "github-pages";
 }
 
 function normalizeLocalBaseUrl(value: string): URL {

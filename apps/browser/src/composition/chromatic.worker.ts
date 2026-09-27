@@ -1,6 +1,6 @@
 /** Worker entry: retains canonical band runtimes for exactly one scenario generation. */
-import { createBandSamplingService, type BandConfiguration } from "../application/chromaticSampling";
-import type { BandRequest } from "../application/chromaticSampler";
+import { createBandSamplingService, type BandConfiguration } from "../application/runtime/chromaticSampling";
+import type { BandRequest } from "../application/runtime/chromaticSampler";
 
 type Message =
   | { kind: "configure"; generation: number; bands: BandConfiguration[] }

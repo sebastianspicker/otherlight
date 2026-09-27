@@ -208,7 +208,12 @@
         "apps/browser/src/domain/photometry/instrumentNoise.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseTypes.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseHelpers.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseCorrelated.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseDetrending.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseElectronNoise.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseFluxEffects.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseRuntime.ts",
+        "apps/browser/src/domain/photometry/instrumentNoiseTrends.ts",
         "apps/browser/src/domain/photometry/random.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
@@ -256,7 +261,7 @@
       "units": "Cartesian state SI; epoch [JD TDB]; radial velocity [m s^-1]",
       "validity": "Barycentric, non-colliding Newtonian point masses with explicit target, numeric JD TDB epoch, finite radii, split absolute tolerances, and recorded provenance. Accepted dense numerical trajectories are certified outside finite-radius contact with bounded interval arithmetic; unsupported representations and unresolved bounds fail closed. Relativity, photometry, timing, atmosphere, astrometry artifacts, and inference are unavailable.",
       "owners": [
-        "apps/browser/src/presentation/controllers/scienceWorkspace.ts",
+        "apps/browser/src/presentation/science/scienceWorkspace.ts",
         "apps/browser/src/infrastructure/science/educationScenarioCompiler.ts",
         "apps/browser/src/infrastructure/science/types.ts",
         "apps/browser/src/infrastructure/science/validation.ts",

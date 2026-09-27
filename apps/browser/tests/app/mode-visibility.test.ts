@@ -2,9 +2,9 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { syncUiModeVisibility } from "../../src/presentation/ui/mode";
-import { syncProductModeVisibility } from "../../src/presentation/ui/productMode";
-import { syncProductProfileVisibility } from "../../src/presentation/ui/productProfile";
+import { syncUiModeVisibility } from "../../src/presentation/shell/mode";
+import { syncProductModeVisibility } from "../../src/presentation/shell/productMode";
+import { syncProductProfileVisibility } from "../../src/presentation/shell/productProfile";
 
 type DomGlobals = {
   window: typeof window;

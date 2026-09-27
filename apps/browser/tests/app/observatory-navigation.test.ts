@@ -2,18 +2,19 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cloneParams, SCENARIO_DEFAULTS } from "../../src/application/scenario";
-import { createSimulationRuntimeV4FromParams } from "../../src/application/v4Runtime";
-import { currentDidacticSignals } from "../../src/composition/currentDidacticSignals";
-import type { UiRefs } from "../../src/presentation/ui/refs";
-import type { BootstrapAppState } from "../../src/presentation/controllers/bootstrapAppState";
+import { cloneParams } from "../../src/domain/model/clone";
+import { SCENARIO_DEFAULTS } from "../../src/application/catalog/defaults";
+import { createSimulationRuntimeV4FromParams } from "../../src/application/runtime/v4Runtime";
+import { currentDidacticSignals } from "../../src/application/runtime/didacticSignals";
+import type { UiRefs } from "../../src/presentation/shell/refs";
+import type { BootstrapAppState } from "../../src/composition/appState";
 import {
   advanceLessonFlow,
   ensureDidacticsConfig,
   initDidacticsRuntime,
   onDidacticSignals,
-} from "../../src/presentation/controllers/didactics";
-import { wireObservatoryNavigation } from "../../src/presentation/controllers/observatoryNavigation";
+} from "../../src/presentation/labs/didactics";
+import { wireObservatoryNavigation } from "../../src/presentation/observatory/observatoryNavigation";
 
 let dom: JSDOM;
 let previousDocument: typeof document;

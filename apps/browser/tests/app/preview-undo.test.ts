@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Preserves fixed-preview validity and comparison scale when undoing a clear. */
 import { expect, it, vi } from "vitest";
-import { wireBootstrapLightCurveActions } from "../../src/presentation/controllers/bootstrapLightCurveActions";
-import type { FixedPreviewKey } from "../../src/presentation/controllers/fixedPreviewCache";
-import type { LightCurvePlot } from "../../src/presentation/render/lightCurvePlot";
+import { wireBootstrapLightCurveActions } from "../../src/presentation/playback/lightCurveActions";
+import type { FixedPreviewKey } from "../../src/presentation/playback/fixedPreviewCache";
+import type { LightCurvePlot } from "../../src/presentation/render/lightCurve/lightCurvePlot";
 it("restores matching preview metadata without validating a later reset", () => {
   const key = { runtime: {}, settings: "settings", generation: 3 } as FixedPreviewKey;
   const state = {

@@ -1,50 +1,56 @@
 /** Composes one app instance and owns abortable cleanup across reinitialization. */
 import { ChromaticWorkerAdapter } from "../infrastructure/workers/chromaticWorkerAdapter";
-import { Canvas2DRenderer, LightCurvePlot } from "../presentation/render/canvas2d";
-import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../application/binaryLab";
-import { getPresetById } from "../application/presets";
-import { wireObservatory } from "../presentation/controllers/observatory";
-import { wireDebugDOM } from "../presentation/controllers/debug";
-import { createSimulationRuntimeV4FromParams, type AppSimulationRuntime } from "../application/v4Runtime";
+import { Canvas2DRenderer } from "../presentation/render/sky/canvas2d";
+import { LightCurvePlot } from "../presentation/render/lightCurve/lightCurvePlot";
+import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../application/catalog/binaryLab";
+import { getPresetById } from "../application/catalog/presets";
+import { wireObservatory } from "../presentation/observatory/observatory";
+import { wireDebugDOM } from "../presentation/shell/debug";
+import {
+  createSimulationRuntimeV4FromParams,
+  type AppSimulationRuntime,
+} from "../application/runtime/v4Runtime";
 import { cloneParams } from "../domain/model/clone";
-import { uiWarningText } from "../application/warnings";
-import { formatTransitHistorySummary, updateTransitHistoryFromStep } from "../application/transitHistory";
-import { onDidacticSignals } from "../presentation/controllers/didactics";
+import { uiWarningText } from "../application/runtime/warnings";
+import {
+  formatTransitHistorySummary,
+  updateTransitHistoryFromStep,
+} from "../application/runtime/transitHistory";
+import { onDidacticSignals, renderLabDidacticsSurface } from "../presentation/labs/didactics";
 import { computeDidacticSignals } from "../domain/education";
-import { createUiRefs } from "../presentation/ui/refs";
-import { clearParamValidationUi } from "../presentation/ui/params";
-import { wireEnableHandlers } from "../presentation/ui/enable";
-import { wireNormalModeQuickControls } from "../presentation/ui/quickControls";
-import { syncScenarioSource, wireScenarioSource } from "../presentation/ui/scenarioSource";
-import { wireParamSliders } from "../presentation/ui/sliders";
-import { isBinaryModeActive, isLabProductModeActive } from "../presentation/controllers/scenarioFlow";
-import { createFrameLoopController } from "../presentation/controllers/frameLoop";
-import { wireDidacticsUi } from "../presentation/controllers/didacticsWiring";
-import { wireBootstrapViewControls } from "../presentation/controllers/bootstrapViewControls";
-import { createBootstrapOcPanelController } from "../presentation/controllers/bootstrapOcPanel";
-import { createBootstrapDirtyGuard } from "../presentation/controllers/bootstrapDirtyGuard";
-import { wireBootstrapLightCurveActions } from "../presentation/controllers/bootstrapLightCurveActions";
+import { createUiRefs } from "../presentation/shell/refs";
+import { clearParamValidationUi } from "../presentation/scenario/paramValidation";
+import { wireEnableHandlers } from "../presentation/scenario/enable";
+import { wireNormalModeQuickControls } from "../presentation/scenario/quickControls";
+import { syncScenarioSource, wireScenarioSource } from "../presentation/scenario/scenarioSource";
+import { wireParamSliders } from "../presentation/scenario/sliders";
+import { isBinaryModeActive, isLabProductModeActive } from "../presentation/scenario/scenarioFlow";
+import { createFrameLoopController } from "../presentation/playback/frameLoop";
+import { wireDidacticsUi } from "../presentation/labs/didacticsWiring";
+import { wireBootstrapViewControls } from "../presentation/playback/viewControls";
+import { createBootstrapOcPanelController } from "../presentation/timing/ocPanel";
+import { createBootstrapDirtyGuard } from "../presentation/scenario/dirtyGuard";
+import { wireBootstrapLightCurveActions } from "../presentation/playback/lightCurveActions";
 import {
   initializeProductViewControls,
   readProductViewStateFromControls,
   syncProductModeNavigation,
-} from "../presentation/controllers/bootstrapProductSetup";
-import { wireBootstrapProfile } from "../presentation/controllers/bootstrapProfile";
-import { createProductHistoryWriter } from "../presentation/controllers/bootstrapProductHistory";
-import { createBootstrapStatusWriter } from "../presentation/controllers/bootstrapStatus";
+} from "../presentation/shell/productNavigation";
+import { wireBootstrapProfile } from "../presentation/shell/profileSwitch";
+import { createProductHistoryWriter } from "../presentation/workspace/productHistory";
+import { createBootstrapStatusWriter } from "../presentation/shell/status";
 import {
   readBootstrapRuntimeMode,
   runtimeArgsFromBootstrapState,
   syncBootstrapDisplayFlux,
-} from "../application/bootstrapRuntime";
-import { renderBootstrapDidacticsSurface } from "../presentation/controllers/bootstrapDidacticsSurface";
-import { wireBootstrapPersistence } from "../presentation/controllers/bootstrapPersistence";
-import { createBootstrapAppState } from "../presentation/controllers/bootstrapAppState";
-import { createBootstrapApplyParams } from "../presentation/controllers/bootstrapApplyParams";
-import { wireBootstrapScenarioControls } from "../presentation/controllers/bootstrapScenarioControls";
-import { wireBootstrapResetHandlers } from "../presentation/controllers/bootstrapResetHandlers";
-import { finalizeBootstrapStartup } from "../presentation/controllers/bootstrapStartup";
-import { currentDidacticSignals } from "./currentDidacticSignals";
+} from "../application/runtime/runtimeArgs";
+import { wireBootstrapPersistence } from "../presentation/workspace/persistence";
+import { createBootstrapAppState } from "./appState";
+import { createBootstrapApplyParams } from "../presentation/scenario/applyParams";
+import { wireBootstrapScenarioControls } from "../presentation/scenario/scenarioControls";
+import { wireBootstrapResetHandlers } from "../presentation/scenario/resetHandlers";
+import { finalizeBootstrapStartup } from "./startup";
+import { currentDidacticSignals } from "../application/runtime/didacticSignals";
 
 let activeAppDispose: (() => void) | null = null;
 
@@ -142,7 +148,7 @@ export async function initApp(): Promise<void> {
 
   const observatoryRef: { current?: ReturnType<typeof wireObservatory> } = {};
   const renderDidacticsSurface = () => {
-    renderBootstrapDidacticsSurface(
+    renderLabDidacticsSurface(
       refs,
       appState.didacticsRuntime,
       isLabProductModeActive(refs) || Boolean(observatoryRef.current?.isLearningVisible()),

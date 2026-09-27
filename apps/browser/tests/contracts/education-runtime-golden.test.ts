@@ -5,10 +5,10 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/application/binaryLab";
-import { PRESETS } from "../../src/application/presets";
-import { buildParamsFromRealSystem, REAL_SYSTEMS_OPTIONS } from "../../src/application/realSystems";
-import { createSimulationRuntimeV4FromParams } from "../../src/application/v4Runtime";
+import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/application/catalog/binaryLab";
+import { PRESETS } from "../../src/application/catalog/presets";
+import { buildParamsFromRealSystem, REAL_SYSTEMS_OPTIONS } from "../../src/application/catalog/realSystems";
+import { createSimulationRuntimeV4FromParams } from "../../src/application/runtime/v4Runtime";
 import type { BrowserScenarioDraft } from "../../src/domain/model/types";
 import type { RuntimeModeV4 } from "../../src/domain/simulation/v4";
 

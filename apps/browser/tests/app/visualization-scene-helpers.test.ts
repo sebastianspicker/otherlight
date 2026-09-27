@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SimulationFrame } from "../../src/domain/simulation/frames";
-import { sceneTimingBadges } from "../../src/presentation/controllers/visualizationSceneHelpers";
+import { sceneTimingBadges } from "../../src/presentation/playback/visualizationSceneHelpers";
 
 function timingFrame(planetTransitCenterSec: number, moonTransitCenterSec: number): SimulationFrame {
   return { timing: { planetTransitCenterSec, moonTransitCenterSec } } as unknown as SimulationFrame;

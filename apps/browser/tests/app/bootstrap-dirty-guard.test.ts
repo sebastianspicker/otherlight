@@ -2,7 +2,7 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createBootstrapDirtyGuard } from "../../src/presentation/controllers/bootstrapDirtyGuard";
+import { createBootstrapDirtyGuard } from "../../src/presentation/scenario/dirtyGuard";
 
 type DomGlobals = {
   window: typeof window;

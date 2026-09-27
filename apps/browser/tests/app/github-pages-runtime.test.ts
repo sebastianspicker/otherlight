@@ -1,11 +1,11 @@
 /** Covers base-aware presentation assets and the GitHub Pages scientific-runtime boundary. */
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { wireScienceWorkspace } from "../../src/presentation/controllers/scienceWorkspace";
-import { isGitHubPagesMode, runtimeAssetUrl } from "../../src/presentation/runtime/deployment";
-import { createAppDocumentHtml } from "../../src/presentation/ui/appShell";
-import { renderSidebarTemplate } from "../../src/presentation/ui/templates/sidebar";
-import { renderScientificWorkspace } from "../../src/presentation/ui/templates/scientificWorkspace";
+import { wireScienceWorkspace } from "../../src/presentation/science/scienceWorkspace";
+import { isGitHubPagesMode, runtimeAssetUrl } from "../../src/application/deployment";
+import { createAppDocumentHtml } from "../../src/presentation/shell/appShell";
+import { renderSidebarTemplate } from "../../src/presentation/shell/templates/sidebar";
+import { renderScientificWorkspace } from "../../src/presentation/science/templates/scientificWorkspace";
 
 type DomGlobals = {
   window: typeof window;

@@ -1,13 +1,13 @@
 /** Protects the frame loop's explicit unavailable-state contract. */
 import { describe, expect, it } from "vitest";
 
-import type { AppSimulationRuntime } from "../../src/application/v4Runtime";
+import type { AppSimulationRuntime } from "../../src/application/runtime/v4Runtime";
 import type { SimulationFrame } from "../../src/domain/simulation/frames";
-import { trySimulationStep } from "../../src/presentation/controllers/frameLoopControllerShared";
+import { trySimulationStep } from "../../src/presentation/playback/frameLoopControllerShared";
 import type {
   FrameLoopContext,
   FrameLoopState,
-} from "../../src/presentation/controllers/frameLoopControllerTypes";
+} from "../../src/presentation/playback/frameLoopControllerTypes";
 
 const frame = { tObsSec: 12 } as SimulationFrame;
 

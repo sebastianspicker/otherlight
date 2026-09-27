@@ -1,12 +1,12 @@
 /** Verifies that the observatory explores one variable without changing the accepted scenario. */
 import { describe, expect, it } from "vitest";
-import { cloneParams } from "../../src/application/scenario";
-import { PRESETS } from "../../src/application/presets";
+import { cloneParams } from "../../src/domain/model/clone";
+import { PRESETS } from "../../src/application/catalog/presets";
 import {
   prepareRadiusComparison,
   readComparisonRadiusKm,
-} from "../../src/presentation/controllers/observatoryComparison";
-import { findObservatoryTransit } from "../../src/presentation/controllers/observatoryTransit";
+} from "../../src/presentation/observatory/observatoryComparison";
+import { findObservatoryTransit } from "../../src/presentation/observatory/observatoryTransit";
 
 const scenario = () => cloneParams(PRESETS.find((preset) => preset.id === "kepler-planet-only")!.params);
 
