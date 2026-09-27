@@ -21,3 +21,4 @@ pnpm-lock.yaml
 *.sarif
 *.sarif.zip
 AUDIT_LEDGER.md
+apps/browser/tests/**/__snapshots__/
