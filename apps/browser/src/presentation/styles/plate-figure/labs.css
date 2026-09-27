@@ -1,0 +1,271 @@
+/*
+ * Plate & Figure — Guided Labs.
+ * A lesson reads like a worked page: one phase at a time, its prompt set in the
+ * text serif, responses on ruled paper, hints and checks as margin notes.
+ */
+
+.lab-rail {
+  display: grid;
+  align-content: start;
+  gap: var(--s-4);
+  min-width: 0;
+  padding-bottom: var(--s-6);
+}
+
+.lab-rail__header .eyebrow {
+  color: var(--ink);
+  font-size: var(--t-lg);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.lab-rail__setup,
+.lab-setup-grid {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.lab-setup-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-3);
+}
+
+.lab-setup-row .inline {
+  display: grid;
+  flex: 1 1 160px;
+  gap: var(--s-1);
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lab-setup-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.lab-setup-row .lab-setup-check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--control-h);
+}
+
+.lesson-settings[open] > :not(summary) {
+  margin-top: var(--s-3);
+}
+
+.lab-rail__summary {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+}
+
+.lab-rail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.lab-vocab-tag {
+  padding: 0 var(--s-2);
+  border: var(--hair-strong);
+  border-radius: 2px;
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  line-height: 20px;
+}
+
+/* The current phase */
+.lab-phase {
+  display: grid;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: var(--hair);
+}
+
+.lesson-progress {
+  margin: 0;
+  color: var(--pencil);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.04em;
+}
+
+#didPhaseTitle {
+  font-size: var(--t-2xl);
+  line-height: var(--lh-tight);
+}
+
+#didPhasePrompt {
+  max-width: 62ch;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+}
+
+.lab-phase__example {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) 0 var(--s-3) var(--s-4);
+  border-left: 2px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--t-base);
+}
+
+.lab-phase__example .help {
+  font-family: var(--font-sans);
+  font-style: normal;
+}
+
+#didResponseComposer {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.lab-phase__response .inline {
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Navigation */
+.lab-rail__actions {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.lab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-2);
+}
+
+.lab-nav--event {
+  margin-top: var(--s-3);
+}
+
+.lab-nav--event .inline {
+  display: grid;
+  flex: 1 1 180px;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lesson-tools[open] > .lab-nav:first-of-type {
+  margin-top: var(--s-2);
+}
+
+.lesson-report-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding-top: var(--s-3);
+  border-top: var(--hair);
+}
+
+#didExportStatus:empty {
+  display: none;
+}
+
+/* Hints, checks and observations: margin notes, not alerts. */
+.lab-rail__evidence {
+  display: grid;
+  gap: var(--s-3);
+  padding-top: var(--s-2);
+}
+
+.lab-evidence-block,
+.lab-phase__result,
+.lab-phase__observations {
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink);
+}
+
+.lab-evidence-block:empty {
+  display: none;
+}
+
+#didHintList {
+  border-left-color: var(--caution);
+}
+
+#didCheckList {
+  display: grid;
+  gap: var(--s-1);
+  border-left-color: var(--ink);
+}
+
+.check-item {
+  font-weight: 600;
+}
+
+.check-pass {
+  color: var(--pass);
+}
+
+.check-pass::before {
+  content: "✓ ";
+}
+
+.check-fail::before {
+  content: "○ ";
+}
+
+#didFormulaList {
+  font-size: var(--t-sm);
+}
+
+.lab-rail__status {
+  color: var(--ink-2);
+}
+
+/* Preset comparison (A against a teaching preset) */
+.lab-rail__compare {
+  padding-top: var(--s-2);
+  border-top: var(--hair);
+}
+
+.lab-compare__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.lab-compare__row .inline {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 120px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lab-compare__out {
+  max-height: 220px;
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3);
+  overflow: auto;
+  border: var(--hair);
+  background: var(--paper-sunk);
+  font-size: var(--t-xs);
+  white-space: pre-wrap;
+}
+
+.lab-compare__out:empty {
+  display: none;
+}

@@ -1,3 +1,11 @@
-/* Signal & Ink is the Browser's single presentation cascade. */
+/* Plate & Figure is the Browser's single presentation cascade. */
 
-@import url("./otherlight-instrument.css");
+@import url("./plate-figure/fonts.css");
+@import url("./plate-figure/tokens.css");
+@import url("./plate-figure/controls.css");
+@import url("./plate-figure/masthead.css");
+@import url("./plate-figure/evidence.css");
+@import url("./plate-figure/margin.css");
+@import url("./plate-figure/labs.css");
+@import url("./plate-figure/scientific.css");
+@import url("./plate-figure/responsive.css");

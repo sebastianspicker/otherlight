@@ -1,0 +1,37 @@
+/*
+ * Plate & Figure — self-hosted, subset variable faces (SIL OFL 1.1; see fonts/).
+ * STIX Two Text sets headings, captions, lesson prose and equations;
+ * Atkinson Hyperlegible Next sets the interface; its Mono sets readouts.
+ */
+
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/stix-two-text.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/stix-two-text-italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-mono.woff2") format("woff2");
+}

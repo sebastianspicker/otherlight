@@ -1,0 +1,357 @@
+/*
+ * Plate & Figure — masthead, running head, experiment title and phases,
+ * scenario strip, status line, and colophon.
+ */
+
+.app-header,
+.observatory-heading,
+.mainGrid,
+.command-strip,
+.observatory-footer,
+.fatal-error {
+  width: min(100% - 2 * var(--gutter), var(--page-max) - 2 * var(--gutter));
+  margin-inline: auto;
+}
+
+/* Masthead */
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
+  min-height: 72px;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--ink);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  color: var(--ink);
+}
+
+.brand-lockup h1 {
+  font-size: var(--t-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.workspace-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-5);
+}
+
+/* The evidence-kind switch is a segmented control; the workspace switch is tabs. */
+.profile-nav {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: var(--hair-strong);
+  border-radius: var(--r-control);
+}
+
+.profile-nav__item {
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.profile-nav__item:hover {
+  background: var(--paper-sunk);
+  color: var(--ink);
+}
+
+.profile-nav__item[aria-current="page"],
+.profile-nav__item[aria-current="page"]:hover {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.mode-nav {
+  display: inline-flex;
+  gap: var(--s-4);
+}
+
+.mode-nav__item {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.mode-nav__item:hover {
+  border-bottom-color: var(--rule-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.mode-nav__item[aria-current="page"],
+.mode-nav__item[aria-current="page"]:hover {
+  border-bottom-color: var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+
+.workspace-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+/* Running head: always states what kind of evidence is on screen. */
+.running-head {
+  margin: 0;
+  padding: var(--s-2) 0;
+  border-bottom: var(--hair);
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-base);
+  line-height: 1.4;
+}
+
+.running-head em {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Experiment title and phase stepper */
+.observatory-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--s-4) var(--col-gap);
+  padding: var(--s-7) 0 var(--s-6);
+}
+
+.observatory-heading h2 {
+  margin-top: var(--s-1);
+  font-size: var(--t-display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: var(--lh-tight);
+}
+
+#observatorySubtitle {
+  margin: var(--s-2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-md);
+}
+
+.experiment-phases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: min(100%, 480px);
+}
+
+.experiment-phases button {
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: var(--s-2) var(--s-4) 0 0;
+  border: 0;
+  border-top: 2px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--t-base);
+}
+
+.scenario-source__tabs button {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.experiment-phases button:hover {
+  border-top-color: var(--ink-2);
+  background: transparent;
+  color: var(--ink);
+}
+
+.scenario-source__tabs button:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+.experiment-phases button[aria-current="step"] {
+  border-top-color: var(--pencil);
+  color: var(--ink);
+}
+
+.experiment-phases button:disabled {
+  border-top-style: dashed;
+  border-top-color: var(--rule);
+}
+
+.scenario-source__tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+
+.phase-index {
+  color: var(--ink-3);
+  font-family: var(--font-serif);
+  font-size: var(--t-lg);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.experiment-phases button[aria-current="step"] .phase-index {
+  color: var(--pencil);
+}
+
+/* Scenario strip and status line */
+.command-strip {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+  padding: var(--s-3) 0 var(--s-4);
+  border-top: 1px solid var(--ink);
+}
+
+.experiment-tools > summary {
+  font-family: var(--font-serif);
+  font-size: var(--t-lg);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.command-strip__left {
+  padding: var(--s-4) 0 var(--s-2);
+}
+
+.command-strip__context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  align-items: start;
+  gap: var(--s-4) var(--col-gap);
+}
+
+.command-strip__context > .inline,
+.scenario-source__panel label {
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.command-strip__context > [data-product-mode="lab"] {
+  grid-column: 1;
+}
+
+.context-description {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.scenario-source {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.scenario-source__tabs {
+  display: flex;
+  gap: var(--s-4);
+}
+
+.scenario-source__panel {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.scenario-source select,
+.command-strip__context select {
+  width: 100%;
+  min-width: 0;
+}
+
+.scenario-source__caption {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-xs);
+}
+
+.app-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  overflow-wrap: anywhere;
+}
+
+.app-status::before {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--ink);
+  content: "";
+}
+
+#appRetryBtn {
+  min-height: 28px;
+  padding: 0 var(--s-2);
+  font-size: var(--t-sm);
+}
+
+/* Colophon */
+.observatory-footer {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
+  margin-bottom: var(--s-6);
+  padding-top: var(--s-4);
+  border-top: var(--hair);
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+}
+
+.observatory-footer p {
+  margin: 0;
+}
+
+.observatory-footer__topics {
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-base);
+  font-style: italic;
+}
+
+.fatal-error {
+  margin-block: var(--s-5);
+  padding: var(--s-4) var(--s-5);
+  border-left: 3px solid var(--fault);
+  background: var(--fault-wash);
+  color: var(--ink);
+}
+
+.fatal-error h2 {
+  font-size: var(--t-xl);
+}

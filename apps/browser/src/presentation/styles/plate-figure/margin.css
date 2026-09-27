@@ -1,0 +1,469 @@
+/*
+ * Plate & Figure — the margin column (controlled inputs, equation, results)
+ * and the model tools below the spread (parameters, display, O-C history).
+ */
+
+.panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.radius-comparison h2,
+.radius-relationship h2 {
+  margin-bottom: var(--s-4);
+  font-size: var(--t-xl);
+  line-height: 1.15;
+}
+
+#radiusComparisonForm {
+  display: grid;
+  gap: var(--s-3);
+}
+
+/* Trace keys repeat the figure's line styles so A and B never rely on color. */
+.trace-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.trace-key__line {
+  width: 22px;
+  border-top: 2px dashed var(--trace-a);
+}
+
+.trace-b {
+  color: var(--trace-b);
+}
+
+.trace-b .trace-key__line {
+  border-top: 2.5px solid var(--trace-b);
+}
+
+.radius-input-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 2.2em;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.radius-input-row input {
+  width: 100%;
+  min-height: 48px;
+  font-family: var(--font-mono);
+  font-size: var(--t-lg);
+  text-align: right;
+}
+
+.unit {
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  font-style: italic;
+}
+
+#radiusBaselineHelp {
+  padding-left: calc(56px + var(--s-3));
+}
+
+.radius-conditions {
+  display: grid;
+  margin: var(--s-2) 0;
+  border-top: var(--hair);
+}
+
+.radius-conditions > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-bottom: var(--hair);
+}
+
+.radius-conditions dt {
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.radius-conditions dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#observatoryCompareBtn {
+  width: 100%;
+  min-height: 48px;
+  font-size: var(--t-md);
+}
+
+.comparison-status {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.comparison-status:empty {
+  display: none;
+}
+
+#observatoryClearComparisonBtn {
+  justify-self: start;
+  font-size: var(--t-sm);
+}
+
+.radius-assumptions {
+  margin-top: var(--s-3);
+}
+
+.radius-assumptions > .help {
+  margin-top: var(--s-2);
+}
+
+/* The relationship: equation set like a displayed formula, results as a table. */
+.radius-equation {
+  margin: 0 0 var(--s-5);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: clamp(30px, 1.4rem + 1vw, 40px);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.radius-equation sub,
+.radius-equation sup {
+  font-size: 0.55em;
+  font-style: normal;
+}
+
+.radius-results {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.radius-results caption {
+  padding-bottom: var(--s-2);
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-base);
+  font-style: italic;
+  text-align: left;
+}
+
+.radius-results tr {
+  border-top: var(--hair);
+}
+
+.radius-results tr:last-child {
+  border-bottom: var(--hair);
+}
+
+.radius-results th,
+.radius-results td {
+  padding: var(--s-2) 0;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.radius-results td {
+  font-family: var(--font-mono);
+  font-size: var(--t-xl);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.radius-ratio {
+  margin: var(--s-3) 0 var(--s-2);
+  font-size: var(--t-base);
+}
+
+.radius-ratio ~ .help {
+  margin-top: var(--s-2);
+}
+
+#observatoryInterpretBtn {
+  margin-top: var(--s-4);
+  font-size: var(--t-md);
+}
+
+/* Model tools: two disclosed columns under the spread. */
+.observatory-model-tools {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0 var(--col-gap);
+  border-top: 1px solid var(--ink);
+}
+
+.model-tools {
+  padding: var(--s-3) 0;
+}
+
+.model-tools > summary {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--t-lg);
+  font-weight: 500;
+}
+
+.model-tools[open] > :not(summary) {
+  margin-top: var(--s-4);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.panel-heading h2,
+.display-controls > h2,
+.model-boundary h2,
+.oc-history > h3 {
+  font-size: var(--t-lg);
+}
+
+.panel-heading__status {
+  padding: 1px var(--s-2);
+  border: var(--hair-strong);
+  border-radius: 2px;
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+}
+
+.parameter-intro {
+  margin: var(--s-1) 0 var(--s-3);
+}
+
+.params,
+#paramForm {
+  display: grid;
+  gap: var(--s-3);
+}
+
+#quickControlsFieldset {
+  padding: 0;
+  border: 0;
+}
+
+.quickControlsGrid {
+  display: grid;
+}
+
+.quickControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  padding: var(--s-3) 0 var(--s-3) var(--s-3);
+  border-bottom: var(--hair);
+  border-left: 2px solid transparent;
+}
+
+.quickControl:last-child {
+  border-bottom: 0;
+}
+
+.quickControlHeader {
+  display: contents;
+}
+
+.quickControlLabel {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quickControlValue {
+  color: var(--ink);
+  font-size: var(--t-sm);
+  text-align: right;
+}
+
+.quickControl > input[type="range"] {
+  grid-column: 1 / -1;
+}
+
+.quickControl > .help {
+  display: none;
+  grid-column: 1 / -1;
+}
+
+.quickControl:focus-within > .help {
+  display: block;
+}
+
+.quickControlCheckbox input[type="checkbox"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.quickControl:focus-within,
+.quickControl--focus {
+  border-left-color: var(--pencil);
+}
+
+.quickControl--dimmed {
+  opacity: 0.5;
+}
+
+#quickControlsFieldset > legend,
+#quickControlsFieldset > .help {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.advanced-parameter-drawer {
+  border-top: var(--hair);
+}
+
+.advanced-parameter-drawer > summary {
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.advanced-parameter-drawer > summary .mono {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: var(--t-xs);
+  font-weight: 400;
+}
+
+.advanced-parameter-drawer__content,
+.paramCols {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.paramCol {
+  min-width: 0;
+}
+
+.paramActions {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--s-3) 0;
+  border-bottom: var(--hair);
+  background: var(--paper);
+}
+
+#paramForm label {
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+#paramForm label.inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+#paramForm :is(input[type="number"], input[type="text"], select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  font-size: 14px;
+}
+
+#paramForm label.inline > :is(input[type="number"], input[type="text"], select) {
+  width: auto;
+  max-width: 60%;
+}
+
+.sidebar .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sidebar .slider-rows {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.slider-rows .row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(90px, 140px);
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-2) 0;
+  border-bottom: var(--hair);
+}
+
+.slider-rows .name {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  overflow-wrap: anywhere;
+}
+
+.parameter-ranges > summary {
+  min-height: 44px;
+}
+
+/* Display, model boundary and O-C history */
+.display-controls,
+.model-boundary,
+.oc-history {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+  border-bottom: var(--hair);
+}
+
+.display-controls .row,
+.oc-history .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  align-items: end;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.display-controls .inline,
+.oc-history .inline {
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.display-controls .inline:has(input[type="checkbox"]) {
+  display: flex;
+  min-height: var(--control-h);
+}
+
+.model-boundary {
+  padding: var(--s-4);
+  border: 0;
+  border-left: 3px solid var(--ink);
+  background: var(--paper-sunk);
+}
+
+.model-boundary .eyebrow {
+  font-size: var(--t-base);
+}
+
+.oc-history .scientific-figure {
+  margin-top: var(--s-2);
+  border: var(--hair);
+}
+
+.oc-history figcaption {
+  padding: var(--s-2) var(--s-3);
+  border-top: var(--hair);
+}
