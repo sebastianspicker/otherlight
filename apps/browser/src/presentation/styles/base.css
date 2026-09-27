@@ -5,25 +5,25 @@
   --bg-1: #0a1116;
   --bg-2: #0e1b24;
   --bg-3: #101622;
-  --panel: rgba(12, 20, 28, 0.82);
-  --panel-strong: rgba(16, 27, 38, 0.92);
+  --panel: rgb(12 20 28 / 82%);
+  --panel-strong: rgb(16 27 38 / 92%);
   --panel2: #14212e;
   --text: #eef4f8;
   --text-secondary: #d0dbe5;
   --muted: #a9b8c6;
-  --stroke: rgba(255, 255, 255, 0.2);
-  --stroke2: rgba(255, 255, 255, 0.12);
-  --focus: rgba(46, 195, 177, 0.55);
+  --stroke: rgb(255 255 255 / 20%);
+  --stroke2: rgb(255 255 255 / 12%);
+  --focus: rgb(46 195 177 / 55%);
   --accent: #2ec3b1;
-  --accent-dim: rgba(46, 195, 177, 0.15);
+  --accent-dim: rgb(46 195 177 / 15%);
   --accent-2: #f5c26b;
-  --accent-2-dim: rgba(245, 194, 107, 0.12);
+  --accent-2-dim: rgb(245 194 107 / 12%);
   --danger: #e85d5d;
   --success: #4ade80;
 
   /* --- Shadows --- */
-  --shadow: 0 22px 60px rgba(3, 8, 12, 0.55);
-  --shadow-sm: 0 4px 16px rgba(3, 8, 12, 0.35);
+  --shadow: 0 22px 60px rgb(3 8 12 / 55%);
+  --shadow-sm: 0 4px 16px rgb(3 8 12 / 35%);
 
   /* --- Border radii --- */
   --radius-sm: 8px;
@@ -41,8 +41,8 @@
 
   /* --- Typography --- */
   --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", "Noto Sans", sans-serif;
-  --font-heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-mono: "SF Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", georgia, serif;
+  --font-mono: "SF Mono", "SFMono-Regular", menlo, monaco, consolas, "Liberation Mono", monospace;
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-base: 13px;
@@ -73,7 +73,7 @@ body {
 body {
   font-family: var(--font-body);
   background: radial-gradient(1200px 800px at 15% 10%, rgb(46 195 177 / 15%), transparent 55%),
-    radial-gradient(900px 600px at 80% 0%, rgba(245, 194, 107, 0.1), transparent 60%),
+    radial-gradient(900px 600px at 80% 0%, rgb(245 194 107 / 10%), transparent 60%),
     linear-gradient(180deg, var(--bg-1), var(--bg-2) 50%, var(--bg-3));
   background-attachment: fixed;
   color: var(--text);
@@ -90,7 +90,7 @@ a {
 }
 
 a:hover {
-  text-decoration-color: currentColor;
+  text-decoration-color: currentcolor;
 }
 
 body::before,
@@ -103,13 +103,13 @@ body::after {
 }
 
 body::before {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgb(255 255 255 / 8%) 1px, transparent 1px);
   background-size: 120px 120px;
   opacity: 0.2;
 }
 
 body::after {
-  background: radial-gradient(900px 600px at 70% 80%, rgba(14, 27, 36, 0.85), transparent 60%);
+  background: radial-gradient(900px 600px at 70% 80%, rgb(14 27 36 / 85%), transparent 60%);
 }
 
 /* ---------------------------------
@@ -161,7 +161,7 @@ summary:focus-visible {
   padding: 20px;
 }
 
-@media (min-width: 680px) {
+@media (width >= 680px) {
   #app {
     padding: 24px;
   }
@@ -173,26 +173,25 @@ summary:focus-visible {
 .app-header {
   padding: 20px 24px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, rgba(20, 33, 46, 0.92), rgba(10, 17, 22, 0.94));
+  background: linear-gradient(135deg, rgb(20 33 46 / 92%), rgb(10 17 22 / 94%));
   border: 1px solid var(--stroke2);
   box-shadow: var(--shadow);
   margin-bottom: 20px;
 }
 
 .app-header h1 {
-  margin: 0 0 6px 0;
+  margin: 0 0 6px;
   font-family: var(--font-heading);
   font-size: clamp(20px, 2.2vw, 32px);
   font-weight: 700;
   letter-spacing: 0.3px;
   background: linear-gradient(135deg, var(--text) 40%, var(--accent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .app-header > .help {
-  margin: 0 0 10px 0;
+  margin: 0 0 10px;
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.5;
@@ -254,7 +253,7 @@ summary:focus-visible {
 }
 
 .panel h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 10px;
   font-family: var(--font-heading);
   font-size: var(--font-size-md);
   color: var(--text-secondary);
@@ -313,21 +312,21 @@ summary:focus-visible {
   gap: 20px;
 }
 
-@media (min-width: 1100px) {
+@media (width >= 1100px) {
   .mainGrid {
     grid-template-columns: minmax(680px, 1fr) 380px;
     align-items: start;
   }
 }
 
-@media (min-width: 1100px) {
+@media (width >= 1100px) {
   .sidebar {
     position: sticky;
     top: 12px;
     max-height: calc(100vh - 24px);
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+    scrollbar-color: rgb(255 255 255 / 12%) transparent;
   }
 
   /* WebKit scrollbar styling for sidebar */
@@ -340,12 +339,12 @@ summary:focus-visible {
   }
 
   .sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgb(255 255 255 / 12%);
     border-radius: 999px;
   }
 
   .sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgb(255 255 255 / 20%);
   }
 }
 
@@ -380,10 +379,10 @@ canvas {
   display: block;
   border-radius: var(--radius-md);
   image-rendering: auto;
-  background: rgba(6, 10, 16, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgb(6 10 16 / 90%);
+  border: 1px solid rgb(255 255 255 / 6%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    inset 0 0 0 1px rgb(255 255 255 / 2%),
     var(--shadow-sm);
 }
 
@@ -406,13 +405,13 @@ fieldset {
   border: 1px solid var(--stroke2);
   border-radius: var(--radius-md);
   padding: 12px;
-  margin: 12px 0 0 0;
-  background: rgba(10, 18, 26, 0.5);
+  margin: 12px 0 0;
+  background: rgb(10 18 26 / 50%);
   transition: border-color var(--transition-normal);
 }
 
 fieldset:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgb(255 255 255 / 16%);
 }
 
 legend {
@@ -430,13 +429,13 @@ legend {
   gap: 8px;
 }
 
-@media (min-width: 680px) {
+@media (width >= 680px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 980px) {
+@media (width >= 980px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

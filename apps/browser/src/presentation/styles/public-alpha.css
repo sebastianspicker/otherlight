@@ -1,7 +1,7 @@
 /* Public-alpha structural layer. Quiet Observatory owns the final hybrid chrome. */
-@import "./public-alpha/foundations.css";
-@import "./public-alpha/header-context.css";
-@import "./public-alpha/workspace.css";
-@import "./public-alpha/figures-controls.css";
-@import "./public-alpha/responsive.css";
-@import "./public-alpha/dark-theme.css";
+@import url("./public-alpha/foundations.css");
+@import url("./public-alpha/header-context.css");
+@import url("./public-alpha/workspace.css");
+@import url("./public-alpha/figures-controls.css");
+@import url("./public-alpha/responsive.css");
+@import url("./public-alpha/dark-theme.css");

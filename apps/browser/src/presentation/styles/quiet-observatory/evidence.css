@@ -1,214 +1,250 @@
-/*
- * Quiet Observatory — evidence column: figures, dark plots, readouts.
- */
-
+/* Real scene and light curve aligned with their model controls. */
 .mainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 2.2fr) minmax(320px, 1fr);
+  gap: 16px 32px;
+  margin: 0 3.2%;
   align-items: start;
-  margin: 12px 16px 16px;
-  background: var(--shell);
 }
 
-.mainLeft {
-  display: grid;
+.sidebar,
+.sidebar-primary {
+  display: contents;
+}
+
+.sidebar-events {
   min-width: 0;
-  gap: 12px;
 }
 
-.vizStack {
+.observatory-model-tools {
+  grid-column: 1 / -1;
   display: grid;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.sidebar .lab-rail {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+body[data-observatory-phase="predict"] .lab-rail,
+body[data-observatory-phase="explain"] .lab-rail {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  padding-left: 32px;
+  border-left: 1px solid var(--hairline);
+}
+
+.mainLeft,
+.panel.vizStack {
+  display: contents;
+}
+
+.scientific-figure {
+  min-width: 0;
+  margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
 }
 
-/* Figure chrome is white; plot surface is dark */
-.scientific-figure {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  overflow: hidden;
-  box-shadow: none;
+.sky-figure {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.light-curve-figure {
+  grid-column: 1;
+  grid-row: 2;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
 }
 
 .figure-heading {
   display: flex;
-  min-height: 40px;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  margin: 0;
-  padding: 10px 12px 8px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--surface-soft);
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .figure-heading h2 {
   margin: 0;
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 22px;
+  font-weight: 450;
 }
 
 .figure-key {
-  margin-right: auto;
   color: var(--text-3);
   font-size: 12px;
 }
 
-/* Event emphasis chips — gold only here */
-.figure-heading .chip,
-.runtime-readouts .chip-event,
-.chip-event {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11.5px;
-  font-weight: 550;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid rgb(196 138 31 / 28%);
-  background: var(--signal-soft);
-  color: #7a4f0a;
+.figure-heading button {
+  margin-left: auto;
+  border-color: transparent;
+  color: var(--text-2);
+  font-size: 12px;
 }
 
-.scientific-figure canvas,
-canvas {
+canvas,
+.scientific-figure canvas {
   display: block;
   width: 100%;
   border: 0;
-  border-radius: 0;
   background: var(--plot);
-  box-shadow: none;
 }
 
 #skyCanvas {
-  min-height: 280px;
-  aspect-ratio: 16 / 9;
-  height: auto;
+  height: 280px;
+}
+
+#skyCanvas.skyCanvas--hidden {
+  visibility: hidden;
 }
 
 #lcCanvas {
-  min-height: 200px;
-  aspect-ratio: 16 / 5;
-  height: auto;
+  height: 245px;
 }
 
 #ocCanvas {
-  min-height: 180px;
-  aspect-ratio: 4 / 3;
-  height: auto;
-  background: var(--plot);
-}
-
-.scientific-figure--compact #ocCanvas {
-  min-height: 150px;
+  height: 190px;
 }
 
 .scientific-figure figcaption {
-  min-height: 20px;
-  margin: 0;
-  padding: 8px 12px 10px;
-  border-top: 1px solid var(--border-soft);
-  color: var(--text-2);
-  font-size: 12.5px;
-  text-align: left;
-  background: var(--surface);
-  text-wrap: pretty;
+  padding: 8px 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.scientific-figure figcaption strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* Compact runtime readouts under figures */
 .runtime-readouts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 12px 0;
 }
 
 .runtime-readouts > span {
   display: grid;
-  min-width: 0;
-  min-height: 64px;
-  align-content: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-right: 1px solid var(--border-soft);
+  gap: 4px;
 }
 
-.runtime-readouts > span:last-child,
-.runtime-readouts > span:nth-child(4) {
-  border-right: 0;
-}
-
-.runtime-readouts > span:nth-child(n + 5) {
-  min-height: 40px;
-  border-top: 1px solid var(--border-soft);
-}
-
-.runtime-readouts .readout-label {
+.readout-label {
   color: var(--text-3);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 550;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.runtime-readouts .mono {
-  overflow: hidden;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: clamp(14px, 1.4vw, 20px);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12px;
 }
 
 .runtime-warning {
-  min-height: 1.5em;
+  grid-column: 1 / -1;
+  margin: 0;
   color: var(--warning);
-  font-weight: 600;
 }
 
-.lesson-progress {
-  margin: 8px 0 4px;
-  color: var(--action-ink);
+.runtime-warning:empty {
+  display: none;
+}
+
+.figure-diagnostics {
+  margin: 0;
+}
+
+.figure-diagnostics > summary {
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.radius-relationship {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  padding: 14px 0 12px 32px;
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+
+.radius-relationship h2,
+.radius-comparison h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 450;
+}
+
+.radius-relationship table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 18px;
+}
+
+.radius-relationship th,
+.radius-relationship td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  font-weight: 450;
+}
+
+.radius-relationship p {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  color: var(--text-2);
+}
+
+.observatory-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 3.2%;
+  padding: 20px 0;
+  color: var(--text-3);
   font-size: 13px;
-  font-weight: 700;
 }
 
-@media (prefers-color-scheme: dark) {
-  .chip-event {
-    border-color: rgb(211 154 50 / 35%);
-    background: var(--signal-soft);
-    color: #f1cd86;
-  }
+.radius-relationship .radius-equation {
+  margin: 0 0 12px;
+  line-height: 1.1;
+  color: var(--text);
+  font-family: Georgia, serif;
+  font-size: 42px;
+  font-style: italic;
+  text-align: center;
+}
 
-  .scientific-figure canvas,
-  canvas,
-  #skyCanvas,
-  #lcCanvas,
-  #ocCanvas {
-    background: var(--plot);
+.radius-results caption {
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12px;
+  text-align: left;
+}
+
+.radius-relationship .text-action {
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid currentcolor;
+  border-radius: 0;
+  background: transparent;
+  color: var(--action);
+  font-size: 16px;
+  font-weight: 450;
+}
+
+@media (width > 760px) {
+  body[data-observatory-phase="predict"] .radius-relationship,
+  body[data-observatory-phase="explain"] .radius-relationship {
+    grid-row: 3;
+  }
+}
+
+@media (width > 760px) {
+  body[data-observatory-system="binary"] .sidebar .lab-rail {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    padding-left: 24px;
+    border-left: 1px solid var(--hairline);
   }
 }

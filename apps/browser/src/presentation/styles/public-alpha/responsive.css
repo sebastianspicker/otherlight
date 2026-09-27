@@ -1,5 +1,5 @@
 /* Adapts the public-alpha shell, workspace, and controls across compact viewports. */
-@media (max-width: 767px) {
+@media (width <= 767px) {
   #app {
     padding: 8px;
   }

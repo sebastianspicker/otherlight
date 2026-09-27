@@ -4,9 +4,9 @@
 
 .panel {
   margin: 0;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
   background: var(--surface);
   box-shadow: none;
   backdrop-filter: none;
@@ -20,55 +20,60 @@
   text-transform: none;
 }
 
-.sidebar {
-  position: sticky;
-  top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  max-height: calc(100vh - 24px);
-  padding: 0;
+.sidebar .panel {
+  padding: 16px 0;
   border: 0;
   background: transparent;
-  overflow: auto;
-  scrollbar-width: thin;
 }
 
-.panel.sidebar,
-.sidebar.panel {
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.panel.sidebar > .panel,
-.sidebar > .panel {
-  margin: 0;
-  padding: 14px;
-  border: 0;
-  border-top: 1px solid var(--border-soft);
-  border-radius: 0;
-  background: var(--surface);
-}
-
-.panel.sidebar > .panel:first-child,
-.sidebar > .panel:first-child {
-  border-top: 0;
-}
-
-.sidebar-primary,
-.sidebar-events {
-  display: grid;
+.radius-comparison {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  gap: 12px;
-  align-content: start;
+  padding: 0 0 8px 32px;
+  border-left: 1px solid var(--hairline);
 }
 
-.sidebar-events {
-  position: static;
+.radius-comparison form {
+  display: grid;
+  gap: 8px;
+}
+
+.radius-comparison label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 18px;
+}
+
+.radius-comparison input {
+  font-size: 20px;
+  text-align: center;
+}
+
+.radius-comparison button[type="submit"] {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border-color: #f9f0e1;
+  background: #f9f0e1;
+  color: #0b1319;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.radius-comparison dl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 2px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  font-size: 16px;
+}
+
+.radius-comparison dd {
+  margin: 0;
 }
 
 .panel-heading {
@@ -76,19 +81,19 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2);
 }
 
 .panel-heading h2,
 .model-boundary h2 {
   margin: 2px 0 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 650;
 }
 
 .eyebrow {
   margin: 0;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -97,7 +102,7 @@
 
 .panel-heading__status {
   padding: 3px 8px;
-  border: 1px solid rgb(8 127 115 / 22%);
+  border: 1px solid rgb(11 122 111 / 22%);
   border-radius: 999px;
   background: var(--action-soft);
   color: var(--action-ink);
@@ -108,11 +113,11 @@
 .params,
 #paramForm {
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .params {
-  padding: 14px;
+  padding: var(--space-4) 0;
 }
 
 #quickControlsFieldset {
@@ -122,6 +127,47 @@
   background: transparent;
 }
 
+.help {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.inline {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+#paramForm label {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.quickControl > .help {
+  display: none;
+}
+
+legend {
+  padding: 0 5px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quickControl:focus-within > .help {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+.display-controls .row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 #quickControlsFieldset > legend,
 #quickControlsFieldset > .help {
   position: absolute;
@@ -129,7 +175,7 @@
   height: 1px;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
 }
 
 .quickControlsGrid {
@@ -140,11 +186,11 @@
 .quickControl {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 5px 12px;
+  gap: 3px var(--space-3);
   align-items: center;
-  padding: 11px 0;
+  padding: 10px 0;
   border: 0;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--hairline);
   background: transparent;
 }
 
@@ -164,11 +210,11 @@
 
 .quickControlValue {
   min-width: 5.5rem;
-  padding: 3px 7px;
-  border: 1px solid var(--border-soft);
+  padding: 2px 6px;
+  border: 0;
   border-radius: var(--radius-sm);
-  color: var(--text-2);
-  background: var(--shell);
+  color: var(--text);
+  background: var(--surface-soft);
   font-family: var(--mono);
   font-size: 12px;
   text-align: right;
@@ -177,10 +223,7 @@
 .quickControl > input[type="range"] {
   grid-column: 1 / -1;
   width: 100%;
-}
-
-.quickControl > .help {
-  display: none;
+  height: 24px;
 }
 
 .quickControlCheckbox {
@@ -203,12 +246,19 @@
 
 .advanced-parameter-drawer {
   margin: 4px 0 0;
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid var(--hairline);
+}
+
+details > summary {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: normal;
 }
 
 .advanced-parameter-drawer > summary {
   display: flex;
-  min-height: 44px;
+  min-height: 36px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -223,7 +273,7 @@
 
 .advanced-parameter-drawer > summary::after {
   content: "⌄";
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .advanced-parameter-drawer[open] > summary::after {
@@ -232,7 +282,7 @@
 
 .advanced-parameter-drawer > summary .mono {
   margin-left: auto;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 10px;
   text-transform: uppercase;
 }
@@ -244,14 +294,12 @@
 }
 
 .advanced-parameter-drawer__content {
-  max-height: 62dvh;
   padding: 10px 0 2px;
-  overflow: auto;
 }
 
 fieldset {
   margin: 0;
-  padding: 12px;
+  padding: var(--space-2);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   background: var(--surface-soft);
@@ -261,18 +309,11 @@ fieldset:hover {
   border-color: var(--border);
 }
 
-legend {
-  padding: 0 5px;
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .display-controls > h2,
-#ocSection > h3,
-.sidebar [data-product-mode="lab"] > h3 {
+.sidebar [data-product-mode="lab"] > h3,
+#ocSection > h3 {
   margin: 0 0 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -280,27 +321,18 @@ legend {
 }
 
 .display-controls .row,
-#ocSection .row,
-.sidebar [data-product-mode="lab"] .row {
+.sidebar [data-product-mode="lab"] .row,
+#ocSection .row {
   display: grid;
   gap: 8px;
 }
 
 .display-controls .inline,
-#ocSection .inline,
-.sidebar [data-product-mode="lab"] .inline {
+.sidebar [data-product-mode="lab"] .inline,
+#ocSection .inline {
   display: grid;
   gap: 4px;
-}
-
-.display-controls .inline,
-#ocSection .inline,
-.sidebar [data-product-mode="lab"] .inline,
-#paramForm label,
-.help,
-.inline,
-details > summary {
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 12.5px;
   line-height: 1.45;
   white-space: normal;
@@ -308,7 +340,7 @@ details > summary {
 
 #ocSection {
   min-width: 0;
-  padding: 12px;
+  padding: var(--space-3);
 }
 
 #ocSection .scientific-figure {
@@ -327,4 +359,137 @@ details > summary {
   color: var(--text-2);
   font-size: 13px;
   white-space: normal;
+}
+
+.quickControl:focus-within {
+  border-bottom-color: var(--action);
+}
+
+.model-boundary {
+  display: grid;
+  gap: 8px;
+}
+
+.paramActions {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar .paramCols {
+  grid-template-columns: 1fr;
+}
+
+@media (width >= 1001px) {
+  .quickControl:not(.quickControlCheckbox) {
+    grid-template-columns: minmax(100px, 1fr) 72px 72px;
+    column-gap: 8px;
+    min-height: 58px;
+  }
+
+  .quickControlValue {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .quickControl > input[type="range"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+.sidebar .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sidebar #sliderRoot {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar #sliderRoot .row {
+  grid-template-columns: minmax(0, 1fr) minmax(80px, 110px);
+}
+
+.sidebar :is(input[type="number"], input[type="text"], textarea, select) {
+  width: 100%;
+  min-width: 0;
+}
+
+#paramForm label:not(.inline, .quickControl) {
+  display: block;
+}
+
+#paramForm label:not(.inline, .quickControl) > :is(input, select, textarea) {
+  display: block;
+  margin-top: 4px;
+}
+
+.parameter-ranges > summary {
+  padding: 12px 0;
+  color: var(--text-2);
+  font-weight: 600;
+  list-style: disclosure-closed;
+}
+
+.model-tools > summary {
+  padding: 8px 0;
+}
+
+.radius-comparison details > summary {
+  padding: 10px 0;
+  font-size: 15px;
+}
+
+.parameter-ranges[open] > summary {
+  list-style: disclosure-open;
+}
+
+.radius-conditions > div {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+}
+
+.radius-input-row > span:first-child {
+  min-width: 24px;
+  font-size: 22px;
+}
+
+.trace-a {
+  color: #8ed7ff;
+}
+
+.trace-b {
+  color: #ffd175;
+}
+
+.comparison-status {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.comparison-status:empty {
+  display: none;
+}
+
+body[data-observatory-phase="predict"] .radius-comparison,
+body[data-observatory-phase="explain"] .radius-comparison {
+  display: none;
+}
+
+#observatoryClearComparisonBtn {
+  min-height: 28px;
+  width: auto;
+  padding: 0;
+  border: 0;
+  color: var(--text-2);
+  background: transparent;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }

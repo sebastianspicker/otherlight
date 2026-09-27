@@ -86,6 +86,14 @@
   margin: 0;
 }
 
+.science-scope-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) 1fr;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--stroke2);
+}
+
 .scientific-workspace__header > div:first-child {
   max-width: 74ch;
 }
@@ -123,14 +131,6 @@
   display: grid;
   gap: 8px;
   margin: 12px 0;
-}
-
-.science-scope-list > div {
-  display: grid;
-  grid-template-columns: minmax(120px, 0.45fr) 1fr;
-  gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--stroke2);
 }
 
 .science-scope-list dt {

@@ -1,6 +1,6 @@
 /* Adds responsive and accessibility behavior that spans multiple application features. */
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .app-header > div.help {
     gap: 12px;
     align-items: stretch;
@@ -38,7 +38,7 @@
    Selection styling
    --------------------------------- */
 ::selection {
-  background: rgba(46, 195, 177, 0.3);
+  background: rgb(46 195 177 / 30%);
   color: var(--text);
 }
 
@@ -47,11 +47,11 @@
    --------------------------------- */
 pre.help {
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   padding: 8px 10px;
-  background: rgba(6, 10, 16, 0.5);
+  background: rgb(6 10 16 / 50%);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(255 255 255 / 6%);
   margin-top: 8px;
 }
 
@@ -77,13 +77,13 @@ pre.help {
   gap: 8px;
   padding: 12px;
   border-radius: var(--radius-md);
-  background: rgba(8, 14, 22, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(8 14 22 / 42%);
+  border: 1px solid rgb(255 255 255 / 8%);
 }
 
 .quickControl--focus {
-  border-color: rgba(46, 195, 177, 0.45);
-  box-shadow: 0 0 0 1px rgba(46, 195, 177, 0.2);
+  border-color: rgb(46 195 177 / 45%);
+  box-shadow: 0 0 0 1px rgb(46 195 177 / 20%);
 }
 
 .quickControl--dimmed {
@@ -114,6 +114,16 @@ pre.help {
   justify-content: flex-start;
 }
 
+/* ---------------------------------
+   Noscript fallback
+   --------------------------------- */
+noscript .help {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 15px;
+  color: var(--accent-2);
+}
+
 .quickControlCheckbox .help {
   margin: 0;
 }
@@ -132,27 +142,10 @@ pre.help {
   justify-self: end;
 }
 
-/* ---------------------------------
-   Sidebar button spacing
-   --------------------------------- */
-.sidebar > .row:first-of-type {
-  margin-top: 4px;
-}
-
 /* Readout label styling inside badges */
 .row.readouts .mono > span {
   color: var(--text);
   font-weight: 700;
-}
-
-/* ---------------------------------
-   Noscript fallback
-   --------------------------------- */
-noscript .help {
-  text-align: center;
-  padding: 40px 20px;
-  font-size: 15px;
-  color: var(--accent-2);
 }
 
 /* ---------------------------------
@@ -215,7 +208,7 @@ noscript .help {
 #didLessonStatus {
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
-  background: rgba(6, 10, 16, 0.4);
+  background: rgb(6 10 16 / 40%);
   border: 1px solid var(--stroke2);
   min-height: 2em;
 }
@@ -233,8 +226,8 @@ noscript .help {
 #didFocusList {
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
-  background: rgba(6, 10, 16, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgb(6 10 16 / 32%);
+  border: 1px solid rgb(255 255 255 / 4%);
 }
 
 #didResponseComposer textarea {
@@ -266,14 +259,14 @@ noscript .help {
 #didFormulaList {
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
-  background: rgba(6, 10, 16, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgb(6 10 16 / 35%);
+  border: 1px solid rgb(255 255 255 / 4%);
 }
 
 /* ---------------------------------
    Tablet layout (768px - 1099px)
    --------------------------------- */
-@media (min-width: 768px) and (max-width: 1099px) {
+@media (width >= 768px) and (width <= 1099px) {
   .mainGrid {
     grid-template-columns: 1fr;
     gap: var(--space-xl);
@@ -343,4 +336,11 @@ fieldset > .help:first-of-type {
 .paramActions .row {
   gap: var(--space-sm);
   padding-top: var(--space-sm);
+}
+
+/* ---------------------------------
+   Sidebar button spacing
+   --------------------------------- */
+.sidebar > .row:first-of-type {
+  margin-top: 4px;
 }
