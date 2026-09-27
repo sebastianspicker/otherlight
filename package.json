@@ -29,6 +29,10 @@
   },
   "knip": {
     "entry": [
+      "apps/browser/src/main.ts",
+      "apps/browser/src/composition/chromatic.worker.ts",
+      "apps/browser/vite.config.ts",
+      "apps/browser/vitest.config.ts",
       "apps/browser/tests/**/*.test.ts",
       "apps/demo/app.js",
       "scripts/**/*.{js,mjs}"
@@ -36,38 +40,47 @@
     "project": [
       "apps/browser/src/**/*.ts",
       "apps/browser/tests/**/*.ts",
-      "scripts/**/*.{js,mjs}"
+      "scripts/**/*.{js,mjs}",
+      "apps/browser/*.config.ts"
     ],
     "ignoreBinaries": [
-      "swift"
+      "shellcheck",
+      "swift",
+      "uv"
     ]
   },
   "scripts": {
     "dev": "vite --config apps/browser/vite.config.ts",
-    "start": "vite preview --config apps/browser/vite.config.ts",
     "build": "vite build --config apps/browser/vite.config.ts",
     "build:pages": "vite build --config apps/browser/vite.config.ts --mode github-pages",
+    "build:pages:site": "pnpm build:pages && node scripts/build-pages-demo.mjs dist/demo",
     "build:demo": "node scripts/build-pages-demo.mjs",
     "preview": "vite preview --config apps/browser/vite.config.ts",
     "preview:pages": "vite preview --config apps/browser/vite.config.ts --mode github-pages",
     "clean": "rm -rf dist pages-dist coverage test-results .vite .vitest .vitest-attachments .nyc_output .pytest_cache .ruff_cache .build docs/audit .science-cache services/science/.pytest_cache services/science/.ruff_cache services/science/science_backend/__pycache__ services/science/tests/__pycache__ services/science/build services/science/dist services/science/*.egg-info apps/apple/Packages/*/.build apps/apple/Packages/*/.swiftpm && rm -f .DS_Store docs/.DS_Store",
-    "typecheck": "tsc -p apps/browser/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters",
-    "typecheck:compat": "tsc6 -p apps/browser/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters",
-    "deadcode": "knip --include files,dependencies,unlisted,binaries,unresolved",
-    "duplicates": "jscpd --min-lines 10 --min-tokens 100 --threshold 0.25 apps/browser/src",
+    "typecheck": "tsc -p apps/browser/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc -p apps/browser/tsconfig.worker.json --noEmit --noUnusedLocals --noUnusedParameters",
+    "typecheck:compat": "tsc6 -p apps/browser/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc6 -p apps/browser/tsconfig.worker.json --noEmit --noUnusedLocals --noUnusedParameters",
+    "deadcode": "knip --include files,dependencies,unlisted,binaries,unresolved && pnpm deadcode:exports",
+    "duplicates": "jscpd --min-lines 10 --min-tokens 100 --threshold 0 --format javascript,typescript,python,swift,css,bash --ignore '**/node_modules/**,**/dist/**,**/pages-dist/**,**/coverage/**,**/test-results/**,**/.science-cache/**,**/.venv/**,**/.build/**,**/.swiftpm/**,**/DerivedData/**,**/test/**,**/tests/**,**/__tests__/**,**/generated/**,**/vendor/**,**/contracts/**,**/schema/**,**/schemas/**,**/data/**,**/fixtures/**' apps/browser/src apps/demo scripts services/science/science_backend apps/apple/App apps/apple/MacApp apps/apple/Packages/OtherlightCore/Sources apps/apple/Packages/OtherlightScience/Sources",
     "test": "vitest run --config apps/browser/vitest.config.ts",
     "test:watch": "vitest --config apps/browser/vitest.config.ts",
     "lint": "eslint . && prettier -c .",
+    "lint:styles": "stylelint 'apps/browser/src/**/*.css'",
+    "lint:shell": "shellcheck scripts/*.sh",
     "lint:fix": "eslint . --fix",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
+    "quality:loc": "node scripts/check-source-line-limits.mjs",
+    "quality:complexity": "bash scripts/check-complexity.sh",
+    "quality:static": "pnpm lint && pnpm lint:styles && pnpm lint:shell && pnpm deadcode && pnpm quality:loc && pnpm duplicates",
+    "quality:check": "pnpm quality:static && pnpm quality:complexity",
     "install:ci": "pnpm install --frozen-lockfile",
     "hygiene:public": "node scripts/check-public-surface.mjs",
     "hygiene:docs": "node scripts/check-code-documentation.mjs",
     "hygiene:swift-docs": "node scripts/check-swift-documentation.mjs",
     "architecture:check": "node scripts/check-architecture.mjs",
     "contracts:check": "node scripts/check-contracts.mjs",
-    "ci:lint": "pnpm hygiene:public && pnpm hygiene:docs && pnpm hygiene:swift-docs && pnpm architecture:check && pnpm physics-registry && pnpm lint",
+    "ci:lint": "pnpm hygiene:public && pnpm hygiene:docs && pnpm hygiene:swift-docs && pnpm architecture:check && pnpm physics-registry && pnpm quality:static",
     "ci:typecheck": "pnpm typecheck && pnpm typecheck:compat",
     "ci:test": "pnpm test",
     "ci:build": "pnpm build",
@@ -84,7 +97,10 @@
     "migrate:v4": "node scripts/migrate-systemparams-v4.mjs",
     "native:fixtures": "node scripts/export-native-parity-fixtures.mjs",
     "smoke:served": "bash ./scripts/smoke-served-app.sh",
-    "smoke:pages": "node scripts/smoke-pages-app.mjs"
+    "smoke:pages": "node scripts/smoke-pages-app.mjs",
+    "benchmark:browser": "OTHERLIGHT_BENCHMARK_REPORT=test-results/browser-benchmark.json vitest run --config apps/browser/vitest.config.ts apps/browser/tests/app/preview-performance.test.ts",
+    "deadcode:report": "knip --include exports,types --reporter json --no-exit-code",
+    "deadcode:exports": "node scripts/check-deadcode-exports.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -92,6 +108,8 @@
     "eslint": "10.1.0",
     "jsdom": "29.1.1",
     "prettier": "3.4.2",
+    "stylelint": "17.15.0",
+    "stylelint-config-standard": "40.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "jscpd": "5.0.12",
     "knip": "6.27.0",

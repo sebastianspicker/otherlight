@@ -3,11 +3,12 @@
  * the public candidate, including force-staged paths ignored by Git.
  */
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+import { repositoryFiles } from "./lib/repository-files.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -17,8 +18,9 @@ const forbiddenPaths = [
   /(^|\/)(Thumbs\.db|Desktop\.ini)$/i,
   /^(\.agents|\.claude|\.codacy|\.codegraph|\.codex|\.continue|\.cursor|\.gemini|\.idea|\.kilo|\.serena|\.vscode|\.windsurf)(\/|$)/,
   /^\.impeccable(\/|$)/,
-  /^(?:AGENTS?|CLAUDE|CODEX|GEMINI)\.md$/i,
-  /^\.cursorrules$/,
+  /(^|\/)(?:AGENTS?|CLAUDE|CODEX|GEMINI)\.md$/i,
+  /(^|\/)\.cursorrules$/,
+  /(^|\/)(?:agent-prompts?|ai-prompts?|prompts?)(\/|$)/i,
   /^\.github\/(?:codex|instructions|prompts)(\/|$)/,
   /^\.github\/copilot-instructions\.md$/,
   /^apps\/browser\/playwright\.config\.[cm]?[jt]s$/,
@@ -33,12 +35,15 @@ const forbiddenPaths = [
   /^docs\/screenshots\/(?:manifest\.json|[^/]+\.png)$/,
   /^(deprecated|external|vendor|third-party|third_party|3rdparty)(\/|$)/,
   /(^|\/)(?:refactor[-_]plan|remediation[-_](?:plan|ledger|status)|github[-_]refresh[-_](?:plan|progress)|[^/]*[-_]ledger[^/]*)\.md$/i,
-  /^(?:agent[-_]audit[-_]report|audit|decisions|findings|log)\.md$/i,
-  /^(?:agent[-_](?:context|memory|notes|output|report)|ai[-_](?:audit|notes|report|summary))(?:\..+)?$/i,
-  /^(?:prompt|prompts|scratch|task[-_]report|task[-_]summary|session[-_]summary|conversation[-_]export)\.(?:md|txt|json|jsonl)$/i,
+  /(^|\/)(?:agent[-_]audit[-_]report|audit|decisions|findings|log)\.md$/i,
+  /(^|\/)(?:agent[-_](?:context|memory|notes|output|report)|ai[-_](?:audit|notes|report|summary))(?:\..+)?$/i,
+  /(^|\/)(?:prompt|prompts|scratch|task[-_]report|task[-_]summary|session[-_]summary|conversation[-_]export)\.(?:md|txt|json|jsonl)$/i,
   /(^|\/)(credentials|secrets)\.json$/i,
+  /(^|\/)(?:id_rsa|id_ed25519|\.pypirc|service-account(?:-key)?\.json)$/i,
+  /(^|\/)\.aws\/credentials$/i,
+  /(^|\/)\.docker\/config\.json$/i,
   /(^|\/)\.env(?:\..+)?$/,
-  /(^|\/).+\.(?:arrow|crt|csr|db|feather|ipc|jks|jsonl|key|keystore|log|mobileprovision|p12|parquet|pem|pfx|py[co]|sarif|sqlite)$/i,
+  /(^|\/).+\.(?:arrow|crt|csr|db|der|feather|ipc|jks|jsonl|key|keystore|log|mobileprovision|p8|p12|parquet|pem|pfx|py[co]|sarif|sqlite)$/i,
 ];
 
 const allowedEnvironmentExamples = new Set([".env.example", ".env.sample"]);
@@ -62,22 +67,6 @@ const privateContentPatterns = [
   { label: "Windows absolute user path", pattern: /[A-Za-z]:\\Users\\[^\\\s]+\\/ },
   { label: "private key material", pattern: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/ },
 ];
-
-function publicCandidatePaths() {
-  const output = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  });
-  return (
-    output
-      .split("\0")
-      .filter(Boolean)
-      // `git ls-files` already returns file entries. Avoid statting non-text
-      // metadata here: a policy-protected file must not crash the whole hygiene
-      // scan before path checks and eligible text-content checks can run.
-      .filter((path) => existsSync(resolve(repoRoot, path)))
-  );
-}
 
 function extension(path) {
   const dot = path.lastIndexOf(".");
@@ -112,7 +101,7 @@ function contentInspection(path) {
   }
 }
 
-const candidates = publicCandidatePaths();
+const candidates = repositoryFiles(repoRoot);
 const violations = [];
 const unverified = [];
 for (const path of candidates) {
