@@ -120,7 +120,7 @@ export function renderPlotControls(): string {
 
 export function renderOcSection(): string {
   return `
-      <section class="panel" id="ocSection" data-ui-tier="expert">
+      <section class="panel oc-history" id="ocSection" data-ui-tier="expert">
         <h3>O-C history</h3>
         <div class="row">
           <label class="inline">
@@ -145,7 +145,7 @@ export function renderOcSection(): string {
               <option value="detrended">detrended</option>
             </select>
           </label>
-          <button id="ocExportBtn" type="button">Export CSV</button>
+          <button id="ocExportBtn" type="button">Export CSV<span class="sr-only"> of the O-C history</span></button>
           <button id="ocClearBtn" type="button">Clear history</button>
           <button id="ocUndoClearBtn" type="button" hidden>Undo clear</button>
         </div>

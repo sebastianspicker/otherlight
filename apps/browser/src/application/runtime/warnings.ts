@@ -12,5 +12,11 @@ export function uiWarningText(p: BrowserScenarioDraft): string | undefined {
   const warns = msgs.filter((m) => m.severity === "warn");
   const highestSeverity = warns.length > 0 ? warns : msgs.filter((m) => m.severity === "info");
   if (!highestSeverity.length) return undefined;
-  return highestSeverity.map((m) => m.message).join("; ");
+  // Messages are full sentences; join them as prose rather than with "; ".
+  return highestSeverity.map((m) => asSentence(m.message)).join(" ");
+}
+
+function asSentence(message: string): string {
+  const trimmed = message.trim();
+  return /[.!?)]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }

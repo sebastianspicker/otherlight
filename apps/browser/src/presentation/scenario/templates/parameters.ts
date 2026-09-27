@@ -20,7 +20,7 @@ function renderUiRangesTemplate(): string {
             Default: sliders use physically meaningful ranges with clamping. Override mode permits extreme
             scenarios; hard numerical invariants (e.g. P &gt; 0) are still enforced.
           </p>
-          <div id="sliderRoot" class="grid"></div>
+          <div id="sliderRoot" class="grid slider-rows"></div>
         </fieldset>
   `;
 }

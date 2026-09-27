@@ -57,7 +57,11 @@ export function wireObservatory(deps: ObservatoryDeps) {
     );
     if (source !== params) {
       source = params;
-      inputA.value = format(params.planet.r / 1000);
+      // Same notation as the numeric B field so the pair reads as one column.
+      inputA.value = (params.planet.r / 1000).toLocaleString("en-US", {
+        maximumFractionDigits: 3,
+        useGrouping: false,
+      });
       inputB.min = String(Number(deps.refs.planetR.min) / 1000);
       inputB.max = String(Number(deps.refs.planetR.max) / 1000);
       inputB.value = String(Math.min((params.planet.r * 1.5) / 1000, Number(inputB.max)));

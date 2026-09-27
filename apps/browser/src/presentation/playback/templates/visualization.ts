@@ -11,7 +11,10 @@ export function renderVisualizationTemplate(): string {
           <h2>Sky-plane geometry</h2>
           <span class="figure-key">Observer view</span>
         </div>
-        <canvas id="skyCanvas" width="960" height="540" role="img" aria-label="Sky-plane geometry" aria-describedby="skySummary"></canvas>
+        <div class="plate">
+          <p class="plate__label" aria-hidden="true"><span>Plate 1</span><span>Sky plane · observer view</span></p>
+          <canvas id="skyCanvas" width="960" height="540" role="img" aria-label="Sky-plane geometry" aria-describedby="skySummary"></canvas>
+        </div>
         <figcaption id="skySummary">The star is centered. Geometry details will appear when the scenario is ready.</figcaption>
         ${renderRuntimeToolbar()}
         <details class="figure-diagnostics"><summary>Simulation details</summary>
@@ -51,9 +54,10 @@ export function renderVisualizationTemplate(): string {
 
       <figure class="scientific-figure light-curve-figure">
         <div class="figure-heading">
+          <p class="figure-number" aria-hidden="true">Figure 2</p>
           <h2>Relative starlight</h2>
-          <span class="figure-key">Flux vs time</span>
-          <button id="lcExportBtn" type="button">Export light-curve CSV</button>
+          <span class="figure-key">flux against time</span>
+          <button id="lcExportBtn" type="button">Export CSV<span class="sr-only"> of the light curve</span></button>
         </div>
         <canvas id="lcCanvas" width="960" height="240" role="img" aria-label="Light curve plot" aria-describedby="lcSummary"></canvas>
         <figcaption id="lcSummary">No plotted samples yet. Start the simulation or jump to an event.</figcaption>
