@@ -1,6 +1,7 @@
 /** Covers base-aware presentation assets and the GitHub Pages scientific-runtime boundary. */
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CapabilityManifest } from "../../src/infrastructure/science/types";
 import { wireScienceWorkspace } from "../../src/presentation/science/scienceWorkspace";
 import { isGitHubPagesMode, runtimeAssetUrl } from "../../src/application/deployment";
 import { createAppDocumentHtml } from "../../src/presentation/shell/appShell";
@@ -144,11 +145,15 @@ describe("GitHub Pages runtime presentation", () => {
   it("continues to check the injected loopback client outside GitHub Pages", async () => {
     installScientificWorkspaceDom();
     const client = {
-      getCapabilities: vi.fn(async () => ({
-        serviceVersion: "5.0.0",
-        supportedJobKinds: ["forward"],
-        supportedOutputs: ["radial-velocity"],
-      })),
+      // A deliberately partial manifest: the controller must not need the rest.
+      getCapabilities: vi.fn(
+        async () =>
+          ({
+            serviceVersion: "5.0.0",
+            supportedJobKinds: ["forward"],
+            supportedOutputs: ["radial-velocity"],
+          }) as unknown as CapabilityManifest,
+      ),
       submitJob: vi.fn(),
       pollJob: vi.fn(),
       getResult: vi.fn(),

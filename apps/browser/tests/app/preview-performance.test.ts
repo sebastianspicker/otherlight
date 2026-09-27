@@ -61,7 +61,8 @@ function workload() {
     setRunning(next: boolean) {
       state.running = next;
     },
-    sampleFluxForPlot: (_s, _p, _m, _t, _dt, _noise, sampled) => sampled!.flux.total,
+    sampleFluxForPlot: ((_s, _p, _m, _t, _dt, _noise, sampled) =>
+      sampled!.flux.total) satisfies FrameLoopContext["sampleFluxForPlot"],
     queueNextFrame() {},
     onSampleStep() {},
   } as unknown as FrameLoopContext;
@@ -151,7 +152,7 @@ describe("preview work and performance", () => {
     };
     frameForContext(ctx, 0);
     expect(ctx.state.fixedPreviewKey).toBeUndefined();
-    expect(ctx.refs.warnVal.textContent).toContain("Fixed preview unavailable");
+    expect(ctx.refs.warnVal!.textContent).toContain("Fixed preview unavailable");
   });
   it("records reproducible preview and multiband workloads when requested", () => {
     if (!process.env.OTHERLIGHT_BENCHMARK_REPORT) return;

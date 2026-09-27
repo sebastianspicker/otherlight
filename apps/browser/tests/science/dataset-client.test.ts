@@ -53,7 +53,7 @@ const secureHeaders = {
 const json = (payload: unknown, status = 200, headers: HeadersInit = secureHeaders): Response =>
   new Response(JSON.stringify(payload), { status, headers });
 
-function validFile(type = SCIENCE_DATASET_MEDIA_TYPE): File {
+function validFile(type: string = SCIENCE_DATASET_MEDIA_TYPE): File {
   return new File(['{"schemaVersion":"science-dataset-v2","kind":"passband-response"}'], "passband.json", {
     type,
   });

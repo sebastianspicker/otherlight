@@ -1,6 +1,7 @@
 /** Verifies that the observatory explores one variable without changing the accepted scenario. */
 import { describe, expect, it } from "vitest";
 import { cloneParams } from "../../src/domain/model/clone";
+import type { OrbitElements } from "../../src/domain/model/types";
 import { PRESETS } from "../../src/application/catalog/presets";
 import {
   prepareRadiusComparison,
@@ -9,6 +10,8 @@ import {
 import { findObservatoryTransit } from "../../src/presentation/observatory/observatoryTransit";
 
 const scenario = () => cloneParams(PRESETS.find((preset) => preset.id === "kepler-planet-only")!.params);
+/** The Kepler preset uses static orbital elements, never a time-dependent provider. */
+const planetOrbit = (draft: ReturnType<typeof scenario>) => draft.planet.orbit as OrbitElements;
 
 describe("observatory radius comparison", () => {
   it.each(["", " ", "NaN", "Infinity", "-1", "999", "200001"])("rejects invalid radius %s", (value) => {
@@ -27,7 +30,7 @@ describe("observatory radius comparison", () => {
     const time = findObservatoryTransit(accepted, 0);
     expect(time).toBeDefined();
     expect(time).toBeGreaterThan(0);
-    expect(time).toBeLessThan(accepted.planet.orbit.period);
+    expect(time).toBeLessThan(planetOrbit(accepted).period);
     const result = prepareRadiusComparison(accepted, 100000, time!);
     expect(accepted).toEqual(original);
     expect(result.comparison.fluxTransitDelta).toBeGreaterThan(0);
@@ -41,7 +44,7 @@ describe("observatory radius comparison", () => {
 
   it("reports no estimate for a face-on orbit rather than fabricating a transit", () => {
     const accepted = scenario();
-    accepted.planet.orbit.inc = 0;
+    planetOrbit(accepted).inc = 0;
     expect(findObservatoryTransit(accepted, 0)).toBeUndefined();
   });
 });
