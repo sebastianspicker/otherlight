@@ -111,6 +111,11 @@
   display: none;
 }
 
+#radiusComparisonForm:has([aria-invalid="true"]) .comparison-status {
+  color: var(--fault);
+  font-weight: 600;
+}
+
 #observatoryClearComparisonBtn {
   justify-self: start;
   font-size: var(--t-sm);
