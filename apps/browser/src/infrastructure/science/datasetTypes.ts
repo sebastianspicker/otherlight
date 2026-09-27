@@ -1,7 +1,6 @@
 /** Strict browser-facing types for the additive V6 dataset-only service family. */
 
 export const SCIENCE_DATASET_CAPABILITIES_SCHEMA_VERSION = "science-v6" as const;
-export const SCIENCE_DATASET_IMPORT_SCHEMA_VERSION = "science-dataset-v2" as const;
 export const SCIENCE_DATASET_DESCRIPTOR_SCHEMA_VERSION = "science-dataset-descriptor-v2" as const;
 export const SCIENCE_DATASET_MEDIA_TYPE =
   "application/vnd.otherlight.science-dataset+json; charset=utf-8" as const;
@@ -24,7 +23,7 @@ export const SCIENCE_DATASET_KINDS = [
   "stellar-variability-psd",
 ] as const;
 
-export type ScienceDatasetKind = (typeof SCIENCE_DATASET_KINDS)[number];
+type ScienceDatasetKind = (typeof SCIENCE_DATASET_KINDS)[number];
 
 export type ScienceDatasetDescriptor = Readonly<{
   schemaVersion: typeof SCIENCE_DATASET_DESCRIPTOR_SCHEMA_VERSION;

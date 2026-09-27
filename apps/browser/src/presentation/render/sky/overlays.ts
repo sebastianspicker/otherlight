@@ -8,7 +8,7 @@
 // - Keep conventions consistent with core/types.ts and render/canvas2d.ts:
 //   observer.dir points from star to observer; larger sky.z means closer to observer. [file:100][file:119]
 
-import { clamp, toFinitePositiveOr } from "../../../domain/model/units";
+import { toFinitePositiveOr } from "../../../domain/model/units";
 import type { Vec3 } from "../../../domain/orbits/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../../../domain/orbits/vec3";
 import type { SizeInfo } from "../canvas/canvasUtil";
@@ -58,23 +58,6 @@ export type DebugOverlayOptions = {
   lineHeight?: number;
 };
 
-type ObserverMarkerOptions = {
-  /** Marker label text. Default: "Observer". */
-  label?: string;
-
-  /** Outer radius placement factor relative to min(cssW,cssH). Default: 0.48. */
-  radiusFactor?: number;
-
-  /** Minimum radius in pixels. Default: 30. */
-  radiusMinPx?: number;
-
-  /** Marker fill color. Default: theme.accent. */
-  markerFill?: string;
-
-  /** Marker outline color. Default: rgba(0,0,0,0.45). */
-  markerStroke?: string;
-};
-
 export type DebugOverlayData = {
   nOcculters?: number;
   bPlanet?: number;
@@ -87,13 +70,6 @@ export type DebugOverlayData = {
   stellarVariabilityFlux?: number;
   fluxTransitFactor?: number;
   fluxTotal?: number;
-};
-
-type ObserverMarkerLayout = {
-  cx: number;
-  cy: number;
-  ox: number;
-  oy: number;
 };
 
 type DebugLineWriter = (s: string) => void;
@@ -120,7 +96,7 @@ export function defaultDebugOverlayToggles(): RequiredDebugOverlayToggles {
   };
 }
 
-export function resolveDebugOverlayToggles(t?: DebugOverlayToggles): RequiredDebugOverlayToggles {
+function resolveDebugOverlayToggles(t?: DebugOverlayToggles): RequiredDebugOverlayToggles {
   const d = defaultDebugOverlayToggles();
   return {
     enabled: overlayDefault(t?.enabled, d.enabled),
@@ -157,93 +133,6 @@ function themeResolved(theme?: Partial<OverlayTheme>): OverlayTheme {
 
 function canvasSizeValid(size: SizeInfo): boolean {
   return Number.isFinite(size.cssW) && Number.isFinite(size.cssH) && size.cssW >= 1 && size.cssH >= 1;
-}
-
-/**
- * Draw a didactic observer marker in the main view (purely visual).
- * The marker placement uses the azimuth in the inertial x/y plane (atan2(y,x)),
- * matching the convention used in the existing renderer code. [file:119]
- */
-export function drawObserverMarkerMainView(
-  ctx: CanvasRenderingContext2D,
-  size: SizeInfo,
-  observerDirRaw: Vec3,
-  opts: ObserverMarkerOptions = {},
-): void {
-  const layout = observerMarkerLayout(size, observerDirRaw, opts);
-  if (!layout) return;
-  const theme = themeResolved();
-  drawObserverMarkerLine(ctx, layout);
-  drawObserverMarkerDot(ctx, layout, opts, theme);
-}
-
-function observerMarkerLayout(
-  size: SizeInfo,
-  observerDirRaw: Vec3,
-  opts: ObserverMarkerOptions,
-): ObserverMarkerLayout | null {
-  if (!observerMarkerSizeValid(size)) return null;
-
-  const observerDir = normalizeObserverDirSafe(observerDirRaw);
-  const cx = size.cssW * 0.5;
-  const cy = size.cssH * 0.5;
-  const ang = Math.atan2(finiteOrZero(observerDir.y), finiteOrZero(observerDir.x));
-  const radius = observerMarkerRadius(size, opts);
-
-  return {
-    cx,
-    cy,
-    ox: cx + Math.cos(ang) * radius,
-    oy: cy - Math.sin(ang) * radius,
-  };
-}
-
-function observerMarkerSizeValid(size: SizeInfo): boolean {
-  return canvasSizeValid(size) && size.cssW >= 40 && size.cssH >= 40;
-}
-
-function observerMarkerRadius(size: SizeInfo, opts: ObserverMarkerOptions): number {
-  const radiusMinPx = toFinitePositiveOr(opts.radiusMinPx, 30);
-  const rawFactor = typeof opts.radiusFactor === "number" ? opts.radiusFactor : 0.48;
-  const radiusFactor = clamp(rawFactor, 0.05, 0.95);
-  return Math.max(radiusMinPx, Math.min(size.cssW, size.cssH) * radiusFactor);
-}
-
-function finiteOrZero(value: number): number {
-  return Number.isFinite(value) ? value : 0;
-}
-
-function drawObserverMarkerLine(ctx: CanvasRenderingContext2D, layout: ObserverMarkerLayout): void {
-  ctx.save();
-  ctx.setLineDash([6, 6]);
-  ctx.strokeStyle = "rgba(255,255,255,0.28)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(layout.ox, layout.oy);
-  ctx.lineTo(layout.cx, layout.cy);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawObserverMarkerDot(
-  ctx: CanvasRenderingContext2D,
-  layout: ObserverMarkerLayout,
-  opts: ObserverMarkerOptions,
-  theme: OverlayTheme,
-): void {
-  ctx.save();
-  ctx.fillStyle = opts.markerFill ?? theme.accent;
-  ctx.strokeStyle = opts.markerStroke ?? "rgba(0,0,0,0.45)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(layout.ox, layout.oy, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = DEFAULT_THEME.font;
-  ctx.fillText(opts.label ?? "Observer", layout.ox + 10, layout.oy - 10);
-  ctx.restore();
 }
 
 export function drawDebugOverlay(

@@ -2,7 +2,7 @@
 //
 // Contracts for in-app learning workflows (Bachelor/Master STEM focus).
 
-export type DidacticFormulaValue = {
+type DidacticFormulaValue = {
   id: string;
   title: string;
   latex: string;
@@ -11,8 +11,8 @@ export type DidacticFormulaValue = {
 };
 
 export type LessonSimMode = "preset-lab" | "binary-lab" | "either";
-export type LessonRecommendedUiMode = "normal" | "expert";
-export type LessonSignalSurface = "physical";
+type LessonRecommendedUiMode = "normal" | "expert";
+type LessonSignalSurface = "physical";
 export type LessonFamily =
   | "transit-geometry"
   | "exomoon-signal"
@@ -36,7 +36,7 @@ export type LessonEventTarget =
   | "moonIngress"
   | "moonMidTransit"
   | "moonEgress";
-export type LessonPhaseType = "worked-example" | "predict" | "observe" | "explain" | "compare" | "report";
+type LessonPhaseType = "worked-example" | "predict" | "observe" | "explain" | "compare" | "report";
 export type LessonResponseMode =
   | "none"
   | "claim-reason"
@@ -67,7 +67,7 @@ export type LessonPhaseSpec = {
   workedExample?: LessonWorkedExample;
 };
 
-export type AssessmentRule =
+type AssessmentRule =
   | {
       id: string;
       label: string;
@@ -109,7 +109,7 @@ export type AssessmentRule =
       tolerance: number;
     };
 
-export type LessonStep = {
+type LessonStep = {
   id: string;
   title: string;
   prompt: string;
@@ -143,7 +143,7 @@ export type LearningState = {
   updatedAtSec?: number;
 };
 
-export type DidacticResponseEntry = {
+type DidacticResponseEntry = {
   primary?: string;
   secondary?: string;
   updatedAtSec?: number;

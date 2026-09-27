@@ -3,7 +3,7 @@
  */
 
 /** Runtime action buttons, speed, calculation mode, and expert view controls. */
-export function renderRuntimeControls(): string {
+function renderRuntimeControls(): string {
   return `
       <div class="runtime-actions">
         <button id="btnStart" type="button">Start</button>

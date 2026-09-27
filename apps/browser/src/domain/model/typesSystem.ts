@@ -11,7 +11,7 @@ import type { SystemDynamicsParams } from "./typesDynamics";
 import type { DidacticsParams } from "./typesDidactics";
 import type { PassbandId, StellarLimbDarkeningParams } from "./typesLimbDarkening";
 
-export type BodyShapeParams = {
+type BodyShapeParams = {
   /**
    * Oblateness / flattening f = (Re - Rp) / Re in [0,1).
    * Interprets body.r as the equatorial radius Re.
@@ -22,7 +22,7 @@ export type BodyShapeParams = {
   angle?: number;
 };
 
-export type RingSystemParams = {
+type RingSystemParams = {
   /** Inner ring radius [m]. */
   innerRadius: number;
   /** Outer ring radius [m]. */
@@ -35,7 +35,7 @@ export type RingSystemParams = {
   opacity?: number;
 };
 
-export type BodySpinParams = {
+type BodySpinParams = {
   /** Rotation period [s]. */
   rotationPeriodSec?: number;
   /** Obliquity relative to orbital angular momentum [rad]. */
@@ -44,12 +44,12 @@ export type BodySpinParams = {
   axisPositionAngle?: number;
 };
 
-export type BodyGravityHarmonicsParams = {
+type BodyGravityHarmonicsParams = {
   /** Zonal quadrupole coefficient (dimensionless). */
   J2?: number;
 };
 
-export type BodyTidesParams = {
+type BodyTidesParams = {
   enabled?: boolean;
   /** Degree-2 Love number. */
   k2?: number;
@@ -104,7 +104,7 @@ export type BinaryStarPhotometryParams = StellarLimbDarkeningParams & {
   passband?: PassbandId;
 };
 
-export type BinarySystemPhotometryParams = {
+type BinarySystemPhotometryParams = {
   primary?: BinaryStarPhotometryParams;
   secondary?: BinaryStarPhotometryParams;
 };

@@ -1,5 +1,5 @@
 /** Orbit assertion primitives shared by general and dynamics validation. */
-import type { OrbitElements, OrbitElementsProvider } from "../../model/types";
+import type { OrbitElements } from "../../model/types";
 
 const assertOrbitObject = (el: OrbitElements, name: string): void => {
   if (!el || typeof el !== "object") throw new Error(`${name} must be an object.`);
@@ -29,8 +29,4 @@ export function assertOrbit(el: OrbitElements, name: string): void {
   assertOrbitScaleAndShape(el, name);
   assertOrbitAngles(el, name);
   assertOrbitEpoch(el, name);
-}
-
-export function assertOrbitProvider(elOrProvider: OrbitElements | OrbitElementsProvider, name: string): void {
-  if (typeof elOrProvider !== "function") assertOrbit(elOrProvider, name);
 }

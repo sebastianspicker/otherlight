@@ -73,18 +73,6 @@ export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eS
 }
 
 /**
- * Retrograde satellites can remain stable farther out than prograde.
- * A conservative rule-of-thumb is ~0.67 R_H for retrograde.
- */
-export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.67): number {
-  assertFinitePositive(hillR, "hillR");
-  if (!Number.isFinite(fraction) || fraction <= 0 || fraction >= 1) {
-    throw new Error("fraction must be in (0, 1).");
-  }
-  return hillR * fraction;
-}
-
-/**
  * Retrograde stability limit from the Domingos, Winter & Yokoyama (2006)
  * empirical fit:
  *   a_crit ≈ 0.9309 * (1 - 1.0764 e_p - 0.9812 e_s + 0.9446 e_p e_s) * R_H

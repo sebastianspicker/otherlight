@@ -13,8 +13,7 @@ import { type CircleOcculter } from "./occulterCircle";
 import { isCircleOcculter, isEllipseOcculter, isRingOcculter } from "./occulterShapeGuards";
 import type { EllipseOcculter, OcculterShape, RingOcculter } from "./occulterTypes";
 export { sanitizeOcculterShapes } from "./occulterSanitize";
-export { isCircleOcculter, isEllipseOcculter, isRingOcculter } from "./occulterShapeGuards";
-export type { EllipseOcculter, OcculterShape, RingOcculter } from "./occulterTypes";
+export type { OcculterShape } from "./occulterTypes";
 
 function hasFiniteCenter(o: { dx: number; dy: number }): boolean {
   return isFiniteNumber(o.dx) && isFiniteNumber(o.dy);
@@ -248,13 +247,4 @@ export function pointOccultedFraction(x: number, y: number, occ: OcculterPre[]):
   }
 
   return 1 - transparencyProduct;
-}
-
-/**
- * Point-in-any-occulter test for precomputed shapes.
- * Returns true if the point is fully blocked by any opaque occulter.
- * For semi-transparent rings, use pointOccultedFraction instead.
- */
-export function isPointOcculted(x: number, y: number, occ: OcculterPre[]): boolean {
-  return pointOccultedFraction(x, y, occ) >= 1;
 }

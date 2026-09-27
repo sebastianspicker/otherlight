@@ -26,16 +26,6 @@ import {
 } from "./overlays";
 import type { SceneDidacticOverlayState } from "./sceneTypes";
 
-// Re-export the star-disk renderer so existing callers can continue to import from canvas2d.ts.
-export { drawStarDisk, StarDiskCache, starRadiusPx } from "./starDisk";
-
-export {
-  defaultDebugOverlayToggles,
-  normalizeObserverDirSafe,
-  resolveDebugOverlayToggles,
-  drawDebugOverlay,
-  drawObserverMarkerMainView,
-} from "./overlays";
 export type { DebugOverlayData, DebugOverlayToggles } from "./overlays";
 
 export type Canvas2DRendererOptions = {

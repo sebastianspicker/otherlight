@@ -13,17 +13,6 @@ import {
 import { renderScientificWorkspace } from "../science/templates/scientificWorkspace";
 import { runtimeAssetUrl } from "../../application/deployment";
 
-export { renderCommandStrip } from "./templates/commandStrip";
-export {
-  renderRuntimeControls,
-  renderRuntimeToolbar,
-  renderReadouts,
-  renderPlotControls,
-  renderOcSection,
-} from "../playback/templates/sidebarRuntime";
-export { renderHeaderTemplate, renderWorkspaceActions, WORKSPACE_FILE_ACCEPT } from "./templates/header";
-export { renderSidebarTemplate } from "./templates/sidebar";
-
 export function renderAppShell(root: HTMLElement | null = null): void {
   if (typeof document === "undefined") return;
   const host = root ?? ensureAppShellRoot();

@@ -81,9 +81,6 @@ export function deriveQuadraticLimbDarkeningFromStellarParams(
   return { kind: "quadratic", u1, u2 };
 }
 
-/** Validation behavior for limb-darkening plausibility checks. */
-export type LimbDarkeningValidationMode = "none" | "warn" | "throw";
-
 /**
  * Select a limb-darkening law for a given passband, with deterministic fallback.
  *

@@ -6,7 +6,7 @@ import { collectUnsupportedPhotometryFeaturesV4 } from "../domain/simulation/v4/
 import { sanitizeStaticOrbit } from "../domain/simulation/v4/orbitSanitizer";
 import { createScientificBrowserRuntimeError } from "../domain/simulation/v4/scientificErrors";
 import type { BinaryLabConfigV4 } from "../domain/simulation/v4/types";
-import { assertOrbit } from "../domain/simulation/validation/assertions";
+import { assertOrbit } from "../domain/simulation/validation/assertOrbit";
 
 export type BrowserScenarioAuthoringInput = {
   system: BrowserScenarioDraft;

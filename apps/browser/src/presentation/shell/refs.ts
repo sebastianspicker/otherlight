@@ -273,5 +273,3 @@ export function createUiRefs(): UiRefs {
     },
   });
 }
-
-export const uiRefs = createUiRefs();

@@ -18,17 +18,8 @@ import {
   maxStableRetrogradeMoonAxisDomingos,
 } from "./hillRadius";
 
-export type HillRadiusOptions = {
-  /**
-   * If true, use periapsis distance r_p = a(1-e), giving a conservative minimum Hill radius
-   * along an eccentric orbit (recommended for stability warnings).
-   * If false, use r = a (circular/mean-distance approximation).
-   */
-  usePeriapsis?: boolean;
-};
-
 /** Validation warning severity. */
-export type PhysicsValidationSeverity = "info" | "warn";
+type PhysicsValidationSeverity = "info" | "warn";
 
 /** A structured warning that UI code can display. */
 export type PhysicsValidationMessage = {

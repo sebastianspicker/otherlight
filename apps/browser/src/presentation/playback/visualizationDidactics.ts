@@ -3,7 +3,7 @@
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { InstrumentNoiseSystematicsParams } from "../../domain/model/instrumentNoiseTypes";
-import { currentAirmass } from "../../domain/photometry/instrumentNoiseHelpers";
+import { currentAirmass } from "../../domain/photometry/instrumentNoiseFluxEffects";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import type {
   LightCurveBadge,
@@ -300,10 +300,6 @@ export function buildMeasurementBadges(
   return badges;
 }
 
-export {
-  componentOverlaySeriesFromSamples,
-  buildComparisonInset,
-  sampleSeriesFromRuntime,
-} from "./visualizationSignals";
+export { componentOverlaySeriesFromSamples } from "./visualizationSignals";
 
 export { buildSceneDidacticOverlay, createGhostGeometry } from "./visualizationScene";

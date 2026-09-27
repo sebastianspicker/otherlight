@@ -12,11 +12,81 @@
 
 import type { BrightnessPatch } from "../model/types";
 import { isFinitePositive } from "../model/units";
-import { maxPatchFactor, multiplyPatchFactor, overrideLastPatchFactor } from "./patchFactors";
-import type { PatchPre, PatchPreCircle, PatchPreEllipse } from "./patchTypes";
 
 export type PatchCombineMode = "multiply" | "max" | "overrideLast";
-export type { PatchPre } from "./patchTypes";
+
+type PatchPreCircle = {
+  kind: "circle";
+  x: number;
+  y: number;
+  factor: number;
+  r2: number;
+};
+
+type PatchPreEllipse = {
+  kind: "ellipse";
+  x: number;
+  y: number;
+  factor: number;
+  invRx2: number;
+  invRy2: number;
+  cosA: number;
+  sinA: number;
+};
+
+export type PatchPre = PatchPreCircle | PatchPreEllipse;
+
+/** Test if point (x,y) lies inside a precomputed patch. */
+function pointInPatch(x: number, y: number, patch: PatchPre): boolean {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  return patch.kind === "circle" ? pointInCirclePatch(x, y, patch) : pointInEllipsePatch(x, y, patch);
+}
+
+function pointInCirclePatch(x: number, y: number, patch: PatchPreCircle): boolean {
+  const dx = x - patch.x;
+  const dy = y - patch.y;
+  return dx * dx + dy * dy < patch.r2;
+}
+
+function pointInEllipsePatch(x: number, y: number, patch: PatchPreEllipse): boolean {
+  const dx = x - patch.x;
+  const dy = y - patch.y;
+  const xp = patch.cosA * dx + patch.sinA * dy;
+  const yp = -patch.sinA * dx + patch.cosA * dy;
+  return xp * xp * patch.invRx2 + yp * yp * patch.invRy2 < 1;
+}
+
+function safePatchFactor(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, value) : 1;
+}
+
+function overrideLastPatchFactor(x: number, y: number, patches: PatchPre[]): number {
+  let f = 1;
+  for (const patch of patches) {
+    if (pointInPatch(x, y, patch)) f = patch.factor;
+  }
+  return safePatchFactor(f);
+}
+
+function maxPatchFactor(x: number, y: number, patches: PatchPre[]): number {
+  let f = 0;
+  let hit = false;
+  for (const patch of patches) {
+    if (!pointInPatch(x, y, patch)) continue;
+    hit = true;
+    f = Math.max(f, patch.factor);
+  }
+  return hit ? safePatchFactor(f) : 1;
+}
+
+function multiplyPatchFactor(x: number, y: number, patches: PatchPre[]): number {
+  let f = 1;
+  for (const patch of patches) {
+    if (pointInPatch(x, y, patch)) f *= patch.factor;
+    if (f === 0) return 0;
+  }
+  return safePatchFactor(f);
+}
 
 function finitePatchBase(
   patch: BrightnessPatch | undefined,

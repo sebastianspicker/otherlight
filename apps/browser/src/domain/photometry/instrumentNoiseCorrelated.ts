@@ -14,7 +14,7 @@ const makeOneOverFSignature = (cfg: OneOverFCfg): string => {
   return `${n}|${tauMin}|${tauMax}|${sigma}`;
 };
 
-export function ensureOneOverFBank(state: InstrumentNoiseState, oneF: OneOverFCfg): void {
+function ensureOneOverFBank(state: InstrumentNoiseState, oneF: OneOverFCfg): void {
   const signature = makeOneOverFSignature(oneF);
   if (state.ar1Bank && state.oneOverFSignature === signature) return;
   const n = Math.max(1, Math.floor(toFiniteNumber(oneF.nComponents, 6)));

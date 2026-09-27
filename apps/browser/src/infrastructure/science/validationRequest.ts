@@ -4,7 +4,6 @@ import {
   MAX_FORWARD_SAMPLES,
   MAX_INTEGRATOR_STEPS,
   type ForwardRunRequest,
-  type InferenceRequest,
   type PriorV5,
   type ScienceJobRequest,
 } from "./types";
@@ -164,9 +163,4 @@ export function assertScienceJobRequest(value: unknown): asserts value is Scienc
 export function assertForwardRunRequest(value: unknown): asserts value is ForwardRunRequest {
   assertScienceJobRequest(value);
   if (value.kind !== "forward") fail("request.kind", "exactly 'forward'");
-}
-
-export function assertInferenceRequest(value: unknown): asserts value is InferenceRequest {
-  assertScienceJobRequest(value);
-  if (value.kind !== "inference") fail("request.kind", "exactly 'inference'");
 }

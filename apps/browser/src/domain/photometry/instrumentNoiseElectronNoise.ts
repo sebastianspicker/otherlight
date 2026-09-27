@@ -56,7 +56,7 @@ const applyPhotonAndSkyNoise = (
   return sourceElectrons + (skyElectrons - meanSkyElectrons) + meanSkyElectrons * skyResidualFraction;
 };
 
-export const sampleElectrons = (
+const sampleElectrons = (
   meanElectrons: number,
   cfg: InstrumentNoiseSystematicsParams["photonNoise"] | undefined,
   rngOwner: { rng: PRNGPublic },

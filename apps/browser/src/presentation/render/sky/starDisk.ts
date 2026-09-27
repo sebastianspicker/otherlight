@@ -300,12 +300,3 @@ export function drawStarDisk(
   drawStarDiskFillAndPatches(ctx, params, opts, state, stops);
   drawStarDiskOutline(ctx, opts, state);
 }
-
-/**
- * Convenience helper: compute star radius in CSS pixels.
- */
-export function starRadiusPx(params: BrowserScenarioDraft, pixelsPerUnit: number): number {
-  const ppu = toFinitePositiveOr(pixelsPerUnit, 1);
-  const rStar = toFinitePositiveOr(params.star?.r, 1);
-  return rStar * ppu;
-}

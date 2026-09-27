@@ -102,7 +102,7 @@ export function setPlotComparisonInset(plot: LightCurvePlot, inset?: LightCurveC
   plot.setComparisonInset?.(inset);
 }
 
-export function setSceneDidacticOverlayForRenderer(
+function setSceneDidacticOverlayForRenderer(
   renderer: Canvas2DRenderer,
   overlay: ReturnType<typeof buildSceneDidacticOverlay> | undefined,
 ): void {

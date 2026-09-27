@@ -3,11 +3,9 @@
  */
 import { clamp, toFiniteNumber } from "../model/units";
 import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";
-import {
-  applyCorrelatedNoise,
-  applyDeterministicSystematics,
-  applyFluxDomainEffects,
-} from "./instrumentNoiseHelpers";
+import { applyCorrelatedNoise } from "./instrumentNoiseCorrelated";
+import { applyDeterministicSystematics } from "./instrumentNoiseTrends";
+import { applyFluxDomainEffects } from "./instrumentNoiseFluxEffects";
 
 export type ResetInstrumentNoiseState = (
   state: InstrumentNoiseState,

@@ -71,7 +71,6 @@
       "validity": "Synthetic event-series diagnostic; phenomenological orientation drifts are educational unless produced by integrated dynamics.",
       "owners": [
         "apps/browser/src/domain/orbits/exomoonTiming.ts",
-        "apps/browser/src/domain/simulation/transitTiming.ts",
         "apps/browser/src/domain/simulation/transitTimingSolve.ts",
         "apps/browser/src/domain/simulation/orbitTimingKey.ts"
       ],
@@ -92,11 +91,6 @@
         "apps/browser/src/domain/photometry/occulterEllipse.ts",
         "apps/browser/src/domain/photometry/occulterTypes.ts",
         "apps/browser/src/domain/photometry/occulterSanitize.ts",
-        "apps/browser/src/domain/photometry/occulterSanitizeCircle.ts",
-        "apps/browser/src/domain/photometry/occulterSanitizeEllipse.ts",
-        "apps/browser/src/domain/photometry/occulterSanitizeGeometry.ts",
-        "apps/browser/src/domain/photometry/occulterSanitizeRing.ts",
-        "apps/browser/src/domain/photometry/occulterSanitizeShape.ts",
         "apps/browser/src/domain/photometry/occulterShapeGuards.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
@@ -114,9 +108,6 @@
         "apps/browser/src/domain/photometry/limbDarkeningBands.ts",
         "apps/browser/src/domain/photometry/limbDarkeningEvaluation.ts",
         "apps/browser/src/domain/photometry/limbDarkeningLookup.ts",
-        "apps/browser/src/domain/photometry/limbDarkeningLookupCommon.ts",
-        "apps/browser/src/domain/photometry/limbDarkeningLookupDirect.ts",
-        "apps/browser/src/domain/photometry/limbDarkeningLookupNormalized.ts",
         "apps/browser/src/domain/simulation/limbDarkeningBridge.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
@@ -131,12 +122,8 @@
       "validity": "Transmission profiles are inputs; the TypeScript exponential halo is not a radiative-transfer solution.",
       "owners": [
         "apps/browser/src/domain/photometry/transitTransmission.ts",
-        "apps/browser/src/domain/photometry/transitTransmissionTypes.ts",
-        "apps/browser/src/domain/photometry/transitTransmissionPoint.ts",
         "apps/browser/src/domain/photometry/atmosphereRT/model.ts",
         "apps/browser/src/domain/photometry/atmosphereRT/gaussianFeatures.ts",
-        "apps/browser/src/domain/photometry/atmosphereRT/numeric.ts",
-        "apps/browser/src/domain/photometry/atmosphereRT/spectralFeatureArrays.ts",
         "apps/browser/src/domain/simulation/v4/nativePhotometry.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
@@ -166,14 +153,7 @@
       "equation": "p(theta) = (1-g^2)/[4 pi (1+g^2-2g cos(theta))^(3/2)]",
       "units": "phase function [sr^-1]",
       "validity": "HG is a single-parameter angular approximation; current amplitude and finite-star geometry are not a research radiative-transfer model.",
-      "owners": [
-        "apps/browser/src/domain/photometry/forwardScattering.ts",
-        "apps/browser/src/domain/photometry/forwardScatteringTypes.ts",
-        "apps/browser/src/domain/photometry/forwardScatteringContext.ts",
-        "apps/browser/src/domain/photometry/forwardScatteringGeometry.ts",
-        "apps/browser/src/domain/photometry/forwardScatteringModels.ts",
-        "apps/browser/src/domain/photometry/forwardScatteringObserver.ts"
-      ],
+      "owners": ["apps/browser/src/domain/photometry/forwardScattering.ts"],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["henyey-greenstein-1941"]
     },
@@ -188,10 +168,7 @@
         "apps/browser/src/domain/photometry/stellarBandFlux.ts",
         "apps/browser/src/domain/photometry/stellarVariability.ts",
         "apps/browser/src/domain/photometry/stellarVariabilityComponents.ts",
-        "apps/browser/src/domain/photometry/patches.ts",
-        "apps/browser/src/domain/photometry/patchFactors.ts",
-        "apps/browser/src/domain/photometry/patchGeometry.ts",
-        "apps/browser/src/domain/photometry/patchTypes.ts"
+        "apps/browser/src/domain/photometry/patches.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]
@@ -207,7 +184,6 @@
         "apps/browser/src/domain/photometry/smearing.ts",
         "apps/browser/src/domain/photometry/instrumentNoise.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseTypes.ts",
-        "apps/browser/src/domain/photometry/instrumentNoiseHelpers.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseCorrelated.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseDetrending.ts",
         "apps/browser/src/domain/photometry/instrumentNoiseElectronNoise.ts",

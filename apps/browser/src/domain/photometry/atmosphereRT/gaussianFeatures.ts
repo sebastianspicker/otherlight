@@ -2,7 +2,18 @@
  * Evaluates the strength of Gaussian spectral features.
  */
 import type { SpectralGaussianFeatureParams } from "../../model/typesPhotometryAtmosphere";
-import { spectralFeatureArray, spectralFeatureCount } from "./spectralFeatureArrays";
+
+function spectralFeatureArray(values: number[] | undefined): number[] {
+  return Array.isArray(values) ? values : [];
+}
+
+function spectralFeatureCount(feature: SpectralGaussianFeatureParams): number {
+  return Math.min(
+    spectralFeatureArray(feature.centerNm).length,
+    spectralFeatureArray(feature.widthNm).length,
+    spectralFeatureArray(feature.strength).length,
+  );
+}
 
 export function gaussianFeatureStrength(
   lambdaNm: number | undefined,

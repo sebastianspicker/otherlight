@@ -43,7 +43,7 @@ import {
   sanitizeOcculterShapes,
 } from "./occulterEllipse";
 
-export type IntensityAtFn = (args: { x: number; y: number; mu: number }) => number;
+type IntensityAtFn = (args: { x: number; y: number; mu: number }) => number;
 
 export type IntegrateDiskMidpointParams = {
   /** Stellar radius (must be > 0). */

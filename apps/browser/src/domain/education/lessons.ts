@@ -10,7 +10,6 @@ import type {
   LessonSpec,
 } from "../model/types";
 import { LESSONS } from "./lessonsCatalog";
-export { LESSONS } from "./lessonsCatalog";
 
 export const LESSON_FOCUS_CONTROL_LABELS: Record<LessonFocusControl, string> = {
   quickPlanetR: "Planet size",

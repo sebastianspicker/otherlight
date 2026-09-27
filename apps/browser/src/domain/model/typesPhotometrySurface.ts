@@ -1,7 +1,7 @@
 /**
  * Defines stellar surface, brightness patch, and variability parameters.
  */
-export type BrightnessPatchShape = "circle" | "ellipse";
+type BrightnessPatchShape = "circle" | "ellipse";
 
 export type BrightnessPatch = {
   shape: BrightnessPatchShape;

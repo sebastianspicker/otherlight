@@ -228,7 +228,7 @@ function compatibilityErrors(
   return errors;
 }
 
-export function validateParamForm(
+function validateParamForm(
   form: HTMLFormElement,
   candidateParams?: BrowserScenarioDraft,
 ): ParamValidationError[] {

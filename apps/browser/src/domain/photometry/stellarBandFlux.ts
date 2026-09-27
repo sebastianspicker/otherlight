@@ -111,7 +111,7 @@ function integratePassbandRadiance(
   return { weightedIntegral, throughputIntegral };
 }
 
-export function relativeStellarBandFlux(input: StellarBandFluxInput): number | undefined {
+function relativeStellarBandFlux(input: StellarBandFluxInput): number | undefined {
   const radius = finitePositive(input.r);
   const teffK = finitePositive(input.teffK);
   if (!radius || !teffK) return undefined;
