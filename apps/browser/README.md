@@ -49,8 +49,8 @@ on a bounded Education transit estimate when one is available, and reports
 explicitly when it is not. Clear comparison restores the component traces and
 event annotations.
 
-Open and Save workspace stay in the header, Workspace options reveals the
-profiles and Guided Labs, and More experiments opens scenario and catalog
+Open and Save workspace stay in the masthead beside the visible profile and
+Guided Labs switches, and More experiments opens scenario and catalog
 selection. Playback sits beside the sky, and model parameters, diagnostics, and
 display controls stay in disclosures. Narrow screens stack the evidence and
 inputs. Invalid B input stays available for correction. B and its curves are

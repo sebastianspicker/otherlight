@@ -56,7 +56,7 @@ stay in step, so the arithmetic is visible next to the picture.
 at a time, keeping the prompt, the evidence, and a learner's written responses
 together so a session can be resumed later.
 
-<img src="docs/screenshots/web/02-guided-lab.png" alt="Otherlight Guided Lab workspace showing the active lesson phase, a worked example, phase navigation, and a lesson report action." width="100%">
+<img src="docs/screenshots/web/02-guided-lab.png" alt="Otherlight Guided Lab workspace: the sky plate beside the active prediction phase, a written response, phase navigation, and a lesson report action." width="100%">
 
 **3 · Scientific — keep the execution boundary explicit.** The Scientific
 profile validates inputs and shows run provenance. On the hosted build it

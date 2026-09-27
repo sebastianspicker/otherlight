@@ -69,8 +69,10 @@ lesson report; saving a workspace includes accepted state and responses but
 excludes B, curve histories, and run artifacts. The light-curve CSV exports the
 active model's plotted series, not both comparison overlays.
 
-The header keeps document actions, and Workspace options reveals the profile and
-mode choices. More experiments opens scenario and catalog selection. Model
+The masthead keeps document actions and shows the Education/Scientific profile
+switch and the Simulation/Guided Labs switch in plain view. A running head below
+it states which kind of evidence is on screen. More experiments opens scenario
+and catalog selection. Model
 controls, playback settings, and diagnostics use native disclosures. At narrow
 widths figures and inputs stack, and focus and invalid drafts stay available.
 
@@ -94,7 +96,8 @@ only after the loopback adapter validates a terminal result.
 ## Visual language
 
 Keep controls quiet and the scientific evidence primary. Use local assets and
-system fonts. Avoid ornamental motion, effects that obscure state changes, and
+the self-hosted typefaces described in the [design system](DESIGN.md); never
+load fonts or images from a third party. Avoid ornamental motion, effects that obscure state changes, and
 continuous redraw work while a simulation is paused or hidden. Dense layouts
 suit comparison; explanatory space suits a learner working through a causal
 relationship.
