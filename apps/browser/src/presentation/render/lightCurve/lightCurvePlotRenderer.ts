@@ -145,11 +145,31 @@ function drawAwaitingData(ctx: CanvasRenderingContext2D, layout: PlotLayout): vo
   ctx.font = `italic 14px ${FIGURE_FONTS.serif}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(
+  const lines = wrapCanvasText(
+    ctx,
     "No samples yet \u2014 start the simulation or jump to a transit.",
-    layout.marginLeft + layout.plotW * 0.5,
-    layout.marginTop + layout.plotH * 0.5,
+    Math.max(1, layout.plotW - 24),
   );
+  const lineHeight = 18;
+  const firstY = layout.marginTop + layout.plotH * 0.5 - ((lines.length - 1) * lineHeight) / 2;
+  const centerX = layout.marginLeft + layout.plotW * 0.5;
+  lines.forEach((line, index) => ctx.fillText(line, centerX, firstY + index * lineHeight));
+}
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(" ")) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (current && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
 }
 
 function resolveLightCurveRenderState(args: {

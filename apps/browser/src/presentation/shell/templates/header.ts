@@ -60,7 +60,7 @@ export function renderHeaderTemplate(
           <em>Education preview</em> — a teaching model with stated limits, computed on this device.
         </span>
         <span data-product-profile="scientific" hidden>
-          <em>Scientific workspace</em> — a validated V5 contract on your loopback service. Never an Education substitute.
+          <em>Scientific workspace</em> — a strict V5 boundary for loopback execution or a labelled hosted fixture replay. Never an Education substitute.
         </span>
       </p>
     </header>

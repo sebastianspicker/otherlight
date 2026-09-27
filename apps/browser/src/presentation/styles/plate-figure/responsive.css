@@ -35,10 +35,12 @@
     gap: var(--s-3) var(--s-4);
   }
 
-  .workspace-switch {
-    order: 3;
+  .brand-lockup {
     flex-basis: 100%;
-    justify-content: space-between;
+  }
+
+  .workspace-switch {
+    flex: 1 1 auto;
   }
 
   .mainGrid,

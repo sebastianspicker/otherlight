@@ -68,24 +68,33 @@ export function wireObservatoryNavigation(args: {
   const interpretButton = document.getElementById("observatoryInterpretBtn") as HTMLButtonElement | null;
   const options = { signal: args.signal };
 
-  function sync(): void {
+  function syncPhaseFromLearning(key: string): void {
     const learning = args.state.didacticsRuntime.learning;
-    const key = `${learning.lessonId}:${learning.stepIndex}:${learning.phaseIndex}`;
     if ((args.refs.productModeSelect.value === "lab" || followsLearningState) && key !== lastLearning) {
       const lesson = getLessonById(learning.lessonId);
       const activePhase = lesson && getLessonStepPhases(lesson, learning.stepIndex)[learning.phaseIndex ?? 0];
       if (activePhase) phase = navPhaseFor(activePhase);
     }
+  }
+
+  function syncPhaseControls(phases: LessonPhaseSpec[]): void {
+    for (const button of buttons) {
+      const buttonPhase = button.dataset.observatoryPhase as Phase;
+      button.disabled = phaseIndexFor(phases, buttonPhase) < 0;
+      button.setAttribute("aria-current", buttonPhase === phase ? "step" : "false");
+    }
+    if (interpretButton) interpretButton.disabled = phaseIndexFor(phases, "explain") < 0;
+  }
+
+  function sync(): void {
+    const learning = args.state.didacticsRuntime.learning;
+    const key = `${learning.lessonId}:${learning.stepIndex}:${learning.phaseIndex}`;
+    syncPhaseFromLearning(key);
     lastLearning = key;
     document.body.dataset.observatoryPhase = phase;
     const lesson = getLessonById(learning.lessonId);
     const phases = lesson ? getLessonStepPhases(lesson, learning.stepIndex) : [];
-    for (const button of buttons) {
-      const buttonPhase = button.dataset.observatoryPhase as Phase;
-      button.disabled = phaseIndexFor(phases, buttonPhase) < 0;
-      button.setAttribute("aria-current", button.dataset.observatoryPhase === phase ? "step" : "false");
-    }
-    if (interpretButton) interpretButton.disabled = phaseIndexFor(phases, "explain") < 0;
+    syncPhaseControls(phases);
     if (rail) rail.hidden = phase === "observe" && args.refs.productModeSelect.value !== "lab";
   }
 

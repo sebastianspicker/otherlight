@@ -39,10 +39,7 @@ export function wireObservatory(deps: ObservatoryDeps) {
   let source: BrowserScenarioDraft | undefined;
   let busy = false;
 
-  function sync(): void {
-    navigation.sync();
-    const { params } = deps.state;
-    const binary = isBinaryModeActive(deps.refs);
+  function syncSystemMode(binary: boolean): void {
     form.hidden = binary;
     document.body.dataset.observatorySystem = binary ? "binary" : "transit";
     const radiusSection = document.querySelector<HTMLElement>(".radius-comparison");
@@ -55,33 +52,46 @@ export function wireObservatory(deps: ObservatoryDeps) {
       "observatorySubtitle",
       binary ? "Form a hypothesis. Explore the eclipses." : "Change the radius. Compare the light.",
     );
-    if (source !== params) {
-      source = params;
-      // Same notation as the numeric B field so the pair reads as one column.
-      inputA.value = (params.planet.r / 1000).toLocaleString("en-US", {
-        maximumFractionDigits: 3,
-        useGrouping: false,
-      });
-      inputB.min = String(Number(deps.refs.planetR.min) / 1000);
-      inputB.max = String(Number(deps.refs.planetR.max) / 1000);
-      inputB.value = String(Math.min((params.planet.r * 1.5) / 1000, Number(inputB.max)));
-      inputB.removeAttribute("aria-invalid");
-      text("radiusComparisonStatus", "");
-      text(
-        "observatoryComparisonSummary",
-        "Compare to compute two Education light curves. B is not saved in the workspace.",
-      );
-      renderEstimates(params, Number(inputB.value));
-      text("observatoryStarRadius", `${format(params.star.r / 1000)} km`);
-      const model = params.star.photometry?.limbDarkeningModel;
-      const law = model ? resolveLimbDarkeningForBand(model, model.bandpass) : undefined;
-      const darkened = law && Object.entries(law).some(([key, value]) => key !== "kind" && value !== 0);
-      text("observatoryStellarDisk", darkened ? "Limb darkened" : "Uniform limb law");
-    }
+  }
+
+  function syncComparisonSource(params: BrowserScenarioDraft): void {
+    if (source === params) return;
+    source = params;
+    // Same notation as the numeric B field so the pair reads as one column.
+    inputA.value = (params.planet.r / 1000).toLocaleString("en-US", {
+      maximumFractionDigits: 3,
+      useGrouping: false,
+    });
+    inputB.min = String(Number(deps.refs.planetR.min) / 1000);
+    inputB.max = String(Number(deps.refs.planetR.max) / 1000);
+    inputB.value = String(Math.min((params.planet.r * 1.5) / 1000, Number(inputB.max)));
+    inputB.removeAttribute("aria-invalid");
+    text("radiusComparisonStatus", "");
+    text(
+      "observatoryComparisonSummary",
+      "Compare to compute two Education light curves. B is not saved in the workspace.",
+    );
+    renderEstimates(params, Number(inputB.value));
+    text("observatoryStarRadius", `${format(params.star.r / 1000)} km`);
+    const model = params.star.photometry?.limbDarkeningModel;
+    const law = model ? resolveLimbDarkeningForBand(model, model.bandpass) : undefined;
+    const darkened = law && Object.entries(law).some(([key, value]) => key !== "kind" && value !== 0);
+    text("observatoryStellarDisk", darkened ? "Limb darkened" : "Uniform limb law");
+  }
+
+  function syncActions(binary: boolean): void {
     compareButton.disabled = busy || binary;
     clearButton.hidden = !deps.state.comparisonCurveSeries?.some((series) => series.id === "radius-a");
     clearButton.disabled = busy;
     if (jumpButton) jumpButton.disabled = binary;
+  }
+
+  function sync(): void {
+    navigation.sync();
+    const binary = isBinaryModeActive(deps.refs);
+    syncSystemMode(binary);
+    syncComparisonSource(deps.state.params);
+    syncActions(binary);
   }
 
   async function compare(): Promise<void> {

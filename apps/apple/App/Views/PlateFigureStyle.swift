@@ -62,7 +62,7 @@ enum EvidenceKind {
     switch self {
     case .education: "a teaching model with stated limits, computed on this device."
     case .scientific:
-      "a validated V5 run on this Mac, session only. Never an Education substitute."
+      "a session-only V5 execution workspace on this Mac. Never an Education substitute."
     }
   }
 }
@@ -162,7 +162,8 @@ struct PlateFrame<Content: View>: View {
         .font(.system(.caption2, design: .monospaced))
         .tracking(1)
         .foregroundStyle(PlateFigure.plateInk3)
-        .accessibilityHidden(true)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(.isHeader)
       content
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()

@@ -74,6 +74,9 @@ struct DetachedBinaryLabView: View {
         hypothesisCard
         if let frame = session.frame {
           adaptivePlots(frame: frame)
+          SimulationFrameSummary(frame: frame, includesScene: session.isBinaryLabSkyVisible)
+            .equatable()
+            .accessibilityIdentifier("detached-binary-figure-summary")
         } else if case .loading = session.displayState {
           ProgressView("Calculating the detached-binary Education preview…")
             .frame(maxWidth: .infinity, minHeight: 360)
@@ -234,13 +237,26 @@ private struct SimulationPlotRow: View {
 @MainActor
 private struct SimulationFrameSummary: View, Equatable {
   let frame: PresentationFrame
-  let transitEventCount: Int
+  let includesScene: Bool
+  let transitEventCount: Int?
   let latestResidualMilliseconds: Double?
+
+  /// Creates a visual-evidence summary, with timing evidence when the dashboard provides it.
+  init(
+    frame: PresentationFrame, includesScene: Bool = true, transitEventCount: Int? = nil,
+    latestResidualMilliseconds: Double? = nil
+  ) {
+    self.frame = frame
+    self.includesScene = includesScene
+    self.transitEventCount = transitEventCount
+    self.latestResidualMilliseconds = latestResidualMilliseconds
+  }
 
   /// Compares data that changes the accessibility summary while throttling frame churn.
   nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
     lhs.frame.series.key == rhs.frame.series.key
       && lhs.frame.generation / 15 == rhs.frame.generation / 15
+      && lhs.includesScene == rhs.includesScene
       && lhs.transitEventCount == rhs.transitEventCount
       && lhs.latestResidualMilliseconds == rhs.latestResidualMilliseconds
   }
@@ -248,9 +264,9 @@ private struct SimulationFrameSummary: View, Equatable {
   /// Builds the visible caption and consolidated accessibility label.
   var body: some View {
     VStack(alignment: .leading, spacing: 3) {
-      Text(AccessibleSummary.scene(frame.scene))
+      if includesScene { Text(AccessibleSummary.scene(frame.scene)) }
       Text(AccessibleSummary.plot(frame.plot))
-      Text(timingSummary)
+      if let timingSummary { Text(timingSummary) }
     }
     .font(.caption)
     .foregroundStyle(PlateFigure.ink2)
@@ -260,15 +276,16 @@ private struct SimulationFrameSummary: View, Equatable {
 
   /// Combines scene, light-curve, and timing values into one spoken summary.
   private var accessibilitySummary: String {
-    "Sky view. \(AccessibleSummary.scene(frame.scene)) "
+    (includesScene ? "Sky view. \(AccessibleSummary.scene(frame.scene)) " : "")
       + "Light-curve marker: time \(frame.scene.timeSeconds) seconds, normalized flux "
       + "\(String(format: "%.6f", frame.scene.flux)). "
       + AccessibleSummary.plot(frame.plot)
-      + " \(timingSummary)"
+      + (timingSummary.map { " \($0)" } ?? "")
   }
 
   /// Describes whether enough event history exists to calculate an O-C residual.
-  private var timingSummary: String {
+  private var timingSummary: String? {
+    guard let transitEventCount else { return nil }
     guard let latestResidualMilliseconds else {
       return "\(transitEventCount) diagnostic transit events; at least two are needed for O-C."
     }

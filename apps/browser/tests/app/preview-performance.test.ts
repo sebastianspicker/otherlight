@@ -144,6 +144,14 @@ describe("preview work and performance", () => {
       ctx.state.comparisonBadges[0],
     );
     expect(vi.mocked(ctx.renderer.setDidacticOverlay).mock.calls.at(-1)?.[0]).not.toEqual(firstScene);
+
+    const radiusA = { ...comparison, id: "radius-a", label: "A" };
+    const radiusB = { ...comparison, id: "radius-b", label: "B" };
+    ctx.state.comparisonCurveSeries = [radiusA, radiusB];
+    const beforeRadiusComparison = count();
+    frameForContext(ctx, 32);
+    expect(count() - beforeRadiusComparison).toBe(1);
+    expect(vi.mocked(ctx.plot.setOverlaySeries).mock.calls.at(-1)?.[0]).toEqual([radiusA, radiusB]);
   });
   it("does not validate failed previews", () => {
     const { ctx } = workload();

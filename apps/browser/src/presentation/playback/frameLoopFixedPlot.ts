@@ -211,10 +211,7 @@ export function refreshFixedPlotPresentation(args: {
   const { anchorStep, times } = preview;
   const currentStep = state.lastValidFrame ?? anchorStep;
   const setters = buildVisualizationSetters(plot, renderer);
-  const radiusComparison = state.comparisonCurveSeries?.some((series) => series.id === "radius-a");
-  const overlaySeries = radiusComparison
-    ? [...(state.comparisonCurveSeries ?? [])]
-    : [...preview.overlaySeries, ...(state.comparisonCurveSeries ?? [])];
+  const { radiusComparison, overlaySeries } = fixedPresentationSeries(state, preview.overlaySeries);
   const badges = fixedPreviewBadges(params, state, currentStep);
   if (state.chromaticOverlay) state.chromaticOverlay.updateBase(overlaySeries);
   else setters.setOverlaySeries(overlaySeries);
@@ -238,6 +235,18 @@ export function refreshFixedPlotPresentation(args: {
           extraBadges: badges,
         }),
   );
+}
+
+function fixedPresentationSeries(
+  state: FrameLoopVisualizationState,
+  previewSeries: LightCurveOverlaySeries[],
+): { radiusComparison: boolean; overlaySeries: LightCurveOverlaySeries[] } {
+  const comparisonSeries = state.comparisonCurveSeries ?? [];
+  const radiusComparison = comparisonSeries.some((series) => series.id === "radius-a");
+  return {
+    radiusComparison,
+    overlaySeries: radiusComparison ? [...comparisonSeries] : [...previewSeries, ...comparisonSeries],
+  };
 }
 
 function fixedPreviewBadges(
