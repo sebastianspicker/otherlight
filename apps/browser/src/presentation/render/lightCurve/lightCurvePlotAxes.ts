@@ -4,10 +4,14 @@
  * Exports:
  *  - `TimeScaleInfo`: shared layout descriptor used by axes and annotations.
  *  - `xOfTime`: converts a time value to a canvas x-coordinate.
- *  - `drawAxes`: draws the plot border, Y/X grid lines, tick marks and labels.
+ *  - `drawAxes`: draws the journal-style frame, inward ticks, faint flux rules and labels.
  */
 
+import { FIGURE_FONTS, figureInk } from "../canvas/figureInk";
 import { computeTickLayout, formatTickValue } from "./lightCurvePlotSeries";
+
+/** Inward tick length in CSS pixels. */
+const TICK = 5;
 
 export type TimeScaleInfo = {
   haveTime: boolean;
@@ -39,15 +43,16 @@ export function drawAxes(args: {
   h: number;
 }): void {
   const { ctx, lo, hi, yRange, yOf, timeInfo, marginLeft, marginTop, plotW, plotH, h } = args;
+  const ink = figureInk();
 
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  // Journal figure: a closed frame with inward ticks on all four sides.
+  ctx.strokeStyle = ink.frame;
   ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.rect(marginLeft, marginTop, plotW, plotH);
-  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeRect(marginLeft + 0.5, marginTop + 0.5, plotW - 1, plotH - 1);
 
   const yTickLayout = computeTickLayout(lo, hi, Math.min(6, Math.floor(plotH / 36)));
-  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.font = `11px ${FIGURE_FONTS.mono}`;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -56,26 +61,24 @@ export function drawAxes(args: {
     Number.isFinite(tickVal) && tickVal <= hi + (yTickLayout?.step ?? 0) * 0.001 && tickCount <= 8;
     tickVal += yTickLayout?.step ?? 0, tickCount++
   ) {
-    const yPos = yOf(tickVal);
+    const yPos = Math.round(yOf(tickVal)) + 0.5;
     if (yPos < marginTop + 2 || yPos > marginTop + plotH - 2) continue;
 
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 4]);
+    ctx.strokeStyle = ink.grid;
     ctx.moveTo(marginLeft, yPos);
     ctx.lineTo(marginLeft + plotW, yPos);
     ctx.stroke();
-    ctx.setLineDash([]);
 
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-    ctx.lineWidth = 1;
-    ctx.moveTo(marginLeft - 4, yPos);
-    ctx.lineTo(marginLeft, yPos);
+    ctx.strokeStyle = ink.frame;
+    ctx.moveTo(marginLeft, yPos);
+    ctx.lineTo(marginLeft + TICK, yPos);
+    ctx.moveTo(marginLeft + plotW - TICK, yPos);
+    ctx.lineTo(marginLeft + plotW, yPos);
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(169, 184, 198, 0.9)";
+    ctx.fillStyle = ink.ink2;
     ctx.fillText(formatTickValue(tickVal, yRange), marginLeft - 6, yPos);
   }
 
@@ -93,34 +96,26 @@ export function drawAxes(args: {
       tickCount <= 10;
       tickVal += xTickLayout?.step ?? 0, tickCount++
     ) {
-      const xPos = tickOffset + tickVal * tickScale;
+      const xPos = Math.round(tickOffset + tickVal * tickScale) + 0.5;
       if (xPos < marginLeft + 2 || xPos > marginLeft + plotW - 2) continue;
 
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 4]);
-      ctx.moveTo(xPos, marginTop);
-      ctx.lineTo(xPos, marginTop + plotH);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.beginPath();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = ink.frame;
       ctx.moveTo(xPos, marginTop + plotH);
-      ctx.lineTo(xPos, marginTop + plotH + 4);
+      ctx.lineTo(xPos, marginTop + plotH - TICK);
+      ctx.moveTo(xPos, marginTop);
+      ctx.lineTo(xPos, marginTop + TICK);
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(169, 184, 198, 0.9)";
+      ctx.fillStyle = ink.ink2;
       ctx.fillText(formatTickValue(tickVal, tickSpan), xPos, marginTop + plotH + 6);
     }
   }
 
   ctx.save();
-  ctx.fillStyle = "rgba(208, 219, 229, 0.8)";
-  ctx.font = "12px system-ui, sans-serif";
-  ctx.translate(12, marginTop + plotH * 0.5);
+  ctx.fillStyle = ink.ink;
+  ctx.font = `italic 14px ${FIGURE_FONTS.serif}`;
+  ctx.translate(13, marginTop + plotH * 0.5);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -128,10 +123,14 @@ export function drawAxes(args: {
   ctx.restore();
 
   if (timeInfo.haveTime) {
-    ctx.fillStyle = "rgba(208, 219, 229, 0.8)";
-    ctx.font = "12px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText("t [s]", marginLeft + plotW * 0.5, h - 10);
+    ctx.fillStyle = ink.ink;
+    ctx.font = `italic 14px ${FIGURE_FONTS.serif}`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    const cx = marginLeft + plotW * 0.5;
+    ctx.fillText("t", cx - 1, h - 1);
+    ctx.font = `14px ${FIGURE_FONTS.serif}`;
+    ctx.textAlign = "left";
+    ctx.fillText(" [s]", cx, h - 1);
   }
 }

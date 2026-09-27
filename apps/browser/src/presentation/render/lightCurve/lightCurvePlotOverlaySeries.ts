@@ -1,5 +1,6 @@
 /** Renders a single overlay series on the light-curve plot. */
 
+import { inkFor } from "../canvas/figureInk";
 import { type TimeScaleInfo, xOfTime } from "./lightCurvePlotAxes";
 import type { LightCurveOverlaySeries } from "./lightCurvePlotTypes";
 
@@ -29,7 +30,7 @@ function canDrawOverlaySeries(series: LightCurveOverlaySeries, timeInfo: TimeSca
 }
 
 function configureOverlayStroke(ctx: CanvasRenderingContext2D, series: LightCurveOverlaySeries): void {
-  ctx.strokeStyle = series.color;
+  ctx.strokeStyle = inkFor(series.color, "figure");
   ctx.globalAlpha = Number.isFinite(series.alpha) ? Math.min(1, Math.max(0.1, series.alpha as number)) : 0.9;
   ctx.lineWidth = Number.isFinite(series.width) ? Math.max(0.75, series.width as number) : 1.3;
   if (series.style === "dashed") ctx.setLineDash([7, 4]);

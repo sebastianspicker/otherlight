@@ -1,4 +1,5 @@
 /** Draws labelled comparison outlines without changing physical geometry. */
+import { FIGURE_FONTS, PLATE_INK, inkFor } from "../canvas/figureInk";
 import type { SceneGhostGeometry, ScratchPoint, ToPxInto } from "./sceneTypes";
 
 export const drawGhostGeometry = (args: {
@@ -10,7 +11,7 @@ export const drawGhostGeometry = (args: {
   labelIndex: number;
 }): void => {
   const { ctx, toPxInto, scratchPoint, pixelsPerUnit, ghost, labelIndex } = args;
-  const color = ghost.color ?? "rgba(255,255,255,0.28)";
+  const color = ghost.color ? inkFor(ghost.color, "plate") : "rgba(255,255,255,0.28)";
   for (const geometry of ghost.geometry) {
     const p = toPxInto(geometry.center.x, geometry.center.y, scratchPoint);
     ctx.save();
@@ -56,7 +57,7 @@ export const drawGhostGeometry = (args: {
         Math.PI * 2,
       );
     }
-    ctx.strokeStyle = "#0b1319";
+    ctx.strokeStyle = PLATE_INK.sky;
     ctx.lineWidth = 3.5;
     ctx.stroke();
     ctx.strokeStyle = color;
@@ -64,7 +65,7 @@ export const drawGhostGeometry = (args: {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = color;
-    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = `12px ${FIGURE_FONTS.mono}`;
     const side = labelIndex % 2 === 0 ? -1 : 1;
     const labelX = p.x + side * (ghost.label.length === 1 ? 145 : 70);
     const labelY = p.y - 48;
@@ -72,7 +73,7 @@ export const drawGhostGeometry = (args: {
     ctx.moveTo(p.x + side * 12, p.y - 12);
     ctx.lineTo(labelX, labelY);
     ctx.stroke();
-    ctx.font = "16px system-ui, sans-serif";
+    ctx.font = `16px ${FIGURE_FONTS.sans}`;
     ctx.textAlign = side < 0 ? "right" : "left";
     ctx.textBaseline = "bottom";
     ctx.fillText(ghost.label, labelX + side * 5, labelY);

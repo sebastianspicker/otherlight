@@ -1,6 +1,7 @@
 /**
  * Formats, exports, and renders the O-C history.
  */
+import { figureInk } from "../render/canvas/figureInk";
 import { drawOcPlotFrame, type OcPlotPoint } from "./ocPlotCanvas";
 import type { TransitHistorySeries, TransitHistoryState } from "../../application/runtime/transitHistory";
 import type { OcBody, OcCsvOptions, OcTrendMode, OcUnit } from "./ocPlotTypes";
@@ -319,7 +320,7 @@ function prepareOcCanvas(canvas: HTMLCanvasElement): OcCanvasMetrics | undefined
 
 function drawOcBackground(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#04080d";
+  ctx.fillStyle = figureInk().paper;
   ctx.fillRect(0, 0, w, h);
 }
 

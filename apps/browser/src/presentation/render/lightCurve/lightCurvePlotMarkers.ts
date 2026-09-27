@@ -1,5 +1,6 @@
 /** Renders labelled timing markers on the light-curve plot. */
 
+import { FIGURE_FONTS, figureInk, inkFor } from "../canvas/figureInk";
 import { type TimeScaleInfo, xOfTime } from "./lightCurvePlotAxes";
 import type { LightCurveMarker } from "./lightCurvePlotTypes";
 
@@ -52,7 +53,7 @@ function visibleMarkerX(
 
 function drawMarker(args: MarkerDrawArgs): void {
   const { ctx, marker, x, yOf, marginLeft, marginTop, plotW, plotH, rows } = args;
-  const color = marker.color ?? "rgba(255, 214, 102, 0.92)";
+  const color = marker.color ? inkFor(marker.color, "figure") : figureInk().caution;
   ctx.save();
   drawMarkerLine({ ctx, marker, x, color, marginTop, plotH });
   const label = markerLabelPosition(marker, rows, marginTop, plotH);
@@ -107,12 +108,12 @@ function drawMarkerLabel(args: {
   plotW: number;
 }): void {
   const { ctx, text, x, yLabel, color, marginLeft, plotW } = args;
-  ctx.fillStyle = "rgba(6, 10, 16, 0.84)";
+  ctx.font = `11px ${FIGURE_FONTS.mono}`;
+  ctx.fillStyle = figureInk().chip;
   const width = ctx.measureText(text).width + 10;
   const textX = Math.max(marginLeft + width * 0.5, Math.min(marginLeft + plotW - width * 0.5, x));
   ctx.fillRect(textX - width * 0.5, yLabel - 1, width, 12);
   ctx.fillStyle = color;
-  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(text, textX, yLabel);

@@ -2,6 +2,7 @@
  * Draws the light-curve plot.
  */
 import { ensureHiDPICanvas, type SizeInfo } from "../canvas/canvasUtil";
+import { FIGURE_FONTS, figureInk } from "../canvas/figureInk";
 import { type VisibleFluxStats, type VisibleWindow } from "./lightCurvePlotMath";
 import { drawLightCurveSeries } from "./lightCurvePlotSeries";
 import type {
@@ -107,7 +108,7 @@ function resolvePlotLayout(size: SizeInfo): PlotLayout {
   const marginLeft = 62;
   const marginRight = 12;
   const marginTop = size.cssW < 600 ? 52 : 28;
-  const marginBottom = 26;
+  const marginBottom = 40;
   return {
     w: size.cssW,
     h: size.cssH,
@@ -124,11 +125,14 @@ function isDrawableLayout(layout: PlotLayout): boolean {
 
 function drawPlotBackground(ctx: CanvasRenderingContext2D, layout: PlotLayout, title: string): void {
   ctx.clearRect(0, 0, layout.w, layout.h);
-  ctx.fillStyle = "#0b1319";
+  const ink = figureInk();
+  ctx.fillStyle = ink.paper;
   ctx.fillRect(0, 0, layout.w, layout.h);
 
-  ctx.fillStyle = "rgba(238, 244, 248, 0.85)";
-  ctx.font = "600 12px system-ui, sans-serif";
+  ctx.fillStyle = ink.ink2;
+  ctx.font = `500 12px ${FIGURE_FONTS.sans}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.fillText(title, layout.marginLeft, 16);
 }
 
@@ -137,11 +141,13 @@ function visibleSampleCount(visibleWindow: VisibleWindow): number {
 }
 
 function drawAwaitingData(ctx: CanvasRenderingContext2D, layout: PlotLayout): void {
-  ctx.fillStyle = "rgba(169, 184, 198, 0.5)";
-  ctx.font = "12px system-ui, sans-serif";
+  ctx.fillStyle = figureInk().ink3;
+  ctx.font = `italic 14px ${FIGURE_FONTS.serif}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(
-    "Awaiting data...",
-    layout.marginLeft + layout.plotW * 0.5 - 40,
+    "No samples yet \u2014 start the simulation or jump to a transit.",
+    layout.marginLeft + layout.plotW * 0.5,
     layout.marginTop + layout.plotH * 0.5,
   );
 }
@@ -268,12 +274,13 @@ const drawUnityBaseline = (
   const y1 = scale.yOf(1);
   if (!isYInPlot(y1, layout)) return;
 
-  drawHorizontalGuide(ctx, layout, y1, "rgba(46, 195, 177, 0.35)", [6, 4]);
-  ctx.fillStyle = "rgba(46, 195, 177, 0.55)";
-  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
-  ctx.textAlign = "left";
+  const ink = figureInk();
+  drawHorizontalGuide(ctx, layout, y1, ink.ink3, [1, 3]);
+  ctx.fillStyle = ink.ink3;
+  ctx.font = `italic 12px ${FIGURE_FONTS.serif}`;
+  ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
-  ctx.fillText("F\u2080 = 1", layout.marginLeft + layout.plotW - 32, y1 - 2);
+  ctx.fillText("F\u2080 = 1", layout.marginLeft + layout.plotW - 8, y1 - 3);
 };
 
 const drawMeanLine = (
@@ -286,7 +293,7 @@ const drawMeanLine = (
   if (!enabled || fluxStats.finiteCount === 0) return;
   const yMean = scale.yOf(fluxStats.sum / fluxStats.finiteCount);
   if (!isYInPlot(yMean, layout)) return;
-  drawHorizontalGuide(ctx, layout, yMean, "rgba(76, 201, 240, 0.4)", [3, 3]);
+  drawHorizontalGuide(ctx, layout, yMean, figureInk().ink3, [6, 3, 1, 3]);
 };
 
 const isYInPlot = (y: number, layout: PlotLayout): boolean => {
@@ -395,7 +402,7 @@ const drawSingleSample = (ctx: CanvasRenderingContext2D, renderState: LightCurve
   const x = singleSampleX(renderState);
   const y = renderState.scale.yOffset + firstFlux * renderState.scale.yScale;
   ctx.beginPath();
-  ctx.fillStyle = "#4cc9f0";
+  ctx.fillStyle = figureInk().traceA;
   ctx.arc(x, y, 3, 0, Math.PI * 2);
   ctx.fill();
 };

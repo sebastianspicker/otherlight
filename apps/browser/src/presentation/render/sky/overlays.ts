@@ -8,6 +8,7 @@
 // - Keep conventions consistent with core/types.ts and render/canvas2d.ts:
 //   observer.dir points from star to observer; larger sky.z means closer to observer. [file:100][file:119]
 
+import { FIGURE_FONTS } from "../canvas/figureInk";
 import { toFinitePositiveOr } from "../../../domain/model/units";
 import type { Vec3 } from "../../../domain/orbits/vec3";
 import { vIsFinite, vNormalizeOrThrow } from "../../../domain/orbits/vec3";
@@ -80,8 +81,8 @@ const DEFAULT_THEME: OverlayTheme = {
   panelStroke: "rgba(255,255,255,0.18)",
   accent: "rgba(76,201,240,0.95)",
   warn: "rgba(255,120,120,0.95)",
-  font: "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  fontSmall: "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  font: `12px ${FIGURE_FONTS.mono}`,
+  fontSmall: `11px ${FIGURE_FONTS.mono}`,
 };
 
 export function defaultDebugOverlayToggles(): RequiredDebugOverlayToggles {

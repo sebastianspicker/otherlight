@@ -10,6 +10,7 @@
  *  - `drawComparisonInset`: renders the small comparison-model inset panel.
  */
 
+import { FIGURE_FONTS, figureInk, inkFor } from "../canvas/figureInk";
 import type {
   LightCurveBadge,
   LightCurveOverlaySeries,
@@ -79,7 +80,7 @@ function drawWindowOverlay(args: {
   if (!(x1 > x0)) return;
 
   ctx.save();
-  ctx.fillStyle = overlay.color;
+  ctx.fillStyle = inkFor(overlay.color, "figure");
   ctx.globalAlpha = windowOverlayAlpha(overlay.alpha);
   ctx.fillRect(x0, marginTop, x1 - x0, plotH);
   if (overlay.label) drawWindowOverlayLabel(ctx, overlay.label, x0, x1, marginTop);
@@ -107,9 +108,9 @@ function drawWindowOverlayLabel(
   x1: number,
   marginTop: number,
 ): void {
-  ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
+  ctx.fillStyle = figureInk().ink2;
   ctx.globalAlpha = 1;
-  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.font = `11px ${FIGURE_FONTS.mono}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(label, x0 + (x1 - x0) * 0.5, marginTop + 4);
@@ -124,6 +125,8 @@ export function drawLegend(args: {
   marginTop: number;
 }): void {
   const { ctx, overlaySeries, badges, w, marginLeft, marginTop } = args;
+  const ink = figureInk();
+  ctx.font = `11px ${FIGURE_FONTS.mono}`;
 
   let badgeX = marginLeft;
   let badgeY = marginTop - 20;
@@ -134,12 +137,12 @@ export function drawLegend(args: {
       badgeY += 14;
     }
     ctx.save();
-    ctx.fillStyle = "rgba(6, 10, 16, 0.85)";
+    ctx.fillStyle = ink.chip;
     ctx.fillRect(badgeX, badgeY, width, 12);
-    ctx.fillStyle = badge.color;
+    ctx.fillStyle = inkFor(badge.color, "figure");
     ctx.fillRect(badgeX + 3, badgeY + 3, 6, 6);
-    ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
-    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = ink.ink2;
+    ctx.font = `11px ${FIGURE_FONTS.mono}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText(badge.label, badgeX + 12, badgeY + 1);
@@ -153,26 +156,25 @@ export function drawLegend(args: {
   let legendRight = w - 16;
   for (const series of radiusLegend ? [...legendSeries].reverse() : legendSeries) {
     const text = series.label;
-    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
-    const width = ctx.measureText(text).width + 22;
+    ctx.font = `11px ${FIGURE_FONTS.mono}`;
+    const width = ctx.measureText(text).width + 26;
     const x = legendRight - width;
     ctx.save();
-    ctx.fillStyle = "rgba(6, 10, 16, 0.76)";
+    ctx.fillStyle = ink.chip;
     ctx.fillRect(x, legendY, width, 12);
-    ctx.strokeStyle = series.color;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = inkFor(series.color, "figure");
+    ctx.lineWidth = series.style === "dashed" ? 1.5 : 2;
     if (series.style === "dashed") ctx.setLineDash([7, 4]);
     else if (series.style === "dotted") ctx.setLineDash([2, 5]);
     ctx.beginPath();
-    ctx.moveTo(x + 4, legendY + 6);
-    ctx.lineTo(x + 14, legendY + 6);
+    ctx.moveTo(x + 2, legendY + 6);
+    ctx.lineTo(x + 18, legendY + 6);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "rgba(225, 233, 239, 0.9)";
-    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = ink.ink;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText(text, x + 18, legendY + 1);
+    ctx.fillText(text, x + 23, legendY + 1);
     ctx.restore();
     if (radiusLegend) legendRight = x - 16;
     else legendY += 14;

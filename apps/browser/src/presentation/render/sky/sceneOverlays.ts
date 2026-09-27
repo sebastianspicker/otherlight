@@ -1,6 +1,7 @@
 /**
  * Resolves occulter geometry and draws the scene overlays.
  */
+import { FIGURE_FONTS } from "../canvas/figureInk";
 import type { BrowserScenarioDraft } from "../../../domain/model/types";
 import type { RenderOcculterGeometry, SimulationFrame } from "../../../domain/simulation/frames";
 
@@ -12,7 +13,7 @@ import type { DebugOverlayData } from "./overlays";
 import type { SceneDidacticOverlayState, ScratchPoint, ToPxInto } from "./sceneTypes";
 import type { StarDiskCache } from "./starDisk";
 
-const MONO_FONT = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+const MONO_FONT = `11px ${FIGURE_FONTS.mono}`;
 
 type EventMarker = SimulationFrame["renderSignals"]["eventMarkers"][number];
 type TimingMarker = NonNullable<SimulationFrame["renderSignals"]["timingMarkers"]>[number];

@@ -1,6 +1,7 @@
 /**
  * Draws light-curve series and their tick layout.
  */
+import { figureInk } from "../canvas/figureInk";
 import { drawDenseFiniteTimeSeries, drawDenseIndexSeries } from "./lightCurvePlotSeriesDense";
 import type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
 export type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
@@ -64,7 +65,7 @@ export function drawLightCurveSeries(args: DrawSeriesArgs): void {
 
 function setupSeriesStroke(ctx: CanvasRenderingContext2D): void {
   ctx.beginPath();
-  ctx.strokeStyle = "#9ddcff";
+  ctx.strokeStyle = figureInk().traceA;
   ctx.lineWidth = 1.5;
   ctx.lineJoin = "round";
 }

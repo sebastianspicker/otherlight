@@ -1,6 +1,7 @@
 /**
  * Draws the O-C plot frame.
  */
+import { FIGURE_FONTS, figureInk } from "../render/canvas/figureInk";
 import type { OcBody, OcTrendMode, OcUnit } from "./ocPlotTypes";
 
 export type OcPlotPoint = {
@@ -89,19 +90,15 @@ function ocPlotLayout(w: number, h: number): OcPlotLayout {
 }
 
 function drawOcAxes(ctx: CanvasRenderingContext2D, layout: OcPlotLayout): void {
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  // Same closed journal frame as the light curve.
+  ctx.strokeStyle = figureInk().frame;
   ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(layout.x0, layout.y0);
-  ctx.lineTo(layout.x0 + layout.pw, layout.y0);
-  ctx.moveTo(layout.x0, layout.m.t);
-  ctx.lineTo(layout.x0, layout.y0);
-  ctx.stroke();
+  ctx.strokeRect(layout.x0 + 0.5, layout.m.t + 0.5, layout.pw - 1, layout.ph - 1);
 }
 
 function drawNoOcEvents(ctx: CanvasRenderingContext2D, layout: OcPlotLayout, body: OcBody): void {
-  ctx.fillStyle = "rgba(220,230,240,0.8)";
-  ctx.font = "12px Space Mono, monospace";
+  ctx.fillStyle = figureInk().ink3;
+  ctx.font = `italic 13px ${FIGURE_FONTS.serif}`;
   ctx.fillText(`No ${body} O-C events`, layout.x0 + 8, layout.m.t + 16);
 }
 
@@ -138,7 +135,7 @@ function ocPlotScales(layout: OcPlotLayout, bounds: OcPlotBounds): OcPlotScales 
 function drawFitOverlay(context: DrawFitOverlayContext): void {
   if (context.trendMode !== "fit" || !context.fit || context.pointsY.length < 2) return;
   context.ctx.save();
-  context.ctx.strokeStyle = "rgba(245,194,107,0.7)";
+  context.ctx.strokeStyle = figureInk().caution;
   context.ctx.lineWidth = 1;
   context.ctx.setLineDash([5, 4]);
   context.ctx.beginPath();
@@ -161,7 +158,7 @@ function fitYAtEpoch(fit: OcPlotFit, epoch: number, scale: number): number {
 }
 
 function drawOcPolyline(ctx: CanvasRenderingContext2D, pointsY: OcPlotPoint[], scales: OcPlotScales): void {
-  ctx.strokeStyle = "rgba(46,195,177,0.9)";
+  ctx.strokeStyle = figureInk().traceA;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   pointsY.forEach((p, i) => {
@@ -174,7 +171,7 @@ function drawOcPolyline(ctx: CanvasRenderingContext2D, pointsY: OcPlotPoint[], s
 }
 
 function drawOcMarkers(ctx: CanvasRenderingContext2D, pointsY: OcPlotPoint[], scales: OcPlotScales): void {
-  ctx.fillStyle = "#f5c26b";
+  ctx.fillStyle = figureInk().traceB;
   for (const p of pointsY) {
     ctx.beginPath();
     ctx.arc(scales.sx(p.x), scales.sy(p.y), 2.6, 0, Math.PI * 2);
@@ -189,8 +186,8 @@ function drawOcLabels(
   unit: OcUnit,
   trendMode: OcTrendMode,
 ): void {
-  ctx.fillStyle = "rgba(220,230,240,0.85)";
-  ctx.font = "11px Space Mono, monospace";
+  ctx.fillStyle = figureInk().ink2;
+  ctx.font = `11px ${FIGURE_FONTS.mono}`;
   const label = trendMode === "detrended" ? `detrended O-C [${unitLabel(unit)}]` : `O-C [${unitLabel(unit)}]`;
   ctx.fillText(label, 8, layout.m.t + 10);
   ctx.fillText(String(bounds.xMin.toFixed(0)), layout.x0, layout.h - 8);
@@ -205,7 +202,7 @@ function unitLabel(unit: OcUnit): string {
 /** Draws the O-C zero line. */
 function drawZeroLine(ctx: CanvasRenderingContext2D, layout: OcPlotLayout, scales: OcPlotScales): void {
   const yZero = scales.sy(0);
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.strokeStyle = figureInk().ink3;
   ctx.beginPath();
   ctx.moveTo(layout.x0, yZero);
   ctx.lineTo(layout.x0 + layout.pw, yZero);

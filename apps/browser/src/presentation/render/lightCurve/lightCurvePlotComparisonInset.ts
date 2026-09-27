@@ -1,5 +1,6 @@
 /** Renders the comparison-model inset for the light-curve plot. */
 
+import { FIGURE_FONTS, figureInk, inkFor } from "../canvas/figureInk";
 import type { TimeScaleInfo } from "./lightCurvePlotAxes";
 import type { LightCurveComparisonInset } from "./lightCurvePlotTypes";
 
@@ -85,13 +86,14 @@ function paddedFluxRange(lo: number, hi: number): InsetFluxRange {
 
 function drawComparisonInsetPanel(ctx: CanvasRenderingContext2D, title: string, rect: InsetRect): void {
   const { x0, y0, w, h } = rect;
-  ctx.fillStyle = "rgba(6, 10, 16, 0.84)";
+  const ink = figureInk();
+  ctx.fillStyle = ink.paper;
   ctx.fillRect(x0, y0, w, h);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  ctx.strokeStyle = ink.frame;
   ctx.lineWidth = 1;
-  ctx.strokeRect(x0, y0, w, h);
-  ctx.fillStyle = "rgba(225, 233, 239, 0.88)";
-  ctx.font = "11px system-ui, sans-serif";
+  ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+  ctx.fillStyle = ink.ink2;
+  ctx.font = `11px ${FIGURE_FONTS.sans}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(title, x0 + 6, y0 + 4);
@@ -106,7 +108,7 @@ function drawComparisonInsetSeries(args: {
 }): void {
   const { ctx, series, rect, range, timeInfo } = args;
   ctx.save();
-  ctx.strokeStyle = series.color;
+  ctx.strokeStyle = inkFor(series.color, "figure");
   ctx.lineWidth = 1.25;
   ctx.beginPath();
   const started = drawComparisonInsetPath({ ctx, series, rect, range, timeInfo });

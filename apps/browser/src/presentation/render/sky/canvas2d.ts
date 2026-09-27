@@ -1,6 +1,7 @@
 // Canvas2D sky-plane renderer; visual-only contract: do not mutate simulation state and keep the
 // shared observer/sky.z convention with display-only limb darkening.
 
+import { PLATE_INK } from "../canvas/figureInk";
 import type { BrowserScenarioDraft } from "../../../domain/model/types";
 import { toFinitePositiveOr } from "../../../domain/model/units";
 import type { Vec3 } from "../../../domain/orbits/vec3";
@@ -31,7 +32,7 @@ export type { DebugOverlayData, DebugOverlayToggles } from "./overlays";
 export type Canvas2DRendererOptions = {
   /**
    * Background fill for the main view.
-   * Default: "#0b1319".
+   * Default: the Plate & Figure sky plate color.
    */
   background?: string;
 
@@ -58,7 +59,7 @@ function getCanvas2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D
 
 function resolveCanvas2DRendererOptions(opts: Canvas2DRendererOptions): Required<Canvas2DRendererOptions> {
   return {
-    background: rendererOptionDefault(opts.background, "#0b1319"),
+    background: rendererOptionDefault(opts.background, PLATE_INK.sky),
     showAxes: rendererOptionDefault(opts.showAxes, true),
     autoFitScene: rendererOptionDefault(opts.autoFitScene, false),
   };

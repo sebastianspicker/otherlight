@@ -50,6 +50,7 @@ import { createBootstrapApplyParams } from "../presentation/scenario/applyParams
 import { wireBootstrapScenarioControls } from "../presentation/scenario/scenarioControls";
 import { wireBootstrapResetHandlers } from "../presentation/scenario/resetHandlers";
 import { finalizeBootstrapStartup } from "./startup";
+import { wireFigureTheme } from "../presentation/shell/figureTheme";
 import { currentDidacticSignals } from "../application/runtime/didacticSignals";
 
 let activeAppDispose: (() => void) | null = null;
@@ -412,6 +413,10 @@ export async function initApp(): Promise<void> {
   });
 
   window.addEventListener("resize", () => frame.invalidate(), { signal: teardownController.signal });
+  wireFigureTheme(() => {
+    frame.invalidate();
+    renderOcPanel();
+  }, teardownController.signal);
   document.getElementById("main")?.addEventListener("change", () => frame.invalidate(), listenerOptions);
   wireOcControls();
 

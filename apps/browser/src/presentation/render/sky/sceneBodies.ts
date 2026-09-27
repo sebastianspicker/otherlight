@@ -1,6 +1,7 @@
 /**
  * Draws bodies and their occlusion hints.
  */
+import { PLATE_INK } from "../canvas/figureInk";
 import { clamp, toFinitePositiveOr } from "../../../domain/model/units";
 
 import type { ScratchPoint, ToPxInto } from "./sceneTypes";
@@ -55,7 +56,7 @@ export function drawBodyWithOcclusionHint(args: {
     y,
     r: rBody,
     z: zBody,
-    baseColor: transitSilhouette ? "#0b1319" : baseColor,
+    baseColor: transitSilhouette ? PLATE_INK.sky : baseColor,
     opaque: transitSilhouette,
   });
 
@@ -103,7 +104,7 @@ export function drawEllipseBodyWithOcclusionHint(args: {
   ctx.globalAlpha = transitSilhouette ? 1 : shade;
   ctx.beginPath();
   ctx.ellipse(p.x, p.y, rxPx, ryPx, ang, 0, Math.PI * 2);
-  ctx.fillStyle = transitSilhouette ? "#0b1319" : baseColor;
+  ctx.fillStyle = transitSilhouette ? PLATE_INK.sky : baseColor;
   ctx.fill();
   ctx.restore();
 
