@@ -1,11 +1,12 @@
 /** Finds a nearby Education transit estimate without stepping the active runtime. */
 import { cloneParams } from "../../domain/model/clone";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
-import { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } from "../../domain/simulation/v4";
+import { toPreviewScenarioV4 } from "../../application/browserScenarioAdapter";
+import { createSimulationV4 } from "../../domain/simulation/v4";
 
 /** Bounded search; an absent estimate does not prove that the orbit has no transit. */
 export function findObservatoryTransit(params: BrowserScenarioDraft, fromSec: number): number | undefined {
-  const config = mapBrowserScenarioDraftToEducationScenarioV4(cloneParams(params));
+  const config = toPreviewScenarioV4(cloneParams(params));
   const period = config.bodies.planets[0]?.orbit.period;
   if (!period || !Number.isFinite(period) || !Number.isFinite(fromSec)) return undefined;
   const probe = createSimulationV4(config);

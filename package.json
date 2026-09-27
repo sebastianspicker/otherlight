@@ -45,8 +45,7 @@
     ],
     "ignoreBinaries": [
       "shellcheck",
-      "swift",
-      "uv"
+      "swift"
     ]
   },
   "scripts": {

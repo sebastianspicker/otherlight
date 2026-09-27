@@ -107,8 +107,7 @@
         "apps/browser/src/domain/photometry/limbDarkening.ts",
         "apps/browser/src/domain/photometry/limbDarkeningBands.ts",
         "apps/browser/src/domain/photometry/limbDarkeningEvaluation.ts",
-        "apps/browser/src/domain/photometry/limbDarkeningLookup.ts",
-        "apps/browser/src/domain/simulation/limbDarkeningBridge.ts"
+        "apps/browser/src/domain/photometry/limbDarkeningLookup.ts"
       ],
       "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]

@@ -1,7 +1,8 @@
 /** Prepares a single-variable Education comparison without mutating accepted authoring state. */
 import { cloneParams } from "../../domain/model/clone";
 import { compareScenariosAtTime, interpretDidacticComparison } from "../../domain/education";
-import { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } from "../../domain/simulation/v4";
+import { toPreviewScenarioV4 } from "../../application/browserScenarioAdapter";
+import { createSimulationV4 } from "../../domain/simulation/v4";
 import { displayFluxValueForConfig } from "../../domain/simulation/v4/binaryBaseline";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 
@@ -20,7 +21,7 @@ export function prepareRadiusComparison(params: BrowserScenarioDraft, radiusKm: 
   alternate.planet.r = radiusKm * 1000;
   const comparison = compareScenariosAtTime(params, alternate, timeSec);
   const visual = comparison.visual;
-  const configs = [params, alternate].map(mapBrowserScenarioDraftToEducationScenarioV4);
+  const configs = [params, alternate].map((draft) => toPreviewScenarioV4(draft));
   const runtimes = configs.map((config) => createSimulationV4(config));
   const halfWindow = Math.max(
     3600,

@@ -195,7 +195,10 @@ export function unsupportedEducationScenarioFeatures(scenario: EducationScenario
   return collectUnsupportedPhotometryFeaturesV4(scenario);
 }
 
-/** Preserves the chromatic preview mapper semantics at the single authoring boundary. */
-export function toChromaticScenarioV4(system: BrowserScenarioDraft): EducationScenarioV4 {
+/**
+ * Maps a draft for a side preview (chromatic bands, observatory comparisons)
+ * without the runtime-ingress validation or runtime mode of toEducationScenarioV4.
+ */
+export function toPreviewScenarioV4(system: BrowserScenarioDraft): EducationScenarioV4 {
   return mapBrowserScenarioDraftToEducationScenarioV4(system);
 }

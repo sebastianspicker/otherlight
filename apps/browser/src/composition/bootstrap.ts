@@ -81,19 +81,21 @@ export async function initApp(): Promise<void> {
     btnApplyParams,
     btnResetParams,
   } = refs;
-  const appStatus = document.getElementById("appStatus");
-  const appStatusMessage = document.getElementById("appStatusMessage");
-  const appRetryBtn = document.getElementById("appRetryBtn") as HTMLButtonElement | null;
-  const paramForm = document.getElementById("paramForm") as HTMLFormElement | null;
-  const paramErrorSummary = document.getElementById("paramErrorSummary");
-  const paramDirtyState = document.getElementById("paramDirtyState");
-  const dirtyDialog = document.getElementById("dirtyChangeDialog") as HTMLDialogElement | null;
-  const dirtyKeepEditingBtn = document.getElementById("dirtyKeepEditingBtn") as HTMLButtonElement | null;
-  const dirtyDiscardBtn = document.getElementById("dirtyDiscardBtn") as HTMLButtonElement | null;
-  const modeSimulationBtn = document.getElementById("modeSimulationBtn") as HTMLButtonElement | null;
-  const modeLabBtn = document.getElementById("modeLabBtn") as HTMLButtonElement | null;
-  const lcExportBtn = document.getElementById("lcExportBtn") as HTMLButtonElement | null;
-  const btnUndoClearLC = document.getElementById("btnUndoClearLC") as HTMLButtonElement | null;
+  const {
+    appStatus,
+    appStatusMessage,
+    appRetryBtn,
+    paramForm,
+    paramErrorSummary,
+    paramDirtyState,
+    dirtyChangeDialog: dirtyDialog,
+    dirtyKeepEditingBtn,
+    dirtyDiscardBtn,
+    modeSimulationBtn,
+    modeLabBtn,
+    lcExportBtn,
+    btnUndoClearLC,
+  } = refs;
   const setAppStatus = createBootstrapStatusWriter(appStatus, appStatusMessage);
   const parsedInitialView = initializeProductViewControls({
     productProfileSelect,

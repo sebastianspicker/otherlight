@@ -251,6 +251,21 @@ export type UiRefs = {
   exoMoonIncDot: HTMLInputElement;
   exoMoonOmegaSmallDot: HTMLInputElement;
   exoImpactYDot: HTMLInputElement;
+
+  // Application status, parameter form state, and unsaved-change dialog
+  appStatus: HTMLElement | null;
+  appStatusMessage: HTMLElement | null;
+  appRetryBtn: HTMLButtonElement | null;
+  paramForm: HTMLFormElement | null;
+  paramErrorSummary: HTMLElement | null;
+  paramDirtyState: HTMLElement | null;
+  dirtyChangeDialog: HTMLDialogElement | null;
+  dirtyKeepEditingBtn: HTMLButtonElement | null;
+  dirtyDiscardBtn: HTMLButtonElement | null;
+  modeSimulationBtn: HTMLButtonElement | null;
+  modeLabBtn: HTMLButtonElement | null;
+  lcExportBtn: HTMLButtonElement | null;
+  btnUndoClearLC: HTMLButtonElement | null;
 };
 
 const refAliases: Record<string, string> = {

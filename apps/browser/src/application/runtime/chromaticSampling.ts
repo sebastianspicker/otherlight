@@ -3,13 +3,13 @@ import { cloneParams } from "../../domain/model/clone";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { resolveWeightedPhotometryBands } from "../../domain/simulation/v4/nativePhotometry";
 import { createSimulationV4, type EducationScenarioV4 } from "../../domain/simulation/v4";
-import { toChromaticScenarioV4 } from "../browserScenarioAdapter";
+import { toPreviewScenarioV4 } from "../browserScenarioAdapter";
 export type BandConfiguration = { label: string; configuration: EducationScenarioV4 };
 export type BandSamples = { label: string; samples: Array<{ t: number; flux: number }> };
 type BandVariantSystem = { label: string; system: BrowserScenarioDraft };
 type WeightedPhotometryBand = ReturnType<typeof resolveWeightedPhotometryBands>[number];
 function buildBandVariantSystems(system: BrowserScenarioDraft): BandVariantSystem[] {
-  const cfg = toChromaticScenarioV4(system);
+  const cfg = toPreviewScenarioV4(system);
   const bands = resolveWeightedPhotometryBands(cfg);
   if (bands.length <= 1) return [];
 
@@ -61,7 +61,7 @@ function pickTransmissionBandIndex(lambdaNmList: number[], lambdaNm: number, fal
 export function buildBandConfigurations(system: BrowserScenarioDraft): BandConfiguration[] {
   return buildBandVariantSystems(system).map(({ label, system }) => ({
     label,
-    configuration: toChromaticScenarioV4(system),
+    configuration: toPreviewScenarioV4(system),
   }));
 }
 export function createBandSamplingService(configurations: BandConfiguration[]) {

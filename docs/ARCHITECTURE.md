@@ -136,9 +136,14 @@ controls and presets
   -> frames, plots, diagnostics, Guided Labs, and exports
 ```
 
-`BrowserScenarioDraft` is mutable authoring state. The sole canonical authoring
-boundary is `apps/browser/src/application/browserScenarioAdapter.ts`, which creates
-a serializable `EducationScenarioV4`. Education output stays a teaching preview
+`BrowserScenarioDraft` is mutable authoring state. The pure draft-to-V4 mapping
+lives in the domain (`domain/simulation/v4/migrateModels.ts`). Outside the domain,
+drafts become a serializable `EducationScenarioV4` only through
+`apps/browser/src/application/browserScenarioAdapter.ts`: `toEducationScenarioV4`
+for runtime ingress (with scientific-browser validation and runtime mode) and
+`toPreviewScenarioV4` for side previews such as chromatic bands and observatory
+comparisons. An ESLint rule rejects direct use of the domain mapping from the
+outer layers. Education output stays a teaching preview
 within the model registry's stated limits. The draft holds model authoring values,
 not DOM state or a cross-language wire format.
 

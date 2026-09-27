@@ -1,7 +1,7 @@
 /** Builds cached radial gradient stops for the projected stellar disk. */
 import type { LimbDarkeningLaw } from "../../../domain/model/types";
 import { clamp, toFinitePositiveOr } from "../../../domain/model/units";
-import { intensityNonNegative } from "../../../domain/simulation/limbDarkeningBridge";
+import { intensityNonNegative } from "../../../domain/photometry/limbDarkening";
 
 export type Rgb = [number, number, number];
 export type GradientStop = { pos: number; color: string };

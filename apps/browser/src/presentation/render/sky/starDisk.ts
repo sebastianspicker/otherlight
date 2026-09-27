@@ -18,7 +18,7 @@
 
 import type { LimbDarkeningLaw, BrowserScenarioDraft } from "../../../domain/model/types";
 import { toFinitePositiveOr } from "../../../domain/model/units";
-import { resolveAndValidateLimbDarkening } from "../../../domain/simulation/limbDarkeningBridge";
+import { resolveAndValidateLimbDarkening } from "../../../domain/photometry/limbDarkening";
 import { drawBrightnessPatches } from "./starDiskBrightnessPatches";
 import {
   applyStopsToGradient,
