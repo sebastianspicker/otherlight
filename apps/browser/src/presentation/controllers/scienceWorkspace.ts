@@ -1,5 +1,5 @@
 /**
- * Owns science Workspace support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Wires the Scientific workspace, its job, and its capability state.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import {
@@ -11,6 +11,8 @@ import {
 } from "../../infrastructure/science";
 import { toEducationScenarioV4 } from "../../application/browserScenarioAdapter";
 import { isGitHubPagesRuntime } from "../runtime/deployment";
+import { getScienceContractReplay, type ScienceContractReplay } from "./scienceContractReplay";
+import { wireScienceDatasetWorkspace } from "./scienceDatasetWorkspace";
 
 type ScienceWorkspaceClient = Pick<
   ReturnType<typeof createScienceBackendClient>,
@@ -28,6 +30,7 @@ type ScienceWorkspaceArgs = {
 
 export type ScienceWorkspaceController = {
   refreshCapabilities: () => Promise<void>;
+  refreshDatasets: () => Promise<void>;
   cancelCurrentJob: () => Promise<void>;
 };
 
@@ -43,6 +46,9 @@ type ScienceWorkspaceElements = {
   runStatus: HTMLElement;
   artifactLink: HTMLAnchorElement;
   result: HTMLElement;
+  replay: HTMLElement;
+  replaySource: HTMLElement;
+  replayMetadata: HTMLElement;
 };
 
 type ScienceRunInputs = {
@@ -93,6 +99,9 @@ function getElements(): ScienceWorkspaceElements {
     runStatus: requiredElement("scienceRunStatus", HTMLElement),
     artifactLink: requiredElement("scienceArtifactLink", HTMLAnchorElement),
     result: requiredElement("scienceResult", HTMLElement),
+    replay: requiredElement("scienceContractReplay", HTMLElement),
+    replaySource: requiredElement("scienceReplaySource", HTMLElement),
+    replayMetadata: requiredElement("scienceReplayMetadata", HTMLElement),
   };
 }
 
@@ -167,19 +176,48 @@ function readRunInputs(elements: ScienceWorkspaceElements): ScienceRunInputs {
 function clearRunResult(elements: ScienceWorkspaceElements): void {
   elements.artifactLink.hidden = true;
   elements.artifactLink.removeAttribute("href");
+  elements.replay.hidden = true;
   elements.result.textContent = "No scientific result has been accepted yet.";
 }
 
-function renderGitHubPagesUnavailable(elements: ScienceWorkspaceElements): void {
-  elements.capabilityStatus.textContent = "Unavailable on GitHub Pages";
+function renderScienceContractReplay(
+  elements: ScienceWorkspaceElements,
+  replay: ScienceContractReplay,
+): void {
+  elements.replay.hidden = false;
+  elements.replaySource.textContent = replay.source;
+  elements.replayMetadata.textContent = JSON.stringify(
+    {
+      label: replay.label,
+      execution: replay.execution,
+      runClassification: replay.runClassification,
+      resultKind: replay.resultKind,
+      fixtureRunId: replay.fixtureRunId,
+      inputHashSha256: replay.inputHashSha256,
+      implementation: replay.implementation,
+      modelVersion: replay.modelVersion,
+      artifact: {
+        format: replay.artifactFormat,
+        rowCount: replay.artifactRowCount,
+      },
+    },
+    null,
+    2,
+  );
+}
+
+function renderGitHubPagesReplay(elements: ScienceWorkspaceElements): void {
+  const replay = getScienceContractReplay();
+  elements.capabilityStatus.textContent = "Fixture replay only (GitHub Pages)";
   elements.refreshButton.disabled = true;
   elements.runButton.disabled = true;
   elements.cancelButton.disabled = true;
   elements.artifactLink.hidden = true;
   elements.artifactLink.removeAttribute("href");
-  elements.result.textContent = "Scientific artifacts are available only from a local V5 run.";
+  elements.result.textContent = "No local scientific result has been accepted in this hosted session.";
   elements.runStatus.textContent =
-    "Scientific V5 jobs are unavailable on GitHub Pages. To run them locally, start the loopback science service with pnpm science:backend:serve.";
+    "Fixture/replay only: no V5 execution occurred, and this is not a completed local or scientific run. The prospective local-run inputs above do not affect this fixture. To run locally, start the loopback science service with pnpm science:backend:serve.";
+  renderScienceContractReplay(elements, replay);
 }
 
 function renderCompletedRun(
@@ -332,12 +370,14 @@ async function cancelScienceJob({ args, client, elements, state }: ScienceWorksp
 export function wireScienceWorkspace(args: ScienceWorkspaceArgs): ScienceWorkspaceController {
   const elements = getElements();
   if (args.isGitHubPages ?? isGitHubPagesRuntime()) {
-    renderGitHubPagesUnavailable(elements);
+    renderGitHubPagesReplay(elements);
     return {
-      refreshCapabilities: async () => renderGitHubPagesUnavailable(elements),
+      refreshCapabilities: async () => renderGitHubPagesReplay(elements),
+      refreshDatasets: async () => {},
       cancelCurrentJob: async () => {},
     };
   }
+  const datasets = wireScienceDatasetWorkspace({ signal: args.signal });
   const context: ScienceWorkspaceContext = {
     args,
     client: args.client ?? args.createClient?.() ?? createScienceBackendClient(),
@@ -353,5 +393,5 @@ export function wireScienceWorkspace(args: ScienceWorkspaceArgs): ScienceWorkspa
   elements.runButton.addEventListener("click", () => void runScienceJob(context), { signal: args.signal });
   elements.cancelButton.addEventListener("click", () => void cancelCurrentJob(), { signal: args.signal });
   context.state.setReady(false);
-  return { refreshCapabilities, cancelCurrentJob };
+  return { refreshCapabilities, refreshDatasets: datasets.refresh, cancelCurrentJob };
 }

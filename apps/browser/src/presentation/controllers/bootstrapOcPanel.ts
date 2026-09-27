@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Oc Panel support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Creates the O-C panel controller and its history rendering.
  */
 import type { UiRefs } from "../ui/refs";
 import { runWithErrorHandling } from "./runWithErrorHandling";

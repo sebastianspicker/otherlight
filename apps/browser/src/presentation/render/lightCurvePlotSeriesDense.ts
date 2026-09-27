@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Series Dense support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws dense index- and time-based light-curve series.
  */
 import type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
 

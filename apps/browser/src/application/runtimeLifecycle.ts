@@ -1,5 +1,5 @@
 /**
- * Owns runtime Lifecycle support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Swaps the active Education runtime and reports its status.
  */
 import type { BrowserScenarioDraft } from "../domain/model/types";
 import type { RuntimeModeV4 } from "../domain/simulation/v4";

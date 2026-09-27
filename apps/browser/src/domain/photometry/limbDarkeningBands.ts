@@ -1,5 +1,5 @@
 /**
- * Owns limb Darkening Bands support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Shifts limb-darkening coefficients per photometric band.
  */
 import type { PassbandId } from "../model/types";
 

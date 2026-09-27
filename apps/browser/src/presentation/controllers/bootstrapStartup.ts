@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap startup finalization within the app layer.
+ * Finalizes application startup after wiring.
  * Keeps application bootstrap and frame orchestration composable.
  */
 import type { UiRefs } from "../ui/refs";

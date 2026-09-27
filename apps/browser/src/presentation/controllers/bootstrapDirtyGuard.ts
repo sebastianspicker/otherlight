@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Dirty Guard support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Guards unsaved authoring changes before a scenario swap.
  */
 type BootstrapDirtyGuardDeps = {
   form: HTMLFormElement | null;
@@ -42,6 +42,7 @@ export function createBootstrapDirtyGuard(deps: BootstrapDirtyGuardDeps): Bootst
     "input",
     (event) => {
       if (deps.uiModeSelect.value !== "expert") return;
+      if (!event.isTrusted) return;
       if (!(event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement)) return;
       setDirty(true);
       deps.clearValidation();

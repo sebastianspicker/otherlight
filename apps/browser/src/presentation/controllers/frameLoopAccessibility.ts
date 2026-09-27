@@ -1,5 +1,5 @@
 /**
- * Owns frame Loop Accessibility support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Updates the accessible visualization summary each frame.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { SimulationFrame } from "../../domain/simulation/frames";
@@ -63,7 +63,8 @@ export const updateAccessibleVisualizationSummary = (
   const elements = accessibleSummaryElements();
   if (!elements) return;
   const warning = ctx.refs.warnVal?.textContent ?? undefined;
-  const key = accessibleSummaryKey(ctx, params, step, plotMode, warning ?? "");
+  const skyHidden = ctx.refs.skyCanvas?.classList.contains("skyCanvas--hidden") ?? false;
+  const key = `${accessibleSummaryKey(ctx, params, step, plotMode, warning ?? "")}:${skyHidden}`;
   if (hasCurrentAccessibleSummaries(elements, key)) return;
   const snapshot = buildVisualizationAccessibleSnapshot({
     params,
@@ -73,6 +74,12 @@ export const updateAccessibleVisualizationSummary = (
     plot: ctx.plot.getAccessibleSnapshot(),
     warning,
   });
-  updateAccessibleSummary(elements.skySummary, key, snapshot.sceneGeometry);
+  updateAccessibleSummary(
+    elements.skySummary,
+    key,
+    skyHidden
+      ? "Detached-binary sky-plane geometry is hidden. Select a hypothesis and reveal the sky to inspect it."
+      : snapshot.sceneGeometry,
+  );
   updateAccessibleSummary(elements.lcSummary, key, formatLightCurveAccessibleSummary(snapshot));
 };

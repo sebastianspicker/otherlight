@@ -1,14 +1,16 @@
 /**
- * Command strip: scenario context, workspace document actions, status pill, and runtime controls.
- * Quiet Observatory IA — single row under the thin identity header.
+ * Scenario selection, workspace document actions, and readable status feedback.
+ * Playback controls live beside the evidence in the main workspace.
  */
-import { renderWorkspaceActions } from "./header";
-import { renderRuntimeControls } from "./sidebarRuntime";
+import { renderScenarioSource } from "./scenarioSource";
 
 /** Context selectors (parameter depth, lab/scenario, catalog) + meta descriptions. */
-export function renderCommandContext(): string {
+function renderCommandContext(): string {
   return `
       <div class="command-strip__context">
+        <div class="command-strip__source" data-product-mode="simulation">
+          ${renderScenarioSource()}
+        </div>
         <label class="inline" for="uiModeSelect" data-product-mode="simulation">
           Parameter depth
           <select id="uiModeSelect" aria-label="Control level">
@@ -22,18 +24,6 @@ export function renderCommandContext(): string {
           <select id="simModeSelect" aria-label="Select lab system"></select>
         </label>
 
-        <label class="inline" for="presetSelect" data-product-mode="simulation">
-          Teaching scenario
-          <select id="presetSelect" aria-label="Select preset"></select>
-        </label>
-
-        <label class="inline" for="realSystemSelect" data-product-mode="simulation">
-          Catalog system
-          <select id="realSystemSelect" aria-label="Select real system"></select>
-        </label>
-
-        <p id="presetDesc" class="context-description" data-product-mode="simulation"></p>
-        <p id="realSystemMeta" class="context-description mono" data-product-mode="simulation"></p>
         <p class="context-description" data-product-mode="lab">
           Choose a planet, exomoon, or binary-star system; predict, observe, test, and export evidence.
         </p>
@@ -41,10 +31,10 @@ export function renderCommandContext(): string {
   `;
 }
 
-/** Compact status pill host — same stable IDs, no full-width banner above main. */
-export function renderStatusPill(): string {
+/** Persistent live feedback preserves complete messages and recovery actions. */
+function renderStatus(): string {
   return `
-      <div id="appStatus" class="app-status status-pill" role="status" aria-live="polite" aria-atomic="true">
+      <div id="appStatus" class="app-status" role="status" aria-live="polite" aria-atomic="true">
         <span id="appStatusMessage">Ready. Choose a scenario, then start the simulation or open a guided lab.</span>
         <button id="appRetryBtn" type="button" hidden>Retry last scenario</button>
       </div>
@@ -52,24 +42,22 @@ export function renderStatusPill(): string {
 }
 
 /**
- * Full command strip: left context + workspace document actions, right status + runtime.
- * Uses command-strip as primary class; keeps context-toolbar for gradual CSS migration.
+ * Scenario and document toolbar with a separate status line.
  */
 export function renderCommandStrip(): string {
   return `
     <section
       class="command-strip context-toolbar"
-      aria-label="Scenario and runtime controls"
+      aria-label="Scenario and workspace controls"
       data-product-profile="education"
     >
+      <details class="experiment-tools" id="scenarioTools">
+        <summary>More experiments &amp; scenario settings</summary>
       <div class="command-strip__left">
         ${renderCommandContext()}
-        ${renderWorkspaceActions()}
       </div>
-      <div class="command-strip__right runtime-toolbar" aria-label="Runtime">
-        ${renderStatusPill()}
-        ${renderRuntimeControls()}
-      </div>
+      </details>
+      ${renderStatus()}
     </section>
   `;
 }

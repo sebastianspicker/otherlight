@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Product History support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Writes product-mode history entries.
  */
 import type { ProductViewState } from "../../application/productViewState";
 import { productViewStateSearch } from "../../application/productViewState";

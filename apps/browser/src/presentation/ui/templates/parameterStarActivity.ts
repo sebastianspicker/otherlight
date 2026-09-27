@@ -1,5 +1,5 @@
 /**
- * Owns parameter Star Activity support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the star brightness-patch and spot-evolution controls.
  */
 export function renderBrightnessPatchControls(): string {
   return `

@@ -1,5 +1,5 @@
 /**
- * Owns parameter Planet Shape support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the planet shape and thermal-inertia controls.
  */
 export function renderPlanetThermalInertiaControls(): string {
   return `

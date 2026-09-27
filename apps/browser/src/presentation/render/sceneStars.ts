@@ -1,5 +1,5 @@
 /**
- * Owns scene Stars support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws the star geometry.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { clamp, toFinitePositiveOr } from "../../domain/model/units";
@@ -95,8 +95,8 @@ export function drawStarGeometry(args: {
       z,
       innerColor: "rgba(255, 224, 169, 0.28)",
       outerColor: "rgba(245, 176, 76, 0)",
-      radiusScale: 1.85,
-      alphaScale: 0.75,
+      radiusScale: 1.4,
+      alphaScale: 0.45,
     });
   } else {
     drawStarHalo({
@@ -122,8 +122,8 @@ export function drawStarGeometry(args: {
     cache: starDiskCache,
     showPatches: variant === "primary",
     drawOutline: true,
-    baseColor: variant === "primary" ? "#f2a33a" : "#9fc8ff",
-    highlightColor: variant === "primary" ? "#ffe1a6" : "#e7f2ff",
+    baseColor: variant === "primary" ? "#f4d9a2" : "#9fc8ff",
+    highlightColor: variant === "primary" ? "#fff2cc" : "#e7f2ff",
     outlineStyle:
       variant === "primary"
         ? { strokeStyle: "rgba(255, 244, 215, 0.35)", lineWidth: 1.1 }

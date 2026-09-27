@@ -1,5 +1,5 @@
 /**
- * Owns transit Transmission Point support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Evaluates transmission at a single sky-plane point.
  */
 import { clamp01, isFinitePositive } from "../model/units";
 import type { TransmissionOcculter } from "./transitTransmissionTypes";

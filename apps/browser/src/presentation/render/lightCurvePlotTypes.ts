@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Types support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Defines the light-curve plot options, samples, and overlay types.
  */
 export type LightCurvePlotOptions = {
   xMode?: "index" | "time";
@@ -65,7 +65,7 @@ export type LightCurveBadge = {
   color: string;
 };
 
-export type LightCurveInsetSeries = {
+type LightCurveInsetSeries = {
   label: string;
   color: string;
   samples: LightCurveOverlayPoint[];

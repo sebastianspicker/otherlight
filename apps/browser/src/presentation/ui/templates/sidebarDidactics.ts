@@ -1,5 +1,5 @@
 /**
- * Owns sidebar Didactics support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the didactics sidebar section.
  */
 import {
   renderComparisonControls,
@@ -15,16 +15,10 @@ function renderDidacticPhaseChrome(): string {
   return `
         <header class="lab-rail__header">
           <p class="eyebrow">Guided Lab</p>
-          <h3 id="labRailTitle">Lesson workspace</h3>
-          <p class="help didactic-intro">
-            Predict, observe, check, and compare. One phase is active at a time; unavailable steps stay
-            hidden until unlocked.
-          </p>
+          <h3 id="labRailTitle" class="sr-only">Lesson workspace</h3>
         </header>
 
         <div class="lab-rail__setup">
-          <p id="didLessonSummary" class="help lab-rail__summary"></p>
-          <p id="didLessonMeta" class="help mono lab-rail__meta"></p>
           ${renderDidacticControls()}
         </div>
 
@@ -35,9 +29,7 @@ function renderDidacticPhaseChrome(): string {
           <h4 id="didPhaseTitle" class="lab-phase__title" tabindex="-1"></h4>
           <p id="didPhasePrompt" class="help lab-phase__prompt"></p>
           <p id="didAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-          <p id="didInterpretation" class="help lab-phase__result"></p>
           <div id="didWorkedExample" class="help lab-phase__example" hidden></div>
-          <div id="didObservationList" class="help lab-phase__observations"></div>
 
           <div id="didResponseComposer" class="lab-phase__response">
             <label class="inline" for="didPrimaryResponseInput">
@@ -56,7 +48,11 @@ function renderDidacticPhaseChrome(): string {
           ${renderDidacticNavigation()}
         </div>
 
+        <details class="lesson-evidence">
+          <summary>Observations, hints &amp; checks</summary>
         <div class="lab-rail__evidence" aria-label="Hints and checks">
+          <p id="didInterpretation" class="help lab-phase__result"></p>
+          <div id="didObservationList" class="help lab-phase__observations"></div>
           <p id="didLessonStatus" class="help lab-rail__status"></p>
           <div id="didFocusList" class="help lab-evidence-block"></div>
           <div id="didHintList" class="help lab-evidence-block"></div>
@@ -64,6 +60,8 @@ function renderDidacticPhaseChrome(): string {
           <div id="didCheckList" class="help lab-evidence-block"></div>
           <div id="didFormulaList" class="help mono lab-evidence-block"></div>
         </div>
+
+        </details>
 
         <div class="lab-rail__compare">
           ${renderComparisonControls()}

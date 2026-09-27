@@ -47,7 +47,7 @@ export function drawAxes(args: {
   ctx.stroke();
 
   const yTickLayout = computeTickLayout(lo, hi, Math.min(6, Math.floor(plotH / 36)));
-  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -82,7 +82,7 @@ export function drawAxes(args: {
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   if (timeInfo.haveTime) {
-    const xTickLayout = computeTickLayout(timeInfo.tMin, timeInfo.tMax, Math.min(8, Math.floor(plotW / 80)));
+    const xTickLayout = computeTickLayout(timeInfo.tMin, timeInfo.tMax, Math.min(8, Math.floor(plotW / 95)));
     const tickSpan = Math.max(1e-12, timeInfo.tMax - timeInfo.tMin);
     const tickScale = plotW / tickSpan;
     const tickOffset = marginLeft - timeInfo.tMin * tickScale;

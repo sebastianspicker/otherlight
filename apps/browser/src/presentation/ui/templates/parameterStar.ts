@@ -1,5 +1,5 @@
 /**
- * Owns parameter Star support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the star parameter fieldset.
  */
 import { renderBrightnessPatchControls, renderSpotEvolutionControls } from "./parameterStarActivity";
 import { renderBandpassControls, renderStarCoreControls } from "./parameterStarCore";

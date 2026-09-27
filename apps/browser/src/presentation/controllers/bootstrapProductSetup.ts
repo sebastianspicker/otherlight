@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Product Setup support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Initializes product view controls and keeps navigation in sync.
  */
 import {
   DEFAULT_PRODUCT_VIEW_STATE,
@@ -18,6 +18,7 @@ import {
 import { PRESETS, getPresetById } from "../../application/presets";
 import { REAL_SYSTEMS_OPTIONS } from "../../application/realSystems";
 import { getLabSystemByControlValue, LAB_SYSTEMS } from "../../domain/model/labs";
+import { syncScenarioSource } from "../ui/scenarioSource";
 
 type BootstrapProductSetupArgs = {
   productProfileSelect: HTMLSelectElement;
@@ -169,6 +170,7 @@ export function applyProductViewControlState(
   setOptionalSelectValue(args.simModeSelect, productLabControlValue(view));
   setOptionalSelectValue(args.runtimeModeSelect, productRuntimeControlValue(view));
   applyScenarioSelection(args, parsed);
+  syncScenarioSource();
 }
 
 function populateLabSystemSelect(select: HTMLSelectElement): void {

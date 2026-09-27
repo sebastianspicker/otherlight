@@ -1,5 +1,5 @@
 /**
- * Owns didactics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Runs the didactics state, controls, lesson flow, and learner responses.
  */
 import type {
   DidacticResponseStore,

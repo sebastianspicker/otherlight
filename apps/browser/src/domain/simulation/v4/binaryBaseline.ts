@@ -1,5 +1,5 @@
 /**
- * Owns binary Baseline support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Computes the detached-binary baseline and display flux.
  */
 import { resolveDetachedBinaryLuminosities } from "../../photometry/stellarBandFlux";
 import type { PassbandId } from "../../model/types";

@@ -1,6 +1,8 @@
 /**
  * Shared visualization helpers: state init, plot setters, flux/history sampling.
  */
+import type { FixedPreviewKey, FixedPreviewPresentation } from "./fixedPreviewCache";
+import type { ChromaticOverlay } from "./chromaticOverlay";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
 import type {
@@ -19,8 +21,13 @@ import { pushCappedOverlayPoint } from "./visualizationDidactics";
 
 export type FrameLoopVisualizationState = {
   t: number;
+  lastValidFrame?: SimulationFrame | null;
   lastFluxForPlot: number;
   displayFluxScale: number;
+  fixedPreviewKey?: FixedPreviewKey;
+  fixedPreviewPresentation?: FixedPreviewPresentation;
+  previewGeneration?: number;
+  chromaticOverlay?: ChromaticOverlay;
   fixedPlotYRange?: { lo: number; hi: number };
   fixedPlotYRangeMode?: string | null;
   noise: NoiseState;

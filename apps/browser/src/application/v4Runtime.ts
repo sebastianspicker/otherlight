@@ -1,5 +1,5 @@
 /**
- * Owns v4Runtime support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Creates the V4 Education simulation runtime from authoring parameters.
  */
 import { createSimulationV4 } from "../domain/simulation/v4";
 import type { SimulationRuntimeDependenciesV4 } from "../domain/simulation/v4";

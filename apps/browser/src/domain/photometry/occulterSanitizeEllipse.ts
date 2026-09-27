@@ -1,5 +1,5 @@
 /**
- * Owns occulter Sanitize Ellipse support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Sanitizes elliptical occulters.
  */
 import { isFinitePositive } from "../model/units";
 import type { EllipseOcculter } from "./occulterTypes";

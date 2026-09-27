@@ -1,5 +1,5 @@
 /**
- * Owns stellar Variability Components support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Combines flare, pulsation, and spot contributions to stellar variability.
  */
 import type { StellarVariabilityParams } from "../model/types";
 import { isFiniteNumber } from "../model/units";

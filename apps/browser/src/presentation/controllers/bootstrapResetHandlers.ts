@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap reset / param-form handlers within the app layer.
+ * Wires the reset and parameter-form handlers.
  * Keeps application bootstrap and frame orchestration composable.
  */
 import { clearParamValidationUi } from "../ui/params";

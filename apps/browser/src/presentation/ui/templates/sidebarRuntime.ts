@@ -1,5 +1,5 @@
 /**
- * Owns sidebar Runtime support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the runtime controls, readouts, plot controls, and O-C section.
  */
 
 /** Runtime action buttons, speed, calculation mode, and expert view controls. */
@@ -8,10 +8,15 @@ export function renderRuntimeControls(): string {
       <div class="runtime-actions">
         <button id="btnStart" type="button">Start</button>
         <button id="btnReset" type="button">Reset time</button>
+        <button id="observatoryJumpBtn" type="button">Jump to transit</button>
+
+      </div>
+
+      <details class="playback-settings"><summary>Playback settings</summary>
+      <div class="runtime-actions">
         <button id="btnClearLC" type="button">Clear light curve</button>
         <button id="btnUndoClearLC" type="button" hidden>Undo clear</button>
       </div>
-
       <div class="runtime-fields">
         <label class="inline" for="timeSpeed">
           Time speed
@@ -50,12 +55,12 @@ export function renderRuntimeControls(): string {
         <label class="inline" for="viewAutoFit"><input id="viewAutoFit" type="checkbox" /> Auto-fit zoom</label>
         </div>
       </details>
+      </details>
   `;
 }
 
 /**
- * Standalone runtime toolbar (legacy export for imports/tests).
- * Prefer {@link renderCommandStrip} from commandStrip.ts for Quiet Observatory IA.
+ * Playback toolbar placed immediately before the Education evidence figures.
  */
 export function renderRuntimeToolbar(): string {
   return `
@@ -73,10 +78,9 @@ export function renderReadouts(): string {
         <span><span class="readout-label">Flux</span> <span id="fluxVal" class="mono">1.000000</span></span>
         <span><span class="readout-label">Occulters</span> <span id="nOccultersVal" class="mono"></span></span>
         <span><span class="readout-label">Planet visible</span> <span id="vPlanetVal" class="mono"></span></span>
-        <span><span class="readout-label">Moon visible</span> <span id="vMoonVal" class="mono"></span></span>
-        <span><span class="readout-label">O-C</span> <span id="timingHistoryVal" class="mono"></span></span>
-        <span><span class="readout-label">Series</span> <span id="plotModeVal" class="mono"></span></span>
-        <span id="warnVal" class="runtime-warning" role="status" aria-live="polite" aria-atomic="true"></span>
+        <span data-ui-tier="expert"><span class="readout-label">Moon visible</span> <span id="vMoonVal" class="mono"></span></span>
+        <span data-ui-tier="expert"><span class="readout-label">O-C</span> <span id="timingHistoryVal" class="mono"></span></span>
+        <span data-ui-tier="expert"><span class="readout-label">Series</span> <span id="plotModeVal" class="mono"></span></span>
       </div>
   `;
 }

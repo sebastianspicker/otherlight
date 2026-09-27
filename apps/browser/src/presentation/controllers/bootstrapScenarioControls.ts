@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Scenario / product-mode control wiring within the app layer.
+ * Wires scenario and product-mode controls.
  * Keeps application bootstrap and frame orchestration composable.
  */
 import { applyObserverModeContract, readUiMode, syncUiModeVisibility } from "../ui/mode";

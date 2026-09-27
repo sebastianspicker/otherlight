@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Series support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws light-curve series and their tick layout.
  */
 import { drawDenseFiniteTimeSeries, drawDenseIndexSeries } from "./lightCurvePlotSeriesDense";
 import type { DrawSeriesArgs } from "./lightCurvePlotSeriesTypes";
@@ -64,7 +64,7 @@ export function drawLightCurveSeries(args: DrawSeriesArgs): void {
 
 function setupSeriesStroke(ctx: CanvasRenderingContext2D): void {
   ctx.beginPath();
-  ctx.strokeStyle = "#4cc9f0";
+  ctx.strokeStyle = "#9ddcff";
   ctx.lineWidth = 1.5;
   ctx.lineJoin = "round";
 }

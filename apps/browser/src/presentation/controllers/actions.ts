@@ -1,5 +1,5 @@
 /**
- * Owns actions support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Provides the frame-delta, run-state, slider-mirror, and time-speed actions.
  */
 import { clamp, toFiniteNumber } from "../../domain/model/units";
 import { setText } from "../ui/dom";

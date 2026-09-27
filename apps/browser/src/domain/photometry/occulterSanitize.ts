@@ -1,5 +1,5 @@
 /**
- * Owns occulter Sanitize support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Sanitizes a list of occulter shapes before photometry.
  */
 import { isFinitePositive } from "../model/units";
 import type { OcculterShape } from "./occulterTypes";

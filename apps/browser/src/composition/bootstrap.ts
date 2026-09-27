@@ -1,7 +1,9 @@
 /** Composes one app instance and owns abortable cleanup across reinitialization. */
+import { ChromaticWorkerAdapter } from "../infrastructure/workers/chromaticWorkerAdapter";
 import { Canvas2DRenderer, LightCurvePlot } from "../presentation/render/canvas2d";
 import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../application/binaryLab";
 import { getPresetById } from "../application/presets";
+import { wireObservatory } from "../presentation/controllers/observatory";
 import { wireDebugDOM } from "../presentation/controllers/debug";
 import { createSimulationRuntimeV4FromParams, type AppSimulationRuntime } from "../application/v4Runtime";
 import { cloneParams } from "../domain/model/clone";
@@ -13,6 +15,7 @@ import { createUiRefs } from "../presentation/ui/refs";
 import { clearParamValidationUi } from "../presentation/ui/params";
 import { wireEnableHandlers } from "../presentation/ui/enable";
 import { wireNormalModeQuickControls } from "../presentation/ui/quickControls";
+import { syncScenarioSource, wireScenarioSource } from "../presentation/ui/scenarioSource";
 import { wireParamSliders } from "../presentation/ui/sliders";
 import { isBinaryModeActive, isLabProductModeActive } from "../presentation/controllers/scenarioFlow";
 import { createFrameLoopController } from "../presentation/controllers/frameLoop";
@@ -41,6 +44,7 @@ import { createBootstrapApplyParams } from "../presentation/controllers/bootstra
 import { wireBootstrapScenarioControls } from "../presentation/controllers/bootstrapScenarioControls";
 import { wireBootstrapResetHandlers } from "../presentation/controllers/bootstrapResetHandlers";
 import { finalizeBootstrapStartup } from "../presentation/controllers/bootstrapStartup";
+import { currentDidacticSignals } from "./currentDidacticSignals";
 
 let activeAppDispose: (() => void) | null = null;
 
@@ -136,10 +140,34 @@ export async function initApp(): Promise<void> {
     signal: teardownController.signal,
   });
 
-  const renderDidacticsSurface = () =>
-    renderBootstrapDidacticsSurface(refs, appState.didacticsRuntime, isLabProductModeActive(refs));
+  const observatoryRef: { current?: ReturnType<typeof wireObservatory> } = {};
+  const renderDidacticsSurface = () => {
+    renderBootstrapDidacticsSurface(
+      refs,
+      appState.didacticsRuntime,
+      isLabProductModeActive(refs) || Boolean(observatoryRef.current?.isLearningVisible()),
+    );
+    observatoryRef.current?.sync();
+  };
+
+  const acceptCurrentDidacticFrame = (step: Parameters<typeof currentDidacticSignals>[1]): void => {
+    appState.didacticsRuntime = onDidacticSignals(
+      appState.params,
+      appState.didacticsRuntime,
+      currentDidacticSignals(appState.params, step),
+      step.timing,
+      step.tObsSec,
+    );
+  };
+
+  const refreshDidacticSignals = (): void => {
+    acceptCurrentDidacticFrame(appState.lastValidFrame ?? simulation.step(appState.t));
+  };
 
   const frame = createFrameLoopController({
+    chromaticSampler: new ChromaticWorkerAdapter(
+      () => new Worker(new URL("./chromatic.worker.ts", import.meta.url), { type: "module" }),
+    ),
     refs,
     renderer,
     plot,
@@ -150,14 +178,8 @@ export async function initApp(): Promise<void> {
     isBinaryModeActive: () => isBinaryModeActive(refs),
     uiWarningText,
     onSampleStep: (step, tSec) => {
-      if (isLabProductModeActive(refs)) {
-        appState.didacticsRuntime = onDidacticSignals(
-          appState.params,
-          appState.didacticsRuntime,
-          step.didactics?.signals,
-          step.timing,
-          tSec,
-        );
+      if (isLabProductModeActive(refs) || observatoryRef.current?.isLearningVisible()) {
+        acceptCurrentDidacticFrame(step);
       }
       renderDidacticsSurface();
       const changed = updateTransitHistoryFromStep({
@@ -176,8 +198,10 @@ export async function initApp(): Promise<void> {
 
   let restoringHistory = false;
 
-  const syncModeNavigation = (): void =>
+  const syncModeNavigation = (): void => {
     syncProductModeNavigation(productModeSelect, modeSimulationBtn, modeLabBtn);
+    syncScenarioSource();
+  };
 
   const writeProductHistory = createProductHistoryWriter({
     isRestoring: () => restoringHistory,
@@ -299,6 +323,7 @@ export async function initApp(): Promise<void> {
     warnEl: warnVal,
     signal: teardownController.signal,
   });
+  wireScenarioSource(teardownController.signal);
 
   wireBootstrapViewControls({ refs, renderer, plot, signal: teardownController.signal });
   wireBootstrapResetHandlers({
@@ -332,6 +357,7 @@ export async function initApp(): Promise<void> {
   });
 
   wireDidacticsUi({
+    invalidate: frame.invalidate,
     refs,
     state: appState,
     getSimulation: () => simulation,
@@ -342,6 +368,17 @@ export async function initApp(): Promise<void> {
     getSuccessMessage: () => uiWarningText(appState.params) ?? "",
     signal: teardownController.signal,
   });
+  const observatory = wireObservatory({
+    refs,
+    state: appState,
+    seekToTime: frame.seekToTime,
+    setRunning: frame.setRunning,
+    invalidate: frame.invalidate,
+    refitScene: () => renderer.invalidateSceneScale(),
+    refreshDidacticSignals,
+    signal: teardownController.signal,
+  });
+  observatoryRef.current = observatory;
   refs.didLessonSelect?.addEventListener("change", () => writeProductHistory("push"), listenerOptions);
 
   wireBootstrapPersistence({

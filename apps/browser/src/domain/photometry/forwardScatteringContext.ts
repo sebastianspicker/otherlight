@@ -1,5 +1,5 @@
 /**
- * Owns forward Scattering Context support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Resolves whether forward scattering applies to the current scenario.
  */
 import { clamp, isFiniteNumber } from "../model/units";
 import type { Vec3 } from "../orbits/vec3";

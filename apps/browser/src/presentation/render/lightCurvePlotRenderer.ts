@@ -1,15 +1,8 @@
 /**
- * Owns light Curve Plot Renderer support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws the light-curve plot.
  */
-import { clamp } from "../../domain/model/units";
 import { ensureHiDPICanvas, type SizeInfo } from "./canvasUtil";
-import {
-  collectVisibleFlux,
-  computeRobustRangeFromScratch,
-  rangeFromStats,
-  type VisibleFluxStats,
-  type VisibleWindow,
-} from "./lightCurvePlotMath";
+import { type VisibleFluxStats, type VisibleWindow } from "./lightCurvePlotMath";
 import { drawLightCurveSeries } from "./lightCurvePlotSeries";
 import type {
   LightCurveBadge,
@@ -22,13 +15,13 @@ import type {
 } from "./lightCurvePlotTypes";
 import { drawAxes, type TimeScaleInfo } from "./lightCurvePlotAxes";
 import {
-  collectOverlayRange,
   drawComparisonInset,
   drawLegend,
   drawMarkers,
   drawOverlaySeries,
   drawWindowOverlays,
 } from "./lightCurvePlotAnnotations";
+import { resolveFluxRange, resolvePlotScale, type PlotLayout, type PlotScale } from "./lightCurvePlotScale";
 
 type DrawLightCurvePlotArgs = {
   canvas: HTMLCanvasElement;
@@ -42,31 +35,6 @@ type DrawLightCurvePlotArgs = {
   windowOverlays?: LightCurveWindowOverlay[];
   badges?: LightCurveBadge[];
   comparisonInset?: LightCurveComparisonInset;
-};
-
-type PlotLayout = {
-  w: number;
-  h: number;
-  marginLeft: number;
-  marginTop: number;
-  plotW: number;
-  plotH: number;
-};
-
-type FluxRange = {
-  lo: number;
-  hi: number;
-};
-
-type PlotScale = {
-  lo: number;
-  hi: number;
-  yRange: number;
-  yScale: number;
-  yOffset: number;
-  indexScale: number;
-  xIndexOffset: number;
-  yOf: (flux: number) => number;
 };
 
 type LightCurveRenderState = {
@@ -138,7 +106,7 @@ export function drawLightCurvePlot(args: DrawLightCurvePlotArgs): SizeInfo | und
 function resolvePlotLayout(size: SizeInfo): PlotLayout {
   const marginLeft = 62;
   const marginRight = 12;
-  const marginTop = 28;
+  const marginTop = size.cssW < 600 ? 52 : 28;
   const marginBottom = 26;
   return {
     w: size.cssW,
@@ -156,7 +124,7 @@ function isDrawableLayout(layout: PlotLayout): boolean {
 
 function drawPlotBackground(ctx: CanvasRenderingContext2D, layout: PlotLayout, title: string): void {
   ctx.clearRect(0, 0, layout.w, layout.h);
-  ctx.fillStyle = "#060a10";
+  ctx.fillStyle = "#0b1319";
   ctx.fillRect(0, 0, layout.w, layout.h);
 
   ctx.fillStyle = "rgba(238, 244, 248, 0.85)";
@@ -240,122 +208,6 @@ function resolveTimeInfo(visibleWindow: VisibleWindow, layout: PlotLayout): Time
     xTimeOffset: layout.marginLeft - timeDomain.tMin * timeScale,
     plotW: layout.plotW,
     marginLeft: layout.marginLeft,
-  };
-}
-
-function resolveFluxRange(args: {
-  state: LightCurveHistoryState;
-  opts: ResolvedLightCurvePlotOptions;
-  overlaySeries: LightCurveOverlaySeries[];
-  timeInfo: TimeScaleInfo;
-  visibleStart: number;
-  visibleEnd: number;
-  sampleCount: number;
-}): { range: FluxRange | null; fluxStats: VisibleFluxStats } {
-  const { state, opts, overlaySeries, timeInfo, visibleStart, visibleEnd, sampleCount } = args;
-  const useRobustRange = opts.yScaleMode === "robust";
-  const { stats: fluxStats, robustCount } = collectVisibleFlux(
-    state.flux,
-    visibleStart,
-    visibleEnd,
-    useRobustRange,
-  );
-  const initialRange = resolveInitialFluxRange(opts, fluxStats, robustCount);
-  const rangeWithOverlay = mergeOverlayRange(initialRange, overlaySeries, timeInfo);
-  return {
-    range: rangeWithFallback(rangeWithOverlay, fluxStats, state.flux[visibleStart], sampleCount),
-    fluxStats,
-  };
-}
-
-function resolveInitialFluxRange(
-  opts: ResolvedLightCurvePlotOptions,
-  fluxStats: VisibleFluxStats,
-  robustCount: number,
-): FluxRange | null {
-  if (isValidManualRange(opts.manualYRange)) {
-    return { lo: opts.manualYRange.lo, hi: opts.manualYRange.hi };
-  }
-
-  if (opts.yScaleMode !== "robust") return rangeFromStats(fluxStats);
-
-  const qLo = clamp(opts.yQuantiles.lo, 0, 0.499999);
-  const qHi = clamp(opts.yQuantiles.hi, qLo + 1e-6, 1);
-  const robustRange = computeRobustRangeFromScratch(robustCount, qLo, qHi);
-  if (robustRange) return robustRange;
-  return rangeFromStats(fluxStats);
-}
-
-function isValidManualRange(range: ResolvedLightCurvePlotOptions["manualYRange"]): range is FluxRange {
-  if (!range) return false;
-  return Number.isFinite(range.lo) && Number.isFinite(range.hi) && range.hi > range.lo;
-}
-
-function mergeOverlayRange(
-  range: FluxRange | null,
-  overlaySeries: LightCurveOverlaySeries[],
-  timeInfo: TimeScaleInfo,
-): FluxRange | null {
-  const overlayWindow = timeInfo.haveTime ? { tMin: timeInfo.tMin, tMax: timeInfo.tMax } : null;
-  const overlayRange = collectOverlayRange(overlaySeries, overlayWindow);
-  if (!overlayRange) return range;
-  if (!range) return overlayRange;
-  return {
-    lo: Math.min(range.lo, overlayRange.lo),
-    hi: Math.max(range.hi, overlayRange.hi),
-  };
-}
-
-function rangeWithFallback(
-  range: FluxRange | null,
-  fluxStats: VisibleFluxStats,
-  firstVisibleFlux: number,
-  sampleCount: number,
-): FluxRange | null {
-  if (range) return range;
-  const constantRange = constantFluxRange(fluxStats);
-  if (constantRange) return constantRange;
-  return singleSampleRange(firstVisibleFlux, sampleCount);
-}
-
-function constantFluxRange(fluxStats: VisibleFluxStats): FluxRange | null {
-  if (fluxStats.finiteCount < 1) return null;
-  if (!Number.isFinite(fluxStats.constantValue)) return null;
-  return paddedValueRange(fluxStats.constantValue);
-}
-
-function singleSampleRange(firstVisibleFlux: number, sampleCount: number): FluxRange | null {
-  if (sampleCount !== 1) return null;
-  if (!Number.isFinite(firstVisibleFlux)) return null;
-  return paddedValueRange(firstVisibleFlux);
-}
-
-function paddedValueRange(value: number): FluxRange {
-  const pad = Math.max(1e-6, Math.abs(value) * 0.01, 0.01);
-  return { lo: value - pad, hi: value + pad };
-}
-
-function resolvePlotScale(
-  range: FluxRange,
-  opts: ResolvedLightCurvePlotOptions,
-  layout: PlotLayout,
-  sampleCount: number,
-): PlotScale {
-  const span = Math.max(1e-10, range.hi - range.lo);
-  const pad = Math.max(1e-10, span * clamp(opts.yPadFrac, 0, 1));
-  const lo = range.lo - pad;
-  const hi = range.hi + pad;
-  const yScale = -layout.plotH / (hi - lo);
-  const yOffset = layout.marginTop + layout.plotH - lo * yScale;
-  return {
-    lo,
-    hi,
-    yRange: hi - lo,
-    yScale,
-    yOffset,
-    indexScale: layout.plotW / Math.max(1, sampleCount - 1),
-    xIndexOffset: layout.marginLeft,
-    yOf: (flux: number) => yOffset + flux * yScale,
   };
 }
 
@@ -482,7 +334,9 @@ const drawClippedPlotContent = (args: {
     plotH: layout.plotH,
   });
   drawOverlaySeriesSet(ctx, layout, renderState, overlaySeries);
+  if (overlaySeries.some((series) => series.id === "radius-a")) ctx.setLineDash([7, 4]);
   drawPrimarySeries(ctx, layout, renderState);
+  ctx.setLineDash([]);
   drawPlotMarkers(ctx, layout, renderState, markers);
 
   ctx.restore();

@@ -10,12 +10,12 @@ import {
   type LabSystemId,
 } from "../domain/model/labs";
 
-export type ProductViewProfile = "education" | "scientific";
-export type ProductViewMode = "simulation" | "lab";
-export type ProductViewUi = "essential" | "advanced";
-export type ProductViewSource = "preset" | "real";
-export type ProductViewLab = LabSystemId;
-export type ProductViewRuntime = "interactive" | "reference";
+type ProductViewProfile = "education" | "scientific";
+type ProductViewMode = "simulation" | "lab";
+type ProductViewUi = "essential" | "advanced";
+type ProductViewSource = "preset" | "real";
+type ProductViewLab = LabSystemId;
+type ProductViewRuntime = "interactive" | "reference";
 
 export type ProductViewState = {
   profile: ProductViewProfile;
@@ -113,7 +113,7 @@ export function parseProductViewState(params: URLSearchParams): ProductViewState
  * Apply a complete state to query parameters in place. Only product keys are
  * changed, so callers retain campaign tags, anchors, and future query fields.
  */
-export function applyProductViewState(params: URLSearchParams, state: ProductViewState): URLSearchParams {
+function applyProductViewState(params: URLSearchParams, state: ProductViewState): URLSearchParams {
   params.set("profile", state.profile);
   params.set("mode", state.mode);
   params.set("ui", state.ui);

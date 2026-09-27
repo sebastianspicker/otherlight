@@ -1,5 +1,5 @@
 /**
- * Owns phase Curve Scaling support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Scales phase-curve terms to physical units.
  */
 import { clamp01, isFiniteNumber } from "../model/units";
 import { vLen } from "../orbits/vec3";

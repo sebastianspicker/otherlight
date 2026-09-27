@@ -1,5 +1,5 @@
 /**
- * Owns scene Bodies support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws bodies and their occlusion hints.
  */
 import { clamp, toFinitePositiveOr } from "../../domain/model/units";
 
@@ -15,6 +15,7 @@ function drawBodyDisk(args: {
   r: number;
   z: number;
   baseColor: string;
+  opaque?: boolean;
 }): void {
   const { ctx, toPxInto, scratchPoint, pixelsPerUnit, x, y, r, z, baseColor } = args;
   const p = toPxInto(x, y, scratchPoint);
@@ -22,7 +23,7 @@ function drawBodyDisk(args: {
   const shade = clamp(0.35 + 0.65 * (1 / (1 + Math.abs(z) * 0.002)), 0.25, 1);
 
   ctx.save();
-  ctx.globalAlpha = shade;
+  ctx.globalAlpha = args.opaque ? 1 : shade;
   ctx.beginPath();
   ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
   ctx.fillStyle = baseColor;
@@ -44,7 +45,19 @@ export function drawBodyWithOcclusionHint(args: {
 }): void {
   const { ctx, toPxInto, scratchPoint, pixelsPerUnit, x, y, rBody, zBody, rStar, baseColor } = args;
 
-  drawBodyDisk({ ctx, toPxInto, scratchPoint, pixelsPerUnit, x, y, r: rBody, z: zBody, baseColor });
+  const transitSilhouette = zBody >= 0 && Math.hypot(x, y) < rStar + rBody;
+  drawBodyDisk({
+    ctx,
+    toPxInto,
+    scratchPoint,
+    pixelsPerUnit,
+    x,
+    y,
+    r: rBody,
+    z: zBody,
+    baseColor: transitSilhouette ? "#0b1319" : baseColor,
+    opaque: transitSilhouette,
+  });
 
   const behindStarPlane = zBody < 0;
   const centerInsideStarDisk = Math.hypot(x, y) < toFinitePositiveOr(rStar, 1);
@@ -86,10 +99,11 @@ export function drawEllipseBodyWithOcclusionHint(args: {
   const shade = clamp(0.35 + 0.65 * (1 / (1 + Math.abs(zBody) * 0.002)), 0.25, 1);
 
   ctx.save();
-  ctx.globalAlpha = shade;
+  const transitSilhouette = zBody >= 0 && Math.hypot(x, y) < rStar + Math.max(rx, ry);
+  ctx.globalAlpha = transitSilhouette ? 1 : shade;
   ctx.beginPath();
   ctx.ellipse(p.x, p.y, rxPx, ryPx, ang, 0, Math.PI * 2);
-  ctx.fillStyle = baseColor;
+  ctx.fillStyle = transitSilhouette ? "#0b1319" : baseColor;
   ctx.fill();
   ctx.restore();
 

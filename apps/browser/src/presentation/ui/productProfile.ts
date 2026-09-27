@@ -1,5 +1,5 @@
 /**
- * Owns product Profile support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Reads the product profile and syncs its visibility and navigation.
  */
 import { syncModeVisibility } from "./modeVisibility";
 
@@ -13,7 +13,7 @@ export function syncProductProfileVisibility(profile: ProductProfile, root: Pare
   if (root instanceof Document) root.documentElement.dataset.productProfile = profile;
 
   for (const el of Array.from(root.querySelectorAll<HTMLElement>("[data-product-profile]"))) {
-    syncModeVisibility(el, el.dataset.productProfile ?? "", profile);
+    syncModeVisibility(el, el.dataset.productProfile ?? "", profile, "product-profile");
   }
 }
 

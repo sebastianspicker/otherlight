@@ -1,5 +1,5 @@
 /**
- * Owns photometry Load support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Loads photometry parameters into the UI.
  */
 import type {
   BrightnessPatch,

@@ -1,5 +1,5 @@
 /**
- * Owns forward Scattering Geometry support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Provides the scattering-angle helpers used by forward scattering.
  */
 import { clamp } from "../model/units";
 import type { Vec3 } from "../orbits/vec3";

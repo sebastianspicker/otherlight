@@ -1,5 +1,5 @@
 /**
- * Owns parameter Observer Star support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the observer and star parameter template.
  */
 import { renderStarFieldset } from "./parameterStar";
 

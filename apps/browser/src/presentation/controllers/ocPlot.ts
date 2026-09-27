@@ -1,5 +1,5 @@
 /**
- * Owns oc Plot support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Formats, exports, and renders the O-C history.
  */
 import { drawOcPlotFrame, type OcPlotPoint } from "./ocPlotCanvas";
 import type { TransitHistorySeries, TransitHistoryState } from "../../application/transitHistory";
@@ -82,7 +82,7 @@ function collectFiniteOcPoints(series: TransitHistorySeries): OcPoint[] {
   return out;
 }
 
-export function fitLinearEphemeris(points: Array<{ x: number; y: number }>):
+function fitLinearEphemeris(points: Array<{ x: number; y: number }>):
   | {
       slope: number;
       intercept: number;
@@ -177,7 +177,7 @@ export function formatOcFitSummary(
   return `${body} fit slope=${fmtWithUnit(slopePerEpoch, unit)}/epoch intercept=${fmtWithUnit(fit.intercept, unit)} rms=${fmtWithUnit(fit.rmsResidual, unit)}`;
 }
 
-export function buildOcCsv(state: TransitHistoryState, body: OcBody, opts: OcCsvOptions = {}): string {
+function buildOcCsv(state: TransitHistoryState, body: OcBody, opts: OcCsvOptions = {}): string {
   const unit = opts.unit ?? "s";
   const trendMode = opts.trendMode ?? "raw";
   const scale = unitScale(unit);

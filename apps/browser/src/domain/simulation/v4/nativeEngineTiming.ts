@@ -1,5 +1,5 @@
 /**
- * Owns native Engine Timing support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Computes native V4 timing and observables for a step.
  */
 import type {
   OrbitElements,

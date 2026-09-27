@@ -1,5 +1,5 @@
 /**
- * Owns types support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Defines the V4 runtime, body, and configuration types.
  */
 import type {
   BinaryStarPhotometryParams,

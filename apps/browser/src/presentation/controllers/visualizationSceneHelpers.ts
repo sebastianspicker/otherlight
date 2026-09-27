@@ -1,5 +1,5 @@
 /**
- * Owns visualization Scene Helpers support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Builds the scene overlay badges, chords, and contact points.
  */
 import type { BrightnessPatch, BrowserScenarioDraft } from "../../domain/model/types";
 import type { LightCurveBadge } from "../render/lightCurvePlotTypes";
@@ -15,7 +15,7 @@ type SceneChordLines = {
   moonChord?: SceneLine;
 };
 
-export function detectOccultedPatchLabel(
+function detectOccultedPatchLabel(
   params: BrowserScenarioDraft,
   center: { x: number; y: number },
   radius: number,
@@ -52,7 +52,7 @@ function occultedPatchKind(patch: BrightnessPatch): string {
   return isFiniteNumber(patch.factor) && patch.factor < 1 ? "occulted spot" : "occulted facula";
 }
 
-export function occultingRadius(geometry: RenderOcculterGeometry): number {
+function occultingRadius(geometry: RenderOcculterGeometry): number {
   if (geometry.kind === "circle") return geometry.radius;
   if (geometry.kind === "ellipse") return Math.max(geometry.rx, geometry.ry);
   return geometry.outerRadius;
@@ -167,24 +167,18 @@ export function sceneBarycenterPoint(
   };
 }
 
-function leadLagBadge(leadLagSec: number): LightCurveBadge | undefined {
-  if (!(Math.abs(leadLagSec) > 1)) return undefined;
-  return {
-    label:
-      leadLagSec < 0
-        ? `moon leads by ${Math.abs(leadLagSec).toFixed(0)} s`
-        : `moon trails by ${Math.abs(leadLagSec).toFixed(0)} s`,
-    color: "#ffd166",
-  };
+function leadLagLabel(leadLagSec: number): string {
+  const roundedSeconds = Math.abs(leadLagSec).toFixed(0);
+  return leadLagSec < 0 ? `moon leads by ${roundedSeconds} s` : `moon trails by ${roundedSeconds} s`;
 }
 
 export function sceneTimingBadges(step: SimulationFrame): LightCurveBadge[] {
   const planetTransitCenterSec = step.timing?.planetTransitCenterSec;
   const moonTransitCenterSec = step.timing?.moonTransitCenterSec;
   if (!isFiniteNumber(planetTransitCenterSec) || !isFiniteNumber(moonTransitCenterSec)) return [];
-
-  const badge = leadLagBadge(moonTransitCenterSec - planetTransitCenterSec);
-  return badge ? [badge] : [];
+  const leadLagSec = moonTransitCenterSec - planetTransitCenterSec;
+  if (Math.abs(leadLagSec) <= 1) return [];
+  return [{ label: leadLagLabel(leadLagSec), color: "#ffd166" }];
 }
 
 export function sceneMutualOverlapBadges(

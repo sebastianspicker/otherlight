@@ -1,5 +1,5 @@
 /**
- * Owns occulter Sanitize Ring support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Sanitizes ring occulters.
  */
 import { isFinitePositive } from "../model/units";
 import type { RingOcculter } from "./occulterTypes";

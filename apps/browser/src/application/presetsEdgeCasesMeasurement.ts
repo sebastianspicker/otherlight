@@ -1,5 +1,5 @@
 /**
- * Owns presets Edge Cases Measurement support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Defines the measurement edge-case presets.
  */
 import { makeEdgeCasePreset, setPlanetImpactParameter, stripToTransitCase } from "./presetEdgeCaseUtils";
 

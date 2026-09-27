@@ -16,12 +16,21 @@
 // - core/types.ts defines BrowserScenarioDraft + limb-darkening models. [project-local]
 // - photometry/limbDarkening.ts implements the intensity laws and optional plausibility validation. [project-local]
 
-import type { BrightnessPatch, LimbDarkeningLaw, BrowserScenarioDraft } from "../../domain/model/types";
-import { clamp, toFinitePositiveOr } from "../../domain/model/units";
+import type { LimbDarkeningLaw, BrowserScenarioDraft } from "../../domain/model/types";
+import { toFinitePositiveOr } from "../../domain/model/units";
+import { resolveAndValidateLimbDarkening } from "../../domain/simulation/limbDarkeningBridge";
+import { drawBrightnessPatches } from "./starDiskBrightnessPatches";
 import {
-  intensityNonNegative,
-  resolveAndValidateLimbDarkening,
-} from "../../domain/simulation/limbDarkeningBridge";
+  applyStopsToGradient,
+  buildDecorativeStops,
+  buildLimbDarkeningStops,
+  chooseStops,
+  lawKey,
+  parseHexColor,
+  rgbToCss,
+  type GradientStop,
+  type Rgb,
+} from "./starDiskColors";
 
 export type StarDiskRenderOptions = {
   /**
@@ -102,8 +111,8 @@ type StarDiskRenderState = {
   pixelsPerUnit: number;
   rStar: number;
   Rpx: number;
-  baseRGB: [number, number, number];
-  highlightRGB: [number, number, number];
+  baseRGB: Rgb;
+  highlightRGB: Rgb;
   gamma: number;
   maxDisplayIntensity: number;
   law: LimbDarkeningLaw | undefined;
@@ -135,70 +144,6 @@ export class StarDiskCache {
   }
 }
 
-function parseHexColor(hex: string, fallback: [number, number, number]): [number, number, number] {
-  if (typeof hex !== "string") return fallback;
-  const s = hex.trim();
-  if (!isSixDigitHexColor(s)) return fallback;
-
-  const v = Number.parseInt(s.slice(1), 16);
-  const r = (v >> 16) & 255;
-  const g = (v >> 8) & 255;
-  const b = v & 255;
-  return [r, g, b];
-}
-
-function isSixDigitHexColor(value: string): boolean {
-  if (value.length !== 7 || value.charCodeAt(0) !== 35) return false;
-  for (let index = 1; index < value.length; index += 1) {
-    if (!isAsciiHexDigit(value.charCodeAt(index))) return false;
-  }
-  return true;
-}
-
-function isAsciiHexDigit(code: number): boolean {
-  const lowercase = code | 32;
-  return (code >= 48 && code <= 57) || (lowercase >= 97 && lowercase <= 102);
-}
-
-function rgbToCss(rgb: [number, number, number]): string {
-  const r = clamp(Math.round(rgb[0]), 0, 255);
-  const g = clamp(Math.round(rgb[1]), 0, 255);
-  const b = clamp(Math.round(rgb[2]), 0, 255);
-  return `rgb(${r},${g},${b})`;
-}
-
-function mulRGB(rgb: [number, number, number], f: number): [number, number, number] {
-  const ff = Number.isFinite(f) ? f : 0;
-  return [rgb[0] * ff, rgb[1] * ff, rgb[2] * ff];
-}
-
-function lerpRGB(
-  a: [number, number, number],
-  b: [number, number, number],
-  t: number,
-): [number, number, number] {
-  const tt = clamp(t, 0, 1);
-  return [a[0] * (1 - tt) + b[0] * tt, a[1] * (1 - tt) + b[1] * tt, a[2] * (1 - tt) + b[2] * tt];
-}
-
-function lawKey(law: LimbDarkeningLaw): string {
-  // Quantize to stable keys; this is only for caching.
-  const q = (x: number) => (Number.isFinite(x) ? x.toFixed(10) : "NaN");
-
-  switch (law.kind) {
-    case "quadratic":
-      return `quadratic|${q(law.u1)}|${q(law.u2)}`;
-    case "three-parameter":
-      return `three|${q(law.a1)}|${q(law.a2)}|${q(law.a3)}`;
-    case "four-parameter":
-      return `four|${q(law.a1)}|${q(law.a2)}|${q(law.a3)}|${q(law.a4)}`;
-    default: {
-      const _never: never = law;
-      return String(_never);
-    }
-  }
-}
-
 function resolveLawFromParams(params: BrowserScenarioDraft): LimbDarkeningLaw | undefined {
   const model = params.star.photometry?.limbDarkeningModel;
   if (!model) return undefined;
@@ -207,199 +152,6 @@ function resolveLawFromParams(params: BrowserScenarioDraft): LimbDarkeningLaw | 
   // Note: The returned law is structurally compatible with core/types LimbDarkeningLaw.
   const resolved = resolveAndValidateLimbDarkening({ model, bandpass: model.bandpass });
   return resolved;
-}
-
-function chooseStops(Rpx: number): number {
-  // Enough stops for smoothness, but bounded for performance.
-  // For small stars, fewer stops are fine; for large stars, cap at 72.
-  const n = Math.floor(Rpx / 3);
-  return Math.max(18, Math.min(72, n));
-}
-
-function buildLimbDarkeningStops(params: {
-  law: LimbDarkeningLaw;
-  Rpx: number;
-  baseRGB: [number, number, number];
-  gamma: number;
-  maxDisplayIntensity: number;
-  nStops: number;
-}): Array<{ pos: number; color: string }> {
-  const { law, baseRGB } = params;
-  const nStops = Math.max(8, Math.floor(params.nStops));
-
-  // Normalize by center intensity to be robust against misconfigured coefficients.
-  const Icenter = Math.max(1e-12, intensityNonNegative(1, law));
-  const invIcenter = 1 / Icenter;
-
-  const gamma = toFinitePositiveOr(params.gamma, 2.2);
-  const invGamma = 1 / gamma;
-  const Imax = Math.max(0.05, toFinitePositiveOr(params.maxDisplayIntensity, 1.4));
-
-  const stops: Array<{ pos: number; color: string }> = [];
-
-  for (let i = 0; i <= nStops; i++) {
-    const r = i / nStops; // 0..1
-    const mu = Math.sqrt(Math.max(0, 1 - r * r)); // mu = cos(theta)
-    let I = intensityNonNegative(mu, law) * invIcenter;
-
-    // Display clamp (visual choice; does not affect photometry).
-    I = clamp(I, 0, Imax);
-
-    // Perceptual gamma mapping (approx sRGB).
-    const bright = Math.pow(I / Imax, invGamma); // 0..1
-    const rgb = mulRGB(baseRGB, 0.25 + 0.9 * bright); // keep limb from going fully black
-    stops.push({ pos: r, color: rgbToCss(rgb) });
-  }
-
-  return stops;
-}
-
-function buildDecorativeStops(params: {
-  baseRGB: [number, number, number];
-  highlightRGB: [number, number, number];
-  nStops: number;
-}): Array<{ pos: number; color: string }> {
-  const nStops = Math.max(8, Math.floor(params.nStops));
-  const { baseRGB, highlightRGB } = params;
-
-  const stops: Array<{ pos: number; color: string }> = [];
-  for (let i = 0; i <= nStops; i++) {
-    const r = i / nStops;
-
-    // Brighter near center; darker toward limb.
-    const t = Math.pow(1 - r, 0.65);
-    const rgb = lerpRGB(baseRGB, highlightRGB, t);
-    stops.push({ pos: r, color: rgbToCss(rgb) });
-  }
-  return stops;
-}
-
-function applyStopsToGradient(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  Rpx: number,
-  stops: Array<{ pos: number; color: string }>,
-): CanvasGradient {
-  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rpx);
-  for (const s of stops) {
-    const pos = clamp(s.pos, 0, 1);
-    g.addColorStop(pos, s.color);
-  }
-  return g;
-}
-
-function drawBrightnessPatches(params: {
-  ctx: CanvasRenderingContext2D;
-  centerPx: { x: number; y: number };
-  pixelsPerUnit: number;
-  rStar: number;
-  patchStrength: number;
-  patches: BrightnessPatch[];
-}): void {
-  const setup = brightnessPatchSetup(params);
-  if (!setup) return;
-  const { ctx, centerPx, pixelsPerUnit, patches } = params;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(centerPx.x, centerPx.y, setup.Rpx, 0, Math.PI * 2);
-  ctx.clip();
-
-  for (const patch of patches) drawBrightnessPatch(ctx, centerPx, pixelsPerUnit, setup.strength, patch);
-
-  ctx.restore();
-}
-
-function brightnessPatchSetup(params: {
-  pixelsPerUnit: number;
-  rStar: number;
-  patchStrength: number;
-}): { Rpx: number; strength: number } | null {
-  if (!Number.isFinite(params.pixelsPerUnit) || params.pixelsPerUnit <= 0) return null;
-  if (!Number.isFinite(params.rStar) || params.rStar <= 0) return null;
-
-  const strength = clamp(params.patchStrength, 0, 1);
-  return strength > 0 ? { Rpx: params.rStar * params.pixelsPerUnit, strength } : null;
-}
-
-function drawBrightnessPatch(
-  ctx: CanvasRenderingContext2D,
-  centerPx: { x: number; y: number },
-  pixelsPerUnit: number,
-  strength: number,
-  patch: BrightnessPatch,
-): void {
-  const fillStyle = brightnessPatchFillStyle(patch, strength);
-  if (!fillStyle) return;
-
-  ctx.save();
-  ctx.fillStyle = fillStyle;
-  drawBrightnessPatchShape(ctx, patch, patchCenterPx(centerPx, pixelsPerUnit, patch), pixelsPerUnit);
-  ctx.restore();
-}
-
-function brightnessPatchFillStyle(patch: BrightnessPatch, strength: number): string | null {
-  const factor = finitePatchValue(patch.factor, 1);
-  if (factor === 1) return null;
-
-  const alpha = clamp(Math.abs(1 - factor) * 0.7 * strength, 0, 0.85);
-  return factor < 1 ? `rgba(0,0,0,${alpha})` : `rgba(255,255,255,${alpha})`;
-}
-
-function patchCenterPx(
-  centerPx: { x: number; y: number },
-  pixelsPerUnit: number,
-  patch: BrightnessPatch,
-): { x: number; y: number } {
-  return {
-    x: centerPx.x + finitePatchValue(patch.x, 0) * pixelsPerUnit,
-    y: centerPx.y - finitePatchValue(patch.y, 0) * pixelsPerUnit,
-  };
-}
-
-function drawBrightnessPatchShape(
-  ctx: CanvasRenderingContext2D,
-  patch: BrightnessPatch,
-  patchCenter: { x: number; y: number },
-  pixelsPerUnit: number,
-): void {
-  if (patch.shape === "circle") {
-    drawCircleBrightnessPatch(ctx, patch, patchCenter, pixelsPerUnit);
-    return;
-  }
-  if (patch.shape === "ellipse") drawEllipseBrightnessPatch(ctx, patch, patchCenter, pixelsPerUnit);
-}
-
-function drawCircleBrightnessPatch(
-  ctx: CanvasRenderingContext2D,
-  patch: BrightnessPatch,
-  patchCenter: { x: number; y: number },
-  pixelsPerUnit: number,
-): void {
-  const rr = finitePatchValue(patch.r, 0) * pixelsPerUnit;
-  if (!(rr > 0)) return;
-  ctx.beginPath();
-  ctx.arc(patchCenter.x, patchCenter.y, rr, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawEllipseBrightnessPatch(
-  ctx: CanvasRenderingContext2D,
-  patch: BrightnessPatch,
-  patchCenter: { x: number; y: number },
-  pixelsPerUnit: number,
-): void {
-  const rx = finitePatchValue(patch.rx, 0) * pixelsPerUnit;
-  const ry = finitePatchValue(patch.ry, 0) * pixelsPerUnit;
-  if (!(rx > 0 && ry > 0)) return;
-  ctx.beginPath();
-  ctx.ellipse(patchCenter.x, patchCenter.y, rx, ry, finitePatchValue(patch.angle, 0), 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function finitePatchValue(value: number | undefined, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function starDiskOptionDefault<T>(value: T | undefined, fallback: T): T {
@@ -428,10 +180,7 @@ function resolveStarDiskRenderState(
   };
 }
 
-function resolveStarDiskStops(
-  state: StarDiskRenderState,
-  cache: StarDiskCache | undefined,
-): Array<{ pos: number; color: string }> {
+function resolveStarDiskStops(state: StarDiskRenderState, cache: StarDiskCache | undefined): GradientStop[] {
   if (!cache) return buildStarDiskStops(state);
 
   const key = starDiskStopsCacheKey(state);
@@ -465,21 +214,21 @@ function starDiskStopsCacheKey(state: StarDiskRenderState): string {
   ].join("|");
 }
 
-function buildStarDiskStops(state: StarDiskRenderState): Array<{ pos: number; color: string }> {
+function buildStarDiskStops(state: StarDiskRenderState): GradientStop[] {
   if (state.law) {
     return buildLimbDarkeningStops({
       law: state.law,
-      Rpx: state.Rpx,
-      baseRGB: state.baseRGB,
+      radiusPx: state.Rpx,
+      baseRgb: state.baseRGB,
       gamma: state.gamma,
       maxDisplayIntensity: state.maxDisplayIntensity,
-      nStops: state.nStops,
+      stopCount: state.nStops,
     });
   }
   return buildDecorativeStops({
-    baseRGB: state.baseRGB,
-    highlightRGB: state.highlightRGB,
-    nStops: state.nStops,
+    baseRgb: state.baseRGB,
+    highlightRgb: state.highlightRGB,
+    stopCount: state.nStops,
   });
 }
 
@@ -488,12 +237,12 @@ function drawStarDiskFillAndPatches(
   params: BrowserScenarioDraft,
   opts: StarDiskRenderOptions,
   state: StarDiskRenderState,
-  stops: Array<{ pos: number; color: string }>,
+  stops: GradientStop[],
 ): void {
   ctx.save();
   ctx.beginPath();
   ctx.arc(state.centerPx.x, state.centerPx.y, state.Rpx, 0, Math.PI * 2);
-  ctx.fillStyle = applyStopsToGradient(ctx, state.centerPx.x, state.centerPx.y, state.Rpx, stops);
+  ctx.fillStyle = applyStopsToGradient(ctx, state.centerPx, state.Rpx, stops);
   ctx.fill();
   drawStarDiskPatches(ctx, params, opts, state);
   ctx.restore();
@@ -514,9 +263,9 @@ function drawStarDiskPatches(
     ctx,
     centerPx: state.centerPx,
     pixelsPerUnit: state.pixelsPerUnit,
-    rStar: state.rStar,
+    starRadius: state.rStar,
     patchStrength: starDiskOptionDefault(opts.patchStrength, 0.65),
-    patches: patches as BrightnessPatch[],
+    patches,
   });
 }
 

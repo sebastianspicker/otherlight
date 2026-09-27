@@ -1,5 +1,5 @@
 /**
- * Owns parameter Moon Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the moon core and phase controls.
  */
 export function renderMoonCoreControls(): string {
   return `

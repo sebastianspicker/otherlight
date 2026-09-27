@@ -1,5 +1,5 @@
 /**
- * Owns parameter Planet Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the planet core and phase controls.
  */
 export function renderPlanetCoreControls(): string {
   return `

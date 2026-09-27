@@ -1,5 +1,5 @@
 /**
- * Owns scientific Errors support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Defines the structured errors raised by scientific Browser runs.
  */
 export type ScientificBrowserFailureStage = "config" | "native-inputs" | "step";
 

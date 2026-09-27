@@ -1,14 +1,15 @@
 /**
- * Owns scene Overlays support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Resolves occulter geometry and draws the scene overlays.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { RenderOcculterGeometry, SimulationFrame } from "../../domain/simulation/frames";
 
+import { drawGhostGeometry } from "./sceneComparison";
 import { bodyColor, drawBodyWithOcclusionHint, drawEllipseBodyWithOcclusionHint } from "./sceneBodies";
 import { atmosphereHaloStyle, drawAtmosphereHalo, drawRingAnnulus, ringColor } from "./sceneAtmosphereRings";
 import { drawStarGeometry } from "./sceneStars";
 import type { DebugOverlayData } from "./overlays";
-import type { SceneDidacticOverlayState, ScratchPoint, SceneGhostGeometry, ToPxInto } from "./sceneTypes";
+import type { SceneDidacticOverlayState, ScratchPoint, ToPxInto } from "./sceneTypes";
 import type { StarDiskCache } from "./starDisk";
 
 const MONO_FONT = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -147,71 +148,6 @@ const drawMarkerRow = (
   ctx.fillText(text, x0, y);
 };
 
-const drawGhostGeometry = (args: {
-  ctx: CanvasRenderingContext2D;
-  toPxInto: ToPxInto;
-  scratchPoint: ScratchPoint;
-  pixelsPerUnit: number;
-  ghost: SceneGhostGeometry;
-}): void => {
-  const { ctx, toPxInto, scratchPoint, pixelsPerUnit, ghost } = args;
-  const color = ghost.color ?? "rgba(255,255,255,0.28)";
-  for (const geometry of ghost.geometry) {
-    const p = toPxInto(geometry.center.x, geometry.center.y, scratchPoint);
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.25;
-    ctx.setLineDash([5, 4]);
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    if (geometry.kind === "circle") {
-      ctx.arc(p.x, p.y, geometry.radius * pixelsPerUnit, 0, Math.PI * 2);
-    } else if (geometry.kind === "ellipse") {
-      ctx.ellipse(
-        p.x,
-        p.y,
-        geometry.rx * pixelsPerUnit,
-        geometry.ry * pixelsPerUnit,
-        geometry.angle,
-        0,
-        Math.PI * 2,
-      );
-    } else {
-      const q = Math.max(
-        0.05,
-        Math.abs(Math.cos(Number.isFinite(geometry.inclination) ? geometry.inclination : 0)),
-      );
-      ctx.ellipse(
-        p.x,
-        p.y,
-        geometry.outerRadius * pixelsPerUnit,
-        geometry.outerRadius * pixelsPerUnit * q,
-        geometry.angle,
-        0,
-        Math.PI * 2,
-      );
-      ctx.moveTo(p.x + geometry.innerRadius * pixelsPerUnit, p.y);
-      ctx.ellipse(
-        p.x,
-        p.y,
-        geometry.innerRadius * pixelsPerUnit,
-        geometry.innerRadius * pixelsPerUnit * q,
-        geometry.angle,
-        0,
-        Math.PI * 2,
-      );
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = color;
-    ctx.font = MONO_FONT;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "bottom";
-    ctx.fillText(ghost.label, p.x + 8, p.y - 6);
-    ctx.restore();
-  }
-};
-
 export function drawDidacticOverlay(args: {
   ctx: CanvasRenderingContext2D;
   toPxInto: ToPxInto;
@@ -237,8 +173,8 @@ const drawDidacticGhosts = (args: {
   overlay: SceneDidacticOverlayState;
 }): void => {
   const { ctx, toPxInto, scratchPoint, pixelsPerUnit, overlay } = args;
-  for (const ghost of overlay.ghosts ?? []) {
-    drawGhostGeometry({ ctx, toPxInto, scratchPoint, pixelsPerUnit, ghost });
+  for (const [labelIndex, ghost] of (overlay.ghosts ?? []).entries()) {
+    drawGhostGeometry({ ctx, toPxInto, scratchPoint, pixelsPerUnit, ghost, labelIndex });
   }
 };
 

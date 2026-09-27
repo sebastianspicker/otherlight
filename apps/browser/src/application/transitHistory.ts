@@ -1,11 +1,11 @@
 /**
- * Owns transit History support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Tracks and summarizes the transit history gathered from simulation steps.
  */
 import type { BrowserScenarioDraft } from "../domain/model/types";
 import type { SimulationFrame } from "../domain/simulation/frames";
 import { resolveOrbitElements } from "../domain/simulation/orbits";
 
-export type TransitHistoryEvent = {
+type TransitHistoryEvent = {
   centerSec: number;
   ocSec?: number;
   durationSec?: number;

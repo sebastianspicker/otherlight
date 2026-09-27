@@ -1,5 +1,5 @@
 /**
- * Owns scenario Flow support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Holds the scenario apply flow and product-mode helpers.
  */
 import type { LessonSimMode, BrowserScenarioDraft } from "../../domain/model/types";
 import { getLabSystemByControlValue, getLabSystemById } from "../../domain/model/labs";
@@ -36,7 +36,7 @@ import type {
 } from "../render/lightCurvePlotTypes";
 import type { SceneGhostGeometry } from "../render/sceneTypes";
 
-export const BINARY_MODE_VALUE = getLabSystemById("binary-stars").controlValue;
+const BINARY_MODE_VALUE = getLabSystemById("binary-stars").controlValue;
 export const PRESET_MODE_VALUE = getLabSystemById("transit-exomoon").controlValue;
 export const LAB_PRODUCT_MODE_VALUE = "lab";
 export const SIMULATION_PRODUCT_MODE_VALUE = "simulation";

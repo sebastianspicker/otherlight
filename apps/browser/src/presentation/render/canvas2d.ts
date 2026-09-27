@@ -44,7 +44,7 @@ export type { DebugOverlayData, DebugOverlayToggles } from "./overlays";
 export type Canvas2DRendererOptions = {
   /**
    * Background fill for the main view.
-   * Default: "#000".
+   * Default: "#0b1319".
    */
   background?: string;
 
@@ -71,7 +71,7 @@ function getCanvas2DContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D
 
 function resolveCanvas2DRendererOptions(opts: Canvas2DRendererOptions): Required<Canvas2DRendererOptions> {
   return {
-    background: rendererOptionDefault(opts.background, "#000"),
+    background: rendererOptionDefault(opts.background, "#0b1319"),
     showAxes: rendererOptionDefault(opts.showAxes, true),
     autoFitScene: rendererOptionDefault(opts.autoFitScene, false),
   };
@@ -279,6 +279,7 @@ export class Canvas2DRenderer {
   }
 
   private drawEventMarkers(step: SimulationFrame): void {
+    if (!this.debug.enabled) return;
     drawEventMarkers({
       ctx: this.ctx,
       cssH: this.size?.cssH ?? 0,

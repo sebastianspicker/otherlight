@@ -1,16 +1,22 @@
 /**
- * Owns sidebar support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the sidebar template.
  */
+import { renderRadiusComparison } from "./observatory";
 import { renderDidacticSection } from "./sidebarDidactics";
 import { renderParametersTemplate } from "./parameters";
 import { renderOcSection, renderPlotControls } from "./sidebarRuntime";
 
 export function renderSidebarTemplate(): string {
   return `
-    <aside class="sidebar" aria-label="Model and workspace controls">
-      <div class="sidebar-primary">
+    <aside id="modelControls" class="sidebar" aria-label="Model and workspace controls" tabindex="-1">
+      ${renderRadiusComparison()}
+      <div class="sidebar-primary" id="experimentTools">
         ${renderDidacticSection()}
+        <div class="observatory-model-tools">
+        <details class="model-tools" id="modelTools"><summary>System parameters &amp; quick controls</summary>
         ${renderParametersTemplate()}
+        </details>
+        <details class="model-tools"><summary>Display, history &amp; model limits</summary>
         <section class="panel display-controls" aria-labelledby="displayControlsTitle">
           <h2 id="displayControlsTitle">Display</h2>
           ${renderPlotControls()}
@@ -23,9 +29,9 @@ export function renderSidebarTemplate(): string {
             View model limits
           </a>
         </section>
-      </div>
-      <div class="sidebar-events">
-        ${renderOcSection()}
+        <div class="sidebar-events">${renderOcSection()}</div>
+        </details>
+        </div>
       </div>
     </aside>
   `;

@@ -14,14 +14,12 @@ import type { SceneGhostGeometry } from "../render/sceneTypes";
 import { getInstrumentCfgFromPhotometry } from "../../application/noise";
 import type { AppSimulationRuntime } from "../../application/v4Runtime";
 import {
-  buildBandVariantSystems,
   buildGapWindowOverlays,
   buildLightCurveMarkers,
   buildMeasurementBadges,
   buildSceneDidacticOverlay,
   createGhostGeometry,
   estimateMeasurementSigma,
-  sampleBandOverlaySeries,
 } from "./visualizationDidactics";
 import { finitePositive } from "./frameLoopSamplingConfig";
 import { buildVisualizationSetters, type FrameLoopVisualizationState } from "./frameLoopVisualizationHelpers";
@@ -167,20 +165,6 @@ function sampleTimesForRange(range: { startSec: number; endSec: number }, sample
   );
 }
 
-function dynamicBandOverlaySeries(
-  params: BrowserScenarioDraft,
-  range: { startSec: number; endSec: number } | undefined,
-  physicalHistory: LightCurveOverlayPoint[],
-): DynamicBandOverlayResult {
-  if (!range) return { series: [], hasChromaticLane: false };
-  const bandVariants = buildBandVariantSystems(params);
-  if (bandVariants.length <= 1) return { series: [], hasChromaticLane: false };
-
-  const sampleCount = Math.min(96, Math.max(24, physicalHistory.length));
-  const times = sampleTimesForRange(range, sampleCount);
-  return { series: sampleBandOverlaySeries({ variants: bandVariants, times }), hasChromaticLane: true };
-}
-
 function dynamicOverlaySeries(args: {
   params: BrowserScenarioDraft;
   plotMode: string;
@@ -195,9 +179,7 @@ function dynamicOverlaySeries(args: {
     ...buildNoiseEnvelopeSeries(args.measuredHistory, estimateMeasurementSigma(args.params, args.state.t)),
     ...(args.state.comparisonCurveSeries ?? []),
   ];
-  const bandOverlay = dynamicBandOverlaySeries(args.params, args.range, args.physicalHistory);
-  overlaySeries.push(...bandOverlay.series);
-  return { series: overlaySeries, hasChromaticLane: bandOverlay.hasChromaticLane };
+  return { series: overlaySeries, hasChromaticLane: args.state.chromaticOverlay?.hasBands() ?? false };
 }
 
 function dynamicBadges(
@@ -240,7 +222,9 @@ export function applyDynamicVisualizationState(args: ApplyDynamicVisualizationSt
   const overlays = dynamicOverlaySeries({ params, plotMode, state, physicalHistory, measuredHistory, range });
   const badges = dynamicBadges(params, step, state, overlays.hasChromaticLane);
 
-  setters.setOverlaySeries(overlays.series);
+  const times = range ? sampleTimesForRange(range, Math.min(96, Math.max(24, physicalHistory.length))) : [];
+  if (state.chromaticOverlay) state.chromaticOverlay.compose(overlays.series, times, false);
+  else setters.setOverlaySeries(overlays.series);
   setters.setWindowOverlays(
     buildGapWindowOverlays(getInstrumentCfgFromPhotometry(params.star.photometry)?.observer, range),
   );

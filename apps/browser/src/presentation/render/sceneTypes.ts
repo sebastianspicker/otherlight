@@ -1,5 +1,5 @@
 /**
- * Owns scene Types support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Defines the scene scratch and overlay types.
  */
 export type ScratchPoint = { x: number; y: number };
 export type ToPxInto = (x: number, y: number, out: ScratchPoint) => ScratchPoint;
@@ -11,7 +11,7 @@ export type AtmosphereHaloStyle = {
   outerColor: string;
 };
 
-export type SceneAnnotationLine = {
+type SceneAnnotationLine = {
   x1: number;
   y1: number;
   x2: number;
@@ -21,14 +21,14 @@ export type SceneAnnotationLine = {
   dashed?: boolean;
 };
 
-export type SceneAnnotationPoint = {
+type SceneAnnotationPoint = {
   x: number;
   y: number;
   color?: string;
   label?: string;
 };
 
-export type SceneAnnotationBadge = {
+type SceneAnnotationBadge = {
   label: string;
   color?: string;
 };

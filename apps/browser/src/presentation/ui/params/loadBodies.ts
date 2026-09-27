@@ -1,5 +1,5 @@
 /**
- * Owns load Bodies support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Loads planet and moon parameters into the UI.
  */
 import type { BrowserScenarioDraft } from "../../../domain/model/types";
 import { RAD2DEG } from "../../../domain/model/units";

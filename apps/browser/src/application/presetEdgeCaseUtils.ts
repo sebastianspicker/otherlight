@@ -1,5 +1,5 @@
 /**
- * Owns preset Edge Case Utils support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Builds the edge-case scenario presets used by teaching and validation.
  */
 import type { SystemDynamicsParams, BrowserScenarioDraft } from "../domain/model/types";
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
@@ -11,18 +11,18 @@ export type EdgeCaseScenarioPreset = {
   params: BrowserScenarioDraft;
 };
 
-export function basePresetParams(): BrowserScenarioDraft {
+function basePresetParams(): BrowserScenarioDraft {
   return cloneParams(SCENARIO_DEFAULTS);
 }
 
-export function withoutPatches(p: BrowserScenarioDraft): void {
+function withoutPatches(p: BrowserScenarioDraft): void {
   const ph = p.star.photometry;
   if (!ph) return;
   ph.brightnessPatches = [];
   delete ph.spotEvolution;
 }
 
-export function disableAdditiveTerms(p: BrowserScenarioDraft): void {
+function disableAdditiveTerms(p: BrowserScenarioDraft): void {
   const ph = p.star.photometry;
   if (!ph) return;
   delete ph.phaseCurve;
@@ -33,7 +33,7 @@ export function disableAdditiveTerms(p: BrowserScenarioDraft): void {
   delete ph.dayNightVisibility;
 }
 
-export function disableMeasurementTerms(p: BrowserScenarioDraft): void {
+function disableMeasurementTerms(p: BrowserScenarioDraft): void {
   const ph = p.star.photometry;
   if (!ph) return;
   ph.cadenceSec = 0;
@@ -42,7 +42,7 @@ export function disableMeasurementTerms(p: BrowserScenarioDraft): void {
   if (ph.instrument) ph.instrument = { ...ph.instrument, enabled: false };
 }
 
-export function disableAdvancedAtmosphere(p: BrowserScenarioDraft): void {
+function disableAdvancedAtmosphere(p: BrowserScenarioDraft): void {
   const ph = p.star.photometry;
   if (!ph) return;
   if (ph.atmosphereTransmission) ph.atmosphereTransmission = { ...ph.atmosphereTransmission, enabled: false };

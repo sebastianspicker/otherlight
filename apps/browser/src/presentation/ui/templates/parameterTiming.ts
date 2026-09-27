@@ -1,5 +1,5 @@
 /**
- * Owns parameter Timing support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the day/night and exomoon timing fieldsets.
  */
 export function renderDayNightFieldset(): string {
   return `

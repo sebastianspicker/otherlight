@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Product Control Values support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Reads product profile, mode, lab, and runtime control values from the UI.
  */
 import type { ProductViewState } from "./productViewState";
 import { getLabSystemById } from "../domain/model/labs";

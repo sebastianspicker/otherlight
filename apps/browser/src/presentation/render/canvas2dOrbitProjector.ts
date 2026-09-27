@@ -1,4 +1,4 @@
-/** Owns canvas scene ordering support within the render layer. */
+/** Orders sky-plane drawables by depth for the canvas renderer. */
 import type { RenderOcculterGeometry } from "../../domain/simulation/frames";
 
 export type Drawable = {

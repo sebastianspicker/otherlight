@@ -1,5 +1,5 @@
 /**
- * Owns read support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Reads the UI back into authoring parameters.
  */
 import type { SystemDynamicsParams, BrowserScenarioDraft } from "../../../domain/model/types";
 import { RAD2DEG } from "../../../domain/model/units";

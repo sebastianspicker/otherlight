@@ -1,6 +1,9 @@
 /**
  * Shared frame-loop controller types used by reset/seek/frame orchestration.
  */
+import type { ChromaticSampler } from "../../application/chromaticSampler";
+import type { FixedPreviewKey, FixedPreviewPresentation } from "./fixedPreviewCache";
+import type { ChromaticOverlay } from "./chromaticOverlay";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import type { ApplyDynamicVisualizationStateArgs } from "./frameLoopDynamicVisualization";
@@ -29,6 +32,10 @@ export type FrameLoopState = {
   lastValidFrame: SimulationFrame | null;
   displayFluxScale: number;
   displayFluxTitle: string;
+  fixedPreviewKey?: FixedPreviewKey;
+  fixedPreviewPresentation?: FixedPreviewPresentation;
+  previewGeneration?: number;
+  chromaticOverlay?: ChromaticOverlay;
   fixedPlotYRange?: { lo: number; hi: number };
   fixedPlotYRangeMode?: string | null;
   noise: NoiseState;
@@ -45,6 +52,7 @@ export type FrameLoopState = {
 };
 
 export type FrameLoopDeps = {
+  chromaticSampler?: ChromaticSampler;
   refs: UiRefs;
   renderer: Canvas2DRenderer;
   plot: LightCurvePlot;

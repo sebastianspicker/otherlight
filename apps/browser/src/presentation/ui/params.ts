@@ -1,5 +1,5 @@
 /**
- * Owns params support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Re-exports the parameter UI helpers.
  */
 export { loadParamsIntoUI, readUIIntoParams, setObserverDirFromUI } from "./params/index";
 export {

@@ -1,5 +1,5 @@
 /**
- * Owns oc Plot Zero Line support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Draws the O-C zero line.
  */
 type OcZeroLineLayout = {
   x0: number;

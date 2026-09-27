@@ -1,5 +1,5 @@
 /**
- * Owns presets Edge Cases Surface support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Defines the stellar-surface edge-case presets.
  */
 import type { LimbDarkeningModel } from "../domain/model/types";
 import {

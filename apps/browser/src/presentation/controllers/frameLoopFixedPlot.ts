@@ -1,6 +1,7 @@
 /**
  * Fixed-window light-curve preview rebuild and Y-range handling.
  */
+import { fixedPreviewKey } from "./fixedPreviewCache";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
@@ -9,13 +10,11 @@ import { createInstrumentNoiseState } from "../../domain/photometry/instrumentNo
 import { getInstrumentCfgFromPhotometry, type NoiseState } from "../../application/noise";
 import type { AppSimulationRuntime } from "../../application/v4Runtime";
 import {
-  buildBandVariantSystems,
   buildGapWindowOverlays,
   buildLightCurveMarkers,
   buildMeasurementBadges,
   buildSceneDidacticOverlay,
   componentOverlaySeriesFromSamples,
-  sampleBandOverlaySeries,
 } from "./visualizationDidactics";
 import {
   finitePositive,
@@ -98,15 +97,20 @@ export function rebuildFixedPlot(args: {
     stepAtTime?: SimulationFrame,
   ) => number;
   step0?: SimulationFrame;
+  clampSmearedFlux?: boolean;
 }): void {
   const { simulation, params, plotMode, state, plot, renderer, sampleFluxForPlot, step0 } = args;
-  const setters = buildVisualizationSetters(plot, renderer);
+  state.fixedPreviewKey = undefined;
+  state.fixedPreviewPresentation = undefined;
   if (state.fixedPlotYRangeMode && state.fixedPlotYRangeMode !== plotMode) {
     clearFixedComparisonRange(state, plot);
   }
 
   const anchorStep = step0 ?? simulation.step(0);
-  const { startSec, endSec } = deriveFixedPlotWindow(anchorStep, params);
+  const focusedSamples = state.comparisonCurveSeries?.find((series) => series.id === "radius-a")?.samples;
+  const { startSec, endSec } = focusedSamples?.length
+    ? { startSec: focusedSamples[0].t, endSec: focusedSamples[focusedSamples.length - 1].t }
+    : deriveFixedPlotWindow(anchorStep, params);
   const sampleCount = Math.max(32, FIXED_PLOT_SAMPLE_COUNT);
   const spanSec = Math.max(1, endSec - startSec);
   const previewNoiseState = createInstrumentNoiseState(state.noise.noiseSeed);
@@ -183,30 +187,61 @@ export function rebuildFixedPlot(args: {
         : []),
   );
   overlaySeries.push(...componentOverlaySeriesFromSamples(stepPreview));
-  const bandVariants = buildBandVariantSystems(params);
-  if (bandVariants.length > 1)
-    overlaySeries.push(...sampleBandOverlaySeries({ variants: bandVariants, times }));
-  if (state.comparisonCurveSeries?.length) overlaySeries.push(...state.comparisonCurveSeries);
+  state.fixedPreviewPresentation = { anchorStep, times, overlaySeries };
+  if (state.chromaticOverlay) state.chromaticOverlay.compose(overlaySeries, times, true);
+  refreshFixedPlotPresentation({ simulation, params, state, plot, renderer });
+  state.fixedPreviewKey = fixedPreviewKey(simulation, params, plotMode, state, args.clampSmearedFlux);
+}
 
-  const badges = [...buildMeasurementBadges(params, anchorStep, state.t), ...(state.comparisonBadges ?? [])];
-  if (bandVariants.length > 1) badges.push({ label: "chromatic lane", color: "#ffb703" });
-  setters.setOverlaySeries(overlaySeries);
+/** Refreshes time-dependent annotations and comparisons without sampling another preview. */
+export function refreshFixedPlotPresentation(args: {
+  simulation: AppSimulationRuntime;
+  params: BrowserScenarioDraft;
+  state: FrameLoopVisualizationState;
+  plot: LightCurvePlot;
+  renderer: Canvas2DRenderer;
+}): void {
+  const { simulation, params, state, plot, renderer } = args;
+  const preview = state.fixedPreviewPresentation;
+  if (!preview) return;
+  const { anchorStep, times } = preview;
+  const currentStep = state.lastValidFrame ?? anchorStep;
+  const setters = buildVisualizationSetters(plot, renderer);
+  const radiusComparison = state.comparisonCurveSeries?.some((series) => series.id === "radius-a");
+  const overlaySeries = radiusComparison
+    ? [...(state.comparisonCurveSeries ?? [])]
+    : [...preview.overlaySeries, ...(state.comparisonCurveSeries ?? [])];
+  const badges = fixedPreviewBadges(params, state, currentStep);
+  if (state.chromaticOverlay) state.chromaticOverlay.updateBase(overlaySeries);
+  else setters.setOverlaySeries(overlaySeries);
   setters.setWindowOverlays(
     buildGapWindowOverlays(getInstrumentCfgFromPhotometry(params.star.photometry)?.observer, {
-      startSec,
-      endSec,
+      startSec: times[0],
+      endSec: times[times.length - 1],
     }),
   );
   setters.setBadges(badges);
-  setters.setMarkers(buildLightCurveMarkers(anchorStep));
+  setters.setMarkers(radiusComparison ? [] : buildLightCurveMarkers(anchorStep));
   setters.setComparisonInset(state.comparisonInset);
   setters.setSceneOverlay(
-    buildSceneDidacticOverlay({
-      params,
-      step: anchorStep,
-      tSec: state.t,
-      ghosts: [...(state.comparisonGhosts ?? []), ...buildEpochGhosts(simulation, params, state.t)],
-      extraBadges: badges,
-    }),
+    radiusComparison
+      ? { ghosts: state.comparisonGhosts }
+      : buildSceneDidacticOverlay({
+          params,
+          step: currentStep,
+          tSec: state.t,
+          ghosts: [...(state.comparisonGhosts ?? []), ...buildEpochGhosts(simulation, params, state.t)],
+          extraBadges: badges,
+        }),
   );
+}
+
+function fixedPreviewBadges(
+  params: BrowserScenarioDraft,
+  state: FrameLoopVisualizationState,
+  step: SimulationFrame,
+) {
+  const badges = [...buildMeasurementBadges(params, step, state.t), ...(state.comparisonBadges ?? [])];
+  if (state.chromaticOverlay?.hasBands()) badges.push({ label: "chromatic lane", color: "#ffb703" });
+  return badges;
 }

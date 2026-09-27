@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Profile support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Wires the Education and Scientific profile switch.
  */
 import {
   readProductProfile,
@@ -40,8 +40,10 @@ export function wireBootstrapProfile(args: BootstrapProfileArgs): BootstrapProfi
     syncProductProfileVisibility(profile);
     syncProductProfileNavigation(args.select, educationButton, scientificButton);
     if (profile === "scientific") args.pauseEducationRuntime();
-    if (profile === "scientific") void scienceWorkspace.refreshCapabilities();
-    else void scienceWorkspace.cancelCurrentJob();
+    if (profile === "scientific") {
+      void scienceWorkspace.refreshCapabilities();
+      void scienceWorkspace.refreshDatasets();
+    } else void scienceWorkspace.cancelCurrentJob();
     if (!announce) return;
     args.setStatus(
       profile === "scientific"

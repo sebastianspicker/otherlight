@@ -1,6 +1,7 @@
 /**
  * Live animation-frame orchestration for the frame-loop controller.
  */
+import { fixedPreviewKey, matchesFixedPreview, invalidateFixedPreview } from "./fixedPreviewCache";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import { computeFrameDt, readTimeSpeed } from "./actions";
@@ -14,7 +15,11 @@ import {
   trySimulationStep,
   warnNoisePipelineOnce,
 } from "./frameLoopControllerShared";
-import { clearFixedComparisonRange, rebuildFixedPlot } from "./frameLoopFixedPlot";
+import {
+  clearFixedComparisonRange,
+  rebuildFixedPlot,
+  refreshFixedPlotPresentation,
+} from "./frameLoopFixedPlot";
 import {
   displayFluxFromStep,
   pushFinitePlotSample,
@@ -53,6 +58,7 @@ const frameStep = (
 
 const resetFramePlotIfTrackingChanged = (ctx: FrameLoopContext, modes: PlotModes): void => {
   if (modes.trackingMode === ctx.state.lastPlotTrackingMode || modes.trackingMode === "fixed") return;
+  invalidateFixedPreview(ctx.state);
   clearFixedComparisonRange(ctx.state, ctx.plot);
   ctx.plot.clear();
   ctx.state.lastPlottedT = Number.NaN;
@@ -63,8 +69,16 @@ const shouldRebuildFixedFramePlot = (ctx: FrameLoopContext, modes: PlotModes): b
   return (
     modes.trackingMode === "fixed" &&
     (ctx.state.lastPlotTrackingMode !== "fixed" ||
-      modes.plotMode !== ctx.state.lastPlotMode ||
-      !Number.isFinite(ctx.state.lastPlottedT))
+      !matchesFixedPreview(
+        ctx.state.fixedPreviewKey,
+        fixedPreviewKey(
+          ctx.getSimulation(),
+          ctx.getParams(),
+          modes.plotMode,
+          ctx.state,
+          ctx.refs.clampSmearedFlux?.checked ?? false,
+        ),
+      ))
   );
 };
 
@@ -83,6 +97,7 @@ const rebuildFixedFramePlot = (
       plot: ctx.plot,
       renderer: ctx.renderer,
       sampleFluxForPlot: ctx.sampleFluxForPlot,
+      clampSmearedFlux: ctx.refs.clampSmearedFlux?.checked ?? false,
     });
     ctx.state.lastPlottedT = Number.NaN;
     ctx.state.lastPlotMode = plotMode;
@@ -160,6 +175,24 @@ const applyDynamicVisualizationForFrame = (
   });
 };
 
+function refreshFixedFramePresentation(
+  ctx: FrameLoopContext,
+  simulation: AppSimulationRuntime,
+  params: BrowserScenarioDraft,
+): void {
+  try {
+    refreshFixedPlotPresentation({
+      simulation,
+      params,
+      state: ctx.state,
+      plot: ctx.plot,
+      renderer: ctx.renderer,
+    });
+  } catch (error) {
+    setWarningText(ctx, `Visualization overlay failed: ${String(error)}`);
+  }
+}
+
 export function frameForContext(ctx: FrameLoopContext, now: number): void {
   const simulation = ctx.getSimulation();
   const params = ctx.getParams();
@@ -179,6 +212,8 @@ export function frameForContext(ctx: FrameLoopContext, now: number): void {
   resetFramePlotIfTrackingChanged(ctx, modes);
   if (shouldRebuildFixedFramePlot(ctx, modes)) {
     rebuildFixedFramePlot(ctx, simulation, params, modes.plotMode);
+  } else if (modes.trackingMode === "fixed") {
+    refreshFixedFramePresentation(ctx, simulation, params);
   }
 
   const sample = sampleFramePlot(ctx, { simulation, params, modes, step, dtSim });

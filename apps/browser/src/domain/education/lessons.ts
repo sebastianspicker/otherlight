@@ -1,5 +1,5 @@
 /**
- * Owns lessons support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Indexes the lesson catalog and resolves lessons, steps, and phases.
  */
 import type {
   LessonEventTarget,

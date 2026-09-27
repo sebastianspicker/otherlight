@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap App State construction within the app layer.
+ * Constructs the shared bootstrap application state.
  * Keeps application bootstrap and frame orchestration composable.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";

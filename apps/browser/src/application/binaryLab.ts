@@ -1,5 +1,5 @@
 /**
- * Owns binary Lab support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Builds the default detached-binary lab configuration and its V4 parameters.
  */
 import { AU_M, G_SI, SOLAR_MASS_KG, SOLAR_RADIUS_M } from "../domain/model/units";
 import type { BrowserScenarioDraft } from "../domain/model/types";

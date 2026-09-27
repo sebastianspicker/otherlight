@@ -1,5 +1,5 @@
 /**
- * Owns parameter Planet Atmosphere support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the planet atmosphere and scattering controls.
  */
 export function renderScatteringControls(): string {
   return `

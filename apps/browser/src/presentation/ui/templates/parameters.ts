@@ -1,5 +1,5 @@
 /**
- * Owns parameters support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the full parameter template.
  */
 import { renderParameterBodiesTemplate } from "./parameterBodies";
 import { renderParameterObserverStarTemplate } from "./parameterObserverStar";
@@ -47,11 +47,11 @@ export function renderParametersTemplate(): string {
     <section class="panel params" id="paramsSection">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">Model controls</p>
           <h2>System parameters</h2>
         </div>
         <span class="panel-heading__status mono">V4</span>
       </div>
+      <p class="help parameter-intro">Adjust a slider to update the model and figures.</p>
       <p id="binaryLabParamNotice" class="help" hidden>
         Binary black-box lab uses a curated detached eclipsing-binary scenario. The generic transit/exomoon
         parameter form is hidden here because its labels do not describe the binary-star contract.
@@ -62,12 +62,15 @@ export function renderParametersTemplate(): string {
         <details class="advanced-parameter-drawer" data-ui-tier="expert" open>
           <summary><span>Advanced parameters</span><span class="mono">full model</span></summary>
           <div class="advanced-parameter-drawer__content">
-            ${renderUiRangesTemplate()}
+            ${renderParameterActionsTemplate()}
             <div class="paramCols" data-ui-tier="expert">
               ${renderParameterObserverStarTemplate()}
               ${renderParameterBodiesTemplate()}
-              ${renderParameterActionsTemplate()}
             </div>
+            <details class="parameter-ranges">
+              <summary>Slider ranges &amp; overrides</summary>
+              ${renderUiRangesTemplate()}
+            </details>
           </div>
         </details>
       </form>

@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Apply Params / scenario apply helpers within the app layer.
+ * Applies accepted parameters and scenarios during bootstrap.
  * Keeps application bootstrap and frame orchestration composable.
  */
 import { clearParamValidationUi, readValidatedUIIntoParams, renderParamValidationErrors } from "../ui/params";

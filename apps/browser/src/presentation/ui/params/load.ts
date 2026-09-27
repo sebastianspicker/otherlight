@@ -1,5 +1,5 @@
 /**
- * Owns load support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Loads authoring parameters into the UI.
  */
 import type { BrowserScenarioDraft } from "../../../domain/model/types";
 import { writeNumberInput } from "../inputs";

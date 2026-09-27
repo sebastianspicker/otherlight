@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Viewport Window support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Chooses the live or fallback visible window.
  */
 import type { VisibleTimeDomain, VisibleWindow } from "./lightCurvePlotMath";
 import type { LightCurveHistoryState, ResolvedLightCurvePlotOptions } from "./lightCurvePlotTypes";

@@ -1,5 +1,5 @@
 /**
- * Owns photometry support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Reads photometry parameters from the UI.
  */
 import type {
   AtmosphereTransmissionParams,

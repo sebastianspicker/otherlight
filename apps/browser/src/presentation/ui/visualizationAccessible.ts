@@ -1,5 +1,5 @@
 /**
- * Owns visualization Accessible support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Builds the accessible visualization snapshot and light-curve summary.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { LightCurveAccessibleSnapshot } from "../render/lightCurvePlot";

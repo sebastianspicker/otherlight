@@ -1,6 +1,7 @@
 /**
  * Reset and seek orchestration for the frame-loop controller.
  */
+import { invalidateFixedPreview } from "./fixedPreviewCache";
 import { setText } from "../ui/dom";
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { resetInstrumentNoiseState } from "../../domain/photometry/instrumentNoise";
@@ -34,6 +35,7 @@ import type { AppSimulationRuntime } from "../../application/v4Runtime";
 
 const resetTimelineState = (ctx: FrameLoopContext): void => {
   const { refs, renderer, plot, state } = ctx;
+  invalidateFixedPreview(state);
   ctx.setRunning(false);
   clearNoiseErrorLogged();
   state.t = 0;
@@ -106,6 +108,7 @@ const resetFixedPlot = (
       plot: ctx.plot,
       renderer: ctx.renderer,
       sampleFluxForPlot: ctx.sampleFluxForPlot,
+      clampSmearedFlux: ctx.refs.clampSmearedFlux?.checked ?? false,
       step0,
     });
     ctx.state.lastPlottedT = Number.NaN;
@@ -182,6 +185,7 @@ export function resetSimTimeAndLCForContext(
 
 const prepareSeek = (ctx: FrameLoopContext, targetSec: number, resetNoise: boolean): void => {
   ctx.setRunning(false);
+  invalidateFixedPreview(ctx.state);
   ctx.state.t = targetSec;
   ctx.state.last = performance.now();
   if (resetNoise) ctx.state.noise = resetNoiseState(ctx.state.noise);
@@ -220,6 +224,7 @@ const seekFixedPlot = (
       plot: ctx.plot,
       renderer: ctx.renderer,
       sampleFluxForPlot: ctx.sampleFluxForPlot,
+      clampSmearedFlux: ctx.refs.clampSmearedFlux?.checked ?? false,
       step0: step,
     });
     ctx.state.lastPlottedT = Number.NaN;

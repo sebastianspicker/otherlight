@@ -24,7 +24,7 @@ const isFiniteNumber = (value: unknown): value is number =>
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 const arrayOrEmpty = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 
-export function collectSpectralBandpassIssues(photometry: unknown): string[] {
+function collectSpectralBandpassIssues(photometry: unknown): string[] {
   if (!isObject(photometry)) return [];
   const bandpass = photometry.spectralBandpass;
   if (!isObject(bandpass) || bandpass.enabled !== true) return [];
@@ -43,7 +43,7 @@ export function collectSpectralBandpassIssues(photometry: unknown): string[] {
   return issues;
 }
 
-export function validateTopLevelFields(input: UnknownRecord, errors: string[]): void {
+function validateTopLevelFields(input: UnknownRecord, errors: string[]): void {
   if (input.version !== "4") errors.push('version must equal "4"');
   if (input.mode !== "general-lab" && input.mode !== "detached-binary-lab") {
     errors.push('mode must be "general-lab" or "detached-binary-lab"');
@@ -51,7 +51,7 @@ export function validateTopLevelFields(input: UnknownRecord, errors: string[]): 
   errors.push(...collectSpectralBandpassIssues(input.photometry));
 }
 
-export function validateRuntime(input: UnknownRecord, errors: string[]): void {
+function validateRuntime(input: UnknownRecord, errors: string[]): void {
   if (input.runtime === undefined) return;
   if (!isObject(input.runtime)) {
     errors.push("runtime must be an object when provided");
@@ -73,10 +73,7 @@ export function validateRuntime(input: UnknownRecord, errors: string[]): void {
   }
 }
 
-export function validationCollections(
-  input: UnknownRecord,
-  errors: string[],
-): ValidationCollections | undefined {
+function validationCollections(input: UnknownRecord, errors: string[]): ValidationCollections | undefined {
   if (!isObject(input.bodies)) {
     errors.push("bodies must be an object");
     return undefined;
@@ -94,7 +91,7 @@ export function validationCollections(
   };
 }
 
-export function validateCollectionShapes(collections: ValidationCollections, errors: string[]): void {
+function validateCollectionShapes(collections: ValidationCollections, errors: string[]): void {
   if (!Array.isArray(collections.stars) || collections.stars.length !== 2) {
     errors.push("bodies.stars must contain exactly two stars");
   }
@@ -104,11 +101,7 @@ export function validateCollectionShapes(collections: ValidationCollections, err
   if (!Array.isArray(collections.hierarchy)) errors.push("orbits.hierarchy must be an array");
 }
 
-export function identifiedRecord(
-  value: unknown,
-  error: string,
-  errors: string[],
-): IdentifiedRecord | undefined {
+function identifiedRecord(value: unknown, error: string, errors: string[]): IdentifiedRecord | undefined {
   if (!isObject(value) || !isNonEmptyString(value.id)) {
     errors.push(error);
     return undefined;
@@ -116,7 +109,7 @@ export function identifiedRecord(
   return value as IdentifiedRecord;
 }
 
-export function validateStar(star: unknown, ids: ValidationIds, errors: string[]): void {
+function validateStar(star: unknown, ids: ValidationIds, errors: string[]): void {
   const record = identifiedRecord(star, "each star must define a non-empty id", errors);
   if (!record) return;
   ids.starIds.add(record.id);
@@ -130,7 +123,7 @@ export function validateStar(star: unknown, ids: ValidationIds, errors: string[]
   }
 }
 
-export function validatePlanet(planet: unknown, ids: ValidationIds, errors: string[]): void {
+function validatePlanet(planet: unknown, ids: ValidationIds, errors: string[]): void {
   const record = identifiedRecord(planet, "each planet must define a non-empty id", errors);
   if (!record) return;
   ids.planetIds.add(record.id);
@@ -153,7 +146,7 @@ export function validatePlanet(planet: unknown, ids: ValidationIds, errors: stri
   }
 }
 
-export function validateMoon(moon: unknown, ids: ValidationIds, errors: string[]): void {
+function validateMoon(moon: unknown, ids: ValidationIds, errors: string[]): void {
   const record = identifiedRecord(moon, "each moon must define a non-empty id", errors);
   if (!record) return;
   ids.moonIds.add(record.id);
@@ -165,7 +158,7 @@ export function validateMoon(moon: unknown, ids: ValidationIds, errors: string[]
   }
 }
 
-export function validateHierarchyLink(link: unknown, ids: ValidationIds, errors: string[]): void {
+function validateHierarchyLink(link: unknown, ids: ValidationIds, errors: string[]): void {
   if (!isObject(link) || !isNonEmptyString(link.childId) || !isNonEmptyString(link.parentId)) {
     errors.push("each hierarchy link must define non-empty childId and parentId");
     return;
@@ -182,7 +175,7 @@ export function validateHierarchyLink(link: unknown, ids: ValidationIds, errors:
   }
 }
 
-export function validateBodiesAndHierarchy(collections: ValidationCollections, errors: string[]): void {
+function validateBodiesAndHierarchy(collections: ValidationCollections, errors: string[]): void {
   const ids: ValidationIds = { starIds: new Set(), planetIds: new Set(), moonIds: new Set() };
   if (Array.isArray(collections.stars)) {
     for (const star of collections.stars) validateStar(star, ids, errors);

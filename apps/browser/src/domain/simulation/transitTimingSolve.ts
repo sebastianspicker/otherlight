@@ -1,5 +1,5 @@
 /**
- * Owns transit Timing Solve support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Estimates transit reference epochs and event times.
  */
 import type { SkyPoint, StepEventTimingSolveDiagnostics, BrowserScenarioDraft } from "../model/types";
 

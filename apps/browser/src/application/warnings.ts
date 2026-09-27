@@ -1,5 +1,5 @@
 /**
- * Owns warnings support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Maps collected warnings into the UI warning text.
  */
 import type { BrowserScenarioDraft } from "../domain/model/types";
 import { collectParamWarnings } from "../domain/simulation/validation";

@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap View Controls support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Wires the view and display controls.
  */
 import type { Canvas2DRenderer, LightCurvePlot } from "../render/canvas2d";
 import type { UiRefs } from "../ui/refs";

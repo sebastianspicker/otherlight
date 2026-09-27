@@ -109,9 +109,6 @@ export type AssessmentRule =
       tolerance: number;
     };
 
-/** Union of all AssessmentRule `kind` discriminants. Useful for exhaustive switch statements. */
-export type AssessmentRuleKind = AssessmentRule["kind"];
-
 export type LessonStep = {
   id: string;
   title: string;

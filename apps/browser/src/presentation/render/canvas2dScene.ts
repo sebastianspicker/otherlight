@@ -1,5 +1,5 @@
 /**
- * Owns canvas2d Scene support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Re-exports the canvas scene types and helpers.
  */
 export { drawStarGeometry } from "./sceneStars";
 export {
@@ -9,4 +9,3 @@ export {
   drawDidacticOverlay,
   drawOcculterGeometry,
 } from "./sceneOverlays";
-export type { AtmosphereHaloStyle, SceneDidacticOverlayState, ScratchPoint, ToPxInto } from "./sceneTypes";

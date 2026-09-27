@@ -1,5 +1,5 @@
 /**
- * Owns limb Darkening Lookup support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Looks up the limb-darkening law for a band.
  */
 import type { LimbDarkeningLaw, PassbandId } from "../model/types";
 import { findDirectBandLaw } from "./limbDarkeningLookupDirect";

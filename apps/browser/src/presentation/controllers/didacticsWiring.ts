@@ -1,5 +1,5 @@
 /**
- * Owns didactics Wiring support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Connects the didactics controller to its UI.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { compareScenariosAtTime, interpretDidacticComparison } from "../../domain/education";
@@ -47,6 +47,7 @@ type DidacticsUiState = {
 };
 
 export type WireDidacticsUiDeps = {
+  invalidate?: () => void;
   refs: UiRefs;
   state: DidacticsUiState;
   getSimulation: () => AppSimulationRuntime;
@@ -282,8 +283,9 @@ function wireReportAndJumpControls(context: DidacticsWireContext): void {
     "click",
     () => {
       runWithErrorHandling(() => exportDidacticReport(state.params, state.didacticsRuntime), {
-        statusEl: warnEl,
-        getSuccessMessage,
+        statusEl: document.getElementById("didExportStatus") ?? warnEl,
+        getSuccessMessage: () =>
+          "Report download started. Check your browser downloads. Save the workspace separately.",
         errorPrefix: "Export failed: ",
       });
     },
@@ -315,6 +317,7 @@ function wireComparisonControl(context: DidacticsWireContext): void {
           const comparison = runDidacticComparison(context);
           renderDidacticComparison(refs, comparison.text);
           applyDidacticComparisonState(state, comparison);
+          context.invalidate?.();
         },
         { statusEl: refs.didCompareOut, errorPrefix: "Compare failed: " },
       );

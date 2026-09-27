@@ -3,10 +3,6 @@
 // Overlay series builders produce LightCurveOverlaySeries data
 // from simulation runtimes, band variants, or sample arrays.
 
-import { cloneParams } from "../../domain/model/clone";
-import type { BrowserScenarioDraft } from "../../domain/model/types";
-import { resolveWeightedPhotometryBands } from "../../domain/simulation/v4/nativePhotometry";
-import { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } from "../../domain/simulation/v4";
 import type { SimulationFrame } from "../../domain/simulation/frames";
 import type {
   LightCurveComparisonInset,
@@ -14,20 +10,11 @@ import type {
   LightCurveOverlaySeries,
 } from "../render/lightCurvePlotTypes";
 
-const BAND_COLORS = ["#ffb703", "#8ecae6", "#fb8500", "#90be6d", "#f28482"];
 const COMPARISON_TIME_EPS_SEC = 1e-9;
 
 type RuntimeLike = {
   step: (tSec: number) => SimulationFrame;
 };
-
-type BandVariantSystem = {
-  label: string;
-  color: string;
-  system: BrowserScenarioDraft;
-};
-
-type WeightedPhotometryBand = ReturnType<typeof resolveWeightedPhotometryBands>[number];
 
 export function componentOverlaySeriesFromSamples(
   samples: Array<{ t: number; step: SimulationFrame }>,
@@ -70,85 +57,6 @@ export function componentOverlaySeriesFromSamples(
     });
   }
   return [baseline, transitOnly, scatterShoulder];
-}
-
-export function buildBandVariantSystems(system: BrowserScenarioDraft): BandVariantSystem[] {
-  const cfg = mapBrowserScenarioDraftToEducationScenarioV4(system);
-  const bands = resolveWeightedPhotometryBands(cfg);
-  if (bands.length <= 1) return [];
-
-  return bands.map((band, index) => buildBandVariantSystem(system, band, index));
-}
-
-function buildBandVariantSystem(
-  system: BrowserScenarioDraft,
-  band: WeightedPhotometryBand,
-  index: number,
-): BandVariantSystem {
-  const clone = cloneParams(system);
-  applySingleSpectralBand(clone, band.lambdaNm);
-  applySingleTransmissionBand(clone, band.lambdaNm, index);
-  return {
-    label: `${Math.round(band.lambdaNm)} nm`,
-    color: BAND_COLORS[index % BAND_COLORS.length],
-    system: clone,
-  };
-}
-
-function applySingleSpectralBand(system: BrowserScenarioDraft, lambdaNm: number): void {
-  const bandpass = system.star.photometry?.spectralBandpass;
-  if (!bandpass?.enabled || !Array.isArray(bandpass.lambdaNm)) return;
-
-  bandpass.lambdaNm = [lambdaNm];
-  bandpass.weights = [1];
-}
-
-function applySingleTransmissionBand(
-  system: BrowserScenarioDraft,
-  lambdaNm: number,
-  fallbackIndex: number,
-): void {
-  const transmission = system.star.photometry?.atmosphereTransmission;
-  if (!transmission?.enabled || !Array.isArray(transmission.lambdaNm)) return;
-
-  const pickIndex = pickTransmissionBandIndex(transmission.lambdaNm, lambdaNm, fallbackIndex);
-  const pickedLambda = transmission.lambdaNm[pickIndex];
-  const tauScale = Array.isArray(transmission.tauScale) ? transmission.tauScale[pickIndex] : undefined;
-  if (Number.isFinite(pickedLambda)) transmission.lambdaNm = [pickedLambda as number];
-  if (Number.isFinite(tauScale)) transmission.tauScale = [tauScale as number];
-}
-
-function pickTransmissionBandIndex(lambdaNmList: number[], lambdaNm: number, fallbackIndex: number): number {
-  const matchingIndex = lambdaNmList.findIndex((value) => value === lambdaNm);
-  return matchingIndex >= 0 ? matchingIndex : fallbackIndex;
-}
-
-export function sampleBandOverlaySeries(args: {
-  variants: Array<{ label: string; color: string; system: BrowserScenarioDraft }>;
-  times: number[];
-}): LightCurveOverlaySeries[] {
-  const series: LightCurveOverlaySeries[] = [];
-  for (const [index, variant] of args.variants.entries()) {
-    const runtime = createSimulationV4(mapBrowserScenarioDraftToEducationScenarioV4(variant.system), {});
-    const samples: LightCurveOverlayPoint[] = [];
-    for (const t of args.times) {
-      const step = runtime.step(t);
-      const flux = Number.isFinite(step.debug?.displayFluxValue)
-        ? (step.debug?.displayFluxValue as number)
-        : step.flux.total;
-      samples.push({ t, flux });
-    }
-    series.push({
-      id: `band-${index}`,
-      label: variant.label,
-      color: variant.color,
-      style: "solid",
-      width: 1.15,
-      alpha: 0.75,
-      samples,
-    });
-  }
-  return series;
 }
 
 export function buildComparisonInset(args: {

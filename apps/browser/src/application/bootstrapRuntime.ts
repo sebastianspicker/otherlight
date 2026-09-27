@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Runtime support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Derives the initial runtime mode and display-flux settings from bootstrap state.
  */
 import type { BrowserScenarioDraft } from "../domain/model/types";
 import type { BinaryLabConfigV4 } from "../domain/simulation/v4/types";

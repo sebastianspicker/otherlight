@@ -1,5 +1,5 @@
 /**
- * Owns observer Gizmo Inset support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws the observer-direction gizmo inset.
  */
 import { clamp } from "../../domain/model/units";
 import type { Vec3 } from "../../domain/orbits/vec3";

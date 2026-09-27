@@ -1,5 +1,5 @@
 /**
- * Owns quick Controls support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the quick-controls template.
  */
 export function renderQuickControlsTemplate(): string {
   return `

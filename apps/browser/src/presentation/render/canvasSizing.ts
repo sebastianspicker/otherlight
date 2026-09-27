@@ -1,5 +1,5 @@
 /**
- * Owns canvas Sizing support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Resolves canvas size, device-pixel ratio, and transforms.
  */
 import type { SizeInfo } from "./canvasTypes";
 

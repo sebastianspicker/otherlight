@@ -1,5 +1,5 @@
 /**
- * Owns hill Radius support within the physics layer. Keeps numerical and frame conventions centralized for all consumers.
+ * Computes Hill radii and the Domingos stability limits for moons.
  */
 import { clamp } from "../model/units";
 

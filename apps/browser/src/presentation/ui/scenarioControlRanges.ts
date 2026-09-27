@@ -1,5 +1,5 @@
 /**
- * Owns scenario Control Ranges support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Applies the normal ranges to scenario controls.
  */
 import scenarioJson from "../../application/catalog/scenario.default.json";
 

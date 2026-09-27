@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Buffer support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Stores the bounded light-curve sample history.
  */
 import { isFiniteNumber } from "../../domain/model/units";
 

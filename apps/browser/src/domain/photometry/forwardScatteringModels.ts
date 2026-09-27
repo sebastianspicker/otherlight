@@ -1,5 +1,5 @@
 /**
- * Owns forward Scattering Models support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Combines the Gaussian and Henyey-Greenstein forward-scattering flux models.
  */
 import { clamp, isFiniteNumber } from "../model/units";
 import type { ForwardScatteringFluxParams } from "./forwardScatteringTypes";

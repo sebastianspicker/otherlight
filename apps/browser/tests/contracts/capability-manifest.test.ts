@@ -65,11 +65,8 @@ const manifest = JSON.parse(
 };
 
 const appleUnimplementedCapabilityIds = new Set([
-  "education.runtime-reference",
-  "education.binary-photometry",
   "education.atmosphere-photometry",
   "education.measurement-noise",
-  "labs.binary-black-box",
 ]);
 
 describe("cross-platform capability manifest", () => {

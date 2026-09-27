@@ -1,5 +1,5 @@
 /**
- * Owns frame Loop Measurement support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Computes the measured flux shown in the plot.
  */
 import { maxSmearingSubsamplesForParams } from "../../domain/model/transitComputeBudget";
 import type { BrowserScenarioDraft } from "../../domain/model/types";

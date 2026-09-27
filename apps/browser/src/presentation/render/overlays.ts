@@ -15,8 +15,6 @@ import type { SizeInfo } from "./canvasUtil";
 import { drawObserverGizmoInsetResolved } from "./observerGizmoInset";
 import type { OverlayTheme } from "./overlayTypes";
 
-export type { OverlayTheme } from "./overlayTypes";
-
 export type DebugOverlayToggles = {
   enabled?: boolean;
 
@@ -60,7 +58,7 @@ export type DebugOverlayOptions = {
   lineHeight?: number;
 };
 
-export type ObserverMarkerOptions = {
+type ObserverMarkerOptions = {
   /** Marker label text. Default: "Observer". */
   label?: string;
 

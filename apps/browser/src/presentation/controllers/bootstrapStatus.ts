@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Status support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Writes application status messages.
  */
 export type BootstrapStatusWriter = (message: string) => void;
 

@@ -1,5 +1,5 @@
 /**
- * Owns lesson Phases support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Defines the reusable lesson phases and their worked examples.
  */
 import type { LessonEventTarget, LessonPhaseSpec, LessonWorkedExample } from "../model/types";
 

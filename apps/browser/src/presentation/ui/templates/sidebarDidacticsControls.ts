@@ -1,5 +1,5 @@
 /**
- * Owns sidebar Didactics Controls support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the didactic controls, navigation, and comparison controls.
  */
 export function renderDidacticControls(): string {
   return `
@@ -19,6 +19,8 @@ export function renderDidacticControls(): string {
             </label>
             <button id="didRevealSkyBtn" type="button">Reveal sky</button>
           </div>
+          <details class="lesson-settings">
+            <summary>Lesson setup &amp; background</summary>
           <div class="lab-setup-row">
             <label
               class="inline"
@@ -40,6 +42,9 @@ export function renderDidacticControls(): string {
               <input id="didAutoAssess" type="checkbox" checked />
             </label>
           </div>
+          <p id="didLessonSummary" class="help lab-rail__summary"></p>
+          <p id="didLessonMeta" class="help lab-rail__meta" aria-label="Lesson vocabulary"></p>
+          </details>
         </div>
   `;
 }
@@ -50,16 +55,24 @@ export function renderDidacticNavigation(): string {
           <button id="didPrevBtn" type="button">Previous</button>
           <button id="didNextBtn" type="button" class="lab-nav__primary">Next phase</button>
           <button id="didCheckBtn" type="button">Check step</button>
+        </div>
+        <details class="lesson-tools">
+          <summary>Guidance &amp; event controls</summary>
+          <div class="lab-nav" role="group" aria-label="Lesson tools">
           <button id="didHintLessBtn" type="button">Less guidance</button>
           <button id="didHintMoreBtn" type="button">More guidance</button>
-          <button id="didExportBtn" type="button">Export report</button>
-        </div>
+          </div>
         <div class="lab-nav lab-nav--event">
           <label class="inline" for="didEventTargetSelect">
             Jump to event
             <select id="didEventTargetSelect" aria-label="Select lesson event"></select>
           </label>
           <button id="didJumpEventBtn" type="button">Jump to event</button>
+        </div>
+        </details>
+        <div class="lesson-report-action">
+          <button id="didExportBtn" type="button">Download lesson report</button>
+          <p id="didExportStatus" class="help" role="status" aria-live="polite"></p>
         </div>
   `;
 }

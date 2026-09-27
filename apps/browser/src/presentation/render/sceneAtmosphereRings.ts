@@ -1,5 +1,5 @@
 /**
- * Owns scene Atmosphere Rings support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Draws atmosphere halos and ring annuli.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type {

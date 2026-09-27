@@ -1,11 +1,15 @@
 /**
- * Owns app Shell support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the application shell document.
  */
-import { renderHeaderTemplate } from "./templates/header";
+import { renderHeaderTemplate, renderWorkspaceActions } from "./templates/header";
 import { renderCommandStrip } from "./templates/commandStrip";
 import { renderSidebarTemplate } from "./templates/sidebar";
 import { renderVisualizationTemplate } from "./templates/visualization";
-import { renderReadouts } from "./templates/sidebarRuntime";
+import {
+  renderObservatoryHeading,
+  renderRadiusRelationship,
+  renderObservatoryFooter,
+} from "./templates/observatory";
 import { renderScientificWorkspace } from "./templates/scientificWorkspace";
 import { runtimeAssetUrl } from "../runtime/deployment";
 
@@ -45,8 +49,7 @@ function appShellInnerHtml(baseUrl = import.meta.env.BASE_URL): string {
   return `
     <a href="#main" class="skip-link">Skip to main content</a>
     <div id="app" class="app">
-      ${renderHeaderTemplate(baseUrl)}
-      ${renderCommandStrip()}
+      ${renderHeaderTemplate(baseUrl, renderWorkspaceActions())}
       <section id="fatalError" class="fatal-error" role="alert" tabindex="-1" hidden>
         <h2>Otherlight could not start</h2>
         <p id="fatalErrorMessage">The application failed during initialization.</p>
@@ -55,13 +58,20 @@ function appShellInnerHtml(baseUrl = import.meta.env.BASE_URL): string {
       </section>
       <main id="main" class="app-main">
         <div data-product-profile="education">
+          ${renderObservatoryHeading()}
           <div class="mainGrid">
-            <div class="mainLeft">
+            <nav class="workspace-jumps" aria-label="Workspace sections">
+              <a href="#simulationEvidence">View figures</a>
+              <a href="#modelControls">Adjust model</a>
+            </nav>
+            <div id="simulationEvidence" class="mainLeft" tabindex="-1">
               ${renderVisualizationTemplate()}
-              ${renderReadouts()}
             </div>
             ${renderSidebarTemplate()}
+            ${renderRadiusRelationship()}
           </div>
+          ${renderCommandStrip()}
+          ${renderObservatoryFooter()}
         </div>
         ${renderScientificWorkspace()}
         <noscript><p class="help">JavaScript is required to run the simulation.</p></noscript>

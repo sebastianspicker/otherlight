@@ -148,11 +148,14 @@ export function drawLegend(args: {
   }
 
   const legendSeries = overlaySeries.filter((series) => series.includeInLegend !== false);
-  let legendY = marginTop + 4;
-  for (const series of legendSeries) {
+  const radiusLegend = legendSeries.length === 2 && legendSeries[0].id === "radius-a";
+  let legendY = radiusLegend ? marginTop - 20 : marginTop + 4;
+  let legendRight = w - 16;
+  for (const series of radiusLegend ? [...legendSeries].reverse() : legendSeries) {
     const text = series.label;
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
     const width = ctx.measureText(text).width + 22;
-    const x = w - 16 - width;
+    const x = legendRight - width;
     ctx.save();
     ctx.fillStyle = "rgba(6, 10, 16, 0.76)";
     ctx.fillRect(x, legendY, width, 12);
@@ -171,6 +174,7 @@ export function drawLegend(args: {
     ctx.textBaseline = "top";
     ctx.fillText(text, x + 18, legendY + 1);
     ctx.restore();
-    legendY += 14;
+    if (radiusLegend) legendRight = x - 16;
+    else legendY += 14;
   }
 }

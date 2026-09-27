@@ -1,5 +1,5 @@
 /**
- * Owns quick Controls support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Wires the normal-mode quick controls.
  */
 import { setText } from "./dom";
 import { toFiniteNumber } from "../../domain/model/units";

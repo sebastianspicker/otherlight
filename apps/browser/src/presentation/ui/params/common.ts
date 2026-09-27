@@ -1,5 +1,5 @@
 /**
- * Owns common support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Provides shared parameter input refs, bounds, and numeric parsing.
  */
 import type {
   LimbDarkeningLaw,
@@ -42,13 +42,13 @@ export type RingInputRefs = {
   angleDeg: HTMLInputElement;
 };
 
-export const ORBIT_A_MIN = 0.001;
-export const ORBIT_A_MAX = 1e12;
-export const ORBIT_PERIOD_MIN = 0.001;
-export const ORBIT_PERIOD_MAX = 1e18;
-export const MAX_FREEFORM_INPUT_CHARS = 8192;
-export const MAX_NUMBER_LIST_ENTRIES = 256;
-export const MAX_QUADRATIC_BAND_ENTRIES = 128;
+const ORBIT_A_MIN = 0.001;
+const ORBIT_A_MAX = 1e12;
+const ORBIT_PERIOD_MIN = 0.001;
+const ORBIT_PERIOD_MAX = 1e18;
+const MAX_FREEFORM_INPUT_CHARS = 8192;
+const MAX_NUMBER_LIST_ENTRIES = 256;
+const MAX_QUADRATIC_BAND_ENTRIES = 128;
 const OBLA_MAX = 0.95;
 const RING_INC_MAX_DEG = 90;
 export const RADIUS_MIN = 1e3;
@@ -67,7 +67,7 @@ export type DefaultPatchInputs = {
   p2f: number;
 };
 
-export const roundPatchLength = (value: number): number => Math.round(value / 1e6) * 1e6;
+const roundPatchLength = (value: number): number => Math.round(value / 1e6) * 1e6;
 
 export const defaultPatchInputs = (starRadius: number): DefaultPatchInputs => {
   const rStar = Math.max(1, starRadius);

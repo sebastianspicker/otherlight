@@ -1,6 +1,7 @@
 /**
- * Owns frame Loop support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Creates the animation frame loop controller.
  */
+import { ChromaticOverlay } from "./chromaticOverlay";
 import type { UiRefs } from "../ui/refs";
 import { setRunningState } from "./actions";
 import {
@@ -34,6 +35,20 @@ export function createFrameLoopController(deps: FrameLoopDeps): FrameLoopControl
   let rafId: number | null = null;
 
   initializeVisualizationState(state);
+  const overlayWarning = typeof document === "undefined" ? undefined : document.createElement("span");
+  if (overlayWarning) {
+    overlayWarning.setAttribute("role", "status");
+    overlayWarning.id = "chromaticOverlayWarning";
+    refs.warnVal?.after(overlayWarning);
+  }
+  if (deps.chromaticSampler)
+    state.chromaticOverlay = new ChromaticOverlay(deps.chromaticSampler, deps.plot, (message) => {
+      if (overlayWarning) overlayWarning.textContent = message;
+    });
+  if (typeof document !== "undefined" && document.hidden) state.chromaticOverlay?.suspend(true);
+  function configureOverlay(): void {
+    state.chromaticOverlay?.configure(deps.getSimulation(), deps.getParams());
+  }
 
   function applyDynamicVisualizationStateSafely(
     args: Parameters<typeof applyDynamicVisualizationState>[0],
@@ -62,6 +77,8 @@ export function createFrameLoopController(deps: FrameLoopDeps): FrameLoopControl
 
   function dispose(): void {
     disposed = true;
+    state.chromaticOverlay?.dispose();
+    overlayWarning?.remove();
     if (rafId !== null) cancelAnimationFrame(rafId);
     rafId = null;
   }
@@ -93,20 +110,24 @@ export function createFrameLoopController(deps: FrameLoopDeps): FrameLoopControl
   ) => sampleFluxForPlotForContext(ctx, simulation, params, plotMode, tSec, dtSec, noiseState, stepAtTime);
 
   function resetSimTimeAndLC(opts: { resetNoise?: boolean } = {}): void {
+    configureOverlay();
     resetSimTimeAndLCForContext(ctx, opts);
   }
 
   function seekToTime(targetSec: number, opts: { resetNoise?: boolean } = {}): void {
+    configureOverlay();
     seekToTimeForContext(ctx, targetSec, opts);
   }
 
   function frame(now: number): void {
     if (disposed) return;
     rafId = null;
+    configureOverlay();
     frameForContext(ctx, now);
   }
 
   const onVisibilityChange = (): void => {
+    state.chromaticOverlay?.suspend(document.hidden);
     if (document.hidden) {
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = null;

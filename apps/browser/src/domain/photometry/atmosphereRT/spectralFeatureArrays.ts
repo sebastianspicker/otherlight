@@ -1,5 +1,5 @@
 /**
- * Owns spectral Feature Arrays support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Packs spectral features into flat arrays.
  */
 import type { SpectralGaussianFeatureParams } from "../../model/typesPhotometryAtmosphere";
 

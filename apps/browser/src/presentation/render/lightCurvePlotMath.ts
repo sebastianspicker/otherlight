@@ -1,5 +1,5 @@
 /**
- * Owns light Curve Plot Math support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Computes the visible light-curve range and flux statistics.
  */
 import { clamp } from "../../domain/model/units";
 

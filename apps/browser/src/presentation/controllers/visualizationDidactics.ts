@@ -1,5 +1,5 @@
 /**
- * Owns visualization Didactics support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Builds the didactic overlays, markers, and measurement badges.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import type { InstrumentNoiseSystematicsParams } from "../../domain/model/instrumentNoiseTypes";
@@ -302,8 +302,6 @@ export function buildMeasurementBadges(
 
 export {
   componentOverlaySeriesFromSamples,
-  buildBandVariantSystems,
-  sampleBandOverlaySeries,
   buildComparisonInset,
   sampleSeriesFromRuntime,
 } from "./visualizationSignals";

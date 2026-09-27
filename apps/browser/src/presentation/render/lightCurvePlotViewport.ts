@@ -1,10 +1,9 @@
 /**
- * Owns light Curve Plot Viewport support within the render layer. Keeps visual projection and drawing concerns out of simulation state.
+ * Resolves the visible light-curve window.
  */
-import type { VisibleTimeDomain, VisibleWindow } from "./lightCurvePlotMath";
+import type { VisibleWindow } from "./lightCurvePlotMath";
 import type { LightCurveHistoryState, ResolvedLightCurvePlotOptions } from "./lightCurvePlotTypes";
 import { getActiveLength, resolveLatestFiniteTime } from "./lightCurvePlotBuffer";
-import { getFullVisibleTimeDomainInfo, scanVisibleTimeDomain } from "./lightCurvePlotTimeDomain";
 import {
   canUseLiveTimeWindow,
   fallbackScannedWindow,
@@ -37,43 +36,4 @@ export function getVisibleWindowInfo(
   }
 
   return liveTimeWindow(state, opts, n, fallbackStart, lastFiniteT);
-}
-
-export function getVisibleSampleBounds(
-  state: LightCurveHistoryState,
-  opts: ResolvedLightCurvePlotOptions,
-): { start: number; end: number } {
-  const { start, end } = getVisibleWindowInfo(state, opts);
-  return { start, end };
-}
-
-export function getVisibleTimeDomainInfo(
-  state: LightCurveHistoryState,
-  opts: ResolvedLightCurvePlotOptions,
-  start: number,
-  end: number,
-): VisibleTimeDomain | null {
-  const activeLength = getActiveLength(state);
-  if (opts.xMode !== "time" || activeLength < end) return null;
-
-  if (start === 0 && end === activeLength) {
-    return getFullVisibleTimeDomainInfo(state, opts, activeLength);
-  }
-
-  const visibleWindow = getVisibleWindowInfo(state, opts);
-  if (visibleWindow.start === start && visibleWindow.end === end) {
-    return visibleWindow.timeDomain;
-  }
-
-  return scanVisibleTimeDomain(state, opts, start, end);
-}
-
-export function getVisibleTimeDomain(
-  state: LightCurveHistoryState,
-  opts: ResolvedLightCurvePlotOptions,
-  start: number,
-  end: number,
-): { tMin: number; tMax: number } | null {
-  const domain = getVisibleTimeDomainInfo(state, opts, start, end);
-  return domain ? { tMin: domain.tMin, tMax: domain.tMax } : null;
 }

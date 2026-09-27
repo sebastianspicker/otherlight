@@ -1,5 +1,5 @@
 /**
- * Owns native Snapshot Helpers support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Provides the validation and defaulting helpers used when building native snapshots.
  */
 import { hasExplicitLimbDarkeningBandLaw } from "../../photometry/limbDarkening";
 import { isSupportedStellarPassband } from "../../photometry/stellarBandFlux";

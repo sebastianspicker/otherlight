@@ -1,5 +1,5 @@
 /**
- * Owns stellar Band Flux support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Computes relative stellar band flux and detached-binary luminosities.
  */
 import type { PassbandId } from "../model/types";
 

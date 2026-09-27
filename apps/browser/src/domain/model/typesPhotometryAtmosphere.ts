@@ -1,5 +1,5 @@
 /**
- * Owns types Photometry Atmosphere support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ * Defines atmosphere, scattering, and spectral-bandpass parameters.
  */
 export type AtmosphereTransmissionParams = {
   enabled?: boolean;

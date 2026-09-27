@@ -1,5 +1,5 @@
 /**
- * Owns presets Atmosphere Advanced support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Defines the advanced-atmosphere edge-case presets.
  */
 import {
   enableAccuratePhysics,

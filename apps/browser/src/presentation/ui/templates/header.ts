@@ -1,29 +1,34 @@
 /**
- * Owns header support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the header, profile navigation, and workspace actions.
  */
-import { runtimeAssetUrl } from "../../runtime/deployment";
-
 /** Browser file-picker compatibility: the current extension, legacy extension, and plain JSON. */
 export const WORKSPACE_FILE_ACCEPT = ".otherlight,.transitlab,application/json";
 
 /**
- * Thin identity band: brand, calculation profile, and education mode tabs only.
- * Workspace open/save and scenario/runtime controls live in the command strip.
+ * Identity, workspace documents, and disclosed calculation profile and mode choices.
  */
-export function renderHeaderTemplate(baseUrl = import.meta.env.BASE_URL): string {
+export function renderHeaderTemplate(
+  _baseUrl = import.meta.env.BASE_URL,
+  workspaceActions = renderWorkspaceActions(),
+): string {
   return `
     <header class="app-header">
       <div class="product-heading">
         <div class="brand-lockup">
-          <img class="brand-mark" src="${runtimeAssetUrl("brand/otherlight-signal-eclipse.svg", baseUrl)}" alt="" aria-hidden="true" />
+          <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+            <circle cx="20" cy="20" r="18" stroke="#efd6a0" stroke-width="1" />
+            <circle cx="32" cy="20" r="6" fill="#f5f3ee" />
+          </svg>
           <div>
             <h1>Otherlight</h1>
-            <p class="brand-descriptor">Exoplanet learning &amp; scientific modeling</p>
           </div>
         </div>
-        <p class="brand-tagline">Exoplanet learning &amp; scientific modeling</p>
       </div>
 
+      <span class="brand-descriptor">Transit experiment</span>
+      <details class="workspace-options">
+        <summary>Workspace options</summary>
+        <div class="workspace-options__content">
       <nav class="profile-nav" aria-label="Calculation profile">
         <button id="profileEducationBtn" class="profile-nav__item" type="button" data-profile="education" aria-current="page">
           Education
@@ -51,18 +56,20 @@ export function renderHeaderTemplate(baseUrl = import.meta.env.BASE_URL): string
             <option value="lab">Guided Labs</option>
         </select>
       </nav>
+        </div>
+      </details>
+      ${workspaceActions}
     </header>
   `;
 }
 
 /**
- * Compact workspace open/save controls.
- * Placed in the command strip (not the identity band) so the header stays thin.
+ * Compact workspace document controls in the identity band.
  */
 export function renderWorkspaceActions(): string {
   return `
       <div class="workspace-actions" data-product-profile="education">
-        <button id="workspaceOpenBtn" type="button" aria-controls="workspaceFileInput">Open workspace</button>
+        <button id="workspaceOpenBtn" type="button" aria-controls="workspaceFileInput">Open</button>
         <button id="workspaceSaveBtn" type="button">Save workspace</button>
         <input id="workspaceFileInput" type="file" accept="${WORKSPACE_FILE_ACCEPT}" hidden />
       </div>

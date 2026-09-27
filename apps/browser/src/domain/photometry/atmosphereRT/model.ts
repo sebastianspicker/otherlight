@@ -1,5 +1,5 @@
 /**
- * Owns model support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Computes layered atmospheric optical depth and transmission.
  */
 import type { AtmosphereRTLayer, AtmosphereRTParams } from "../../model/types";
 import { gaussianFeatureStrength } from "./gaussianFeatures";

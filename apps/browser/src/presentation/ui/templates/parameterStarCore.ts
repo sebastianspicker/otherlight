@@ -1,5 +1,5 @@
 /**
- * Owns parameter Star Core support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the star core and bandpass controls.
  */
 import { MAX_TRANSIT_GRID_RES, MIN_TRANSIT_GRID_RES } from "../../../domain/model/transitComputeBudget";
 

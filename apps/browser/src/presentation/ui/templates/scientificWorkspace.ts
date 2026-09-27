@@ -1,7 +1,7 @@
 /**
- * Owns scientific Workspace support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the Scientific workspace and its dataset surface.
  */
-export function renderScientificWorkspaceHeader(): string {
+function renderScientificWorkspaceHeader(): string {
   return `
     <section
       id="scientificWorkspace"
@@ -32,7 +32,7 @@ export function renderScientificWorkspaceHeader(): string {
 `;
 }
 
-export function renderScientificWorkspaceRunAndScope(): string {
+function renderScientificWorkspaceRunAndScope(): string {
   return `
       <div class="scientific-workspace__grid">
         <section class="panel scientific-panel scientific-panel--run" aria-labelledby="scienceRunTitle">
@@ -102,7 +102,63 @@ export function renderScientificWorkspaceRunAndScope(): string {
 `;
 }
 
-export function renderScientificWorkspaceResult(): string {
+export function renderScientificDatasetWorkspace(
+  isGitHubPages = import.meta.env.MODE === "github-pages",
+): string {
+  if (isGitHubPages) return "";
+  return `
+      <section id="scienceDatasetWorkspace" class="panel scientific-panel scientific-panel--datasets" aria-labelledby="scienceDatasetTitle">
+        <div class="scientific-panel__heading">
+          <h3 id="scienceDatasetTitle">V6 local datasets</h3>
+          <p class="eyebrow">Dataset-only, process memory</p>
+        </div>
+        <p class="help">
+          Import bounded observation-support datasets into the local loopback service. They are removed when
+          that service stops. V6 does not run jobs or create artifacts.
+        </p>
+        <dl id="scienceDatasetCapabilities" class="science-scope-list science-dataset-capabilities" aria-label="V6 dataset capability details">
+          <div><dt>Availability</dt><dd id="scienceDatasetCapabilityStatus" role="status" aria-live="polite">Not checked</dd></div>
+          <div><dt>Persistence</dt><dd id="scienceDatasetPersistence">Process memory only</dd></div>
+          <div><dt>Admission limits</dt><dd id="scienceDatasetLimits">Check the local backend for limits.</dd></div>
+        </dl>
+        <div class="science-dataset-import">
+          <label for="scienceDatasetFile">Dataset JSON file</label>
+          <input
+            id="scienceDatasetFile"
+            type="file"
+            accept=".json,application/vnd.otherlight.science-dataset+json"
+            aria-describedby="scienceDatasetImportHint scienceDatasetStatus"
+          />
+          <p id="scienceDatasetImportHint" class="help">
+            The strict local client accepts only <code>.json</code> files with a JSON-compatible local type and
+            up to 8 MiB. The upload uses
+            <code>application/vnd.otherlight.science-dataset+json; charset=utf-8</code>. Rejected files remain
+            available for correction.
+          </p>
+          <div class="row science-run-actions">
+            <button id="scienceDatasetRefreshBtn" type="button">Refresh V6 datasets</button>
+            <button id="scienceDatasetImportBtn" type="button" disabled>Import selected dataset</button>
+          </div>
+          <p id="scienceDatasetStatus" class="help science-run-status" role="status" aria-live="polite">
+            Check the local V6 dataset backend to view imports.
+          </p>
+        </div>
+        <section class="science-dataset-listing" aria-labelledby="scienceDatasetListTitle">
+          <h4 id="scienceDatasetListTitle">Imported datasets</h4>
+          <p class="help">Each row exposes its canonical content hash, source hash, and normalized sample count.</p>
+          <ul id="scienceDatasetList" class="science-dataset-list" aria-live="polite">
+            <li class="science-dataset-empty">No V6 datasets have been loaded.</li>
+          </ul>
+        </section>
+        <section class="science-dataset-metadata" aria-labelledby="scienceDatasetMetadataTitle">
+          <h4 id="scienceDatasetMetadataTitle">Dataset metadata</h4>
+          <pre id="scienceDatasetMetadata" class="science-result" aria-live="polite">Select a dataset to inspect its validated metadata.</pre>
+        </section>
+      </section>
+`;
+}
+
+function renderScientificWorkspaceResult(): string {
   return `
       <section class="panel scientific-panel scientific-panel--result" aria-labelledby="scienceResultTitle">
         <div class="scientific-panel__heading">
@@ -110,16 +166,28 @@ export function renderScientificWorkspaceResult(): string {
           <p class="eyebrow">Manifest + artifact</p>
         </div>
         <p class="science-artifact-row">
-          <a id="scienceArtifactLink" class="science-artifact-link" href="#" target="_blank" rel="noopener" hidden>
+          <a id="scienceArtifactLink" class="science-artifact-link" target="_blank" rel="noopener" hidden>
             Open immutable Arrow IPC artifact
           </a>
         </p>
         <pre id="scienceResult" class="science-result">No scientific job has completed.</pre>
+        <section id="scienceContractReplay" class="science-contract-replay" aria-labelledby="scienceContractReplayTitle" hidden>
+          <h4 id="scienceContractReplayTitle">Deterministic V5 contract replay</h4>
+          <p>
+            <strong>Fixture/replay only.</strong> <strong>No V5 execution.</strong> This is
+            <strong>not a completed local or scientific run.</strong>
+          </p>
+          <p class="help">Prospective local-run inputs do not affect this fixture.</p>
+          <dl class="science-scope-list">
+            <div><dt>Fixture source</dt><dd id="scienceReplaySource"></dd></div>
+          </dl>
+          <pre id="scienceReplayMetadata" class="science-result" aria-label="Fixture replay metadata"></pre>
+        </section>
       </section>
     </section>
   `;
 }
 
-export function renderScientificWorkspace(): string {
-  return `${renderScientificWorkspaceHeader()}${renderScientificWorkspaceRunAndScope()}${renderScientificWorkspaceResult()}`;
+export function renderScientificWorkspace(isGitHubPages = import.meta.env.MODE === "github-pages"): string {
+  return `${renderScientificWorkspaceHeader()}${renderScientificWorkspaceRunAndScope()}${renderScientificDatasetWorkspace(isGitHubPages)}${renderScientificWorkspaceResult()}`;
 }

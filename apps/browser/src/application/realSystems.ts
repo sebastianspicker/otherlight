@@ -1,5 +1,5 @@
 /**
- * Owns real Systems support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Exposes the checked-in real-system catalog and converts an entry into authoring parameters.
  */
 import type { OrbitElements, BrowserScenarioDraft } from "../domain/model/types";
 import {
@@ -16,7 +16,7 @@ import {
 import { cloneParams, SCENARIO_DEFAULTS } from "./scenario";
 import snapshotJson from "./catalog/real-systems.snapshot.json";
 
-export type RealSystemsSnapshotMeta = {
+type RealSystemsSnapshotMeta = {
   source: string;
   fetchedAt: string;
   rowCount: number;
@@ -40,7 +40,7 @@ export type RealSystemSnapshotEntry = {
   inclinationDeg?: number;
 };
 
-export type RealSystemsSnapshot = {
+type RealSystemsSnapshot = {
   meta: RealSystemsSnapshotMeta;
   systems: RealSystemSnapshotEntry[];
 };
@@ -233,7 +233,7 @@ export function getRealSystemById(id: string): RealSystemSnapshotEntry | undefin
   return REAL_SYSTEMS_SNAPSHOT.systems.find((s) => s.id === id);
 }
 
-export function mapSnapshotSystemToParams(entry: RealSystemSnapshotEntry): BrowserScenarioDraft {
+function mapSnapshotSystemToParams(entry: RealSystemSnapshotEntry): BrowserScenarioDraft {
   const base = cloneParams(SCENARIO_DEFAULTS);
   const scalars = realSystemScalars(entry);
   validateRealSystemScalars(entry, scalars);

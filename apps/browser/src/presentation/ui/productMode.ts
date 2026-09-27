@@ -1,5 +1,5 @@
 /**
- * Owns product Mode support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Reads the product mode and applies its visibility.
  */
 import { syncModeVisibility } from "./modeVisibility";
 
@@ -14,6 +14,6 @@ export function syncProductModeVisibility(mode: ProductMode, root: ParentNode = 
 
   const modeEls = Array.from(root.querySelectorAll<HTMLElement>("[data-product-mode]"));
   for (const el of modeEls) {
-    syncModeVisibility(el, el.dataset.productMode ?? "", mode);
+    syncModeVisibility(el, el.dataset.productMode ?? "", mode, "product-mode");
   }
 }

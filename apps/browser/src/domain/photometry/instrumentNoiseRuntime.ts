@@ -1,5 +1,5 @@
 /**
- * Owns instrument Noise Runtime support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Advances measured-flux noise state across playback time jumps.
  */
 import { clamp, toFiniteNumber } from "../model/units";
 import type { InstrumentNoiseState, InstrumentNoiseSystematicsParams } from "./instrumentNoiseTypes";

@@ -1,5 +1,5 @@
 /**
- * Owns limb Darkening Lookup Normalized support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Looks up limb-darkening from normalized coefficient tables.
  */
 import type { LimbDarkeningLaw, PassbandId } from "../model/types";
 import { lawForBandKey, normalizeBandpassId } from "./limbDarkeningLookupCommon";

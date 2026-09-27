@@ -1,5 +1,5 @@
 /**
- * Owns bootstrap Didactics Surface support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Renders the bootstrap didactics surface.
  */
 import type { UiRefs } from "../ui/refs";
 import { renderDidacticSignals, type DidacticsRuntimeState } from "./didactics";

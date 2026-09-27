@@ -1,5 +1,5 @@
 /**
- * Owns param Validation support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Validates parameter form input and renders field errors.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import {
@@ -300,5 +300,8 @@ export function renderParamValidationErrors(
     summary.focus();
   }
   const first = form.elements.namedItem(errors[0]?.fieldId ?? "");
-  if (first instanceof HTMLInputElement) first.focus();
+  if (first instanceof HTMLInputElement) {
+    first.focus();
+    first.scrollIntoView?.({ block: "center", inline: "nearest" });
+  }
 }

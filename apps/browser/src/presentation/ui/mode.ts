@@ -1,12 +1,12 @@
 /**
- * Owns mode support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Reads the UI mode and applies its observer and visibility contract.
  */
 import type { BrowserScenarioDraft } from "../../domain/model/types";
 import { syncModeVisibility } from "./modeVisibility";
 
 export type UiMode = "normal" | "expert";
 
-export function canonicalObserverDir(): { x: number; y: number; z: number } {
+function canonicalObserverDir(): { x: number; y: number; z: number } {
   return { x: 0, y: 0, z: 1 };
 }
 
@@ -33,7 +33,7 @@ export function syncUiModeVisibility(mode: UiMode, root: ParentNode = document):
 
   const tieredEls = Array.from(root.querySelectorAll<HTMLElement>("[data-ui-tier]"));
   for (const el of tieredEls) {
-    const visible = syncModeVisibility(el, el.dataset.uiTier ?? "", mode);
+    const visible = syncModeVisibility(el, el.dataset.uiTier ?? "", mode, "ui-tier");
     if (visible && el instanceof HTMLDetailsElement && el.classList.contains("advanced-parameter-drawer")) {
       el.open = true;
     }

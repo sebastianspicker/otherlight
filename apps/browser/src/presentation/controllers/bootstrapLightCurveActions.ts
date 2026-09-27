@@ -1,9 +1,20 @@
 /**
- * Owns bootstrap Light Curve Actions support within the app layer. Keeps application bootstrap and frame orchestration composable.
+ * Wires the light-curve toolbar actions.
  */
+import {
+  invalidateFixedPreview,
+  type FixedPreviewKey,
+  type FixedPreviewPresentation,
+} from "./fixedPreviewCache";
+import type { ChromaticOverlay } from "./chromaticOverlay";
 import type { LightCurvePlot } from "../render/lightCurvePlot";
 
 type LightCurveActionState = {
+  fixedPreviewKey?: FixedPreviewKey;
+  fixedPreviewPresentation?: FixedPreviewPresentation;
+  previewGeneration?: number;
+  chromaticOverlay?: ChromaticOverlay;
+  lastPlotTrackingMode?: string | null;
   lastPlottedT: number;
   lastPlotMode: string | null;
   fixedPlotYRange?: { lo: number; hi: number };
@@ -26,12 +37,37 @@ export function wireBootstrapLightCurveActions(deps: BootstrapLightCurveActionDe
   const { plot, state, clearButton, undoButton, exportButton, plotMode, invalidate, setStatus, signal } =
     deps;
   let clearedLightCurve: ReturnType<LightCurvePlot["createHistorySnapshot"]> | null = null;
+  let clearedMetadata:
+    | {
+        key?: FixedPreviewKey;
+        presentation?: FixedPreviewPresentation;
+        generation?: number;
+        mode: string | null;
+        tracking?: string | null;
+        range?: { lo: number; hi: number };
+        rangeMode?: string | null;
+        overlay?: ReturnType<ChromaticOverlay["snapshot"]>;
+      }
+    | undefined;
   const options = { signal };
 
   clearButton.addEventListener(
     "click",
     () => {
       clearedLightCurve = plot.createHistorySnapshot();
+      clearedMetadata = {
+        key: state.fixedPreviewKey,
+        presentation: state.fixedPreviewPresentation,
+        mode: state.lastPlotMode,
+        tracking: state.lastPlotTrackingMode,
+        range: state.fixedPlotYRange,
+        rangeMode: state.fixedPlotYRangeMode,
+        overlay: state.chromaticOverlay?.snapshot(),
+      };
+      invalidateFixedPreview(state);
+      state.fixedPreviewPresentation = undefined;
+      clearedMetadata.generation = state.previewGeneration;
+      state.chromaticOverlay?.clear();
       plot.clear();
       plot.setOptions({ manualYRange: undefined });
       state.lastPlottedT = Number.NaN;
@@ -51,7 +87,27 @@ export function wireBootstrapLightCurveActions(deps: BootstrapLightCurveActionDe
     "click",
     () => {
       if (!clearedLightCurve) return;
+      if (!clearedMetadata || clearedMetadata.generation !== state.previewGeneration) {
+        clearedLightCurve = null;
+        clearedMetadata = undefined;
+        undoButton.hidden = true;
+        setStatus("Cleared history expired after the simulation changed.");
+        return;
+      }
       plot.restoreHistorySnapshot(clearedLightCurve);
+      {
+        state.fixedPreviewKey = clearedMetadata.key
+          ? { ...clearedMetadata.key, generation: state.previewGeneration ?? 0 }
+          : undefined;
+        state.fixedPreviewPresentation = clearedMetadata.presentation;
+        state.lastPlotMode = clearedMetadata.mode;
+        state.lastPlotTrackingMode = clearedMetadata.tracking;
+        state.fixedPlotYRange = clearedMetadata.range;
+        state.fixedPlotYRangeMode = clearedMetadata.rangeMode;
+        plot.setOptions({ manualYRange: clearedMetadata.range });
+        if (clearedMetadata.overlay) state.chromaticOverlay?.restore(clearedMetadata.overlay);
+      }
+      clearedMetadata = undefined;
       plot.draw();
       clearedLightCurve = null;
       undoButton.hidden = true;

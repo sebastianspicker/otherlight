@@ -1,5 +1,5 @@
 /**
- * Owns parameter Dynamics support within the ui layer. Keeps DOM-facing behavior separate from application orchestration.
+ * Renders the dynamics parameter fieldsets.
  */
 import { renderDayNightFieldset, renderExomoonTimingFieldset } from "./parameterTiming";
 
