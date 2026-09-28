@@ -1,5 +1,3 @@
-<div align="center">
-
 # Otherlight
 
 **Exoplanet and binary-star labs you can run in a browser tab.**
@@ -15,8 +13,6 @@ strictly validated radial-velocity model when you want numbers you can inspect.
 [![CI](https://github.com/sebastianspicker/otherlight/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sebastianspicker/otherlight/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange.svg)](RELEASE_STATUS.md)
-
-</div>
 
 Otherlight is a local-first workspace for learning about exoplanet transits,
 exomoons, detached binaries, photometry, and timing. It began as a teaching
@@ -50,20 +46,20 @@ match what you can click through yourself.
 and watch the transit depth follow. Sky view, light curve, and the depth formula
 stay in step, so the arithmetic is visible next to the picture.
 
-<img src="docs/screenshots/web/01-education-simulation.png" alt="Otherlight Education workspace with a sky-plane observer view, a relative-starlight plot, and planet radius controls comparing model A with model B." width="100%">
+![Otherlight Education workspace with a sky-plane observer view, a relative-starlight plot, and planet radius controls comparing model A with model B.](docs/screenshots/web/01-education-simulation.png)
 
 **2 · Guided Lab — move from prediction to evidence.** Lessons advance one phase
 at a time, keeping the prompt, the evidence, and a learner's written responses
 together so a session can be resumed later.
 
-<img src="docs/screenshots/web/02-guided-lab.png" alt="Otherlight Guided Lab workspace: the sky plate beside the active prediction phase, a written response, phase navigation, and a lesson report action." width="100%">
+![Otherlight Guided Lab workspace: the sky plate beside the active prediction phase, a written response, phase navigation, and a lesson report action.](docs/screenshots/web/02-guided-lab.png)
 
 **3 · Scientific — keep the execution boundary explicit.** The Scientific
 profile validates inputs and shows run provenance. On the hosted build it
 replays a checked-in result fixture; a real run requires the loopback service on
 your own machine.
 
-<img src="docs/screenshots/web/03-scientific-replay.png" alt="Otherlight Scientific workspace showing a capability-gated radial-velocity run form, the validated scope, and a run-provenance manifest labelled as a fixture replay." width="100%">
+![Otherlight Scientific workspace showing a capability-gated radial-velocity run form, the validated scope, and a run-provenance manifest labelled as a fixture replay.](docs/screenshots/web/03-scientific-replay.png)
 
 ## Try it
 

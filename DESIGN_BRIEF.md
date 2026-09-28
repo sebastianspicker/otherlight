@@ -208,7 +208,7 @@ editorial fact ("what kind of evidence is this?") rather than a UI theme.
   disclosure markers rotate, and the plot redraw is the only animation. No
   entrances. Reduced motion removes even these.
 - **Signature details.** (1) **Journal figures**: the light curve is framed on
-  four sides with inward ticks, STIX axis labels (_F_/*F*₀, _t_ [s]), and a
+  four sides with inward ticks, STIX axis labels (_F_ / _F₀_, _t_ [s]), and a
   numbered caption ("Figure 2. Relative starlight"). (2) **Plate fiducials**: the
   sky canvas carries corner registration marks and an envelope line in mono
   ("PLATE 1 · SKY PLANE · OBSERVER VIEW"). (3) **Running head**: under the

@@ -24,7 +24,7 @@ function addOption(select: HTMLSelectElement, label: string, value: string): voi
 }
 
 beforeEach(() => {
-  dom = new JSDOM(`<!doctype html><body>${renderScenarioSource()}</body>`);
+  dom = new JSDOM(["<!doctype html><body>", renderScenarioSource(), "</body>"].join(""));
   previous = {
     window: globalThis.window,
     document: globalThis.document,

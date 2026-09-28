@@ -6,6 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { loadContractCorpus } from "../../../../scripts/check-contracts.mjs";
+import { ContractValidator } from "../../../../scripts/lib/contract-validator.mjs";
 import { canonicalScientificJson } from "../../src/infrastructure/science/canonicalJson";
 
 const root = path.resolve(import.meta.dirname, "../../../../");
@@ -56,6 +57,50 @@ function applyMutation(source: Record<string, unknown>, mutation: ContractMutati
   }
   return document;
 }
+
+describe("contract validator hardening", () => {
+  const draft = "https://json-schema.org/draft/2020-12/schema";
+  const schemaId = "https://example.test/schema.json";
+
+  it("fails closed for inherited type names", () => {
+    const schema = { $schema: draft, $id: schemaId, type: "constructor" };
+    const validator = new ContractValidator(new Map([["schema", schema]]));
+
+    expect(validator.validate(schema, {}, schemaId)).toBe(false);
+    expect(validator.errors).toEqual(["/ must be constructor"]);
+  });
+
+  it("rejects inherited JSON pointer segments", () => {
+    const schema = { $schema: draft, $id: schemaId, $ref: "#/constructor" };
+
+    expect(() => new ContractValidator(new Map([["schema", schema]]))).toThrow(
+      "schema has dangling $ref #/constructor.",
+    );
+  });
+
+  it("rejects additional properties named after inherited object members", () => {
+    const schema = {
+      $schema: draft,
+      $id: schemaId,
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    };
+    const validator = new ContractValidator(new Map([["schema", schema]]));
+
+    expect(validator.validate(schema, { constructor: "blocked" }, schemaId)).toBe(false);
+    expect(validator.errors).toEqual(["/constructor is not allowed"]);
+  });
+
+  it("rejects schema patterns outside the audited subset", () => {
+    const schema = { $schema: draft, $id: schemaId, type: "string", pattern: "(a+)+$" };
+    const validator = new ContractValidator(new Map([["schema", schema]]));
+
+    expect(() => validator.validate(schema, "aaaa!", schemaId)).toThrow(
+      "Unsupported JSON Schema pattern: (a+)+$",
+    );
+  });
+});
 
 describe("serialized V4 contracts", () => {
   it("accepts optional body masses and both V4 modes", async () => {

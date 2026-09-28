@@ -44,8 +44,10 @@ export class ContractValidator {
     for (const part of fragment.replace(/^\//, "").split("/")) {
       if (!part) continue;
       const key = part.replace(/~1/g, "/").replace(/~0/g, "~");
-      if (!object(schema) || !(key in schema)) throw new Error(`${source} has dangling $ref ${ref}.`);
-      schema = schema[key];
+      if (!object(schema)) throw new Error(`${source} has dangling $ref ${ref}.`);
+      const property = Object.getOwnPropertyDescriptor(schema, key);
+      if (property === undefined) throw new Error(`${source} has dangling $ref ${ref}.`);
+      schema = property.value;
     }
     return [schema, entry.$id];
   }

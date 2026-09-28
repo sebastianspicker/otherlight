@@ -58,9 +58,12 @@ afterEach(() => {
 });
 
 function installDatasetDom(): void {
-  const dom = new JSDOM(`<!doctype html><body>${renderScientificDatasetWorkspace(false)}</body>`, {
-    url: "http://localhost/",
-  });
+  const dom = new JSDOM(
+    ["<!doctype html><body>", renderScientificDatasetWorkspace(false), "</body>"].join(""),
+    {
+      url: "http://localhost/",
+    },
+  );
   const previous: DomGlobals = {
     window: globalThis.window,
     document: globalThis.document,

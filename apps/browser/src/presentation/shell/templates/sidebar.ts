@@ -7,19 +7,28 @@ import { renderParametersTemplate } from "../../scenario/templates/parameters";
 import { renderOcSection, renderPlotControls } from "../../playback/templates/sidebarRuntime";
 
 export function renderSidebarTemplate(): string {
-  return `
+  return [
+    `
     <aside id="modelControls" class="sidebar" aria-label="Model and workspace controls" tabindex="-1">
-      ${renderRadiusComparison()}
+      `,
+    renderRadiusComparison(),
+    `
       <div class="sidebar-primary" id="experimentTools">
-        ${renderDidacticSection()}
+        `,
+    renderDidacticSection(),
+    `
         <div class="observatory-model-tools">
         <details class="model-tools" id="modelTools"><summary>System parameters &amp; quick controls</summary>
-        ${renderParametersTemplate()}
+        `,
+    renderParametersTemplate(),
+    `
         </details>
         <details class="model-tools"><summary>Display, history &amp; model limits</summary>
         <section class="panel display-controls" aria-labelledby="displayControlsTitle">
           <h2 id="displayControlsTitle">Display</h2>
-          ${renderPlotControls()}
+          `,
+    renderPlotControls(),
+    `
         </section>
         <section class="panel model-boundary" data-product-mode="simulation" aria-labelledby="modelBoundaryTitle">
           <p class="eyebrow">Educational model</p>
@@ -29,10 +38,13 @@ export function renderSidebarTemplate(): string {
             View model limits
           </a>
         </section>
-        <div class="sidebar-events">${renderOcSection()}</div>
+        <div class="sidebar-events">`,
+    renderOcSection(),
+    `</div>
         </details>
         </div>
       </div>
     </aside>
-  `;
+  `,
+  ].join("");
 }

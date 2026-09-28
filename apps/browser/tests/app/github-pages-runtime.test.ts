@@ -26,7 +26,9 @@ let restoreDomGlobals: (() => void) | undefined;
 afterEach(() => restoreDomGlobals?.());
 
 function installScientificWorkspaceDom(isGitHubPages = false): void {
-  const dom = new JSDOM(`<!doctype html><body>${renderScientificWorkspace(isGitHubPages)}</body>`);
+  const dom = new JSDOM(
+    ["<!doctype html><body>", renderScientificWorkspace(isGitHubPages), "</body>"].join(""),
+  );
   const previous: DomGlobals = {
     window: globalThis.window,
     document: globalThis.document,
