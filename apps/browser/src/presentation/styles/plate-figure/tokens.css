@@ -1,0 +1,297 @@
+/*
+ * Plate & Figure — design tokens and document base.
+ *
+ * Paper and ink carry the interface; blue pencil marks "your change" (trace B,
+ * the current step, active edits). The sky plate stays dark in both themes.
+ * Canvas figures mirror these roles in presentation/render/canvas/figureInk.ts.
+ */
+
+:root {
+  /* Paper and ink */
+  --paper: #f3efe6;
+  --paper-raised: #fbf9f4;
+  --paper-sunk: #e8e3d7;
+  --ink: #17191b;
+  --ink-2: #45484b;
+  --ink-3: #5d6063;
+  --rule: #d6cfc0;
+  --rule-strong: #8f887b;
+
+  /* Annotation and state */
+  --pencil: #1f55b3;
+  --pencil-wash: #e1e7f1;
+  --caution: #72500a;
+  --caution-wash: #f2e5c3;
+  --fault: #9e2a2b;
+  --fault-wash: #f6dcd8;
+  --pass: #2b6a3e;
+  --pass-wash: #dcead9;
+
+  /* Evidence roles */
+  --trace-a: var(--ink);
+  --trace-b: var(--pencil);
+  --plate: #0c0f13;
+  --plate-ink: #e6e1d4;
+  --plate-ink-3: #8f8b82;
+  --plate-rule: #3a3d42;
+  --ink-hover: #33373a;
+  --focus: var(--ink);
+  --on-ink: var(--paper);
+
+  /* Type */
+  --font-serif: "STIX Two Text", "STIX Two", georgia, serif;
+  --font-sans: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", menlo, consolas, monospace;
+  --t-xs: 12px;
+  --t-sm: 13px;
+  --t-base: 15px;
+  --t-md: 17px;
+  --t-lg: 20px;
+  --t-xl: 26px;
+  --t-2xl: 34px;
+  --t-display: clamp(34px, 1.6rem + 1.8vw, 52px);
+  --lh-tight: 1.12;
+  --lh-snug: 1.3;
+  --lh-body: 1.55;
+
+  /* Space: a 4 px base, doubling at the section scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Shape, rules, motion, layout */
+  --r-control: 3px;
+  --hair: 1px solid var(--rule);
+  --hair-strong: 1px solid var(--rule-strong);
+  --dur: 160ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --page-max: 1440px;
+  --gutter: clamp(16px, 3.2vw, 40px);
+  --col-gap: clamp(24px, 3.4vw, 48px);
+  --control-h: 40px;
+  --z-sticky: 20;
+
+  color-scheme: light;
+  accent-color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131416;
+    --paper-raised: #1c1d20;
+    --paper-sunk: #0e0f10;
+    --ink: #ebe6db;
+    --ink-2: #bbb6ab;
+    --ink-3: #99958c;
+    --rule: #34332f;
+    --rule-strong: #6b675f;
+    --pencil: #8fb3ff;
+    --pencil-wash: #1c2536;
+    --caution: #e2bf76;
+    --caution-wash: #2d2616;
+    --fault: #ff9f96;
+    --fault-wash: #3a1d1b;
+    --pass: #8fd0a0;
+    --pass-wash: #18281c;
+    --plate-rule: #2e3136;
+    --ink-hover: #fffaf0;
+
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--paper);
+  text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--t-base);
+  line-height: var(--lh-body);
+  font-variant-numeric: lining-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: var(--lh-snug);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+::selection {
+  background: var(--pencil-wash);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#app {
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-2);
+  z-index: 100;
+  padding: var(--s-2) var(--s-4);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mono,
+code,
+pre,
+kbd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+code {
+  font-size: 0.92em;
+}
+
+.help {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-2) 0;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s-2) var(--s-4);
+}
+
+/* Small-caps kicker used for section labels; set in the serif, not tracked caps. */
+.eyebrow,
+.kicker {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  font-style: italic;
+  font-weight: 400;
+  line-height: var(--lh-snug);
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: var(--s-2) var(--s-3);
+  border: var(--hair-strong);
+  background: var(--paper-raised);
+  color: var(--ink);
+  content: attr(data-tooltip);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-within::after {
+  opacity: 1;
+}

@@ -1,16 +1,49 @@
 # Documentation map
 
-| Document                                                    | Purpose                                                    |
-| ----------------------------------------------------------- | ---------------------------------------------------------- |
-| [Architecture](architecture.md)                             | Product layout, Browser layers, contracts, and data flows  |
-| [Operations](RUNBOOK.md)                                    | Local setup, service, Apple, and verification commands     |
-| [Browser guide](frontend.md)                                | Browser startup, presentation, and interaction conventions |
-| [Validation](validation.md)                                 | Education, V5, and workspace validation boundaries         |
-| [Physics overview](physics/overview.md)                     | Model scope and implementation locations                   |
-| [Model status](physics/model-status.md)                     | Registry-driven model evidence and limits                  |
-| [V5 scientific contract](physics/v5-scientific-contract.md) | V5 request and service semantics                           |
-| [Continuous integration](ci.md)                             | Workflow and local verification lanes                      |
-| [Release status](../RELEASE_STATUS.md)                      | Current evidence and open release gates                    |
+New here? Start with the [root README](../README.md) for what Otherlight is and
+how to run it, then read [Architecture](ARCHITECTURE.md) before you move Browser
+code or change a serialized contract.
 
-Architecture and operating guidance describe current paths. Historical release
-records are retained only where explicitly labelled as historical.
+Each maintained document has one audience and one subject. Generated output, the
+ignored historical material under `docs/archive/`, and tool-specific local state
+are not part of this set.
+
+## Start here
+
+| Document                               | Audience and purpose                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------------- |
+| [Root README](../README.md)            | What the project is, screenshots, quick start, and component navigation           |
+| [Architecture](ARCHITECTURE.md)        | Components, dependency rules, data flows, state, interfaces, and non-goals        |
+| [Operations runbook](RUNBOOK.md)       | Step-by-step procedures for the Browser, Pages, science service, and Apple builds |
+| [Contributing](../CONTRIBUTING.md)     | Change workflow and the checks to run per subsystem                               |
+| [Continuous integration](ci.md)        | What each automated lane runs, and where its evidence stops                       |
+| [Security policy](../SECURITY.md)      | How to report a problem and which trust boundaries apply                          |
+| [Release status](../RELEASE_STATUS.md) | Whether any revision is release-qualified                                         |
+| [Product](PRODUCT.md)                  | Users, purpose, voice, principles, and accessibility commitments                  |
+| [Design system](DESIGN.md)             | The Signal & Ink visual language and cross-platform interaction rules             |
+
+## Product and contract references
+
+| Document                                                    | Purpose                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Browser interface guide](frontend.md)                      | Interaction, accessibility, rendering, and Browser checks                 |
+| [Export and type discovery](dead-code.md)                   | The dead-code gate and its few exact allowances                           |
+| [Performance validation](performance.md)                    | Reproducible workloads, deterministic work bounds, and manual profiling   |
+| [Validation boundaries](validation.md)                      | What authoring, V4, V5, and workspace validation each own                 |
+| [Adding an Education body](ADDING_BODY.md)                  | Cross-layer and cross-contract checklist for a new body                   |
+| [Physics overview](physics/overview.md)                     | Education and V5 model scopes by topic                                    |
+| [Physics model status](physics/model-status.md)             | Human-readable companion to the authoritative model registry              |
+| [V5 scientific contract](physics/v5-scientific-contract.md) | Request, execution, output, and fixture semantics for the scientific lane |
+| [V6 contract boundary](../contracts/science-v6/README.md)   | Dataset imports plus strict pending timing and result shapes              |
+| [Alpha release procedure](alpha-release.md)                 | How to qualify a specific revision and what evidence to record            |
+| [Architecture decisions](decisions/)                        | Accepted boundary decisions, including explicitly pending work            |
+
+Component setup and interfaces are documented beside the component:
+
+- [Browser](../apps/browser/README.md)
+- [Apple application](../apps/apple/README.md)
+- [OtherlightCore](../apps/apple/Packages/OtherlightCore/README.md)
+- [OtherlightScience](../apps/apple/Packages/OtherlightScience/README.md)
+- [Static screenshot tour](../apps/demo/README.md)
+- [Python science service](../services/science/README.md)
+- contract READMEs under [`contracts/`](../contracts/)

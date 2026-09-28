@@ -1,5 +1,5 @@
 /**
- * Owns reference runtime support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Creates the deterministic reference simulation runtime.
  */
 import {
   createSimulationV4,

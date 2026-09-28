@@ -1,7 +1,7 @@
 /**
- * Owns types support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Defines the UI validation message and severity types.
  */
-export type UiValidationSeverity = "info" | "warn";
+type UiValidationSeverity = "info" | "warn";
 
 export type UiValidationMessage = {
   severity: UiValidationSeverity;

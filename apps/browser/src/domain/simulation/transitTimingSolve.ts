@@ -1,9 +1,9 @@
 /**
- * Owns transit Timing Solve support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Estimates transit reference epochs and event times.
  */
-import type { SkyPoint, StepEventTimingSolveDiagnostics, BrowserScenarioDraft } from "../model/types";
+import type { SkyPoint, StepEventTimingSolveDiagnostics } from "../model/types";
 
-export type TransitEventEstimate = {
+type TransitEventEstimate = {
   centerSec: number;
   durationSec: number;
   ingressSec: number;
@@ -37,11 +37,6 @@ type LinearCenterProjection = {
   impactMin: number;
   zCenter: number;
 };
-
-export function usesExactTransitTiming(params: BrowserScenarioDraft): boolean {
-  const fidelity = params.dynamics?.fidelityProfile;
-  return fidelity === "accurate" || fidelity === "reference";
-}
 
 function computeTtvSec(
   centerSec: number,
@@ -480,7 +475,7 @@ export function estimateTransitEventWithDiagnostics(args: {
   );
 }
 
-export function estimateTransitEvent(args: {
+function estimateTransitEvent(args: {
   tObsSec: number;
   rStar: number;
   rBody: number;

@@ -17,7 +17,7 @@
 // - Applies a configurable stability clamp (default ±1e3) purely as a safety guard.
 
 import type { OrbitElements, StellarVariabilityParams, StellarVariabilityPhaseModel } from "../model/types";
-import { clamp, isFiniteNumber, wrapTo2Pi } from "../model/units";
+import { clamp, wrapTo2Pi } from "../model/units";
 import { solveKeplerE, trueAnomalyFromE } from "../orbits/kepler";
 import {
   finiteOrZero,
@@ -27,15 +27,13 @@ import {
   type StellarVariabilityComponents,
 } from "./stellarVariabilityComponents";
 
-export type { StellarVariabilityParams, StellarVariabilityPhaseModel } from "../model/types";
-
 /**
  * Compute an orbital phase angle phi(t) in [0, 2π) from (period, t0).
  *
  * Convention:
  *   phi = wrapTo2Pi( 2π * (t - t0) / period )
  */
-export function orbitalPhaseFromPeriod(params: { t: number; period: number; t0: number }): number {
+function orbitalPhaseFromPeriod(params: { t: number; period: number; t0: number }): number {
   const { t, period, t0 } = params;
 
   if (!Number.isFinite(t) || !Number.isFinite(period) || !Number.isFinite(t0)) return NaN;
@@ -43,41 +41,6 @@ export function orbitalPhaseFromPeriod(params: { t: number; period: number; t0: 
 
   const phi = (2 * Math.PI * (t - t0)) / period;
   return wrapTo2Pi(phi);
-}
-
-/**
- * Smooth periodic lifecycle weight in [0,1] for spot evolution.
- * If lifetimeSec <= 0 or invalid, returns 1 (no fading).
- */
-export function spotLifecycleWeight(params: {
-  t: number;
-  lifetimeSec: number;
-  t0?: number;
-  phaseOffset?: number;
-}): number {
-  const inputs = resolveSpotLifecycleInputs(params);
-  if (!inputs) return 1;
-
-  const phi = wrapTo2Pi((2 * Math.PI * (inputs.t - inputs.t0)) / inputs.lifetimeSec + inputs.phaseOffset);
-  const w = 0.5 - 0.5 * Math.cos(phi);
-  return Number.isFinite(w) ? clamp(w, 0, 1) : 1;
-}
-
-function resolveSpotLifecycleInputs(params: {
-  t: number;
-  lifetimeSec: number;
-  t0?: number;
-  phaseOffset?: number;
-}): { t: number; lifetimeSec: number; t0: number; phaseOffset: number } | undefined {
-  if (!Number.isFinite(params.t) || !Number.isFinite(params.lifetimeSec) || params.lifetimeSec <= 0) {
-    return undefined;
-  }
-  return {
-    t: params.t,
-    lifetimeSec: params.lifetimeSec,
-    t0: isFiniteNumber(params.t0) ? (params.t0 as number) : 0,
-    phaseOffset: isFiniteNumber(params.phaseOffset) ? (params.phaseOffset as number) : 0,
-  };
 }
 
 /**

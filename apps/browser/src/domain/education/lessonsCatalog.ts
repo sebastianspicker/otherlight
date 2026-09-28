@@ -1,5 +1,5 @@
 /**
- * Owns lessons Catalog support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Defines the main Education lesson catalog.
  */
 import type { LessonSpec } from "../model/types";
 import { PRESET_LESSONS } from "./lessonsPresetCatalog";

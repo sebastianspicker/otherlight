@@ -31,6 +31,40 @@ public enum ScenarioCatalog {
       radiusMetres: star.radiusMetres, massKilograms: star.massKilograms, limbDarkeningU1: 0.55,
       limbDarkeningU2: 0.15), planet: planet, moon: moon, planetPhase: planetPhase,
     moonPhase: moonPhase)
+  /// Provides the portable two-star V4 teaching scenario used by the detached-binary lab.
+  public static let detachedBinaryLab: EducationScenarioV4 = {
+    let solarRadius = 6.957e8
+    let solarMass = 1.98847e30
+    let primaryMass = 1.35 * solarMass
+    let secondaryMass = 0.95 * solarMass
+    let semiMajorAxis = 0.12 * 1.495978707e11
+    let period =
+      2 * Double.pi
+      * sqrt(
+        pow(semiMajorAxis, 3) / (6.67430e-11 * (primaryMass + secondaryMass)))
+    let eclipsePhase = 186_278.4 / (9.6 * 86_400)
+    let relativeOrbit = KeplerOrbit(
+      semiMajorAxisMetres: semiMajorAxis, periodSeconds: period, eccentricity: 0.07,
+      inclinationRadians: 88.8 * Double.pi / 180,
+      meanAnomalyAtEpochRadians: 2 * Double.pi * eclipsePhase)
+    let primary = BinaryStar(
+      identifier: "star-a",
+      star: .init(
+        radiusMetres: 1.15 * solarRadius, massKilograms: primaryMass, limbDarkeningU1: 0.44,
+        limbDarkeningU2: 0.21), luminosityScale: 1)
+    let secondary = BinaryStar(
+      identifier: "star-b",
+      star: .init(
+        radiusMetres: 0.82 * solarRadius, massKilograms: secondaryMass, limbDarkeningU1: 0.44,
+        limbDarkeningU2: 0.21), luminosityScale: 0.32)
+    return .init(
+      identifier: "detached-binary-lab", star: primary.star,
+      planet: .init(radiusMetres: 1, orbit: relativeOrbit), gridResolution: 280,
+      mode: .detachedBinaryLab,
+      detachedBinary: .init(
+        primary: primary, secondary: secondary, relativeOrbit: relativeOrbit),
+      binaryLab: .default)
+  }()
   /// Decodes the native compatible scenario representation without applying browser migration rules.
   ///
   /// Missing required values or incompatible data fail decoding so callers retain their last valid

@@ -1,5 +1,5 @@
 /**
- * Owns compare Text support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Turns didactic comparison deltas into short learner-facing sentences.
  */
 type ComparisonScalars = {
   fluxTotalDelta: number;

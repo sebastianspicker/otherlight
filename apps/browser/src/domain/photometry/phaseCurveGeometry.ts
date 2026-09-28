@@ -1,5 +1,5 @@
 /**
- * Owns phase Curve Geometry support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Computes phase angles and the reflected and thermal model weights.
  */
 import type { DayNightVisibilityParams } from "../model/types";
 import { vIsFinite, vLen } from "../orbits/vec3";

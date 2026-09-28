@@ -1,5 +1,5 @@
 /**
- * Owns stellar Variability Components support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Combines flare, pulsation, and spot contributions to stellar variability.
  */
 import type { StellarVariabilityParams } from "../model/types";
 import { isFiniteNumber } from "../model/units";
@@ -16,11 +16,11 @@ export function finiteOrZero(x: unknown): number {
   return isFiniteNumber(x) ? x : 0;
 }
 
-export function finiteOrDefault(x: unknown, def: number): number {
+function finiteOrDefault(x: unknown, def: number): number {
   return isFiniteNumber(x) ? x : def;
 }
 
-export function flareContribution(t: number, model?: StellarVariabilityParams["flare"]): number {
+function flareContribution(t: number, model?: StellarVariabilityParams["flare"]): number {
   if (!model?.enabled || !Number.isFinite(t)) return 0;
   const amp = Math.max(0, finiteOrZero(model.amp));
   const tPeak = finiteOrDefault(model.tPeakSec, 0);
@@ -35,7 +35,7 @@ export function flareContribution(t: number, model?: StellarVariabilityParams["f
   return amp * Math.exp(-dt / decaySec);
 }
 
-export function validPulsationModeContribution(
+function validPulsationModeContribution(
   t: number,
   mode: NonNullable<NonNullable<StellarVariabilityParams["pulsations"]>["modes"]>[number],
 ): number {
@@ -46,11 +46,11 @@ export function validPulsationModeContribution(
   return amp * Math.sin((2 * Math.PI * t) / periodSec + phaseRad);
 }
 
-export function isActivePulsationMode(amp: number, periodSec: number): boolean {
+function isActivePulsationMode(amp: number, periodSec: number): boolean {
   return Number.isFinite(amp) && amp !== 0 && Number.isFinite(periodSec) && periodSec > 0;
 }
 
-export function pulsationContribution(t: number, model?: StellarVariabilityParams["pulsations"]): number {
+function pulsationContribution(t: number, model?: StellarVariabilityParams["pulsations"]): number {
   if (!model?.enabled || !Number.isFinite(t) || !Array.isArray(model.modes)) return 0;
   let acc = 0;
   for (const mode of model.modes) {

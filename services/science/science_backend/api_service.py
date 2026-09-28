@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 from collections import deque
 from collections.abc import Callable
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor
 from contextlib import suppress
 from dataclasses import dataclass
+from functools import partial
 from hashlib import sha256
 from pathlib import Path
 from threading import Event, RLock
@@ -25,9 +25,16 @@ from .api_contract import (
     now,
 )
 from .api_manifest import result_payload
+from .artifact_cache import (
+    MAX_ARTIFACT_WRITER_TEMP_BYTES,
+    ArtifactCache,
+    configured_cache_max_bytes,
+)
 from .canonical_json import canonical_json
 from .contracts import MAX_FORWARD_WALL_TIME_SECONDS, ForwardRunRequest
 from .errors import (
+    ArtifactCacheCapacityError,
+    ArtifactWriterCapacityError,
     CapabilityUnavailableError,
     CollisionDomainError,
     ContractError,
@@ -37,15 +44,18 @@ from .errors import (
     ScientificBackendError,
     WorkBudgetError,
 )
-from .forward import ForwardRunResult, run_forward
+from .forward import ForwardRunResult, run_forward_compact
+from .forward_types import CompactForwardRunResult
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_JOB_STATES = frozenset({"succeeded", "failed", "cancelled"})
 DEFAULT_MAX_OUTSTANDING_JOBS = 8
 DEFAULT_MAX_TERMINAL_JOBS = 128
-ForwardRunner = Callable[..., ForwardRunResult]
+ForwardRunner = Callable[..., ForwardRunResult | CompactForwardRunResult]
 ArtifactWriter = Callable[..., str]
 _PUBLIC_FAILURE_CODES = (
+    (ArtifactCacheCapacityError, "artifact-cache-capacity-exhausted"),
+    (ArtifactWriterCapacityError, "artifact-writer-capacity-exhausted"),
     (ContractError, "invalid-contract"),
     (CapabilityUnavailableError, "capability-unavailable"),
     (CollisionDomainError, "collision-domain"),
@@ -74,7 +84,9 @@ class V5ApiService:
         *,
         max_outstanding_jobs: int = DEFAULT_MAX_OUTSTANDING_JOBS,
         max_terminal_jobs: int = DEFAULT_MAX_TERMINAL_JOBS,
-        runner: ForwardRunner = run_forward,
+        max_artifact_cache_bytes: int | None = None,
+        max_artifact_writer_temp_bytes: int = MAX_ARTIFACT_WRITER_TEMP_BYTES,
+        runner: ForwardRunner = run_forward_compact,
         artifact_writer: ArtifactWriter = write_arrow,
         capabilities: CapabilitySnapshot | None = None,
         wall_time_seconds: float = MAX_FORWARD_WALL_TIME_SECONDS,
@@ -85,6 +97,15 @@ class V5ApiService:
             raise ValueError("max_outstanding_jobs must be at least max_workers")
         if max_terminal_jobs < 1:
             raise ValueError("max_terminal_jobs must be positive")
+        if (
+            type(max_artifact_writer_temp_bytes) is not int
+            or not 1 <= max_artifact_writer_temp_bytes <= MAX_ARTIFACT_WRITER_TEMP_BYTES
+        ):
+            raise ValueError(
+                f"max_artifact_writer_temp_bytes must be an integer from 1 through {MAX_ARTIFACT_WRITER_TEMP_BYTES}"
+            )
+        artifact_cache_bytes = configured_cache_max_bytes(max_artifact_cache_bytes)
+        resolved_capabilities = capabilities or capability_snapshot()
         self.artifact_root, self.max_outstanding_jobs, self.max_terminal_jobs = (
             artifact_root,
             max_outstanding_jobs,
@@ -95,12 +116,32 @@ class V5ApiService:
         self._terminal_job_ids: deque[str] = deque()
         self._outstanding_jobs, self._closed = 0, False
         self._lock = RLock()
-        self._executor = ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix="v5-science"
+        self._artifact_cache = ArtifactCache(
+            artifact_root,
+            max_bytes=artifact_cache_bytes,
+            max_writer_bytes=max_artifact_writer_temp_bytes,
         )
-        self._runner, self._artifact_writer = runner, artifact_writer
+        self.max_artifact_cache_bytes = artifact_cache_bytes
+        self.max_artifact_writer_temp_bytes = max_artifact_writer_temp_bytes
+        try:
+            self._executor = ThreadPoolExecutor(
+                max_workers=max_workers, thread_name_prefix="v5-science"
+            )
+        except Exception:
+            self._artifact_cache.close()
+            raise
+        self._runner = runner
+        self._artifact_writer = (
+            partial(
+                write_arrow,
+                max_temp_bytes=max_artifact_writer_temp_bytes,
+                active_temporary=self._artifact_cache.active_writer,
+            )
+            if artifact_writer is write_arrow
+            else artifact_writer
+        )
         self._capabilities, self._wall_time_seconds = (
-            capabilities or capability_snapshot(),
+            resolved_capabilities,
             wall_time_seconds,
         )
 
@@ -216,7 +257,7 @@ class V5ApiService:
         artifact_id: str,
         temporary: Path,
         destination: Path,
-        physical: ForwardRunResult,
+        physical: ForwardRunResult | CompactForwardRunResult,
         fingerprint: str,
         seed: int,
         started: str,
@@ -224,7 +265,7 @@ class V5ApiService:
         with self._lock:
             if job.terminal.is_set() or job.cancel_requested.is_set():
                 return False
-            os.replace(temporary, destination)
+            self._artifact_cache.publish(artifact_id, temporary, destination)
             completed = now()
             job.result = result_payload(
                 job_id, artifact_id, physical, fingerprint, seed, started, completed
@@ -369,3 +410,4 @@ class V5ApiService:
                 if job.status["state"] not in TERMINAL_JOB_STATES:
                     self._mark_cancelled_locked(job_id, job)
         self._executor.shutdown(wait=True, cancel_futures=True)
+        self._artifact_cache.close()

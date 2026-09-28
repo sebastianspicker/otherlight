@@ -10,6 +10,7 @@ let package = Package(
     .library(name: "TransitEducation", targets: ["TransitEducation"]),
     .library(name: "TransitVisualization", targets: ["TransitVisualization"]),
     .library(name: "TransitScienceContracts", targets: ["TransitScienceContracts"]),
+    .library(name: "TransitScienceAuthoring", targets: ["TransitScienceAuthoring"]),
     .executable(name: "OtherlightBenchmark", targets: ["OtherlightBenchmark"]),
   ],
   targets: [
@@ -17,12 +18,16 @@ let package = Package(
     .target(name: "TransitEducation", dependencies: ["TransitCore"]),
     .target(name: "TransitVisualization", dependencies: ["TransitCore"]),
     .target(name: "TransitScienceContracts"),
+    .target(
+      name: "TransitScienceAuthoring",
+      dependencies: ["TransitCore", "TransitEducation", "TransitScienceContracts"]),
     .executableTarget(
       name: "OtherlightBenchmark", dependencies: ["TransitCore", "TransitEducation"]),
     .testTarget(
       name: "OtherlightCoreTests",
       dependencies: [
         "TransitCore", "TransitEducation", "TransitVisualization", "TransitScienceContracts",
+        "TransitScienceAuthoring",
       ]),
   ],
   swiftLanguageModes: [.v6]

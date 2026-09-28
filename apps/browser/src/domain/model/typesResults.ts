@@ -37,7 +37,7 @@ export type StepAdvancedTimingDiagnostics = {
   validityFlags?: string[];
 };
 
-export type StepTimingSolveDiagnostics = {
+type StepTimingSolveDiagnostics = {
   status: "converged" | "max-iters" | "invalid-input" | "nonfinite-delay" | "nonfinite-next";
   converged: boolean;
   iterations: number;
@@ -52,7 +52,7 @@ export type StepTimingSolveDiagnostics = {
   residualSec?: number;
 };
 
-export type StepTimingSolveBundle = {
+type StepTimingSolveBundle = {
   planet?: StepTimingSolveDiagnostics;
   moon?: StepTimingSolveDiagnostics;
 };
@@ -110,7 +110,7 @@ export type StepObservables = {
   conservation?: StepConservationDiagnostics;
 };
 
-export type StepMeta = {
+type StepMeta = {
   /** Simulation time [s]. */
   t: number;
 

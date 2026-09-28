@@ -40,12 +40,7 @@ import type {
   NormalizedThermalInertia,
   PhaseCurveModel,
 } from "./phaseCurveTypes";
-export type {
-  BodyPhaseFluxParams,
-  NormalizedPhaseCurveModel,
-  NormalizedThermalInertia,
-  PhaseCurveModel,
-} from "./phaseCurveTypes";
+export type { BodyPhaseFluxParams } from "./phaseCurveTypes";
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {
   return isFiniteNumber(value) ? value : fallback;
@@ -152,7 +147,7 @@ function inertiaResponse(period: number, inertia: NormalizedThermalInertia): { l
   };
 }
 
-export function shouldUseThermalInertia(
+function shouldUseThermalInertia(
   model: ThermalPhaseModel,
   inertia: NormalizedThermalInertia | undefined,
   period: number | undefined,
@@ -162,7 +157,7 @@ export function shouldUseThermalInertia(
   );
 }
 
-export function thermalInertiaFluxTerm(
+function thermalInertiaFluxTerm(
   params: ThermalFluxTermParams,
   amp: number,
   inertia: NormalizedThermalInertia,
@@ -178,7 +173,7 @@ export function thermalInertiaFluxTerm(
   return Number.isFinite(ww) ? amp * ww : 0;
 }
 
-export function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number): number {
+function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number): number {
   const aEff = applyPhaseOffset(params.alpha, -phaseOffsetOrZero(params.thermOffset));
   const ww = phaseWeightWithClamp(aEff, params.model, params.clamp !== false);
   return Number.isFinite(ww) ? amp * ww : 0;
@@ -191,7 +186,7 @@ export function directThermalFluxTerm(params: ThermalFluxTermParams, amp: number
  * - For model="constant", W=1.
  * - Otherwise uses the thermal geometric weight from dayNightVisibility.ts.
  */
-export function thermalFluxTerm(params: ThermalFluxTermParams): number {
+function thermalFluxTerm(params: ThermalFluxTermParams): number {
   if (!Number.isFinite(params.alpha)) return 0;
   if (!positiveFinite(params.thermAmp)) return 0;
 

@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/otherlight/science-v6/run-manifest-v3.schema.json",
+  "title": "Scientific V6 run manifest V3",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputHashSha256",
+    "scientificResult",
+    "implementation",
+    "gravitationalConstantM3KgS2",
+    "coordinateSystem",
+    "lineOfSightDirection",
+    "timeScale",
+    "epochJdTdb",
+    "startedAt",
+    "completedAt",
+    "capabilityManifestVersion",
+    "modelVersions",
+    "numericalTolerances",
+    "numericalErrorEstimates",
+    "crossLanguageAgreementLimitSec",
+    "errorScope",
+    "datasets",
+    "artifacts",
+    "validityDomain",
+    "warnings",
+    "randomSeed"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "science-run-manifest-v3" },
+    "runId": { "type": "string", "pattern": "^job-[a-z0-9][a-z0-9-]{0,126}$" },
+    "inputHashSha256": { "$ref": "#/$defs/sha256" },
+    "scientificResult": { "const": true },
+    "implementation": {
+      "$ref": "https://example.invalid/transit-light-curve-lab/science-v5/run-manifest-v2.schema.json#/$defs/implementation"
+    },
+    "gravitationalConstantM3KgS2": { "const": 6.6743e-11 },
+    "coordinateSystem": { "const": "barycentric-si" },
+    "lineOfSightDirection": { "const": "system-to-observer" },
+    "timeScale": { "const": "TDB" },
+    "epochJdTdb": { "type": "number", "exclusiveMinimum": 0 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "capabilityManifestVersion": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "modelVersions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/idVersion" }
+    },
+    "numericalTolerances": { "$ref": "#/$defs/numericalTolerances" },
+    "numericalErrorEstimates": { "$ref": "#/$defs/numericalErrorEstimates" },
+    "crossLanguageAgreementLimitSec": { "const": 0.1 },
+    "errorScope": { "const": "numerical-implementation-only" },
+    "datasets": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "$ref": "dataset-descriptor-v2.schema.json" }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "artifact-descriptor-v2.schema.json" }
+    },
+    "validityDomain": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
+    "randomSeed": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "idVersion": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "additionalProperties": false
+    },
+    "numericalTolerances": {
+      "type": "object",
+      "required": [
+        "requestedPositionToleranceM",
+        "effectivePositionToleranceM",
+        "requestedVelocityToleranceMps",
+        "effectiveVelocityToleranceMps",
+        "requestedRelativeTolerance",
+        "effectiveRelativeTolerance",
+        "requestedMaxStepSec",
+        "effectiveMaxStepSec",
+        "maxDenseSegments",
+        "maxRhsEvaluations",
+        "maxIsolationNodes",
+        "maxIsolationNodesPerSegmentSeries",
+        "maxIsolationDepth",
+        "maxRootRefinementIterations",
+        "maxEventRows",
+        "maxWallTimeSec",
+        "rootIsolationHalfWidthSec",
+        "artifactsPerJob",
+        "refinementRelativeToleranceMultiplier",
+        "refinementPositionToleranceMultiplier",
+        "refinementVelocityToleranceMultiplier",
+        "refinementMaxStepMultiplier"
+      ],
+      "properties": {
+        "requestedPositionToleranceM": { "type": "number", "exclusiveMinimum": 0 },
+        "effectivePositionToleranceM": { "type": "number", "exclusiveMinimum": 0 },
+        "requestedVelocityToleranceMps": { "type": "number", "exclusiveMinimum": 0 },
+        "effectiveVelocityToleranceMps": { "type": "number", "exclusiveMinimum": 0 },
+        "requestedRelativeTolerance": {
+          "type": "number",
+          "minimum": 2.220446049250313e-14,
+          "exclusiveMaximum": 1
+        },
+        "effectiveRelativeTolerance": {
+          "type": "number",
+          "minimum": 2.220446049250313e-14,
+          "exclusiveMaximum": 1
+        },
+        "requestedMaxStepSec": { "type": "number", "exclusiveMinimum": 0 },
+        "effectiveMaxStepSec": { "type": "number", "exclusiveMinimum": 0 },
+        "maxDenseSegments": { "const": 500000 },
+        "maxRhsEvaluations": { "const": 8000000 },
+        "maxIsolationNodes": { "const": 2000000 },
+        "maxIsolationNodesPerSegmentSeries": { "const": 4096 },
+        "maxIsolationDepth": { "const": 64 },
+        "maxRootRefinementIterations": { "const": 64 },
+        "maxEventRows": { "const": 10000 },
+        "maxWallTimeSec": { "const": 60 },
+        "rootIsolationHalfWidthSec": { "const": 0.001 },
+        "artifactsPerJob": { "const": 1 },
+        "refinementRelativeToleranceMultiplier": { "const": 0.1 },
+        "refinementPositionToleranceMultiplier": { "const": 0.1 },
+        "refinementVelocityToleranceMultiplier": { "const": 0.1 },
+        "refinementMaxStepMultiplier": { "const": 0.5 }
+      },
+      "additionalProperties": false
+    },
+    "numericalErrorEstimates": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/eventRootIsolationHalfWidthMax" },
+        { "$ref": "#/$defs/eventPrimaryRefinementDifferenceMax" },
+        { "$ref": "#/$defs/durationPrimaryRefinementDifferenceMax" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "eventRootIsolationHalfWidthMax": {
+      "type": "object",
+      "required": ["id", "valueSec", "method"],
+      "properties": {
+        "id": { "const": "event-root-isolation-half-width-max" },
+        "valueSec": { "type": "number", "minimum": 0, "maximum": 0.001 },
+        "method": { "const": "bounded-dense-segment-isolation" }
+      },
+      "additionalProperties": false
+    },
+    "eventPrimaryRefinementDifferenceMax": {
+      "type": "object",
+      "required": ["id", "valueSec", "method"],
+      "properties": {
+        "id": { "const": "event-primary-refinement-difference-max" },
+        "valueSec": { "type": "number", "minimum": 0, "maximum": 0.05 },
+        "method": { "const": "tighter-integration" }
+      },
+      "additionalProperties": false
+    },
+    "durationPrimaryRefinementDifferenceMax": {
+      "type": "object",
+      "required": ["id", "valueSec", "method"],
+      "properties": {
+        "id": { "const": "duration-primary-refinement-difference-max" },
+        "valueSec": { "type": "number", "minimum": 0, "maximum": 0.05 },
+        "method": { "const": "tighter-integration" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

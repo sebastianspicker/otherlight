@@ -1,5 +1,5 @@
 /**
- * Owns adapter Photometry support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Bridges Education photometry into detached-binary photometry.
  */
 import type { BinaryStarPhotometryParams, PhotometryParams, BrowserScenarioDraft } from "../../model/types";
 import type { StarBodyV4 } from "./types";

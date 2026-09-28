@@ -1,0 +1,148 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		M10000000000000000000001 = {isa = PBXBuildFile; fileRef = M20000000000000000000001; };
+		M10000000000000000000002 = {isa = PBXBuildFile; fileRef = M20000000000000000000002; };
+		M10000000000000000000003 = {isa = PBXBuildFile; fileRef = M20000000000000000000003; };
+		M10000000000000000000004 = {isa = PBXBuildFile; fileRef = M20000000000000000000004; };
+		M10000000000000000000005 = {isa = PBXBuildFile; fileRef = M20000000000000000000005; };
+		M10000000000000000000006 = {isa = PBXBuildFile; fileRef = M20000000000000000000006; };
+		M10000000000000000000007 = {isa = PBXBuildFile; fileRef = M20000000000000000000007; };
+		M10000000000000000000008 = {isa = PBXBuildFile; fileRef = M20000000000000000000008; };
+		M10000000000000000000009 = {isa = PBXBuildFile; fileRef = M20000000000000000000009; };
+		M1000000000000000000000A = {isa = PBXBuildFile; fileRef = M2000000000000000000000A; };
+		M10000000000000000000030 = {isa = PBXBuildFile; fileRef = M20000000000000000000030; };
+		M1000000000000000000000B = {isa = PBXBuildFile; fileRef = M2000000000000000000000B; };
+		M1000000000000000000000C = {isa = PBXBuildFile; fileRef = M2000000000000000000000C; };
+		M1000000000000000000000D = {isa = PBXBuildFile; fileRef = M2000000000000000000000D; };
+		M1000000000000000000000E = {isa = PBXBuildFile; fileRef = M2000000000000000000000E; };
+		M1000000000000000000000F = {isa = PBXBuildFile; fileRef = M2000000000000000000000F; };
+		M10000000000000000000010 = {isa = PBXBuildFile; fileRef = M20000000000000000000010; };
+		M10000000000000000000011 = {isa = PBXBuildFile; fileRef = M20000000000000000000011; };
+		M10000000000000000000012 = {isa = PBXBuildFile; fileRef = M20000000000000000000012; };
+		M10000000000000000000013 = {isa = PBXBuildFile; fileRef = M20000000000000000000013; };
+		M10000000000000000000014 = {isa = PBXBuildFile; fileRef = M20000000000000000000014; };
+		M10000000000000000000015 = {isa = PBXBuildFile; fileRef = M20000000000000000000015; };
+		M10000000000000000000016 = {isa = PBXBuildFile; fileRef = M20000000000000000000016; };
+		M10000000000000000000017 = {isa = PBXBuildFile; fileRef = M20000000000000000000017; };
+		M10000000000000000000018 = {isa = PBXBuildFile; fileRef = M20000000000000000000018; };
+		M10000000000000000000019 = {isa = PBXBuildFile; productRef = M90000000000000000000001; };
+		M1000000000000000000001A = {isa = PBXBuildFile; productRef = M90000000000000000000002; };
+		M1000000000000000000001B = {isa = PBXBuildFile; productRef = M90000000000000000000003; };
+		M1000000000000000000001C = {isa = PBXBuildFile; productRef = M90000000000000000000004; };
+		M1000000000000000000001D = {isa = PBXBuildFile; productRef = M90000000000000000000005; };
+		M1000000000000000000001E = {isa = PBXBuildFile; productRef = M90000000000000000000006; };
+		M1000000000000000000001F = {isa = PBXBuildFile; fileRef = M2000000000000000000001B; };
+		M10000000000000000000020 = {isa = PBXBuildFile; fileRef = M2000000000000000000001C; };
+		M10000000000000000000021 = {isa = PBXBuildFile; fileRef = M2000000000000000000001D; };
+		M10000000000000000000022 = {isa = PBXBuildFile; fileRef = M2000000000000000000001E; };
+		M10000000000000000000023 = {isa = PBXBuildFile; fileRef = M2000000000000000000001F; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		M20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacApp/OtherlightMacApp.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/PresentationModels.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/EducationSession.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Runtime/SimulationRuntime.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Support/ExportDocument.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Support/PlatformActivityBridge.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Support/WorkspaceCommandTarget.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/OtherlightWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/ParameterInspector.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/SimulationCanvases.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000030 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/PlateFigureStyle.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Support/BundledRealSystems.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Support/OtherlightWorkspaceDocument.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/SimulationHistory.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/EducationSessionPolicies.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000000F = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/OtherlightWorkspaceShell.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/OtherlightWorkspaceToolbar.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/SimulationDashboard.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Views/GuidedLabsView.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../browser/src/application/catalog/real-systems.snapshot.json; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = text.xml; path = App/PrivacyInfo.xcprivacy; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = MacApp/Info.plist; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000017 = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacApp/OtherlightMac.entitlements; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000018 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAppTests/OtherlightMacTests.swift; sourceTree = SOURCE_ROOT; };
+		M20000000000000000000019 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = OtherlightMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		M2000000000000000000001A = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = OtherlightMacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		M2000000000000000000001B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacApp/ScientificRunExecuting.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000001C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacApp/ScientificHostView.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000001D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/EducationSessionDrafts.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000001E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/EducationSessionGuidedWorkspace.swift; sourceTree = SOURCE_ROOT; };
+		M2000000000000000000001F = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Models/EducationSessionRuntime.swift; sourceTree = SOURCE_ROOT; };
+		M82000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		M82000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Release.xcconfig; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		M30000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (M10000000000000000000019, M1000000000000000000001A, M1000000000000000000001B, M1000000000000000000001C, M1000000000000000000001D, M1000000000000000000001E); runOnlyForDeploymentPostprocessing = 0; };
+		M30000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		M40000000000000000000001 = {isa = PBXGroup; children = (M40000000000000000000002, M40000000000000000000003); sourceTree = "<group>"; };
+		M40000000000000000000002 = {isa = PBXGroup; children = (M20000000000000000000001, M20000000000000000000002, M20000000000000000000003, M20000000000000000000004, M20000000000000000000005, M20000000000000000000006, M20000000000000000000007, M20000000000000000000008, M20000000000000000000009, M2000000000000000000000A, M20000000000000000000030, M2000000000000000000000B, M2000000000000000000000C, M2000000000000000000000D, M2000000000000000000000E, M2000000000000000000000F, M20000000000000000000010, M20000000000000000000011, M20000000000000000000012, M20000000000000000000013, M20000000000000000000014, M20000000000000000000015, M20000000000000000000016, M20000000000000000000017, M20000000000000000000018, M2000000000000000000001B, M2000000000000000000001C, M2000000000000000000001D, M2000000000000000000001E, M2000000000000000000001F); name = Sources; sourceTree = "<group>"; };
+		M40000000000000000000003 = {isa = PBXGroup; children = (M20000000000000000000019, M2000000000000000000001A); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		M50000000000000000000001 /* OtherlightMac */ = {isa = PBXNativeTarget; buildConfigurationList = M80000000000000000000001; buildPhases = (M30000000000000000000001, M60000000000000000000001, M70000000000000000000001); buildRules = (); dependencies = (); name = OtherlightMac; packageProductDependencies = (M90000000000000000000001, M90000000000000000000002, M90000000000000000000003, M90000000000000000000004, M90000000000000000000005, M90000000000000000000006); productName = OtherlightMac; productReference = M20000000000000000000019; productType = "com.apple.product-type.application"; };
+		M50000000000000000000002 /* OtherlightMacTests */ = {isa = PBXNativeTarget; buildConfigurationList = M80000000000000000000002; buildPhases = (M30000000000000000000002, M60000000000000000000002, M70000000000000000000002); buildRules = (); dependencies = (MA00000000000000000000001); name = OtherlightMacTests; productName = OtherlightMacTests; productReference = M2000000000000000000001A; productType = "com.apple.product-type.bundle.unit-test"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		M50000000000000000000000 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2600; LastUpgradeCheck = 2600; TargetAttributes = {M50000000000000000000001 = {CreatedOnToolsVersion = 26.0; }; M50000000000000000000002 = {CreatedOnToolsVersion = 26.0; TestTargetID = M50000000000000000000001; }; }; }; buildConfigurationList = M80000000000000000000000; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; mainGroup = M40000000000000000000001; packageReferences = (MB00000000000000000000001, MB00000000000000000000002); productRefGroup = M40000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (M50000000000000000000001, M50000000000000000000002); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		M70000000000000000000001 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (M10000000000000000000013, M10000000000000000000014, M10000000000000000000015); runOnlyForDeploymentPostprocessing = 0; };
+		M70000000000000000000002 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		M60000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (M10000000000000000000001, M10000000000000000000002, M10000000000000000000003, M10000000000000000000004, M10000000000000000000005, M10000000000000000000006, M10000000000000000000007, M10000000000000000000008, M10000000000000000000009, M1000000000000000000000A, M10000000000000000000030, M1000000000000000000000B, M1000000000000000000000C, M1000000000000000000000D, M1000000000000000000000E, M1000000000000000000000F, M10000000000000000000010, M10000000000000000000011, M10000000000000000000012, M1000000000000000000001F, M10000000000000000000020, M10000000000000000000021, M10000000000000000000022, M10000000000000000000023); runOnlyForDeploymentPostprocessing = 0; };
+		M60000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (M10000000000000000000018); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		MA00000000000000000000001 = {isa = PBXTargetDependency; target = M50000000000000000000001; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		M81000000000000000000000 = {isa = XCBuildConfiguration; baseConfigurationReference = M82000000000000000000001; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 14.0; SUPPORTED_PLATFORMS = macosx; }; name = Debug; };
+		M81000000000000000000001 = {isa = XCBuildConfiguration; baseConfigurationReference = M82000000000000000000002; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 14.0; SUPPORTED_PLATFORMS = macosx; }; name = Release; };
+		M81100000000000000000000 = {isa = XCBuildConfiguration; baseConfigurationReference = M82000000000000000000001; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_ENTITLEMENTS = MacApp/OtherlightMac.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_HARDENED_RUNTIME = YES; ENABLE_TESTABILITY = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MacApp/Info.plist; MARKETING_VERSION = 0.3.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightMac; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
+		M81100000000000000000001 = {isa = XCBuildConfiguration; baseConfigurationReference = M82000000000000000000002; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_ENTITLEMENTS = MacApp/OtherlightMac.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MacApp/Info.plist; MARKETING_VERSION = 0.3.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightMac; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Release; };
+		M81200000000000000000000 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightMacTests; PRODUCT_MODULE_NAME = OtherlightMacTests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OtherlightMac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OtherlightMac"; TEST_TARGET_NAME = OtherlightMac; }; name = Debug; };
+		M81200000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; PRODUCT_BUNDLE_IDENTIFIER = com.sebastianspicker.OtherlightMacTests; PRODUCT_MODULE_NAME = OtherlightMacTests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OtherlightMac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OtherlightMac"; TEST_TARGET_NAME = OtherlightMac; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		M80000000000000000000000 = {isa = XCConfigurationList; buildConfigurations = (M81000000000000000000000, M81000000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		M80000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (M81100000000000000000000, M81100000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		M80000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (M81200000000000000000000, M81200000000000000000001); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		MB00000000000000000000001 = {isa = XCLocalSwiftPackageReference; relativePath = Packages/OtherlightCore; };
+		MB00000000000000000000002 = {isa = XCLocalSwiftPackageReference; relativePath = Packages/OtherlightScience; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		M90000000000000000000001 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000001; productName = TransitCore; };
+		M90000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000001; productName = TransitEducation; };
+		M90000000000000000000003 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000001; productName = TransitVisualization; };
+		M90000000000000000000004 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000001; productName = TransitScienceContracts; };
+		M90000000000000000000005 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000002; productName = TransitScience; };
+		M90000000000000000000006 = {isa = XCSwiftPackageProductDependency; package = MB00000000000000000000001; productName = TransitScienceAuthoring; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = M50000000000000000000000;
+}

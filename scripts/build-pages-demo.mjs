@@ -1,11 +1,12 @@
-/** Builds the self-contained static GitHub Pages artifact without running the product. */
+/** Builds the self-contained static screenshot tour without running the product. */
 
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outputDirectory = path.join(repositoryRoot, "pages-dist");
+const outputDirectory = path.resolve(repositoryRoot, process.argv[2] ?? "pages-dist");
 const assetDirectory = path.join(outputDirectory, "assets");
 
 await rm(outputDirectory, { recursive: true, force: true });
@@ -28,8 +29,8 @@ await Promise.all([
     path.join(assetDirectory, "02-guided-lab.png"),
   ),
   cp(
-    path.join(repositoryRoot, "docs", "screenshots", "web", "07-scientific-result.png"),
-    path.join(assetDirectory, "07-scientific-result.png"),
+    path.join(repositoryRoot, "docs", "screenshots", "web", "03-scientific-replay.png"),
+    path.join(assetDirectory, "03-scientific-replay.png"),
   ),
 ]);
 

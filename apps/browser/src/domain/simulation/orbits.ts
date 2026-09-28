@@ -93,12 +93,3 @@ export function stateFromResolvedElements(
     v: perifocalToInertial(vPQW, el.Omega, el.inc, el.omega),
   };
 }
-
-export function posFromElements(
-  elOrProvider: OrbitElements | OrbitElementsProvider,
-  t: number,
-  nameForErrors: string,
-): Vec3 {
-  const el = resolveOrbitElements(elOrProvider, t, nameForErrors);
-  return posFromResolvedElements(el, t, nameForErrors);
-}

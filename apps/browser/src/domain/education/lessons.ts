@@ -1,5 +1,5 @@
 /**
- * Owns lessons support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Indexes the lesson catalog and resolves lessons, steps, and phases.
  */
 import type {
   LessonEventTarget,
@@ -10,7 +10,6 @@ import type {
   LessonSpec,
 } from "../model/types";
 import { LESSONS } from "./lessonsCatalog";
-export { LESSONS } from "./lessonsCatalog";
 
 export const LESSON_FOCUS_CONTROL_LABELS: Record<LessonFocusControl, string> = {
   quickPlanetR: "Planet size",

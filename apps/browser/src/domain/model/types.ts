@@ -41,20 +41,7 @@
 
 // Orbit / dynamics
 export type { OrbitElements, OrbitElementsProvider } from "./typesOrbit";
-export type {
-  NBodyPlanetMoonParams,
-  NBodyPerturberParams,
-  RelativityParams,
-  ExomoonTimingShapeParams,
-  SystemDynamicsParams,
-  FidelityProfile,
-  RelativityLevel,
-  IntegratorParams,
-  IntegratorMode,
-  CollisionPolicyParams,
-  SecularEvolutionParams,
-  PhysicsFeatureFlags,
-} from "./typesDynamics";
+export type { SystemDynamicsParams } from "./typesDynamics";
 
 // Observer / sky geometry
 export type { Observer, SkyPoint } from "./typesObserver";
@@ -64,8 +51,6 @@ export type {
   PassbandId,
   LimbDarkeningConstraints,
   LimbDarkeningLawQuadratic,
-  LimbDarkeningLawThreeParameter,
-  LimbDarkeningLawFourParameter,
   LimbDarkeningLaw,
   LimbDarkeningModel,
   StellarLimbDarkeningParams,
@@ -73,49 +58,27 @@ export type {
 
 // Photometry config
 export type {
-  BrightnessPatchShape,
   BrightnessPatch,
   PhaseCurveParams,
   DayNightVisibilityParams,
   AtmosphereTransmissionParams,
   AtmosphereRTParams,
   AtmosphereRTLayer,
-  SpectralBandpassParams,
   ThermalModelAdvancedParams,
-  RingScatteringParams,
-  AdditiveCompositionMode,
-  StellarSurfaceParams,
-  ForwardScatteringParams,
   StellarVariabilityParams,
   StellarVariabilityPhaseModel,
-  SpotEvolutionParams,
   ThermalInertiaParams,
   PhotometryParams,
 } from "./typesPhotometry";
 
 // System
-export type {
-  Body,
-  BinaryStarPhotometryParams,
-  BinarySystemPhotometryParams,
-  BodyShapeParams,
-  RingSystemParams,
-  BodySpinParams,
-  BodyGravityHarmonicsParams,
-  BodyTidesParams,
-  SystemParamsV2,
-  BrowserScenarioDraft,
-} from "./typesSystem";
+export type { Body, BinaryStarPhotometryParams, SystemParamsV2, BrowserScenarioDraft } from "./typesSystem";
 
 // Results
 export type {
-  StepMeta,
   StepResult,
   StepObservables,
   StepTimingDiagnostics,
-  StepAdvancedTimingDiagnostics,
-  StepTimingSolveDiagnostics,
-  StepTimingSolveBundle,
   StepEventTimingSolveDiagnostics,
   StepEventTimingSolveBundle,
   StepConservationDiagnostics,
@@ -124,21 +87,14 @@ export type {
 
 // Didactics
 export type {
-  DidacticFormulaValue,
-  AssessmentRule,
   DidacticInterpretation,
-  DidacticResponseEntry,
   DidacticResponseStore,
   LessonFamily,
   LessonEventTarget,
   LessonFocusControl,
   LessonPhaseSpec,
-  LessonPhaseType,
-  LessonRecommendedUiMode,
   LessonResponseMode,
-  LessonSignalSurface,
   LessonSimMode,
-  LessonStep,
   LessonSpec,
   LessonWorkedExample,
   LearningState,

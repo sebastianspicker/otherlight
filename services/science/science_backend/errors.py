@@ -31,3 +31,23 @@ class JobCapacityError(ScientificBackendError):
 
 class WorkBudgetError(ScientificBackendError):
     """A valid request exceeded a deterministic scientific-work budget."""
+
+
+class DatasetCapacityError(ScientificBackendError):
+    """An imported dataset would exceed a declared process-memory quota."""
+
+
+class DatasetInUseError(ScientificBackendError):
+    """A queued or running job currently retains an imported dataset."""
+
+
+class ArtifactCacheCapacityError(ScientificBackendError):
+    """Publishing an artifact would grow the retained cache beyond its quota."""
+
+
+class ArtifactWriterCapacityError(ScientificBackendError):
+    """One artifact writer exceeded its bounded temporary-file allowance."""
+
+
+class ArtifactCacheOwnershipError(ScientificBackendError):
+    """Another writer or cleanup process owns the artifact cache."""

@@ -34,7 +34,7 @@ import { vCross, vDot, vIsFinite, vNormalizeOrThrow, vNormalizeOrZero } from "./
 
 export type SkyPoint = { x: number; y: number; z: number };
 
-export type SkyBasis = {
+type SkyBasis = {
   ex: Vec3;
   ey: Vec3;
   ez: Vec3;
@@ -46,7 +46,7 @@ const DEFAULT_OBSERVER_DIR: Vec3 = { x: 0, y: 0, z: 1 };
  * Active right-handed rotation of a vector about the Z axis by angle a [rad].
  * Right-hand rule: positive angle rotates X toward Y.
  */
-export function rotateZ(v: Vec3, a: number): Vec3 {
+function rotateZ(v: Vec3, a: number): Vec3 {
   const c = Math.cos(a);
   const s = Math.sin(a);
   return { x: c * v.x - s * v.y, y: s * v.x + c * v.y, z: v.z };
@@ -56,20 +56,10 @@ export function rotateZ(v: Vec3, a: number): Vec3 {
  * Active right-handed rotation of a vector about the X axis by angle a [rad].
  * Right-hand rule: positive angle rotates Y toward Z.
  */
-export function rotateX(v: Vec3, a: number): Vec3 {
+function rotateX(v: Vec3, a: number): Vec3 {
   const c = Math.cos(a);
   const s = Math.sin(a);
   return { x: v.x, y: c * v.y - s * v.z, z: s * v.y + c * v.z };
-}
-
-/**
- * Optional utility: active right-handed rotation about the Y axis by angle a [rad].
- * Right-hand rule: positive angle rotates Z toward X.
- */
-export function rotateY(v: Vec3, a: number): Vec3 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return { x: c * v.x + s * v.z, y: v.y, z: -s * v.x + c * v.z };
 }
 
 /**
@@ -115,7 +105,7 @@ function pickReferenceAxisForEz(ez: Vec3): Vec3 {
  *
  * This function is intended to be the canonical basis builder used everywhere.
  */
-export function buildSkyBasis(observerDir: Vec3): SkyBasis {
+function buildSkyBasis(observerDir: Vec3): SkyBasis {
   if (!vIsFinite(observerDir)) throw new Error("buildSkyBasis: observerDir must be finite.");
 
   // Require a non-zero LOS direction.
@@ -148,26 +138,8 @@ export function buildSkyBasis(observerDir: Vec3): SkyBasis {
  * - z depth along the observer direction ez
  *
  * Default convention: observer looks along +Z.
- *
- * **Performance note:** This function recomputes the sky basis on every call.
- * When projecting multiple bodies per simulation step with the same observer
- * direction, prefer calling {@link buildSkyBasis} once and then using
- * {@link projectToSkyWithBasis} for each body to avoid redundant basis
- * construction.
  */
 export function projectToSky(r: Vec3, observerDir: Vec3 = DEFAULT_OBSERVER_DIR): SkyPoint {
   const { ex, ey, ez } = buildSkyBasis(observerDir);
   return { x: vDot(r, ex), y: vDot(r, ey), z: vDot(r, ez) };
-}
-
-/**
- * Project using a precomputed sky basis.
- * Useful when projecting many points against the same observer direction.
- */
-export function projectToSkyWithBasis(r: Vec3, basis: SkyBasis): SkyPoint {
-  return {
-    x: vDot(r, basis.ex),
-    y: vDot(r, basis.ey),
-    z: vDot(r, basis.ez),
-  };
 }

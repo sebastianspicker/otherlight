@@ -58,6 +58,9 @@ public struct SimulationEngine: Sendable {
   public mutating func step(at timeSeconds: Double) throws -> EducationStep {
     guard timeSeconds.isFinite else { throw ValidationError([.nonFinite(field: "timeSeconds")]) }
     let elapsed = timeSeconds - scenario.epochSeconds
+    if let binary = scenario.detachedBinary {
+      return binaryStep(binary, elapsed: elapsed, at: timeSeconds)
+    }
     let planet = scenario.planet.orbit.position(at: elapsed)
     let planetVelocity = scenario.planet.orbit.velocity(at: elapsed)
     var points = [SkyPoint(body: "planet", position: planet)]
@@ -116,6 +119,80 @@ public struct SimulationEngine: Sendable {
     try times.map { try step(at: $0) }
   }
 
+  /// Evaluates barycentric star positions and normalized luminous-disk overlap for a detached binary.
+  private func binaryStep(_ binary: DetachedBinary, elapsed: Double, at timeSeconds: Double)
+    -> EducationStep
+  {
+    let totalMass = binary.primary.star.massKilograms + binary.secondary.star.massKilograms
+    let relative = binary.relativeOrbit.position(at: elapsed)
+    let primary = relative * (-binary.secondary.star.massKilograms / totalMass)
+    let secondary = relative * (binary.primary.star.massKilograms / totalMass)
+    let primaryVisible = binaryVisibleFlux(
+      source: binary.primary, position: primary, foreground: binary.secondary,
+      foregroundPosition: secondary)
+    let secondaryVisible = binaryVisibleFlux(
+      source: binary.secondary, position: secondary, foreground: binary.primary,
+      foregroundPosition: primary)
+    let baseline = binary.primary.luminosityScale + binary.secondary.luminosityScale
+    let visible = primaryVisible + secondaryVisible
+    let normalized = baseline > 0 ? visible / baseline : 1
+    let phase = (elapsed / binary.relativeOrbit.periodSeconds).truncatingRemainder(dividingBy: 1)
+    return EducationStep(
+      timeSeconds: timeSeconds,
+      skyPoints: [
+        .init(body: binary.primary.identifier, position: primary),
+        .init(body: binary.secondary.identifier, position: secondary),
+      ], flux: normalized,
+      fluxComponents: .init(
+        total: normalized, transitFactor: normalized, stellarPreTransit: baseline, planetPhase: 0,
+        moonPhase: 0),
+      timing: .init(
+        transitNumber: Int((elapsed / binary.relativeOrbit.periodSeconds).rounded()),
+        calculatedSeconds: timeSeconds, observedMinusCalculatedSeconds: 0),
+      renderSignals: .init(
+        phase: phase < 0 ? phase + 1 : phase, dayNightFraction: 0, occultedFraction: 1 - normalized,
+        events: [
+          .init(
+            id: "binary-eclipse", kind: "binary-eclipse", label: "Binary eclipse active",
+            active: normalized < 0.999999)
+        ]),
+      warnings: [])
+  }
+
+  /// Integrates the source disk once, masking it only when the other luminous star is in front.
+  private func binaryVisibleFlux(
+    source: BinaryStar, position: Vector3, foreground: BinaryStar, foregroundPosition: Vector3
+  ) -> Double {
+    guard source.luminosityScale > 0 else { return 0 }
+    guard foregroundPosition.z > position.z else { return source.luminosityScale }
+    let resolution = max(1, min(512, scenario.gridResolution))
+    let radius = source.star.radiusMetres
+    let dy = 2 * radius / Double(resolution)
+    var total = 0.0
+    var visible = 0.0
+    for iy in 0..<resolution {
+      let y = -radius + (Double(iy) + 0.5) * dy
+      let xMax = sqrt(max(0, radius * radius - y * y))
+      let dx = 2 * xMax / Double(resolution)
+      for ix in 0..<resolution {
+        let x = -xMax + (Double(ix) + 0.5) * dx
+        let mu = sqrt(max(0, 1 - (x * x + y * y) / (radius * radius)))
+        let weight =
+          QuadraticLimbDarkening.intensity(
+            mu: mu, u1: source.star.limbDarkeningU1, u2: source.star.limbDarkeningU2) * dx * dy
+        total += weight
+        let dxForeground = position.x + x - foregroundPosition.x
+        let dyForeground = position.y + y - foregroundPosition.y
+        if dxForeground * dxForeground + dyForeground * dyForeground >= foreground.star.radiusMetres
+          * foreground.star.radiusMetres
+        {
+          visible += weight
+        }
+      }
+    }
+    return source.luminosityScale * (total > 0 ? visible / total : 1)
+  }
+
   /// Samples the stellar disk once so overlapping occulters do not double-count blocked flux.
   private func limbDarkenedUnionFlux(_ input: [(position: Vector3, radius: Double)]) -> Double {
     let star = scenario.star
@@ -158,9 +235,30 @@ public struct SimulationEngine: Sendable {
   private func phaseFlux(_ curve: PhaseCurve?, at position: Vector3) -> Double {
     guard let curve, curve.enabled else { return 0 }
     let alpha = acos(max(-1, min(1, -position.z / max(position.length, .leastNonzeroMagnitude))))
-    let reflected =
-      curve.lambertian ? (sin(alpha) + (.pi - alpha) * cos(alpha)) / .pi : (1 + cos(alpha)) / 2
-    return max(0, curve.reflectedAmplitude * reflected + curve.thermalAmplitude)
+    let reflectedAlpha = min(max(alpha - curve.reflectedOffsetRadians, 0), .pi)
+    let thermalAlpha = min(max(alpha - curve.thermalOffsetRadians, 0), .pi)
+    let reflected = phaseWeight(at: reflectedAlpha, model: curve.reflectedModel)
+    let thermal = phaseWeight(at: thermalAlpha, model: curve.thermalModel)
+    return max(
+      0,
+      curve.reflectedAmplitude * reflected + curve.thermalAmplitude * thermal + curve.constantFlux)
+  }
+
+  /// Evaluates the portable V4 phase weights after an optional phenomenological offset.
+  private func phaseWeight(at alpha: Double, model: PhaseCurve.ReflectedModel) -> Double {
+    switch model {
+    case .lambert: (sin(alpha) + (.pi - alpha) * cos(alpha)) / .pi
+    case .cosine: (1 + cos(alpha)) / 2
+    }
+  }
+
+  /// Evaluates the portable thermal phase weights, including isotropic emission.
+  private func phaseWeight(at alpha: Double, model: PhaseCurve.ThermalModel) -> Double {
+    switch model {
+    case .constant: 1
+    case .lambert: phaseWeight(at: alpha, model: PhaseCurve.ReflectedModel.lambert)
+    case .cosine: phaseWeight(at: alpha, model: PhaseCurve.ReflectedModel.cosine)
+    }
   }
 
   /// Solves a linearized transit center and contacts when the body crosses the stellar disk.
@@ -209,7 +307,30 @@ public struct SimulationEngine: Sendable {
   /// Returns all bounded-model input violations without mutating the scenario.
   public static func validate(_ scenario: EducationScenarioV4) -> [ValidationIssue] {
     var issues: [ValidationIssue] = []
+    validateIdentity(scenario, into: &issues)
+    validatePrimaryValues(scenario, into: &issues)
+    validateEccentricity(scenario, into: &issues)
+    validateGridResolution(scenario, into: &issues)
+    if scenario.mode == .detachedBinaryLab, !validateDetachedBinary(scenario, into: &issues) {
+      return issues
+    }
+    validateLimbDarkening(scenario, into: &issues)
+    validatePhaseCurve(scenario.planetPhase, field: "photometry.phaseCurve", into: &issues)
+    validatePhaseCurve(scenario.moonPhase, field: "photometry.moonPhaseCurve", into: &issues)
+    return issues
+  }
+
+  /// Reports the stable identifier violation before numerical violations.
+  private static func validateIdentity(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) {
     if scenario.identifier.isEmpty { issues.append(.invalidIdentifier) }
+  }
+
+  /// Reports the general-lab positive SI quantities in their established error order.
+  private static func validatePrimaryValues(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) {
     let positive: [(String, Double)] = [
       ("star.radiusMetres", scenario.star.radiusMetres),
       ("star.massKilograms", scenario.star.massKilograms),
@@ -224,11 +345,135 @@ public struct SimulationEngine: Sendable {
         issues.append(.nonPositive(field: name))
       }
     }
+  }
+
+  /// Reports the orbit eccentricity after the other primary orbital quantities.
+  private static func validateEccentricity(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) {
     if !(0..<1).contains(scenario.planet.orbit.eccentricity) {
       issues.append(
         .outOfRange(field: "planet.orbit.eccentricity", value: scenario.planet.orbit.eccentricity))
     }
+  }
+
+  /// Reports a non-positive sampled disk resolution before detached-binary details.
+  private static func validateGridResolution(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) {
     if scenario.gridResolution <= 0 { issues.append(.nonPositive(field: "gridResolution")) }
-    return issues
+  }
+
+  /// Validates binary components and reports whether its required model was present.
+  private static func validateDetachedBinary(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) -> Bool {
+    guard let binary = scenario.detachedBinary else {
+      issues.append(.nonPositive(field: "detachedBinary"))
+      return false
+    }
+    for (name, value) in [
+      ("detachedBinary.primary.radiusMetres", binary.primary.star.radiusMetres),
+      ("detachedBinary.secondary.radiusMetres", binary.secondary.star.radiusMetres),
+      ("detachedBinary.primary.massKilograms", binary.primary.star.massKilograms),
+      ("detachedBinary.secondary.massKilograms", binary.secondary.star.massKilograms),
+      ("detachedBinary.primary.luminosityScale", binary.primary.luminosityScale),
+      ("detachedBinary.secondary.luminosityScale", binary.secondary.luminosityScale),
+    ] {
+      if !value.isFinite {
+        issues.append(.nonFinite(field: name))
+      } else if value <= 0 && !name.hasSuffix("luminosityScale") {
+        issues.append(.nonPositive(field: name))
+      } else if name.hasSuffix("luminosityScale") && value < 0 {
+        issues.append(.outOfRange(field: name, value: value))
+      }
+    }
+    return true
+  }
+
+  /// Reports non-finite limb-darkening values after binary component validation.
+  private static func validateLimbDarkening(
+    _ scenario: EducationScenarioV4, into issues: inout [ValidationIssue]
+  ) {
+    for (name, value) in [
+      ("star.limbDarkeningU1", scenario.star.limbDarkeningU1),
+      ("star.limbDarkeningU2", scenario.star.limbDarkeningU2),
+    ] where !value.isFinite {
+      issues.append(.nonFinite(field: name))
+    }
+  }
+
+  /// Reports invalid active or preserved phase parameters without changing their serialized values.
+  private static func validatePhaseCurve(
+    _ curve: PhaseCurve?, field: String, into issues: inout [ValidationIssue]
+  ) {
+    guard let curve else { return }
+    for (name, value) in [
+      ("reflectedAmplitude", curve.reflectedAmplitude),
+      ("thermalAmplitude", curve.thermalAmplitude),
+      ("constantFlux", curve.constantFlux),
+    ] {
+      guard value.isFinite else {
+        issues.append(.nonFinite(field: "\(field).\(name)"))
+        continue
+      }
+      if value < 0 { issues.append(.outOfRange(field: "\(field).\(name)", value: value)) }
+    }
+    for (name, value) in [
+      ("reflectedOffsetRadians", curve.reflectedOffsetRadians),
+      ("thermalOffsetRadians", curve.thermalOffsetRadians),
+    ] where !value.isFinite {
+      issues.append(.nonFinite(field: "\(field).\(name)"))
+    }
+  }
+}
+
+/// Evaluates the deterministic V4 reference path through temporal supersampling.
+///
+/// The reference path retains the center sample's geometry and timing diagnostics while averaging
+/// flux-facing values across the fixed 0.2-second observation window used by the Browser runtime.
+public struct ReferenceSimulationEngine: Sendable {
+  public let scenario: EducationScenarioV4
+  public let configuration: EducationRuntimeConfiguration
+  private var interactive: SimulationEngine
+
+  /// Creates a validated reference engine with a bounded deterministic sampling configuration.
+  public init(
+    scenario: EducationScenarioV4,
+    configuration: EducationRuntimeConfiguration = .init(mode: .reference)
+  ) throws {
+    self.scenario = scenario
+    self.configuration = configuration
+    interactive = try SimulationEngine(scenario: scenario)
+  }
+
+  /// Evaluates the center snapshot and averages flux values over the V4 reference window.
+  public mutating func step(at timeSeconds: Double) throws -> EducationStep {
+    guard timeSeconds.isFinite else { throw ValidationError([.nonFinite(field: "timeSeconds")]) }
+    guard configuration.mode == .reference else { return try interactive.step(at: timeSeconds) }
+
+    let count = configuration.referenceSubsteps
+    let samples = try (0..<count).map { index in
+      let fraction = count <= 1 ? 0 : Double(index) / Double(count - 1)
+      return try interactive.step(at: timeSeconds + (fraction - 0.5) * 0.2)
+    }
+    let center = samples[count / 2]
+    let divisor = Double(samples.count)
+    let components = FluxComponents(
+      total: samples.reduce(0) { $0 + $1.fluxComponents.total } / divisor,
+      transitFactor: samples.reduce(0) { $0 + $1.fluxComponents.transitFactor } / divisor,
+      stellarPreTransit: samples.reduce(0) { $0 + $1.fluxComponents.stellarPreTransit } / divisor,
+      planetPhase: samples.reduce(0) { $0 + $1.fluxComponents.planetPhase } / divisor,
+      moonPhase: samples.reduce(0) { $0 + $1.fluxComponents.moonPhase } / divisor)
+    var reference = center
+    reference.flux = components.total
+    reference.fluxComponents = components
+    reference.renderSignals.occultedFraction = 1 - components.transitFactor
+    return reference
+  }
+
+  /// Evaluates independent reference snapshots for each absolute SI time in seconds.
+  public mutating func sample(times: [Double]) throws -> [EducationStep] {
+    try times.map { try step(at: $0) }
   }
 }

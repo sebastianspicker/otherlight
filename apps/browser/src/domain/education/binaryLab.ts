@@ -1,5 +1,5 @@
 /**
- * Owns binary Lab support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Holds the binary-lab hypothesis and reveal state machine.
  */
 export type BinaryLabHypothesis =
   | "primary-eclipse-deepest"

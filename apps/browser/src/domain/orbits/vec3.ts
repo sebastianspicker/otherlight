@@ -17,12 +17,7 @@
 export type Vec3 = { x: number; y: number; z: number };
 
 /** Canonical zero vector constant. Treat as immutable. */
-export const VEC3ZERO: Vec3 = Object.freeze({ x: 0, y: 0, z: 0 }) as Vec3;
-
-/** Construct a Vec3. */
-export function v3(x: number, y: number, z: number): Vec3 {
-  return { x, y, z };
-}
+const VEC3ZERO: Vec3 = Object.freeze({ x: 0, y: 0, z: 0 }) as Vec3;
 
 /** True iff all components are finite (rejects NaN and ±Infinity). */
 export function vIsFinite(v: Vec3): boolean {
@@ -118,12 +113,4 @@ export function vNormalizeOrThrow(
   if (!Number.isFinite(invL)) throw new Error(msg);
 
   return vScale(v, invL);
-}
-
-/** True if ||v|| < eps (using squared length). */
-export function vNearlyZero(v: Vec3, eps = 1e-15): boolean {
-  if (!Number.isFinite(eps) || eps < 0) {
-    throw new Error("vNearlyZero: eps must be a finite number >= 0.");
-  }
-  return vLenSq(v) < eps * eps;
 }

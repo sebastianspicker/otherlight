@@ -58,7 +58,7 @@ struct GuidedLabsView: View {
         ) { lesson in
           VStack(alignment: .leading, spacing: 3) {
             Text(lesson.title)
-            Text(lesson.objective).font(.caption).foregroundStyle(.secondary)
+            Text(lesson.objective).font(.caption).foregroundStyle(PlateFigure.ink2)
           }
           .tag(lesson.id)
         }
@@ -77,7 +77,7 @@ struct GuidedLabsView: View {
         } label: {
           VStack(alignment: .leading, spacing: 3) {
             Text(lesson.title)
-            Text(lesson.objective).font(.caption).foregroundStyle(.secondary)
+            Text(lesson.objective).font(.caption).foregroundStyle(PlateFigure.ink2)
           }
         }
         .accessibilityIdentifier("guided-lab-\(lesson.id)")
@@ -95,7 +95,7 @@ struct GuidedLabsView: View {
       HStack {
         VStack(alignment: .leading) {
           Text(lesson.title)
-          Text(lesson.objective).font(.caption).foregroundStyle(.secondary)
+          Text(lesson.objective).font(.caption).foregroundStyle(PlateFigure.ink2)
         }
         Spacer()
         if lesson.id == session.selectedLessonID {
@@ -125,19 +125,20 @@ private struct GuidedLabDetail: View {
     let lessons = LessonCatalog.lessons
     let report = session.currentLessonReport
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: 20) {
+        RunningHead(kind: .education)
         if let lesson = lessons.first(where: { $0.id == session.selectedLessonID }) {
-          Text(lesson.title).font(.title2.weight(.semibold))
-          Text(lesson.objective).foregroundStyle(.secondary)
+          ScreenTitle(kicker: "Guided Lab", title: lesson.title, subtitle: lesson.objective)
         }
 
         if let phase = session.currentGuidedPhase {
-          HStack {
+          VStack(alignment: .leading, spacing: 6) {
+            Rectangle().fill(PlateFigure.rule).frame(height: 1)
             Text("Phase \(session.guidedPhaseIndex + 1) of \(session.guidedPhases.count)")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.secondary)
-            Spacer()
-            Text(phase.title).font(.headline)
+              .font(.system(.caption, design: .monospaced))
+              .foregroundStyle(PlateFigure.pencil)
+            Text(phase.title).font(.plateTitle).foregroundStyle(PlateFigure.ink)
+              .accessibilityAddTraits(.isHeader)
           }
           ForEach(phase.prompts, id: \.id) { prompt in
             promptEditor(prompt)
@@ -151,7 +152,9 @@ private struct GuidedLabDetail: View {
         completionProgress(totalLessons: lessons.count)
       }
       .padding(24)
+      .frame(maxWidth: 760, alignment: .leading)
     }
+    .paperGround()
     .onAppear {
       if let selectedLessonID { session.selectLesson(id: selectedLessonID) }
     }
@@ -162,7 +165,7 @@ private struct GuidedLabDetail: View {
   @ViewBuilder
   private func promptEditor(_ prompt: GuidedLabPrompt) -> some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(prompt.prompt)
+      Text(prompt.prompt).font(.plateProse).foregroundStyle(PlateFigure.ink)
       TextEditor(
         text: Binding(
           get: { session.guidedResponse(for: prompt.responseKey) },
@@ -171,16 +174,14 @@ private struct GuidedLabDetail: View {
       .frame(minHeight: 90)
       .accessibilityLabel(prompt.prompt)
       .accessibilityIdentifier("guided-response-\(prompt.id)")
-      .overlay {
-        RoundedRectangle(cornerRadius: 6)
-          .stroke(Color.secondary.opacity(0.35), lineWidth: 1)
-      }
+      .ruledField()
     }
   }
 
   /// Builds the hint depth picker and its current contextual guidance.
   private var hintControls: some View {
-    GroupBox("Hint") {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Hint").font(.plateHeading).foregroundStyle(PlateFigure.ink)
       VStack(alignment: .leading, spacing: 8) {
         Picker(
           "Level",
@@ -193,17 +194,18 @@ private struct GuidedLabDetail: View {
           }
         }
         .pickerStyle(.segmented)
-        Text(session.guidedHintText).foregroundStyle(.secondary)
+        Text(session.guidedHintText).foregroundStyle(PlateFigure.ink)
       }
+      .marginNote(.caution)
     }
   }
 
   /// Builds the free-form comparison evidence field used by the lesson rubric.
   private var comparisonControls: some View {
-    GroupBox("A/B comparison") {
+    EvidenceSection(title: "A/B comparison") {
       VStack(alignment: .leading, spacing: 6) {
         Text("Record one evidence-based difference between the baseline and current state.")
-          .foregroundStyle(.secondary)
+          .foregroundStyle(PlateFigure.ink2)
         TextEditor(
           text: Binding(
             get: { session.guidedComparisonObservation },
@@ -212,10 +214,7 @@ private struct GuidedLabDetail: View {
         .frame(minHeight: 70)
         .accessibilityLabel("A/B comparison observation")
         .accessibilityIdentifier("guided-comparison")
-        .overlay {
-          RoundedRectangle(cornerRadius: 6)
-            .stroke(Color.secondary.opacity(0.35), lineWidth: 1)
-        }
+        .ruledField()
       }
     }
   }
@@ -225,7 +224,7 @@ private struct GuidedLabDetail: View {
   private func lessonProgress(report: LessonReport?) -> some View {
     if let report, let check = report.checks.first {
       Label(check.message, systemImage: check.passed ? "checkmark.circle.fill" : "circle")
-        .foregroundStyle(check.passed ? .green : .secondary)
+        .foregroundStyle(check.passed ? PlateFigure.pass : PlateFigure.ink2)
     } else {
       ProgressView("Waiting for a simulation frame")
     }
@@ -237,7 +236,7 @@ private struct GuidedLabDetail: View {
         "Response rubric: \(rubric.earnedWeight, format: .number)/\(rubric.totalWeight, format: .number)"
       )
       .font(.footnote)
-      .foregroundStyle(.secondary)
+      .foregroundStyle(PlateFigure.ink2)
     }
   }
 
@@ -247,6 +246,7 @@ private struct GuidedLabDetail: View {
       Button("Previous phase") { session.moveGuidedPhase(by: -1) }
         .disabled(session.guidedPhaseIndex == 0)
       Button("Next phase") { session.moveGuidedPhase(by: 1) }
+        .buttonStyle(InkButtonStyle())
         .disabled(
           !session.guidedPhaseReady || session.guidedPhaseIndex >= session.guidedPhases.count - 1)
       Spacer()
@@ -260,7 +260,7 @@ private struct GuidedLabDetail: View {
     VStack(alignment: .leading, spacing: 4) {
       ProgressView(value: Double(session.completedLessonIDs.count), total: Double(totalLessons))
       Text("\(session.completedLessonIDs.count) of \(totalLessons) labs completed")
-        .font(.footnote).foregroundStyle(.secondary)
+        .font(.footnote).foregroundStyle(PlateFigure.ink2)
     }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Owns adapter support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Converts an accepted Education V4 scenario back into Browser authoring state.
  */
 import { deepClone } from "../../model/clone";
 import type { OrbitElements, PhotometryParams, BrowserScenarioDraft } from "../../model/types";

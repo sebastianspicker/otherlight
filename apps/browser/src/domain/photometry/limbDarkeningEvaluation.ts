@@ -1,5 +1,5 @@
 /**
- * Owns limb Darkening Evaluation support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Validates limb-darkening laws and keeps intensity non-negative.
  */
 import type { LimbDarkeningConstraints, LimbDarkeningLaw } from "../model/types";
 import { clamp01, toFiniteNumber } from "../model/units";

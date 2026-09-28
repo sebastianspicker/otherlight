@@ -1,0 +1,270 @@
+/*
+ * Plate & Figure — Scientific workspace.
+ * Set like a methods-and-provenance section: the same paper and ink, denser,
+ * with the backend state and the replay boundary stated in words.
+ */
+
+.scientific-workspace {
+  display: grid;
+  gap: var(--s-6);
+  width: min(100% - 2 * var(--gutter), var(--page-max) - 2 * var(--gutter));
+  margin: 0 auto var(--s-7);
+  padding-top: var(--s-7);
+}
+
+.scientific-workspace__header {
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(260px, 4fr);
+  align-items: end;
+  gap: var(--s-5) var(--col-gap);
+}
+
+.scientific-workspace__header h2 {
+  margin: var(--s-1) 0 var(--s-3);
+  font-size: var(--t-display);
+  letter-spacing: -0.015em;
+  line-height: var(--lh-tight);
+}
+
+.scientific-workspace__intro p:not(.eyebrow) {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--t-md);
+}
+
+.scientific-workspace__status {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--ink);
+}
+
+.scientific-workspace__status .readout-label {
+  font-size: var(--t-xs);
+}
+
+#scienceCapabilityStatus {
+  font-family: var(--font-serif);
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.scientific-workspace__endpoint {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scientific-workspace__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--s-6) var(--col-gap);
+}
+
+.scientific-panel {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--ink);
+}
+
+.scientific-panel__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-4);
+}
+
+.scientific-panel__heading h3 {
+  font-size: var(--t-xl);
+  line-height: 1.15;
+}
+
+.scientific-panel__heading .eyebrow {
+  font-size: var(--t-base);
+}
+
+.science-run-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.science-run-fields > .inline {
+  display: grid;
+  gap: var(--s-1);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.science-field {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.science-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.science-unit {
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.science-run-actions {
+  margin: 0;
+}
+
+.science-run-status {
+  padding: var(--s-2) var(--s-3);
+  border-left: 3px solid var(--rule-strong);
+  background: var(--paper-sunk);
+  color: var(--ink);
+}
+
+.science-scope-list {
+  display: grid;
+  margin: 0;
+  border-top: var(--hair);
+}
+
+.science-scope-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) 1fr;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-bottom: var(--hair);
+}
+
+.science-scope-list dt {
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.science-scope-list dd {
+  margin: 0;
+}
+
+.scientific-panel__footnote {
+  max-width: 72ch;
+}
+
+.science-dataset-import,
+.science-dataset-listing,
+.science-dataset-metadata {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.science-dataset-import > label,
+.science-dataset-listing h4,
+.science-dataset-metadata h4 {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.science-dataset-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: var(--hair);
+  list-style: none;
+}
+
+.science-dataset-item,
+.science-dataset-empty {
+  padding: var(--s-3) 0;
+  border-bottom: var(--hair);
+}
+
+.science-dataset-item {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.science-dataset-item__details {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.science-dataset-item__details span,
+.science-dataset-empty {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  overflow-wrap: anywhere;
+}
+
+.science-dataset-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.science-result {
+  min-height: 160px;
+  max-height: 420px;
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  overflow: auto;
+  border: var(--hair);
+  background: var(--paper-sunk);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.science-dataset-metadata .science-result {
+  min-height: 110px;
+}
+
+.science-artifact-row {
+  margin: 0;
+}
+
+.science-artifact-row:has(a[hidden]) {
+  display: none;
+}
+
+.science-artifact-link {
+  font-weight: 600;
+}
+
+/* A replay is never a run: set apart with the caution rule and a plain statement. */
+.science-contract-replay {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-left: 3px solid var(--caution);
+  background: var(--caution-wash);
+}
+
+.science-contract-replay h4 {
+  font-size: var(--t-lg);
+}
+
+.science-contract-replay .science-result {
+  background: var(--paper-raised);
+}

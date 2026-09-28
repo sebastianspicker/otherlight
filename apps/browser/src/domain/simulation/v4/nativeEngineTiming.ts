@@ -1,5 +1,5 @@
 /**
- * Owns native Engine Timing support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Computes native V4 timing and observables for a step.
  */
 import type {
   OrbitElements,
@@ -12,7 +12,7 @@ import { projectToSky } from "../../orbits/frames";
 import type { Vec3 } from "../../orbits/vec3";
 import { vIsFinite, vLenSq, vNormalizeOrZero, vSub } from "../../orbits/vec3";
 import { orbitTimingKey } from "../orbitTimingKey";
-import { computeTransitReferenceEpochSec, estimateTransitEventWithDiagnostics } from "../transitTiming";
+import { computeTransitReferenceEpochSec, estimateTransitEventWithDiagnostics } from "../transitTimingSolve";
 import type { MoonBodyV4, PlanetBodyV4, EducationScenarioV4 } from "./types";
 import {
   buildNativeSnapshot,
@@ -22,14 +22,14 @@ import {
   type NativeSnapshot,
 } from "./nativeModel";
 
-export function sourceOrbit(body: NativeBodyState): OrbitElements | undefined {
+function sourceOrbit(body: NativeBodyState): OrbitElements | undefined {
   const src = body.source;
   return "orbit" in src ? (src as PlanetBodyV4 | MoonBodyV4).orbit : undefined;
 }
 
 const transitReferenceEpochCache = new WeakMap<EducationScenarioV4, Map<string, number | undefined>>();
 
-// V4 timing mirrors sim/transitTiming.ts, but works from NativeSnapshot bodies
+// V4 timing mirrors sim/transitTimingSolve.ts, but works from NativeSnapshot bodies
 // instead of BrowserScenarioDraft kinematics. The cache key includes full orbit fragments
 // because binary-lab and scientific-browser modes can share period/t0 while
 // changing orientation, hierarchy, or execution semantics.

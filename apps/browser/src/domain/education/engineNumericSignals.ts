@@ -1,5 +1,5 @@
 /**
- * Owns engine Numeric Signals support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Collects the numeric signals a lesson phase exposes.
  */
 import type { StepResult, BrowserScenarioDraft } from "../model/types";
 import { toFiniteNumber } from "../model/units";

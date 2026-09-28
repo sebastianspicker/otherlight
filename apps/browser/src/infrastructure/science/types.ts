@@ -23,13 +23,13 @@ export const MAX_FORWARD_WALL_TIME_SECONDS = 60;
 export const RUN_MANIFEST_V2_SCHEMA_VERSION = "science-run-manifest-v2" as const;
 
 export type ScientificBodyKind = "star" | "planet" | "moon" | "companion";
-export type TimeScale = "TDB";
+type TimeScale = "TDB";
 export type JobKind = "forward" | "inference";
 export type JobState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export type Vector3 = readonly [number, number, number];
 
-export type CartesianStateSI = {
+type CartesianStateSI = {
   /** Barycentric position [m]. */
   positionM: Vector3;
   /** Barycentric velocity [m s^-1]. */
@@ -44,7 +44,7 @@ export type ScientificBodyV5 = {
   state: CartesianStateSI;
 };
 
-export type ObserverGeometryV5 = {
+type ObserverGeometryV5 = {
   /** Unit vector from barycentre toward the observer. */
   lineOfSight: Vector3;
   /** Body whose barycentric line-of-sight velocity defines the RV output. */
@@ -53,7 +53,7 @@ export type ObserverGeometryV5 = {
   distanceM?: number;
 };
 
-export type IntegratorSettingsV5 = {
+type IntegratorSettingsV5 = {
   method: "DOP853";
   /** Absolute tolerance for Cartesian position components [m]. */
   positionToleranceM: number;
@@ -76,7 +76,7 @@ export type ScientificScenarioV5 = {
 };
 
 /** The alpha HTTP backend intentionally advertises and accepts only this implemented output. */
-export type ForwardOutput = "radial-velocity";
+type ForwardOutput = "radial-velocity";
 
 export type ForwardRunRequest = {
   kind: "forward";
@@ -88,9 +88,9 @@ export type ForwardRunRequest = {
   seed: number;
 };
 
-export type ObservationKind = "photometry" | "radial-velocity" | "astrometry" | "timing";
+type ObservationKind = "photometry" | "radial-velocity" | "astrometry" | "timing";
 
-export type ObservationTableRef = {
+type ObservationTableRef = {
   id: string;
   kind: ObservationKind;
   /** Local backend dataset identifier; the browser never uploads arbitrary files. */
@@ -109,12 +109,12 @@ export type PriorV5 =
       upper: number;
     };
 
-export type InferenceParameterV5 = {
+type InferenceParameterV5 = {
   id: string;
   prior: PriorV5;
 };
 
-export type InferenceRequest = {
+type InferenceRequest = {
   kind: "inference";
   scenario: ScientificScenarioV5;
   observations: readonly ObservationTableRef[];
@@ -165,7 +165,7 @@ type RunManifestCommon = {
 };
 
 /** Compatibility shape emitted before engine-neutral provenance was introduced. */
-export type RunManifestV1 = RunManifestCommon & {
+type RunManifestV1 = RunManifestCommon & {
   schemaVersion: typeof SCIENCE_SCHEMA_VERSION;
   softwareVersions: Readonly<{
     backend: string;
@@ -176,7 +176,7 @@ export type RunManifestV1 = RunManifestCommon & {
   }>;
 };
 
-export type RunManifestV2 = RunManifestCommon & {
+type RunManifestV2 = RunManifestCommon & {
   schemaVersion: typeof RUN_MANIFEST_V2_SCHEMA_VERSION;
   implementation: Readonly<{
     application: Readonly<{ name: string; version: string; build: string }>;
@@ -210,14 +210,14 @@ export type ScienceJobStatus = {
   error?: { code: string; message: string };
 };
 
-export type ForwardRunResult = {
+type ForwardRunResult = {
   kind: "forward";
   runManifest: RunManifest;
   /** Immutable local Arrow IPC artifact. */
   arrowArtifactId: string;
 };
 
-export type PosteriorResult = {
+type PosteriorResult = {
   kind: "inference";
   runManifest: RunManifest;
   /** Immutable local Arrow IPC artifact containing weighted posterior samples. */

@@ -1,16 +1,9 @@
 /** Defines the supported V4 simulation import surface for application consumers. */
 export type {
-  BinaryLabConfigV4,
-  BinaryLabMode,
-  ComputeDidacticSignalsFn,
   EducationScenarioV4,
   RuntimeExecutionModeV4,
-  RuntimeConfigV4,
   RuntimeModeV4,
-  BodiesV4,
-  HierarchyLinkV4,
   MoonBodyV4,
-  OrbitsV4,
   PlanetBodyV4,
   StarBodyV4,
 } from "./types";
@@ -22,10 +15,4 @@ export {
   mapBrowserScenarioDraftToEducationScenarioV4,
   normalizeEducationScenarioV4Input,
 } from "./migrate";
-export { createReferenceSimulationV4 } from "./referenceRuntime";
-export { sanitizeStaticOrbit, defaultBinaryOrbit } from "./orbitSanitizer";
-export {
-  ScientificBrowserRuntimeError,
-  createScientificBrowserRuntimeError,
-  isScientificBrowserRuntimeError,
-} from "./scientificErrors";
+export { ScientificBrowserRuntimeError } from "./scientificErrors";

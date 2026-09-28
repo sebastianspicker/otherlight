@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="A static, simulated tour of Otherlight's exoplanet Education, Guided Labs, and Scientific interfaces."
+      content="A static screenshot tour of Otherlight: browser-based exoplanet Education, Guided Labs, and the loopback Scientific workspace."
     />
-    <title>Otherlight — static demo</title>
+    <title>Otherlight — screenshot tour</title>
     <link rel="icon" href="./assets/otherlight-signal-eclipse.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#demo">Skip to demo</a>
+    <a class="skip-link" href="#tour">Skip to tour</a>
 
     <header class="site-header">
       <a class="brand" href="https://github.com/sebastianspicker/otherlight">
@@ -24,37 +24,41 @@
         </span>
       </a>
       <nav aria-label="Project links">
+        <a href="https://sebastianspicker.github.io/otherlight/">Live app</a>
         <a href="https://github.com/sebastianspicker/otherlight">Repository</a>
         <a href="https://github.com/sebastianspicker/otherlight/blob/main/docs/README.md">Documentation</a>
       </nav>
     </header>
 
-    <main id="demo">
+    <main id="tour">
       <section class="intro" aria-labelledby="intro-title">
         <div>
-          <h1 id="intro-title">Explore a signal from system to evidence.</h1>
+          <h1 id="intro-title">Follow one signal from system to evidence.</h1>
           <p>
-            This small click-through presents three maintained Otherlight interface states. It uses
-            repository-owned captures and sanitized deterministic fixture data; it does not run the simulator,
-            open files, export data, or contact the loopback Scientific service.
+            This page is a three-stop screenshot tour of Otherlight. The images are real captures from the
+            repository application; the controls inside them are painted pixels, so nothing here runs, opens
+            files, exports data, or contacts the science service.
           </p>
         </div>
-        <aside class="simulation-boundary" aria-label="Static demo boundary">
-          <strong>Static demo</strong>
-          <span>Every action is simulated. No computation, file access, export, or network job occurs.</span>
+        <aside class="simulation-boundary" aria-label="Screenshot tour scope">
+          <strong>Screenshots, not a simulator</strong>
+          <span
+            >Everything on this page is a still image. Open the live app to interact with the real
+            thing.</span
+          >
         </aside>
       </section>
 
       <section class="demo-shell" aria-labelledby="demo-title">
         <div class="demo-heading">
           <div>
-            <h2 id="demo-title">Interface tour</h2>
-            <p>Choose a simulated view. Each frame is a non-interactive capture.</p>
+            <h2 id="demo-title">Screenshot tour</h2>
+            <p>Pick a workspace. Each frame is a static capture of the current interface.</p>
           </div>
-          <span class="fixture-label">Sanitized fixtures only</span>
+          <span class="fixture-label">Static captures</span>
         </div>
 
-        <div class="view-tabs" role="tablist" aria-label="Simulated Otherlight views">
+        <div class="view-tabs" role="tablist" aria-label="Otherlight workspaces">
           <button
             id="tab-education"
             type="button"
@@ -63,7 +67,7 @@
             aria-controls="panel-education"
             data-view="education"
           >
-            <span>01</span> Simulated: Education
+            <span>01</span> Education
           </button>
           <button
             id="tab-lab"
@@ -74,7 +78,7 @@
             data-view="lab"
             tabindex="-1"
           >
-            <span>02</span> Simulated: Guided Lab
+            <span>02</span> Guided Lab
           </button>
           <button
             id="tab-scientific"
@@ -85,7 +89,7 @@
             data-view="scientific"
             tabindex="-1"
           >
-            <span>03</span> Simulated: Scientific result
+            <span>03</span> Scientific
           </button>
         </div>
 
@@ -100,37 +104,39 @@
             <p class="step">Education · Simulation</p>
             <h3>Connect geometry to a light curve.</h3>
             <p>
-              The browser Education workspace pairs an observer view with photometry and bounded model
-              controls. The displayed Kepler planet-only scenario is a teaching preview, not a calibrated
-              research result.
+              Change the planet's radius and watch the transit depth move. The sky view, the light curve, and
+              the depth formula stay in step, so the arithmetic behind the dip is always visible next to the
+              picture.
             </p>
             <dl>
               <div>
-                <dt>State</dt>
-                <dd>Maintained browser capture</dd>
+                <dt>Runs in</dt>
+                <dd>Your browser</dd>
               </div>
               <div>
-                <dt>Data</dt>
-                <dd>Repository scenario fixture</dd>
+                <dt>Model</dt>
+                <dd>Education V4 preview</dd>
               </div>
               <div>
-                <dt>Execution</dt>
-                <dd>None in this demo</dd>
+                <dt>This page</dt>
+                <dd>Still image only</dd>
               </div>
             </dl>
           </div>
           <figure>
             <div class="capture-frame">
-              <span>Static capture · every pictured action is simulated</span>
+              <span>Static capture</span>
               <img
                 src="./assets/01-education-simulation.png"
-                alt="Otherlight Education workspace showing sky-plane geometry, a light curve, and system parameters."
+                alt="Otherlight Education workspace with a sky-plane observer view, a relative-starlight plot, and planet radius controls comparing two models."
                 width="1440"
                 height="1000"
               />
             </div>
             <figcaption>
-              Non-interactive capture from the maintained browser tour. Pictured controls do not run.
+              Education pairs the live sky and light curve with an A/B radius comparison. The pictured
+              controls are non-interactive. An Education preview is a teaching model, not a calibrated
+              research result.
             </figcaption>
           </figure>
         </article>
@@ -147,37 +153,37 @@
             <p class="step">Education · Guided Labs</p>
             <h3>Move from prediction to evidence.</h3>
             <p>
-              Guided Labs structure one learning phase at a time around a question, response, evidence, and
-              next action. The captured state uses the same Education runtime surface as the repository
-              application.
+              Guided Labs walk through one learning phase at a time: predict, observe, check, and compare.
+              Each lesson keeps its prompt, its evidence, and your written responses together.
             </p>
             <dl>
               <div>
-                <dt>State</dt>
-                <dd>Maintained browser capture</dd>
+                <dt>Runs in</dt>
+                <dd>Your browser</dd>
               </div>
               <div>
-                <dt>Data</dt>
-                <dd>Repository lesson fixture</dd>
+                <dt>Model</dt>
+                <dd>Education V4 preview</dd>
               </div>
               <div>
-                <dt>Execution</dt>
-                <dd>None in this demo</dd>
+                <dt>This page</dt>
+                <dd>Still image only</dd>
               </div>
             </dl>
           </div>
           <figure>
             <div class="capture-frame">
-              <span>Static capture · every pictured action is simulated</span>
+              <span>Static capture</span>
               <img
                 src="./assets/02-guided-lab.png"
-                alt="Otherlight Guided Lab workspace showing a learning prompt and its supporting simulation evidence."
+                alt="Otherlight Guided Lab workspace: the sky plate beside the active prediction phase, a written response, phase navigation, and a lesson report download action."
                 width="1440"
                 height="1000"
               />
             </div>
             <figcaption>
-              Non-interactive capture from the maintained browser tour. Pictured controls do not run.
+              A Guided Lab prediction phase with a written response and progress controls. Responses are
+              stored with the lesson so a class or study session can pick up where it stopped.
             </figcaption>
           </figure>
         </article>
@@ -194,37 +200,38 @@
             <p class="step">Scientific · Contract replay</p>
             <h3>Keep the execution boundary explicit.</h3>
             <p>
-              The real Scientific workspace requires a validated loopback-only Python service. This capture
-              replays the checked-in V5 result contract to document the completed interface; it is not a live
-              calculation or backend claim.
+              The Scientific workspace is a separate profile. On the hosted build it validates a checked-in
+              result fixture and shows the run manifest, clearly labelled as a replay; a real run needs the
+              loopback Python service on your own machine.
             </p>
             <dl>
               <div>
-                <dt>State</dt>
-                <dd>Deterministic contract replay</dd>
+                <dt>Runs in</dt>
+                <dd>Loopback service</dd>
               </div>
               <div>
-                <dt>Fixture</dt>
-                <dd>validForwardResult</dd>
+                <dt>Model</dt>
+                <dd>V5 radial velocity</dd>
               </div>
               <div>
-                <dt>Execution</dt>
-                <dd>No backend available here</dd>
+                <dt>This page</dt>
+                <dd>Fixture replay</dd>
               </div>
             </dl>
           </div>
           <figure>
             <div class="capture-frame">
-              <span>Static capture · every pictured action is simulated</span>
+              <span>Static capture</span>
               <img
-                src="./assets/07-scientific-result.png"
-                alt="Otherlight Scientific workspace showing a completed radial-velocity contract replay and run provenance."
+                src="./assets/03-scientific-replay.png"
+                alt="Otherlight Scientific workspace showing a capability-gated radial-velocity run form, the validated scope, and a run-provenance manifest labelled as a fixture replay."
                 width="1440"
-                height="1000"
+                height="1355"
               />
             </div>
             <figcaption>
-              Deterministic contract fixture. No Scientific job is submitted and no artifact is opened.
+              The hosted Scientific view validates the shared V5 fixture and reports run provenance. It is a
+              replay, not a completed local or scientific run.
             </figcaption>
           </figure>
         </article>
@@ -234,23 +241,23 @@
         <div>
           <h2 id="scope-title">What this page is</h2>
           <p>
-            A compact presentation of maintained repository evidence, styled with Otherlight’s Quiet
-            Observatory colors, typography, borders, and information hierarchy.
+            A maintained gallery of real captures from the Otherlight interface, styled with the project's own
+            colors and typography.
           </p>
         </div>
         <div>
           <h2>What it is not</h2>
           <p>
-            A hosted simulator, a substitute for the local application, a remote Scientific service, or
-            evidence of research-grade numerical output.
+            A simulator, a substitute for the local application, a remote science service, or evidence of
+            research-grade numerical output.
           </p>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>Otherlight is an alpha local workspace. This demo is static by design.</p>
-      <a href="https://github.com/sebastianspicker/otherlight">View source and local setup</a>
+      <p>Otherlight is pre-release software. This tour is static by design.</p>
+      <a href="https://sebastianspicker.github.io/otherlight/">Open the live app</a>
     </footer>
   </body>
 </html>

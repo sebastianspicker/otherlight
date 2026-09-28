@@ -1,5 +1,5 @@
 /**
- * Owns stellar Band Flux support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Computes relative stellar band flux and detached-binary luminosities.
  */
 import type { PassbandId } from "../model/types";
 
@@ -111,7 +111,7 @@ function integratePassbandRadiance(
   return { weightedIntegral, throughputIntegral };
 }
 
-export function relativeStellarBandFlux(input: StellarBandFluxInput): number | undefined {
+function relativeStellarBandFlux(input: StellarBandFluxInput): number | undefined {
   const radius = finitePositive(input.r);
   const teffK = finitePositive(input.teffK);
   if (!radius || !teffK) return undefined;

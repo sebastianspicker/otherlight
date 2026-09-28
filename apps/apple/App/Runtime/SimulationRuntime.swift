@@ -21,6 +21,55 @@ actor SimulationRuntime {
   private var cachedSeries: SeriesSnapshot?
   private var runtimeMetrics = SimulationRuntimeMetrics()
 
+  /// Keeps one mode-specific engine alive for a calculation without constructing the other mode.
+  private enum SelectedEngine {
+    case interactive(SimulationEngine)
+    case reference(ReferenceSimulationEngine)
+
+    /// Creates only the engine selected by the request while retaining its configuration.
+    init(
+      scenario: EducationScenarioV4, mode: NativeRuntimeMode, referenceSubsteps: Int
+    ) throws {
+      switch mode {
+      case .interactive:
+        self = .interactive(try SimulationEngine(scenario: scenario))
+      case .reference:
+        self = .reference(
+          try ReferenceSimulationEngine(
+            scenario: scenario,
+            configuration: .init(mode: .reference, referenceSubsteps: referenceSubsteps)))
+      }
+    }
+
+    /// Evaluates one snapshot with the request's selected Education semantics.
+    mutating func step(at timeSeconds: Double) throws -> EducationStep {
+      switch self {
+      case .interactive(var engine):
+        let result = try engine.step(at: timeSeconds)
+        self = .interactive(engine)
+        return result
+      case .reference(var engine):
+        let result = try engine.step(at: timeSeconds)
+        self = .reference(engine)
+        return result
+      }
+    }
+
+    /// Evaluates independent snapshots without crossing interactive and reference semantics.
+    mutating func sample(times: [Double]) throws -> [EducationStep] {
+      switch self {
+      case .interactive(var engine):
+        let result = try engine.sample(times: times)
+        self = .interactive(engine)
+        return result
+      case .reference(var engine):
+        let result = try engine.sample(times: times)
+        self = .reference(engine)
+        return result
+      }
+    }
+  }
+
   /// Enqueues only a newer request so rendering work coalesces behind the latest generation.
   func submit(
     _ request: CalculationRequest,
@@ -87,7 +136,9 @@ actor SimulationRuntime {
     do {
       guard key.samples >= 16 else { throw SimulationError.insufficientSamples }
       let scenario = key.scenario
-      var engine = try SimulationEngine(scenario: scenario)
+      var engine = try SelectedEngine(
+        scenario: scenario, mode: request.runtimeMode,
+        referenceSubsteps: request.referenceSubsteps)
       let series: SeriesSnapshot
       if let reusableSeries, reusableSeries.key == key {
         series = reusableSeries

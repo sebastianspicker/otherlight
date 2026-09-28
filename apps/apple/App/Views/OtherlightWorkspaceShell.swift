@@ -40,7 +40,7 @@ struct OtherlightWorkspaceShell: View {
         Group {
           switch selection ?? .simulation {
           case .simulation:
-            SimulationDashboard(session: session)
+            simulationDetail
           case .guidedLabs:
             GuidedLabsView(session: session)
           }
@@ -61,6 +61,16 @@ struct OtherlightWorkspaceShell: View {
       .frame(minWidth: 960, minHeight: 640)
     }
   #endif
+
+  /// Chooses the selected scenario's truthful Education surface without creating another session owner.
+  @ViewBuilder
+  private var simulationDetail: some View {
+    if session.isDetachedBinaryLab {
+      DetachedBinaryLabView(session: session)
+    } else {
+      SimulationDashboard(session: session)
+    }
+  }
 
   #if os(iOS)
     /// Presents sidebar-and-detail navigation on regular-width iPad layouts.
@@ -143,10 +153,11 @@ struct OtherlightWorkspaceShell: View {
     private func workspaceDetail(for section: WorkspaceSection) -> some View {
       switch section {
       case .simulation:
-        SimulationDashboard(session: session)
+        simulationDetail
       case .guidedLabs:
         GuidedLabsView(session: session, navigationStyle: .regular)
       }
+
     }
   #endif
 }

@@ -1,0 +1,332 @@
+/*
+ * Plate & Figure — native controls in one shape vocabulary.
+ * Default buttons are ruled paper, primary actions are solid ink, quiet actions
+ * are underlined text. Every control keeps its native behaviour.
+ */
+
+button,
+input,
+select,
+textarea,
+summary {
+  transition:
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--control-h);
+  padding: 0 var(--s-4);
+  border: var(--hair-strong);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--ink);
+}
+
+button:active {
+  background: var(--paper-sunk);
+}
+
+button:disabled {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* Solid ink: the one action a surface exists for. */
+.primary-action:not(:disabled),
+#btnApplyParams:not(:disabled),
+#didNextBtn:not(:disabled),
+#scienceRunBtn:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.primary-action:hover:not(:disabled),
+#btnApplyParams:hover:not(:disabled),
+#didNextBtn:hover:not(:disabled),
+#scienceRunBtn:hover:not(:disabled) {
+  border-color: var(--ink-hover);
+  background: var(--ink-hover);
+  color: var(--on-ink);
+}
+
+.primary-action:active:not(:disabled),
+#btnApplyParams:active:not(:disabled),
+#didNextBtn:active:not(:disabled) {
+  background: var(--ink);
+}
+
+/* Quiet text actions: underlined, no box. */
+.text-action,
+.figure-heading button,
+#btnReset,
+#btnClearLC,
+#observatoryClearComparisonBtn {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.text-action:hover,
+.figure-heading button:hover,
+#btnReset:hover,
+#btnClearLC:hover,
+#observatoryClearComparisonBtn:hover {
+  background: transparent;
+  text-decoration-color: currentcolor;
+}
+
+.text-action--forward::after {
+  content: "→";
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+/* Fields */
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+  min-height: var(--control-h);
+  padding: 0 var(--s-3);
+  border: var(--hair-strong);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--t-base);
+}
+
+input[type="number"],
+input[type="text"] {
+  font-variant-numeric: tabular-nums;
+}
+
+input[readonly] {
+  border-style: dashed;
+  background: transparent;
+}
+
+textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: var(--s-2) var(--s-3);
+  line-height: var(--lh-body);
+  resize: vertical;
+}
+
+::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+select {
+  max-width: 100%;
+  padding-right: 32px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%2345484b' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+input[type="number"]:hover,
+input[type="text"]:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--ink-2);
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--ink);
+}
+
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--ink);
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  cursor: pointer;
+}
+
+input[type="file"] {
+  max-width: 100%;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+}
+
+input[type="file"]::file-selector-button {
+  min-height: 36px;
+  margin-right: var(--s-3);
+  padding: 0 var(--s-3);
+  border: var(--hair-strong);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: 600 14px var(--font-sans);
+  cursor: pointer;
+}
+
+/* Validation keeps the draft visible and names the fault. */
+input[aria-invalid="true"],
+input[aria-invalid="true"]:hover {
+  border-color: var(--fault);
+  background: var(--fault-wash);
+  box-shadow: inset 0 0 0 1px var(--fault);
+}
+
+.field-error {
+  display: block;
+  margin-top: var(--s-1);
+  color: var(--fault);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.form-error-summary {
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border-left: 3px solid var(--fault);
+  background: var(--fault-wash);
+  color: var(--ink);
+}
+
+.param-dirty {
+  color: var(--caution);
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+/* Disclosures: a drawn chevron, text in the interface face. */
+details {
+  margin: 0;
+}
+
+details > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  list-style: none;
+  cursor: pointer;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px 2px 1px;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  content: "";
+  transform: rotate(-45deg);
+  transition: transform var(--dur) var(--ease);
+}
+
+details[open] > summary::before {
+  margin-bottom: 4px;
+  transform: rotate(45deg);
+}
+
+details > summary:hover {
+  color: var(--ink);
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: var(--s-3) 0 0;
+  border: 0;
+  border-top: var(--hair);
+}
+
+legend {
+  padding: 0 var(--s-2) 0 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  font-style: italic;
+}
+
+dialog {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: var(--s-5);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+dialog h2 {
+  font-size: var(--t-xl);
+}
+
+dialog::backdrop {
+  background: rgb(12 15 19 / 50%);
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+#dirtyDiscardBtn {
+  border-color: var(--fault);
+  color: var(--fault);
+}
+
+@media (prefers-color-scheme: dark) {
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23bbb6ab' stroke-width='1.5'/%3E%3C/svg%3E");
+  }
+}

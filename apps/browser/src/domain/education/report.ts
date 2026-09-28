@@ -1,5 +1,5 @@
 /**
- * Owns report support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Renders a lesson report as Markdown.
  */
 import type { DidacticResponseStore, DidacticSignals, LearningState } from "../model/types";
 import type { DidacticComparison } from "./compare";

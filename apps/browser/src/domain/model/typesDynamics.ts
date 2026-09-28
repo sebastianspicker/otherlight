@@ -6,13 +6,13 @@
 
 import type { OrbitElements, OrbitElementsProvider } from "./typesOrbit";
 
-export type FidelityProfile = "interactive" | "accurate" | "reference";
+type FidelityProfile = "interactive" | "accurate" | "reference";
 
-export type RelativityLevel = "toy" | "enhanced";
+type RelativityLevel = "toy" | "enhanced";
 
-export type IntegratorMode = "fixed-verlet" | "adaptive-verlet";
+type IntegratorMode = "fixed-verlet" | "adaptive-verlet";
 
-export type IntegratorParams = {
+type IntegratorParams = {
   /**
    * Integrator family.
    * - fixed-verlet: deterministic fixed-step Velocity-Verlet (legacy behavior).
@@ -31,7 +31,7 @@ export type IntegratorParams = {
   shrinkFactor?: number;
 };
 
-export type CollisionPolicyParams = {
+type CollisionPolicyParams = {
   enabled?: boolean;
   /**
    * Pairwise distance threshold [m] used for close-encounter detection.
@@ -42,7 +42,7 @@ export type CollisionPolicyParams = {
   onCloseEncounter?: "warn" | "abort";
 };
 
-export type SecularEvolutionParams = {
+type SecularEvolutionParams = {
   enabled?: boolean;
   /** Apply J2-driven apsidal/nodal precession in Kepler mode. */
   j2Precession?: boolean;
@@ -52,7 +52,7 @@ export type SecularEvolutionParams = {
   tRef?: number;
 };
 
-export type PhysicsFeatureFlags = {
+type PhysicsFeatureFlags = {
   observables?: boolean;
   stellarSurface?: boolean;
   atmosphereRT?: boolean;
@@ -61,7 +61,7 @@ export type PhysicsFeatureFlags = {
   detectorRealism?: boolean;
 };
 
-export type RelativityParams = {
+type RelativityParams = {
   enabled?: boolean;
   /** Apply light-travel time effect (LTTE) timing correction. */
   ltte?: boolean;
@@ -89,7 +89,7 @@ export type RelativityParams = {
   shapiroMinImpact?: number;
 };
 
-export type NBodyPerturberParams = {
+type NBodyPerturberParams = {
   enabled?: boolean;
 
   /** Gravitational parameter mu = G*M for the perturber (must be > 0). */
@@ -102,7 +102,7 @@ export type NBodyPerturberParams = {
   orbit?: OrbitElements | OrbitElementsProvider;
 };
 
-export type NBodyPlanetMoonParams = {
+type NBodyPlanetMoonParams = {
   enabled?: boolean;
 
   /** Gravitational parameter mu = G*M for the star (must be > 0). */
@@ -148,7 +148,7 @@ export type NBodyPlanetMoonParams = {
 };
 
 /** Data-driven exomoon timing/shape configuration. */
-export type ExomoonTimingShapeParams = {
+type ExomoonTimingShapeParams = {
   enabled?: boolean;
 
   /** Reference epoch for evolution and for “relative to ref” diagnostics. Default: 0. */
@@ -158,10 +158,8 @@ export type ExomoonTimingShapeParams = {
   velDt?: number;
 
   // --- Moon orbit orientation evolution (applied to moon.orbitAroundPlanet) ---
-  // Field mapping to OrbitOrientationEvolution in domain/orbits/exomoonTiming.ts:
-  //   moonOmegaDot      → OmegaDot      (nodal precession dΩ/dt)
-  //   moonOmegaSmallDot → omegaDot      (apsidal precession dω/dt)
-  //   moonIncDot        → incDot        (inclination drift di/dt)
+  // Time-dependent orientation/drift is authored here but unimplemented: the V4
+  // compiler rejects any nonzero value (see educationScenarioCompiler.ts).
   moonOmegaDot?: number; // dΩ/dt [rad/s]
   moonIncDot?: number; // di/dt [rad/s]
   moonOmegaSmallDot?: number; // dω/dt [rad/s]

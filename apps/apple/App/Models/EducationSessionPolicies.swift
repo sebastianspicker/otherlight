@@ -12,6 +12,7 @@ enum EducationScenarioPolicy {
       (ScenarioCatalog.default.identifier, "Default system"),
       (ScenarioCatalog.keplerPlanetOnly.identifier, "Kepler planet only"),
       (ScenarioCatalog.limbDarkeningVariation.identifier, "Limb-darkening variation"),
+      (ScenarioCatalog.detachedBinaryLab.identifier, "Detached binary lab"),
     ] + BundledRealSystems.labels.map { ($0.0, $0.1) }
   }
 
@@ -21,6 +22,7 @@ enum EducationScenarioPolicy {
     case ScenarioCatalog.default.identifier: ScenarioCatalog.default
     case ScenarioCatalog.keplerPlanetOnly.identifier: ScenarioCatalog.keplerPlanetOnly
     case ScenarioCatalog.limbDarkeningVariation.identifier: ScenarioCatalog.limbDarkeningVariation
+    case ScenarioCatalog.detachedBinaryLab.identifier: ScenarioCatalog.detachedBinaryLab
     default: try? BundledRealSystems.scenario(id: id)
     }
   }
@@ -28,15 +30,53 @@ enum EducationScenarioPolicy {
 
 /// Formats accepted numeric drafts for stable editing and workspace round trips.
 enum EducationDraftPolicy {
+  /// Keeps all editable native V4 values as text or toggles until the learner applies a valid draft.
+  struct Values {
+    let planet: String
+    let moon: String
+    let phase: String
+    let gridResolution: String
+    let limbDarkeningU1: String
+    let limbDarkeningU2: String
+    let planetPhase: PhaseValues
+    let moonPhase: PhaseValues
+  }
+
+  /// Holds one portable phase curve's editable values without exposing unsupported V4 modules.
+  struct PhaseValues {
+    let enabled: Bool
+    let reflectedAmplitude: String
+    let thermalAmplitude: String
+    let constantFlux: String
+    let reflectedOffsetRadians: String
+    let thermalOffsetRadians: String
+    let reflectedModel: PhaseCurve.ReflectedModel
+    let thermalModel: PhaseCurve.ThermalModel
+  }
+
   /// Formats all editable draft values from one accepted scenario.
-  static func values(
-    for scenario: EducationScenarioV4
-  ) -> (planet: String, moon: String, phase: String) {
-    (
-      text(scenario.planet.radiusMetres),
-      text(scenario.moon?.radiusMetres ?? 0),
-      text(scenario.moon?.orbit.meanAnomalyAtEpochRadians ?? 0)
-    )
+  static func values(for scenario: EducationScenarioV4) -> Values {
+    let editableStar = scenario.detachedBinary?.primary.star ?? scenario.star
+    return .init(
+      planet: text(scenario.planet.radiusMetres), moon: text(scenario.moon?.radiusMetres ?? 0),
+      phase: text(scenario.moon?.orbit.meanAnomalyAtEpochRadians ?? 0),
+      gridResolution: String(scenario.gridResolution),
+      limbDarkeningU1: text(editableStar.limbDarkeningU1),
+      limbDarkeningU2: text(editableStar.limbDarkeningU2),
+      planetPhase: phaseValues(for: scenario.planetPhase),
+      moonPhase: phaseValues(for: scenario.moonPhase))
+  }
+
+  /// Projects optional V4 phase curves into stable editable defaults without inventing an active curve.
+  private static func phaseValues(for curve: PhaseCurve?) -> PhaseValues {
+    .init(
+      enabled: curve?.enabled ?? false, reflectedAmplitude: text(curve?.reflectedAmplitude ?? 0),
+      thermalAmplitude: text(curve?.thermalAmplitude ?? 0),
+      constantFlux: text(curve?.constantFlux ?? 0),
+      reflectedOffsetRadians: text(curve?.reflectedOffsetRadians ?? 0),
+      thermalOffsetRadians: text(curve?.thermalOffsetRadians ?? 0),
+      reflectedModel: curve?.reflectedModel ?? .lambert,
+      thermalModel: curve?.thermalModel ?? .constant)
   }
 
   /// Formats a numeric draft without locale-dependent grouping or precision loss.
@@ -151,6 +191,8 @@ enum EducationWorkspacePayloadPolicy {
     selectedScenarioID: String,
     selectedLessonID: String,
     interfaceTier: InterfaceTier,
+    runtimeMode: NativeRuntimeMode,
+    referenceSubsteps: Int,
     learningStepIndex: Int,
     learningPhaseIndex: Int,
     passedStepIDs: [String],
@@ -177,11 +219,15 @@ enum EducationWorkspacePayloadPolicy {
         source: BundledRealSystems.labels.contains(where: { $0.0 == selectedScenarioID })
           ? .real : .preset,
         scenario: selectedScenarioID,
-        lab: "transit-exomoon",
+        lab: scenario.mode == .detachedBinaryLab ? "binary-eclipse" : "transit-exomoon",
         lesson: selectedLessonID,
-        runtime: .interactive),
+        runtime: runtimeMode == .reference ? .reference : .interactive),
       education: .init(
-        scenario: BrowserV4Export.scenario(from: scenario, lessonID: selectedLessonID),
+        scenario: BrowserV4Export.scenario(
+          from: scenario, lessonID: selectedLessonID,
+          runtime: .init(
+            mode: runtimeMode == .reference ? .reference : .interactive,
+            referenceSubsteps: referenceSubsteps)),
         guidedLab: guidedLab))
   }
 }

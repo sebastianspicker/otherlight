@@ -1,5 +1,5 @@
 /**
- * Owns occulter Shape Guards support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Narrows occulter shapes by kind.
  */
 import type { CircleOcculter } from "./occulterCircle";
 import type { EllipseOcculter, OcculterShape, RingOcculter } from "./occulterTypes";

@@ -1,5 +1,5 @@
 /**
- * Owns native Engine support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Steps the native V4 simulation by one frame.
  */
 import type {
   BrowserScenarioDraft,

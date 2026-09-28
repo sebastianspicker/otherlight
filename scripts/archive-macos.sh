@@ -4,9 +4,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT/apps/apple/Otherlight.xcodeproj"
-SCHEME="Otherlight"
-ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT/artifacts/Otherlight.xcarchive}"
+PROJECT="$ROOT/apps/apple/OtherlightMac.xcodeproj"
+SCHEME="OtherlightMac"
+ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT/artifacts/OtherlightMac.xcarchive}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/private/tmp/otherlight-release-derived-data}"
 MARKETING_VERSION="${MARKETING_VERSION:-0.3.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
@@ -29,7 +29,7 @@ source "$ROOT/scripts/select-swift-toolchain.sh"
 
 mkdir -p "$(dirname "$ARCHIVE_PATH")"
 
-xcodebuild archive \
+env -u TOOLCHAINS xcodebuild archive \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration Release \
@@ -46,10 +46,10 @@ xcodebuild archive \
   ARCHS="arm64 x86_64" \
   ONLY_ACTIVE_ARCH=NO
 
-APP_PATH="$ARCHIVE_PATH/Products/Applications/Otherlight.app"
+APP_PATH="$ARCHIVE_PATH/Products/Applications/OtherlightMac.app"
 APP_COUNT="$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -type d -name '*.app' -print | wc -l | tr -d ' ')"
 if [[ "$APP_COUNT" != "1" || ! -d "$APP_PATH" || -L "$APP_PATH" ]]; then
-  echo "Archive must contain exactly Otherlight.app: $ARCHIVE_PATH" >&2
+  echo "Archive must contain exactly OtherlightMac.app: $ARCHIVE_PATH" >&2
   exit 70
 fi
 

@@ -2,16 +2,17 @@
 
 The registry is the release truth for website-to-Apple parity. Every capability
 has website, macOS, iPhone, and iPad entries. A capability is `available` only
-when its platform entry names automated evidence. Work in progress remains
-`experimental`; intentionally absent behavior is `unavailable` with a reason.
+when its platform entry names automated evidence; work in progress stays
+`experimental`, and intentionally absent behavior is `unavailable` with a reason.
 
-`available` describes an implemented, evidenced code path. A platform entry
-with `availability: capability-gated` additionally requires a successful
-runtime capability handshake; it must remain unavailable in the interface when
-that service or its required execution dependencies are absent.
+`available` means an implemented, evidenced code path. An entry with
+`availability: capability-gated` additionally requires a successful runtime
+capability handshake, and it must stay unavailable in the interface whenever that
+service or its required execution dependencies are absent.
 
-The Apple application has one shared SwiftUI target for macOS, iPhone, and iPad.
-Its deployment baseline is iOS 17 for iPhone and iPad. Apple entries remain
-experimental until the relevant Xcode 26.6 simulator/device gate has passed;
-Scientific rows remain unavailable unless their bounded local execution contract
-is independently evidenced.
+The Apple applications share Education sources but use separate targets: the
+`Otherlight` iPhone and iPad target and the `OtherlightMac` macOS target. The
+mobile deployment baseline is iOS 17. Apple entries remain experimental until the
+relevant Xcode 26.6 simulator or device gate has passed, and Scientific rows stay
+unavailable unless their bounded local execution contract is independently
+evidenced.

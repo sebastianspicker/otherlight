@@ -6,7 +6,7 @@ import { collectUnsupportedPhotometryFeaturesV4 } from "../domain/simulation/v4/
 import { sanitizeStaticOrbit } from "../domain/simulation/v4/orbitSanitizer";
 import { createScientificBrowserRuntimeError } from "../domain/simulation/v4/scientificErrors";
 import type { BinaryLabConfigV4 } from "../domain/simulation/v4/types";
-import { assertOrbit } from "../domain/simulation/validation/assertions";
+import { assertOrbit } from "../domain/simulation/validation/assertOrbit";
 
 export type BrowserScenarioAuthoringInput = {
   system: BrowserScenarioDraft;
@@ -64,37 +64,44 @@ function collectScientificBrowserDraftOrbitIssues(args: { orbit: unknown; name: 
   }
 }
 
-function assertScientificBrowserDraftInputs(args: BrowserScenarioAuthoringInput): void {
-  if (args.executionMode !== "scientific-browser") return;
-  const details = collectScientificBrowserDraftOrbitIssues({
-    orbit: args.system.planet.orbit,
-    name: args.binaryMode ? "system.planet.orbit (binary orbit)" : "system.planet.orbit",
+function collectScientificBrowserMoonIssues(args: BrowserScenarioAuthoringInput): string[] {
+  if (args.binaryMode || !args.system.moon) return [];
+  return collectScientificBrowserDraftOrbitIssues({
+    orbit: args.system.moon.orbitAroundPlanet,
+    name: "system.moon.orbitAroundPlanet",
   });
-  if (!args.binaryMode && args.system.moon) {
+}
+
+function collectScientificBrowserBinaryPassbandIssues(args: BrowserScenarioAuthoringInput): string[] {
+  if (!args.binaryMode) return [];
+  const details: string[] = [];
+  const primaryPassband = args.system.binaryStars?.primary?.passband;
+  const secondaryPassband = args.system.binaryStars?.secondary?.passband;
+  if (!(typeof primaryPassband === "string" && primaryPassband.trim().length > 0))
     details.push(
-      ...collectScientificBrowserDraftOrbitIssues({
-        orbit: args.system.moon.orbitAroundPlanet,
-        name: "system.moon.orbitAroundPlanet",
-      }),
+      "system.binaryStars.primary.passband must be explicit in detached-binary scientific-browser mode",
     );
-  }
-  if (args.binaryMode) {
-    const primaryPassband = args.system.binaryStars?.primary?.passband;
-    const secondaryPassband = args.system.binaryStars?.secondary?.passband;
-    if (!(typeof primaryPassband === "string" && primaryPassband.trim().length > 0)) {
-      details.push(
-        "system.binaryStars.primary.passband must be explicit in detached-binary scientific-browser mode",
-      );
-    }
-    if (!(typeof secondaryPassband === "string" && secondaryPassband.trim().length > 0)) {
-      details.push(
-        "system.binaryStars.secondary.passband must be explicit in detached-binary scientific-browser mode",
-      );
-    }
-  }
-  if (details.length === 0) return;
+  if (!(typeof secondaryPassband === "string" && secondaryPassband.trim().length > 0))
+    details.push(
+      "system.binaryStars.secondary.passband must be explicit in detached-binary scientific-browser mode",
+    );
+  return details;
+}
+
+function collectScientificBrowserDraftIssues(args: BrowserScenarioAuthoringInput): string[] {
+  return [
+    ...collectScientificBrowserDraftOrbitIssues({
+      orbit: args.system.planet.orbit,
+      name: args.binaryMode ? "system.planet.orbit (binary orbit)" : "system.planet.orbit",
+    }),
+    ...collectScientificBrowserMoonIssues(args),
+    ...collectScientificBrowserBinaryPassbandIssues(args),
+  ];
+}
+
+function createScientificBrowserDraftError(args: BrowserScenarioAuthoringInput, details: string[]): Error {
   const binaryPassbandOnly = details.every((detail) => detail.includes(".passband must be explicit"));
-  throw createScientificBrowserRuntimeError({
+  return createScientificBrowserRuntimeError({
     stage: "config",
     code: binaryPassbandOnly ? "SCB_BINARY_IMPLICIT_PASSBAND" : "SCB_INVALID_LEGACY_ORBIT",
     summary: binaryPassbandOnly
@@ -102,11 +109,18 @@ function assertScientificBrowserDraftInputs(args: BrowserScenarioAuthoringInput)
       : "BrowserScenarioDraft orbit input cannot be losslessly mapped into scientific-browser runtime",
     details,
     context: {
-      executionMode: args.executionMode,
+      executionMode: args.executionMode ?? "scientific-browser",
       runtimeMode: args.runtimeMode,
       binaryMode: args.binaryMode,
     },
   });
+}
+
+function assertScientificBrowserDraftInputs(args: BrowserScenarioAuthoringInput): void {
+  if (args.executionMode !== "scientific-browser") return;
+  const details = collectScientificBrowserDraftIssues(args);
+  if (details.length === 0) return;
+  throw createScientificBrowserDraftError(args, details);
 }
 
 /**
@@ -179,4 +193,12 @@ export function toEducationScenarioV4(args: BrowserScenarioAuthoringInput): Educ
 
 export function unsupportedEducationScenarioFeatures(scenario: EducationScenarioV4): string[] {
   return collectUnsupportedPhotometryFeaturesV4(scenario);
+}
+
+/**
+ * Maps a draft for a side preview (chromatic bands, observatory comparisons)
+ * without the runtime-ingress validation or runtime mode of toEducationScenarioV4.
+ */
+export function toPreviewScenarioV4(system: BrowserScenarioDraft): EducationScenarioV4 {
+  return mapBrowserScenarioDraftToEducationScenarioV4(system);
 }

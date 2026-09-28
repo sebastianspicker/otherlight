@@ -15,7 +15,7 @@ struct OtherlightApp: App {
   var body: some Scene {
     WindowGroup("Otherlight") {
       OtherlightWorkspace()
-        .tint(OtherlightBrand.accent)
+        .tint(PlateFigure.pencil)
     }
     #if os(macOS)
       .defaultSize(width: 1_280, height: 760)
@@ -41,9 +41,4 @@ struct OtherlightApp: App {
       }
     #endif
   }
-}
-
-/// Keeps the native shell's Instrumental Nocturne accent independent of system appearance.
-private enum OtherlightBrand {
-  static let accent = Color(red: 8.0 / 255.0, green: 127.0 / 255.0, blue: 115.0 / 255.0)
 }
