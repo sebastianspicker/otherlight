@@ -106,7 +106,7 @@
     "@types/jsdom": "28.0.3",
     "@types/node": "^25.5.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "eslint": "10.1.0",
+    "eslint": "10.11.0",
     "jscpd": "5.0.12",
     "jsdom": "29.1.1",
     "knip": "6.27.0",
