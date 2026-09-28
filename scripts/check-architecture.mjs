@@ -1,4 +1,7 @@
-/** Enforces browser layer import boundaries and rejects relative TypeScript import cycles. */
+/**
+ * Enforces browser layer import boundaries, keeps canvas rendering independent of
+ * the rest of presentation, and rejects relative TypeScript import cycles.
+ */
 
 import { readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -14,6 +17,9 @@ const forbiddenImports = new Map([
   ["infrastructure", new Set(["presentation", "composition"])],
   ["application", new Set(["presentation", "infrastructure", "composition"])],
 ]);
+// Canvas drawing is a pure projection of domain output: it may not reach into
+// presentation features, application state, infrastructure, or composition.
+const restrictedAreas = [{ area: "presentation/render", allowed: ["domain", "presentation/render"] }];
 const sourceExtensions = [".ts", ".tsx", ".mts", ".cts"];
 const importPattern = /(?:\b(?:import|export)\s+(?:[^;"']*?\s+from\s+)?|\bimport\s*\()\s*["']([^"']+)["']/g;
 
@@ -43,8 +49,21 @@ function layerForPath(file) {
   return layers.includes(firstSegment) ? firstSegment : undefined;
 }
 
+function sourcePath(file) {
+  return path.relative(sourceRoot, file).split(path.sep).join("/");
+}
+
+function isWithin(file, area) {
+  const relative = sourcePath(file);
+  return relative === area || relative.startsWith(`${area}/`);
+}
+
 function importedSpecifiers(source) {
-  return [...source.matchAll(importPattern)].map((match) => match[1]);
+  const imports = [...source.matchAll(importPattern)].map((match) => match[1]);
+  const workers = [...source.matchAll(/new URL\(["']([^"']+\.worker\.ts)["'],\s*import\.meta\.url\)/g)].map(
+    (match) => match[1],
+  );
+  return [...imports, ...workers];
 }
 
 function resolveImport(fromFile, specifier) {
@@ -59,15 +78,18 @@ function resolveImport(fromFile, specifier) {
   return options.find((option) => existsSync(option));
 }
 
-function addBoundaryViolations(file, source, violations) {
-  const sourceLayer = layerForPath(file);
-  const forbidden = sourceLayer ? forbiddenImports.get(sourceLayer) : undefined;
-  if (!forbidden) return;
+function isForbiddenImport(file, target) {
+  const forbidden = forbiddenImports.get(layerForPath(file));
+  const targetLayer = layerForPath(target);
+  if (forbidden && targetLayer && forbidden.has(targetLayer)) return true;
+  const restriction = restrictedAreas.find(({ area }) => isWithin(file, area));
+  return Boolean(restriction && !restriction.allowed.some((allowed) => isWithin(target, allowed)));
+}
 
+function addBoundaryViolations(file, source, violations) {
   for (const specifier of importedSpecifiers(source)) {
     const target = resolveImport(file, specifier);
-    const targetLayer = target ? layerForPath(target) : undefined;
-    if (targetLayer && forbidden.has(targetLayer)) {
+    if (target && isForbiddenImport(file, target)) {
       violations.push(`${displayPath(file)} imports ${displayPath(target)} (${specifier})`);
     }
   }
@@ -101,9 +123,11 @@ if (!existsSync(sourceRoot)) {
   throw new Error(`Browser source root is missing: ${displayPath(sourceRoot)}`);
 }
 
-for (const layer of layers) {
-  if (!existsSync(path.join(sourceRoot, layer))) {
-    throw new Error(`Browser architecture layer is missing: ${displayPath(path.join(sourceRoot, layer))}`);
+for (const directory of [...layers, ...restrictedAreas.map(({ area }) => area)]) {
+  if (!existsSync(path.join(sourceRoot, directory))) {
+    throw new Error(
+      `Browser architecture directory is missing: ${displayPath(path.join(sourceRoot, directory))}`,
+    );
   }
 }
 
@@ -130,7 +154,7 @@ addCycleViolations(graph, cycleViolations);
 if (boundaryViolations.length || cycleViolations.length) {
   process.stderr.write("Architecture check failed:\n");
   for (const violation of boundaryViolations.sort())
-    process.stderr.write(`- forbidden layer import: ${violation}\n`);
+    process.stderr.write(`- forbidden import: ${violation}\n`);
   for (const cycle of [...new Set(cycleViolations)].sort())
     process.stderr.write(`- import cycle: ${cycle}\n`);
   process.exitCode = 1;

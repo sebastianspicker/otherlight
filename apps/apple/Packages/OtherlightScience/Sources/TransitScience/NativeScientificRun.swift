@@ -93,7 +93,7 @@ public struct NativeScientificForwardRunner: Sendable {
       throw ScienceContractError.invalid("nativeRunMetadata.runId", "a non-empty value")
     }
     let startedAt = Self.timestamp(now())
-    let propagation = try NativeDOP853ForwardPropagator().propagate(
+    let propagation = try NativeDOP853ForwardPropagator().propagateRadialVelocity(
       request, cancellation: cancellation)
     guard !cancellation() else {
       throw ScienceContractError.unsupportedExecution("scientific run was cancelled")

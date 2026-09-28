@@ -1,5 +1,5 @@
 /**
- * Owns scientific Browser Dynamics Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Collects dynamics issues that block scientific Browser execution.
  */
 import { assertOrbit } from "../validation/assertOrbit";
 import type { EducationScenarioV4 } from "./types";

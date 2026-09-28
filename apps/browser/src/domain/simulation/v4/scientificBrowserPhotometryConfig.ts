@@ -1,5 +1,5 @@
 /**
- * Owns scientific Browser Photometry Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Collects photometry issues that block scientific Browser execution.
  */
 import type { PhotometryParams } from "../../model/types";
 import type { EducationScenarioV4 } from "./types";

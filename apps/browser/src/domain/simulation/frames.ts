@@ -15,7 +15,7 @@ import type {
   StepTimingDiagnostics,
 } from "../model/typesResults";
 
-export type LearningProgress = {
+type LearningProgress = {
   lessonId?: string;
   stepIndex?: number;
   passedStepIds?: readonly string[];
@@ -23,7 +23,7 @@ export type LearningProgress = {
   updatedAtSec?: number;
 };
 
-export type SimulationFlux = {
+type SimulationFlux = {
   total: number;
   transitFactor: number;
   stellarPreTransit: number;
@@ -36,7 +36,7 @@ export type SimulationFlux = {
   decomposition?: StepFluxDecomposition;
 };
 
-export type SimulationKinematics = {
+type SimulationKinematics = {
   planetSky: SkyPoint;
   moonSky?: SkyPoint;
 };
@@ -49,7 +49,7 @@ export type SimulationDidactics = {
   adaptiveHints?: string[];
 };
 
-export type SimulationDebug = {
+type SimulationDebug = {
   nOcculters?: number;
   bPlanet?: number;
   bMoon?: number;
@@ -88,14 +88,14 @@ export type RenderOcculterGeometry =
       angle: number;
     };
 
-export type RenderEventMarker = {
+type RenderEventMarker = {
   id: string;
   kind: "transit" | "mutual-event" | "conjunction" | "timing";
   label: string;
   active: boolean;
 };
 
-export type RenderTimingMarker = {
+type RenderTimingMarker = {
   id: string;
   seconds?: number;
 };
@@ -127,14 +127,14 @@ export type BrowserRenderSignals = {
   uncertaintyFlags: string[];
 };
 
-export type ConvergenceDiagnostics = {
+type ConvergenceDiagnostics = {
   enabled: boolean;
   status: "disabled" | "ok" | "unavailable";
   valueSec?: number;
   validityFlags?: string[];
 };
 
-export type IntegratorStats = {
+type IntegratorStats = {
   mode: "kepler" | "fixed-verlet" | "adaptive-verlet";
   nbodyEnabled: boolean;
   dtMaxSec?: number;
@@ -152,7 +152,7 @@ export type PhysicsDiagnostics = {
 };
 
 /** Scientific and domain output for one observed simulation time. */
-export type ObservationFrame = {
+type ObservationFrame = {
   tObsSec: number;
   kinematics: SimulationKinematics;
   flux: SimulationFlux;
@@ -165,7 +165,7 @@ export type ObservationFrame = {
 };
 
 /** Browser-specific visualization projection for an observation frame. */
-export type BrowserRenderFrame = {
+type BrowserRenderFrame = {
   renderSignals: BrowserRenderSignals;
 };
 

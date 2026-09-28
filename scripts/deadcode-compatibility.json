@@ -1,0 +1,14 @@
+[
+  {
+    "file": "apps/browser/src/domain/photometry/diskMidpoint.ts",
+    "symbol": "integrateDiskMidpointShapes",
+    "kind": "export",
+    "reason": "Sole implementation of the mixed-shape opaque-transit path claimed as implemented by docs/physics/model-registry.json model 'photometry.transit.opaque-disks'; no live caller currently reaches it."
+  },
+  {
+    "file": "apps/browser/src/domain/photometry/diskMidpoint.ts",
+    "symbol": "IntegrateDiskMidpointShapesParams",
+    "kind": "type",
+    "reason": "Sole implementation of the mixed-shape opaque-transit path claimed as implemented by docs/physics/model-registry.json model 'photometry.transit.opaque-disks'; no live caller currently reaches it."
+  }
+]

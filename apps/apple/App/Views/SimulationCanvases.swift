@@ -20,22 +20,66 @@ struct SkyCanvas: View {
         y: size.height / 2 - starDiameter / 2,
         width: starDiameter,
         height: starDiameter)
-      context.fill(Path(ellipseIn: star), with: .color(.yellow.opacity(0.88)))
+      // A mild centre-to-limb falloff reads as a luminous disc on the dark plate.
+      context.fill(
+        Path(ellipseIn: star),
+        with: .radialGradient(
+          Gradient(colors: [SkyInk.starCore, SkyInk.starLimb]),
+          center: CGPoint(x: star.midX, y: star.midY), startRadius: 0,
+          endRadius: starScreenRadius))
       for point in scene.skyPoints {
         let x = size.width * 0.5 + point.position.x / starRadiusMetres * starScreenRadius
         let y = size.height * 0.5 - point.position.y / starRadiusMetres * starScreenRadius
         let physicalRadius =
           point.body == "planet" ? planetRadiusMetres : moonRadiusMetres ?? 0
         let radius = max(4, physicalRadius / starRadiusMetres * starScreenRadius)
-        let color: Color = point.body == "planet" ? .indigo : .gray
-        context.fill(
-          Path(
-            ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
-          with: .color(color))
+        let body = Path(
+          ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
+        // Bodies are silhouettes cut from the starlight, outlined so they stay visible off the disc.
+        context.fill(body, with: .color(point.body == "planet" ? PlateFigure.plate : SkyInk.moon))
+        context.stroke(body, with: .color(PlateFigure.plateInk.opacity(0.7)), lineWidth: 1)
       }
     }
+    .background(PlateFigure.plate)
     .accessibilityHidden(true)
   }
+}
+
+/// Holds the fixed plate colours for bodies drawn on the sky view.
+private enum SkyInk {
+  static let starCore = Color(red: 1.0, green: 0.95, blue: 0.82)
+  static let starLimb = Color(red: 0.91, green: 0.72, blue: 0.42)
+  static let moon = Color(red: 0.56, green: 0.55, blue: 0.51)
+}
+
+/// Draws a closed journal-figure frame with inward ticks on all four sides.
+private func drawFigureFrame(_ context: GraphicsContext, in bounds: CGRect, ticks: Int = 5) {
+  var frame = Path(bounds)
+  let tick: CGFloat = 5
+  for index in 1..<ticks {
+    let fraction = CGFloat(index) / CGFloat(ticks)
+    let x = bounds.minX + bounds.width * fraction
+    let y = bounds.minY + bounds.height * fraction
+    frame.move(to: CGPoint(x: x, y: bounds.maxY))
+    frame.addLine(to: CGPoint(x: x, y: bounds.maxY - tick))
+    frame.move(to: CGPoint(x: x, y: bounds.minY))
+    frame.addLine(to: CGPoint(x: x, y: bounds.minY + tick))
+    frame.move(to: CGPoint(x: bounds.minX, y: y))
+    frame.addLine(to: CGPoint(x: bounds.minX + tick, y: y))
+    frame.move(to: CGPoint(x: bounds.maxX, y: y))
+    frame.addLine(to: CGPoint(x: bounds.maxX - tick, y: y))
+  }
+  context.stroke(frame, with: .color(PlateFigure.ink), lineWidth: 1)
+}
+
+/// Draws the residual figure's frame and its dotted zero line.
+private func drawResidualAxes(_ context: GraphicsContext, in plot: CGRect) {
+  drawFigureFrame(context, in: plot)
+  context.stroke(
+    Path {
+      $0.move(to: CGPoint(x: plot.minX, y: plot.midY))
+      $0.addLine(to: CGPoint(x: plot.maxX, y: plot.midY))
+    }, with: .color(PlateFigure.ink3), style: StrokeStyle(lineWidth: 1, dash: [1, 3]))
 }
 
 /// Displays observed-minus-calculated residuals recorded for one transiting body.
@@ -50,11 +94,7 @@ struct TransitOCChart: View {
       Canvas { context, size in
         let plot = CGRect(origin: .zero, size: size).insetBy(dx: 24, dy: 18)
         let middle = plot.midY
-        context.stroke(
-          Path {
-            $0.move(to: CGPoint(x: plot.minX, y: middle))
-            $0.addLine(to: CGPoint(x: plot.maxX, y: middle))
-          }, with: .color(.secondary.opacity(0.45)))
+        drawResidualAxes(context, in: plot)
         guard residuals.count > 1 else { return }
         let maximumMagnitude = max(
           residuals.map { abs($0.milliseconds) }.max() ?? 0, Double.leastNonzeroMagnitude)
@@ -65,7 +105,7 @@ struct TransitOCChart: View {
           let y = middle - residual.milliseconds / maximumMagnitude * plot.height * 0.42
           context.fill(
             Path(ellipseIn: CGRect(x: x - 3, y: y - 3, width: 6, height: 6)),
-            with: .color(.orange))
+            with: .color(PlateFigure.pencil))
         }
       }
       .accessibilityHidden(true)
@@ -117,7 +157,7 @@ private struct AcceptedLightCurveHistoryCanvas: View {
         }
         context.fill(
           Path(ellipseIn: CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)),
-          with: .color(.orange.opacity(0.75)))
+          with: .color(PlateFigure.pencil.opacity(0.8)))
       }
     }
   }
@@ -140,11 +180,9 @@ private struct StaticLightCurveCanvas: View, Equatable {
         plot: series.plot,
         domain: series.lightCurveDomain,
         size: size)
-      context.stroke(
-        Path(CGRect(origin: drawing.bounds.origin, size: drawing.bounds.size)),
-        with: .color(.secondary.opacity(0.3)))
+      drawFigureFrame(context, in: drawing.bounds)
       guard let path = drawing.curvePath else { return }
-      context.stroke(path, with: .color(.accentColor), lineWidth: 2)
+      context.stroke(path, with: .color(PlateFigure.ink), lineWidth: 1.5)
     }
   }
 }
@@ -168,11 +206,11 @@ private struct LightCurveMarkerCanvas: View {
       markerLine.addLine(to: CGPoint(x: marker.x, y: bounds.maxY))
       context.stroke(
         markerLine,
-        with: .color(.orange),
+        with: .color(PlateFigure.pencil),
         style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
       context.fill(
         Path(ellipseIn: CGRect(x: marker.x - 4, y: marker.y - 4, width: 8, height: 8)),
-        with: .color(.orange))
+        with: .color(PlateFigure.pencil))
     }
   }
 }
@@ -204,11 +242,7 @@ private struct StaticOCChart: View, Equatable {
     Canvas { context, size in
       let plot = CGRect(origin: .zero, size: size).insetBy(dx: 24, dy: 18)
       let middle = plot.midY
-      context.stroke(
-        Path {
-          $0.move(to: CGPoint(x: plot.minX, y: middle))
-          $0.addLine(to: CGPoint(x: plot.maxX, y: middle))
-        }, with: .color(.secondary.opacity(0.45)))
+      drawResidualAxes(context, in: plot)
       let points = series.oc.timings
       guard points.count > 1 else { return }
       for point in points {
@@ -217,7 +251,8 @@ private struct StaticOCChart: View, Equatable {
           / CGFloat(max(1, points.last!.transitNumber - points[0].transitNumber)) * plot.width
         let y = middle - point.observedMinusCalculatedSeconds / 120 * plot.height * 0.45
         context.fill(
-          Path(ellipseIn: CGRect(x: x - 3, y: y - 3, width: 6, height: 6)), with: .color(.orange))
+          Path(ellipseIn: CGRect(x: x - 3, y: y - 3, width: 6, height: 6)),
+          with: .color(PlateFigure.pencil))
       }
     }
   }

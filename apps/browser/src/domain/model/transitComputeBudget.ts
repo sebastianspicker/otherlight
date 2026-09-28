@@ -1,5 +1,5 @@
 /**
- * Owns transit Compute Budget support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ * Bounds transit grid resolution and smearing subsampling.
  */
 import type { BrowserScenarioDraft } from "./types";
 
@@ -10,7 +10,7 @@ export const MAX_TRANSIT_GRID_RES = 1024;
 export const MIN_TRANSIT_GRID_RES = 60;
 
 /** Maximum spectral samples retained by the transit solver at low grid resolutions. */
-export const MAX_SPECTRAL_SAMPLES = 256;
+const MAX_SPECTRAL_SAMPLES = 256;
 
 /**
  * Upper bound for stellar-disk point evaluations in one synchronous frame sample.
@@ -19,7 +19,7 @@ export const MAX_SPECTRAL_SAMPLES = 256;
  * grid resolution, spectral bands, and cadence smearing from multiplying into an
  * unbounded main-thread workload.
  */
-export const MAX_TRANSIT_POINT_EVALUATIONS = MAX_SPECTRAL_SAMPLES * 64 * 64;
+const MAX_TRANSIT_POINT_EVALUATIONS = MAX_SPECTRAL_SAMPLES * 64 * 64;
 
 /** Existing scientific cap retained for inexpensive smearing configurations. */
 export const MAX_SMEARING_SUBSAMPLES = 512;
@@ -30,7 +30,7 @@ function normalizeTransitGridResolution(gridRes: unknown, fallback: number): num
   return Math.max(MIN_TRANSIT_GRID_RES, Math.min(MAX_TRANSIT_GRID_RES, Math.floor(finite)));
 }
 
-export function maxSpectralSamplesForGrid(gridRes: unknown, fallback = 220): number {
+function maxSpectralSamplesForGrid(gridRes: unknown, fallback = 220): number {
   const grid = normalizeTransitGridResolution(gridRes, fallback);
   return Math.max(
     1,
@@ -69,7 +69,7 @@ function activeSpectralSampleCount(params: BrowserScenarioDraft, gridRes: number
   return Math.min(configuredSamples, maxSpectralSamplesForGrid(gridRes));
 }
 
-export function estimateTransitPointEvaluations(params: BrowserScenarioDraft): number {
+function estimateTransitPointEvaluations(params: BrowserScenarioDraft): number {
   const fallbackGridRes = hasTransmissionConfigured(params) ? 256 : 220;
   const gridRes = normalizeTransitGridResolution(params.star.photometry?.gridRes, fallbackGridRes);
   return gridRes * gridRes * activeSpectralSampleCount(params, gridRes);

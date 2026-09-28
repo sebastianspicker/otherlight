@@ -1,5 +1,5 @@
 /**
- * Owns types support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Defines the V4 runtime, body, and configuration types.
  */
 import type {
   BinaryStarPhotometryParams,
@@ -14,7 +14,7 @@ import type {
 } from "../../model/types";
 import type { Body } from "../../model/types";
 
-export type BinaryLabMode = "detached-binary-lab" | "general-lab";
+type BinaryLabMode = "detached-binary-lab" | "general-lab";
 export type RuntimeModeV4 = "realtime" | "reference";
 export type RuntimeExecutionModeV4 = "interactive" | "scientific-browser";
 
@@ -31,7 +31,7 @@ export type BinaryLabConfigV4 = {
   lockParamsUntilHypothesis?: boolean;
 };
 
-export type RuntimeConfigV4 = {
+type RuntimeConfigV4 = {
   mode?: RuntimeModeV4;
   referenceSubsteps?: number;
   executionMode?: RuntimeExecutionModeV4;
@@ -61,12 +61,12 @@ export type HierarchyLinkV4 = {
   relation: "orbits";
 };
 
-export type OrbitsV4 = {
+type OrbitsV4 = {
   binary: OrbitElements;
   hierarchy: HierarchyLinkV4[];
 };
 
-export type BodiesV4 = {
+type BodiesV4 = {
   stars: [StarBodyV4, StarBodyV4];
   planets: PlanetBodyV4[];
   moons: MoonBodyV4[];

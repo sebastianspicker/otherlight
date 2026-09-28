@@ -1,13 +1,13 @@
 /** Protects the frame loop's explicit unavailable-state contract. */
 import { describe, expect, it } from "vitest";
 
-import type { AppSimulationRuntime } from "../../src/application/v4Runtime";
+import type { AppSimulationRuntime } from "../../src/application/runtime/v4Runtime";
 import type { SimulationFrame } from "../../src/domain/simulation/frames";
-import { trySimulationStep } from "../../src/presentation/controllers/frameLoopControllerShared";
+import { trySimulationStep } from "../../src/presentation/playback/frameLoopControllerShared";
 import type {
   FrameLoopContext,
   FrameLoopState,
-} from "../../src/presentation/controllers/frameLoopControllerTypes";
+} from "../../src/presentation/playback/frameLoopControllerTypes";
 
 const frame = { tObsSec: 12 } as SimulationFrame;
 
@@ -22,7 +22,7 @@ describe("frame-loop runtime failures", () => {
       step: () => {
         throw new Error("invalid orbit");
       },
-    } as AppSimulationRuntime;
+    } as unknown as AppSimulationRuntime;
 
     expect(trySimulationStep(ctx, runtime, 12)).toEqual({
       ok: false,
@@ -33,14 +33,14 @@ describe("frame-loop runtime failures", () => {
 
   it("keeps the last valid frame separate from a later failure", () => {
     const ctx = context(null);
-    const validRuntime = { step: () => frame } as AppSimulationRuntime;
+    const validRuntime = { step: () => frame } as unknown as AppSimulationRuntime;
     expect(trySimulationStep(ctx, validRuntime, 12)).toEqual({ ok: true, step: frame });
 
     const failingRuntime = {
       step: () => {
         throw new Error("integration failed");
       },
-    } as AppSimulationRuntime;
+    } as unknown as AppSimulationRuntime;
     expect(trySimulationStep(ctx, failingRuntime, 13).ok).toBe(false);
     expect(ctx.state.lastValidFrame).toBe(frame);
   });

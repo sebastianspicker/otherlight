@@ -6,8 +6,10 @@ import json
 import subprocess
 import sys
 from collections.abc import Callable
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import replace
+from functools import partial
 from importlib.util import find_spec
 from math import sqrt
 from pathlib import Path
@@ -19,6 +21,8 @@ from typing import cast
 import pytest
 
 import science_backend.api as api
+import science_backend.api_service as api_service_module
+from science_backend.api_http import _valid_loopback_host
 from science_backend.contracts import (
     G_SI,
     MAX_FORWARD_BODIES,
@@ -26,7 +30,12 @@ from science_backend.contracts import (
     MAX_INTEGRATOR_STEPS,
     ForwardRunRequest,
 )
-from science_backend.errors import ContractError, JobCancelledError, JobCapacityError
+from science_backend.errors import (
+    ArtifactWriterCapacityError,
+    ContractError,
+    JobCancelledError,
+    JobCapacityError,
+)
 from science_backend.forward import run_forward as core_run_forward
 
 
@@ -113,7 +122,7 @@ def client_or_skip():
         pytest.skip("httpx2 is required for FastAPI TestClient coverage")
     from fastapi.testclient import TestClient
 
-    return TestClient
+    return partial(TestClient, base_url="http://127.0.0.1")
 
 
 def fake_arrow_writer(result_id: str = "a" * 64):
@@ -127,7 +136,7 @@ def fake_arrow_writer(result_id: str = "a" * 64):
     return write
 
 
-def test_browser_cors_origins_cover_vite_dev_preview_and_e2e_ports() -> None:
+def test_browser_cors_origins_cover_vite_dev_preview_and_pages_smoke_ports() -> None:
     assert api.BROWSER_CORS_ORIGINS == (
         "http://127.0.0.1:5173",
         "http://localhost:5173",
@@ -136,6 +145,43 @@ def test_browser_cors_origins_cover_vite_dev_preview_and_e2e_ports() -> None:
         "http://127.0.0.1:4174",
         "http://localhost:4174",
     )
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        b"127.0.0.1",
+        b"127.0.0.1:1",
+        b"127.0.0.1:65535",
+        b"localhost",
+        b"LOCALHOST:4173",
+        b"[::1]",
+        b"[::1]:8765",
+    ],
+)
+def test_loopback_host_accepts_only_supported_forms(host: bytes) -> None:
+    assert _valid_loopback_host(((b"host", host),)) is True
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        (),
+        ((b"host", b"localhost"), (b"host", b"127.0.0.1")),
+        ((b"host", b"\xff"),),
+        ((b"host", b"::1"),),
+        ((b"host", b"[::1"),),
+        ((b"host", b"[::2]"),),
+        ((b"host", b"localhost:"),),
+        ((b"host", b"localhost:0"),),
+        ((b"host", b"localhost:65536"),),
+        ((b"host", b"localhost:abc"),),
+        ((b"host", b"localhost:80:90"),),
+        ((b"host", b"127.0.0.1.attacker.invalid"),),
+    ],
+)
+def test_loopback_host_rejects_ambiguous_or_non_loopback_forms(headers: tuple) -> None:
+    assert _valid_loopback_host(headers) is False
 
 
 def test_service_api_import_does_not_eagerly_load_scientific_audit_dependencies() -> (
@@ -375,6 +421,33 @@ def test_http_result_manifest_round_trips_epoch_versions_g_and_tolerances(
     rerun_result = service.result(rerun["id"])
     assert rerun_result is not None
     assert rerun_result["runManifest"]["inputHashSha256"] == manifest["inputHashSha256"]
+    service.close()
+
+
+def test_default_service_runner_retains_only_arrow_columns(tmp_path) -> None:
+    captured: list[object] = []
+
+    def capture_compact_result(result, artifact_root, **kwargs):
+        captured.extend(result.samples)
+        return fake_arrow_writer()(result, artifact_root, **kwargs)
+
+    service = api.V5ApiService(
+        tmp_path,
+        artifact_writer=capture_compact_result,
+        capabilities=available_capabilities(),
+    )
+    submitted = service.submit(forward_payload())
+    terminal = service.wait_for_terminal(submitted["id"], timeout=5)
+
+    assert terminal["state"] == "succeeded"
+    assert len(captured) == 3
+    assert all(
+        hasattr(sample, "time_offset_s")
+        and hasattr(sample, "radial_velocity_m_s")
+        and not hasattr(sample, "positions_m")
+        and not hasattr(sample, "velocities_m_s")
+        for sample in captured
+    )
     service.close()
 
 
@@ -619,3 +692,124 @@ def test_cancelled_arrow_write_leaves_no_temporary_or_final_artifact(tmp_path) -
         api._write_arrow(result, tmp_path, cancel_requested=lambda: next(checks))
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_bounded_arrow_writer_preserves_file_schema_and_rows(tmp_path) -> None:
+    pyarrow = pytest.importorskip("pyarrow")
+    ipc = pytest.importorskip("pyarrow.ipc")
+    result = SimpleNamespace(
+        samples=(
+            SimpleNamespace(time_offset_s=-1.0, radial_velocity_m_s=2.0),
+            SimpleNamespace(time_offset_s=3.0, radial_velocity_m_s=-4.0),
+        ),
+    )
+
+    artifact_id = api._write_arrow(result, tmp_path)
+    artifact_path = tmp_path / f"{artifact_id}.arrow"
+    with pyarrow.memory_map(str(artifact_path), "r") as source:
+        table = ipc.open_file(source).read_all()
+
+    assert table.column_names == ["time_offset_s", "radial_velocity_m_s"]
+    assert table.to_pydict() == {
+        "time_offset_s": [-1.0, 3.0],
+        "radial_velocity_m_s": [2.0, -4.0],
+    }
+    assert artifact_path.stat().st_size <= api.MAX_ARTIFACT_WRITER_TEMP_BYTES
+
+
+def test_writer_temporary_limit_is_separate_and_removes_failed_file(tmp_path) -> None:
+    pytest.importorskip("pyarrow")
+    result = SimpleNamespace(
+        samples=(SimpleNamespace(time_offset_s=0.0, radial_velocity_m_s=0.0),),
+    )
+
+    observed_sizes: list[int] = []
+
+    @contextmanager
+    def observe_before_cleanup(path: Path):
+        try:
+            yield
+        finally:
+            observed_sizes.append(path.stat().st_size)
+
+    with pytest.raises(ArtifactWriterCapacityError, match="temporary-file limit"):
+        api._write_arrow(
+            result,
+            tmp_path,
+            max_temp_bytes=1,
+            active_temporary=observe_before_cleanup,
+        )
+
+    assert observed_sizes and max(observed_sizes) <= 1
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_cache_capacity_failure_marks_job_and_removes_writer_temporary(
+    tmp_path,
+) -> None:
+    def fake_run(request: ForwardRunRequest, *, cancel_requested=None):
+        test_request = replace(
+            request,
+            execution_mode="test",
+            allow_analytic_two_body_test_fallback=True,
+        )
+        result = core_run_forward(test_request)
+        return replace(
+            result, manifest=replace(result.manifest, scientific_result=True)
+        )
+
+    def capacity_writer(result, artifact_root, **kwargs):
+        temporary = artifact_root / ".arrow-capacity.tmp"
+        temporary.write_bytes(b"too large")
+        try:
+            artifact_id = "c" * 64
+            kwargs["promote"](
+                artifact_id, temporary, artifact_root / f"{artifact_id}.arrow"
+            )
+            return artifact_id
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    service = api.V5ApiService(
+        tmp_path,
+        max_artifact_cache_bytes=1,
+        runner=fake_run,
+        artifact_writer=capacity_writer,
+        capabilities=available_capabilities(),
+    )
+    submitted = service.submit(forward_payload())
+    terminal = service.wait_for_terminal(submitted["id"], timeout=2)
+
+    assert terminal["state"] == "failed"
+    assert terminal["error"]["code"] == "artifact-cache-capacity-exhausted"
+    assert not any(path.suffix in {".tmp", ".arrow"} for path in tmp_path.iterdir())
+    service.close()
+
+
+def test_service_strictly_validates_artifact_cache_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("OTHERLIGHT_ARTIFACT_CACHE_MAX_BYTES", "1 MiB")
+    with pytest.raises(ValueError, match="positive base-10 integer"):
+        api.V5ApiService(tmp_path)
+
+
+@pytest.mark.parametrize("value", [True, 1.5, 64 * 1024 * 1024 + 1])
+def test_service_writer_limit_is_a_bounded_integer(value, tmp_path) -> None:
+    with pytest.raises(ValueError, match="must be an integer"):
+        api.V5ApiService(tmp_path, max_artifact_writer_temp_bytes=value)
+
+
+def test_service_releases_cache_ownership_if_executor_startup_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    def fail_executor(**_kwargs):
+        raise RuntimeError("executor unavailable")
+
+    with monkeypatch.context() as context:
+        context.setattr(api_service_module, "ThreadPoolExecutor", fail_executor)
+        with pytest.raises(RuntimeError, match="executor unavailable"):
+            api.V5ApiService(tmp_path)
+
+    service = api.V5ApiService(tmp_path)
+    service.close()

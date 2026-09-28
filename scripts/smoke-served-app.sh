@@ -54,3 +54,5 @@ fi
 
 curl --fail --silent --head "${base_url}${main_path}" >"${tmp_dir}/main.headers"
 grep -qi 'content-type:.*javascript' "${tmp_dir}/main.headers"
+
+node scripts/check-worker-asset.mjs "${base_url}/"

@@ -1,5 +1,5 @@
 /**
- * Owns types Photometry Phase support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ * Defines phase-curve, thermal, ring, and day/night parameters.
  */
 export type ThermalInertiaParams = {
   enabled?: boolean;

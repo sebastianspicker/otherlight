@@ -1,5 +1,5 @@
 /**
- * Owns engine support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Creates the Education lesson engine and advances learning state.
  */
 import type { DidacticSignals, LearningState, StepResult, BrowserScenarioDraft } from "../model/types";
 import { toFiniteNumber } from "../model/units";

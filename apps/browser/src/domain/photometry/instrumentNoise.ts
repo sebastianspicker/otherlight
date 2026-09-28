@@ -28,7 +28,8 @@
 // - Must never throw for normal invalid UI inputs; treat as safe no-op and return input flux.
 
 import { createMulberry32 } from "./random";
-import { applyDetrend, applyElectronNoise, computeDt, isGapSample } from "./instrumentNoiseHelpers";
+import { applyDetrend, computeDt, isGapSample } from "./instrumentNoiseDetrending";
+import { applyElectronNoise } from "./instrumentNoiseElectronNoise";
 import {
   clampMeasuredFlux,
   finiteNoiseOutputOrFallback,

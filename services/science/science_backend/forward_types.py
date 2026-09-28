@@ -87,6 +87,14 @@ class ForwardSample:
 
 
 @dataclass(frozen=True, slots=True)
+class CompactForwardSample:
+    """The only per-sample values retained by the V5 HTTP service."""
+
+    time_offset_s: float
+    radial_velocity_m_s: float
+
+
+@dataclass(frozen=True, slots=True)
 class RunManifest:
     schema_version: str
     request_sha256: str
@@ -108,6 +116,12 @@ class RunManifest:
 @dataclass(frozen=True, slots=True)
 class ForwardRunResult:
     samples: tuple[ForwardSample, ...]
+    manifest: RunManifest
+
+
+@dataclass(frozen=True, slots=True)
+class CompactForwardRunResult:
+    samples: tuple[CompactForwardSample, ...]
     manifest: RunManifest
 
 

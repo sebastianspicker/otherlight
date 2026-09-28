@@ -1,12 +1,15 @@
 /**
- * Owns model support within the photometry layer. Keeps measurement modeling independently composable with simulation output.
+ * Computes layered atmospheric optical depth and transmission.
  */
 import type { AtmosphereRTLayer, AtmosphereRTParams } from "../../model/types";
 import { gaussianFeatureStrength } from "./gaussianFeatures";
-import { finiteOr } from "./numeric";
 
 /** Buffer factor for the outer shell boundary; ensures the sampling grid outer edge is outside the body. */
 const SHELL_OUTER_BUFFER_FACTOR = 1.000001;
+
+function finiteOr(v: unknown, fb: number): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fb;
+}
 
 function hasValidLayerScale(layer: AtmosphereRTLayer): boolean {
   return Number.isFinite(layer.r0) && layer.r0 > 0 && Number.isFinite(layer.H) && layer.H > 0;
@@ -52,7 +55,7 @@ function layerCoreOpticalDepth(params: {
   return params.layer.tau0 * Math.exp(-(params.rho - params.layer.r0) / params.layer.H) * scale;
 }
 
-export function layerOpticalDepthAtRadius(params: {
+function layerOpticalDepthAtRadius(params: {
   rho: number;
   layer: AtmosphereRTLayer;
   lambdaNm?: number;

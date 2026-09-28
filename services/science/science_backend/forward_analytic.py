@@ -2,18 +2,52 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from math import cos, isclose, sin, sqrt
+from typing import cast
 
-from .contracts import G_SI, ForwardRunRequest
+from .contracts import G_SI, Body, ForwardRunRequest
 from .errors import CapabilityUnavailableError, ContractError
-from .forward_observables import add, dot, norm, observable_sample, scale, subtract
-from .forward_types import CancellationCheck, ForwardSample, raise_if_cancelled
+from .forward_collectors import compact_sample, rich_sample
+from .forward_observables import add, dot, norm, scale, subtract
+from .forward_types import (
+    CancellationCheck,
+    CompactForwardSample,
+    ForwardSample,
+    raise_if_cancelled,
+)
+
+CollectedSample = ForwardSample | CompactForwardSample
+SampleCollector = Callable[
+    [ForwardRunRequest, tuple[Body, ...], float, Sequence[float]], CollectedSample
+]
 
 
 def circular_two_body_test_propagate(
     request: ForwardRunRequest,
     cancel_requested: CancellationCheck | None = None,
 ) -> tuple[ForwardSample, ...]:
+    return cast(
+        tuple[ForwardSample, ...],
+        _circular_two_body_test_propagate(request, cancel_requested, rich_sample),
+    )
+
+
+def circular_two_body_test_propagate_compact(
+    request: ForwardRunRequest,
+    cancel_requested: CancellationCheck | None = None,
+) -> tuple[CompactForwardSample, ...]:
+    return cast(
+        tuple[CompactForwardSample, ...],
+        _circular_two_body_test_propagate(request, cancel_requested, compact_sample),
+    )
+
+
+def _circular_two_body_test_propagate(
+    request: ForwardRunRequest,
+    cancel_requested: CancellationCheck | None,
+    collector: SampleCollector,
+) -> tuple[CollectedSample, ...]:
     if len(request.bodies) != 2:
         raise CapabilityUnavailableError(
             "analytic test fallback supports exactly two bodies"
@@ -53,7 +87,8 @@ def circular_two_body_test_propagate(
         ),
         1.0 / total_mass,
     )
-    samples: list[ForwardSample] = []
+    bodies = tuple(request.bodies)
+    samples: list[CollectedSample] = []
     for time in request.sample_times_s:
         raise_if_cancelled(cancel_requested)
         phase = omega * time
@@ -65,17 +100,19 @@ def circular_two_body_test_propagate(
             separation * omega,
         )
         centre = add(centre_position, scale(centre_velocity, time))
-        positions = {
-            first.id: subtract(centre, scale(relative, second.mass_kg / total_mass)),
-            second.id: add(centre, scale(relative, first.mass_kg / total_mass)),
-        }
-        velocities = {
-            first.id: subtract(
-                centre_velocity, scale(relative_v, second.mass_kg / total_mass)
-            ),
-            second.id: add(
-                centre_velocity, scale(relative_v, first.mass_kg / total_mass)
-            ),
-        }
-        samples.append(observable_sample(request, time, positions, velocities))
+        first_position = subtract(centre, scale(relative, second.mass_kg / total_mass))
+        second_position = add(centre, scale(relative, first.mass_kg / total_mass))
+        first_velocity = subtract(
+            centre_velocity, scale(relative_v, second.mass_kg / total_mass)
+        )
+        second_velocity = add(
+            centre_velocity, scale(relative_v, first.mass_kg / total_mass)
+        )
+        state = (
+            *first_position,
+            *first_velocity,
+            *second_position,
+            *second_velocity,
+        )
+        samples.append(collector(request, bodies, time, state))
     return tuple(samples)

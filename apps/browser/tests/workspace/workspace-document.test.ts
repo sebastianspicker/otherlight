@@ -1,6 +1,6 @@
 /** Verifies strict workspace-v1 persistence, migration, and untrusted-document rejection. */
 import { describe, expect, it } from "vitest";
-import { getPresetById } from "../../src/application/presets";
+import { getPresetById } from "../../src/application/catalog/presets";
 import { toEducationScenarioV4 } from "../../src/application/browserScenarioAdapter";
 import { buildScientificForwardRequestFromEducationScenarioV4 } from "../../src/infrastructure/science";
 import { normalizeEducationScenarioV4Input } from "../../src/domain/simulation/v4";

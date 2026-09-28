@@ -97,7 +97,9 @@ struct OtherlightWorkspace: View {
           ?? .simulation
         if screenshotConfiguration != nil {
           showsInspector = screenshotConfiguration?.scenario == "parameters"
-          session.selectScenario(id: "kepler-planet-only")
+          session.selectScenario(
+            id: screenshotConfiguration?.scenario == "detached-binary"
+              ? ScenarioCatalog.detachedBinaryLab.identifier : "kepler-planet-only")
           session.jumpToTransit()
           session.recalculate()
         }

@@ -1,0 +1,325 @@
+/*
+ * Plate & Figure — the Education spread.
+ * An eight-column main column carries the plate and the figure; a four-column
+ * margin column carries the controlled inputs, the equation and the lesson.
+ */
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr);
+  column-gap: var(--col-gap);
+  align-items: start;
+}
+
+.mainLeft,
+.panel.vizStack,
+.sidebar,
+.sidebar-primary {
+  display: contents;
+}
+
+.workspace-jumps {
+  display: none;
+}
+
+.scientific-figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.sky-figure {
+  grid-column: 1;
+  grid-row: 1;
+  padding-bottom: var(--s-6);
+}
+
+.light-curve-figure {
+  grid-column: 1;
+  grid-row: 2;
+  padding: var(--s-5) 0 var(--s-6);
+  border-top: 1px solid var(--ink);
+}
+
+.sidebar .lab-rail {
+  grid-column: 1;
+  grid-row: 3;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--ink);
+}
+
+/* Margin column: one continuous rule down its left edge. */
+.radius-comparison,
+.radius-relationship {
+  grid-column: 2;
+  min-width: 0;
+  padding: 0 0 var(--s-6) var(--s-6);
+  border-left: var(--hair);
+}
+
+.radius-comparison {
+  grid-row: 1;
+}
+
+.radius-relationship {
+  grid-row: 2;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--ink);
+}
+
+/*
+ * Lesson state moves the lesson into the margin column. State selectors sit in
+ * :where() so they share the base specificity and win by source order only.
+ */
+:where(
+    body[data-observatory-phase="predict"],
+    body[data-observatory-phase="explain"],
+    body[data-observatory-system="binary"]
+  )
+  .sidebar
+  .lab-rail {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  padding: 0 0 var(--s-6) var(--s-6);
+  border-top: 0;
+  border-left: var(--hair);
+}
+
+:where(body[data-observatory-phase="predict"], body[data-observatory-phase="explain"]) .radius-relationship {
+  grid-column: 1;
+  grid-row: 3;
+  padding-left: 0;
+  border-left: 0;
+}
+
+:where(body[data-observatory-phase="predict"], body[data-observatory-phase="explain"]) .radius-comparison {
+  display: none;
+}
+
+/* Plate 1: the sky, always dark, with registration marks and an envelope line. */
+.plate {
+  position: relative;
+  padding: 36px var(--s-4) var(--s-4);
+  border: 1px solid var(--plate-rule);
+  background: var(--plate);
+  color: var(--plate-ink);
+}
+
+.plate::before,
+.plate::after {
+  position: absolute;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  border-bottom: 1px solid var(--plate-ink-3);
+  content: "";
+  pointer-events: none;
+}
+
+.plate::before {
+  left: 8px;
+  border-left: 1px solid var(--plate-ink-3);
+}
+
+.plate::after {
+  right: 8px;
+  border-right: 1px solid var(--plate-ink-3);
+}
+
+.plate__label {
+  position: absolute;
+  inset: 10px var(--s-4) auto;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+  color: var(--plate-ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+}
+
+#skyCanvas {
+  height: clamp(240px, 26vw, 340px);
+  background: var(--plate);
+}
+
+#skyCanvas.skyCanvas--hidden {
+  visibility: hidden;
+}
+
+.scientific-figure figcaption {
+  max-width: 88ch;
+  padding-top: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+
+/* Figure 2: a journal figure on paper. */
+.figure-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.figure-number {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-serif);
+  font-size: var(--t-base);
+  font-style: italic;
+}
+
+.figure-heading h2 {
+  font-size: var(--t-xl);
+  line-height: 1.15;
+}
+
+.figure-key {
+  color: var(--ink-3);
+  font-family: var(--font-serif);
+  font-size: var(--t-md);
+  font-style: italic;
+}
+
+.figure-heading button {
+  margin-left: auto;
+  font-size: var(--t-sm);
+}
+
+#lcCanvas {
+  height: clamp(240px, 22vw, 300px);
+  background: var(--paper);
+}
+
+#ocCanvas {
+  height: 200px;
+  background: var(--paper);
+}
+
+/* Playback */
+.runtime-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-5);
+  padding-top: var(--s-3);
+}
+
+.runtime-toolbar > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.runtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+}
+
+#btnStart {
+  min-width: 104px;
+}
+
+#btnStart::before {
+  width: 10px;
+  height: 11px;
+  background: currentcolor;
+  content: "";
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 11'%3E%3Cpath d='M0 0 10 5.5 0 11Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+#btnStart[aria-pressed="true"]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 11'%3E%3Cpath d='M0 0h3.5v11H0zM6.5 0H10v11H6.5z'/%3E%3C/svg%3E");
+}
+
+.playback-settings {
+  margin-left: auto;
+}
+
+.playback-settings[open] {
+  flex-basis: 100%;
+  margin-left: 0;
+  padding: var(--s-2) 0 var(--s-3);
+  border-top: var(--hair);
+}
+
+.runtime-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+  margin-top: var(--s-2);
+}
+
+.runtime-fields > .inline {
+  white-space: nowrap;
+}
+
+#timeSpeed {
+  width: 140px;
+}
+
+.runtime-view > summary {
+  margin-top: var(--s-2);
+}
+
+.figure-diagnostics {
+  padding-top: var(--s-2);
+}
+
+.runtime-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-6);
+  margin: var(--s-2) 0 var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: var(--hair);
+  border-bottom: var(--hair);
+}
+
+.runtime-readouts > span {
+  display: grid;
+  gap: 2px;
+}
+
+.readout-label {
+  color: var(--ink-3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+.runtime-readouts .mono {
+  font-size: var(--t-base);
+}
+
+/* Model limits and action failures share one calm, ruled note (text carries the meaning). */
+.runtime-warning {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  border-left: 3px solid var(--caution);
+  background: var(--caution-wash);
+  color: var(--ink);
+  font-size: var(--t-sm);
+}
+
+.runtime-warning:empty {
+  display: none;
+}

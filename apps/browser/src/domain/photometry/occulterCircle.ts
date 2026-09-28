@@ -44,16 +44,6 @@ export type CircleOcculter = {
 };
 
 /**
- * Point-in-circle test for occulter geometry (strict: tangency is NOT blocked).
- */
-export function pointInCircleOcculter(x: number, y: number, o: CircleOcculter): boolean {
-  const dx = x - o.dx;
-  const dy = y - o.dy;
-  const r2 = o.r * o.r;
-  return dx * dx + dy * dy < r2;
-}
-
-/**
  * Clamp a "grid resolution" input used by disk integrators.
  *
  * Interpretation:

@@ -1,0 +1,4714 @@
+{
+ "preset:default": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001883532,
+    "transitFactor": 1,
+    "planetSky": [
+     -7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000822798,
+    "transitFactor": 1,
+    "planetSky": [
+     -17771206.94,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9393186942,
+    "transitFactor": 0.9388684965,
+    "planetSky": [
+     -25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.077816856e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.008440467,
+    "transitFactor": 1,
+    "planetSky": [
+     25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.004340088,
+    "transitFactor": 1,
+    "planetSky": [
+     7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:kepler-planet-only": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17771206.94,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.944942317,
+    "transitFactor": 0.944942317,
+    "planetSky": [
+     -25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.077816856e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:limb-darkening-variation": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001883532,
+    "transitFactor": 1,
+    "planetSky": [
+     -7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000822798,
+    "transitFactor": 1,
+    "planetSky": [
+     -17771206.94,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9356789366,
+    "transitFactor": 0.9352287388,
+    "planetSky": [
+     -25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.077816856e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.008440467,
+    "transitFactor": 1,
+    "planetSky": [
+     25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.004340088,
+    "transitFactor": 1,
+    "planetSky": [
+     7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-central-transit": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.541240077e-8,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.039147267e-7,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9449289169,
+    "transitFactor": 0.9449289169,
+    "planetSky": [
+     -1.469576159e-7,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.799711739e-23,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     1.469576159e-7,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     4.541240077e-8,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-grazing-transit": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -204233966.8,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -467337478.3,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9753567182,
+    "transitFactor": 0.9753567182,
+    "planetSky": [
+     -660915000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -8.093874393e-8,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     660915000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     204233966.8,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-near-miss": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -290227216,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -664111153.4,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -939195000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.150182151e-7,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     939195000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     290227216,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-long-cadence-smear": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -8599324.919,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -19677367.51,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448255356,
+    "transitFactor": 0.9448255356,
+    "planetSky": [
+     -27828000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.407947113e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     27828000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     8599324.919,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-exomoon-separated": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9411355665,
+    "transitFactor": 0.9411355665,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-exomoon-overlap": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9450570678,
+    "transitFactor": 0.9450570678,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-exomoon-moon-only": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -290227216,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -664111153.4,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -939195000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.150182151e-7,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     939195000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     290227216,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-oblate-planet": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -32247468.45,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -73790128.15,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9565276074,
+    "transitFactor": 0.9565276074,
+    "planetSky": [
+     -104355000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.277980167e-8,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     104355000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     32247468.45,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-geometry-ringed-planet": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000000086,
+    "transitFactor": 1,
+    "planetSky": [
+     -59032102.52,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9460677329,
+    "transitFactor": 0.9448957068,
+    "planetSky": [
+     -83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.022384134e-8,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-limb-darkening-strong": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9373279536,
+    "transitFactor": 0.9373279536,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-spot-crossing": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -9838683.753,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9449943305,
+    "transitFactor": 0.9449943305,
+    "planetSky": [
+     -13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.703973556e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-facula-crossing": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -9838683.753,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9449943305,
+    "transitFactor": 0.9449943305,
+    "planetSky": [
+     -13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.703973556e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-unocculted-spots": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -9838683.753,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9449943305,
+    "transitFactor": 0.9449943305,
+    "planetSky": [
+     -13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.703973556e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-unocculted-faculae": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -9838683.753,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9449943305,
+    "transitFactor": 0.9449943305,
+    "planetSky": [
+     -13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.703973556e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     13914000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     4299662.46,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-spot-evolution": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6449493.69,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -14758025.63,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448164043,
+    "transitFactor": 0.9448164043,
+    "planetSky": [
+     -20871000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -2.555960335e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     20871000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     6449493.69,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-flare-transient": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.008,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.004440822,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.001836638,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9454555556,
+    "transitFactor": 0.9450570678,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.000022224,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.000001171,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.000000111,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-stellar-pulsation-contamination": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.000901982,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.000995991,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 0.9988698886,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9458062041,
+    "transitFactor": 0.9450570678,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 0.9993882835,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 0.9993970734,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 0.999328915,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-transmissive-halo": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9380504074,
+    "transitFactor": 0.9380504074,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-extended-exosphere": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9321393341,
+    "transitFactor": 0.9321393341,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-chromatic-transmission": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9364839016,
+    "transitFactor": 0.9364839016,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-molecular-feature": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9056904235,
+    "transitFactor": 0.9056904235,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-spectral-contamination": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -39354735.01,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9348545798,
+    "transitFactor": 0.9348545798,
+    "planetSky": [
+     -55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.815894225e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     55656000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     17198649.84,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-refraction-shoulder": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -59032102.52,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9419732628,
+    "transitFactor": 0.9419732628,
+    "planetSky": [
+     -83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.022384134e-8,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-atmosphere-forward-scattering": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -59032102.52,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9466837285,
+    "transitFactor": 0.9448957068,
+    "planetSky": [
+     -83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.022384134e-8,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     83484000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     25797974.76,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-white-noise-threshold": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9966284178,
+    "transitFactor": 0.9966284178,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-red-noise-threshold": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9966284178,
+    "transitFactor": 0.9966284178,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-roll-systematics": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-linear-drift": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-data-gap": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-detrended-linear-drift": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-measurement-read-noise-dominated": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9974396488,
+    "transitFactor": 0.9974396488,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-airmass-extinction": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-scintillation": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-cloud-extinction": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-seeing-loss": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-telluric-absorption": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "preset:ec-observer-sky-background": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24596709.38,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9448951644,
+    "transitFactor": 0.9448951644,
+    "planetSky": [
+     -34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.259933891e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     34785000,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     10749156.15,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:ph1-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     90690657320
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001269654,
+    "transitFactor": 1,
+    "planetSky": [
+     28107256.37,
+     85191405840
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000490882,
+    "transitFactor": 1,
+    "planetSky": [
+     63087395.05,
+     58432914850
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000301741,
+    "transitFactor": 1,
+    "planetSky": [
+     84699691.05,
+     -13671945470
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     1.115568192e-8,
+     -104384966100
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006243084,
+    "transitFactor": 1,
+    "planetSky": [
+     -84699691.05,
+     -13671945470
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003391505,
+    "transitFactor": 1,
+    "planetSky": [
+     -28107256.37,
+     85191405840
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:ph2-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     97822795640
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001012108,
+    "transitFactor": 1,
+    "planetSky": [
+     -83842980.19,
+     88113453900
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000346132,
+    "transitFactor": 1,
+    "planetSky": [
+     -177698501.2,
+     44499402730
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000345543,
+    "transitFactor": 1,
+    "planetSky": [
+     -211884285.6,
+     -52801735410
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.30091889e-8,
+     -151407256900
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.005830048,
+    "transitFactor": 1,
+    "planetSky": [
+     211884285.6,
+     -52801735410
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003840435,
+    "transitFactor": 1,
+    "planetSky": [
+     83842980.19,
+     88113453900
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-3-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     9979240121
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001209553,
+    "transitFactor": 1,
+    "planetSky": [
+     -39999327.52,
+     9298109745
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000445422,
+    "transitFactor": 1,
+    "planetSky": [
+     -88702060.86,
+     6036020196
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000306094,
+    "transitFactor": 1,
+    "planetSky": [
+     -115692045.7,
+     -2382438432
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.586445535e-8,
+     -12370681760
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006170949,
+    "transitFactor": 1,
+    "planetSky": [
+     115692045.7,
+     -2382438432
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003489379,
+    "transitFactor": 1,
+    "planetSky": [
+     39999327.52,
+     9298109745
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-3-c": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     19326010360
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001304229,
+    "transitFactor": 1,
+    "planetSky": [
+     -18332550.55,
+     18232621300
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000520642,
+    "transitFactor": 1,
+    "planetSky": [
+     -41420150.54,
+     12867394540
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000300561,
+    "transitFactor": 1,
+    "planetSky": [
+     -56559011.64,
+     -1947348795
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -7.275689889e-9,
+     -21274851740
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006272995,
+    "transitFactor": 1,
+    "planetSky": [
+     56559011.64,
+     -1947348795
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003336847,
+    "transitFactor": 1,
+    "planetSky": [
+     18332550.55,
+     18232621300
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-3-d": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     27387271140
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001236102,
+    "transitFactor": 1,
+    "planetSky": [
+     -31872196,
+     25612655260
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000464535,
+    "transitFactor": 1,
+    "planetSky": [
+     -71064401.67,
+     17052093880
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000303765,
+    "transitFactor": 1,
+    "planetSky": [
+     -93873376.47,
+     -5468492415
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.264647934e-8,
+     -32870751170
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006205713,
+    "transitFactor": 1,
+    "planetSky": [
+     93873376.47,
+     -5468492415
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003445682,
+    "transitFactor": 1,
+    "planetSky": [
+     31872196,
+     25612655260
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-4-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     10735143200
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001254012,
+    "transitFactor": 1,
+    "planetSky": [
+     -31221001.25,
+     10063635950
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000478303,
+    "transitFactor": 1,
+    "planetSky": [
+     -69861375.2,
+     6809172513
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000302578,
+    "transitFactor": 1,
+    "planetSky": [
+     -93083767.04,
+     -1863028838
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.239039511e-8,
+     -12602124630
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006226396,
+    "transitFactor": 1,
+    "planetSky": [
+     93083767.04,
+     -1863028838
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.00341662,
+    "transitFactor": 1,
+    "planetSky": [
+     31221001.25,
+     10063635950
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-5-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     7958606721
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001375537,
+    "transitFactor": 1,
+    "planetSky": [
+     -113707156.8,
+     7569084783
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000590949,
+    "transitFactor": 1,
+    "planetSky": [
+     -260189902.4,
+     5627584781
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9996185926,
+    "transitFactor": 0.9993185296,
+    "planetSky": [
+     -367964088.8,
+     4.873241123e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -4.506260436e-8,
+     -7958606721
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006293647,
+    "transitFactor": 1,
+    "planetSky": [
+     367964088.8,
+     4.873241123e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003227656,
+    "transitFactor": 1,
+    "planetSky": [
+     113707156.8,
+     7569084783
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-5-c": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     12237105820
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001375794,
+    "transitFactor": 1,
+    "planetSky": [
+     -201202400.1,
+     11638179230
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000591318,
+    "transitFactor": 1,
+    "planetSky": [
+     -460400509,
+     8652940510
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000300096,
+    "transitFactor": 1,
+    "planetSky": [
+     -651104644,
+     7.493066239e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -7.973732182e-8,
+     -12237105820
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006291597,
+    "transitFactor": 1,
+    "planetSky": [
+     651104644,
+     0.00001161803994
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.00322727,
+    "transitFactor": 1,
+    "planetSky": [
+     201202400.1,
+     11638179230
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-6-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     28393675860
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001374781,
+    "transitFactor": 1,
+    "planetSky": [
+     -88830442.31,
+     27003990450
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000589869,
+    "transitFactor": 1,
+    "planetSky": [
+     -203265869.8,
+     20077360740
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9996977805,
+    "transitFactor": 0.9993977798,
+    "planetSky": [
+     -287461349.8,
+     0.000001738611213
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     2.905208296e-7,
+     -28393675860
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006299693,
+    "transitFactor": 1,
+    "planetSky": [
+     287461349.8,
+     0.00002695726137
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003228788,
+    "transitFactor": 1,
+    "planetSky": [
+     88830442.31,
+     27003990450
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-7-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     21226741070
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.000962275,
+    "transitFactor": 1,
+    "planetSky": [
+     -173443375.3,
+     18914422440
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000331524,
+    "transitFactor": 1,
+    "planetSky": [
+     -362867496.3,
+     8727951750
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000361918,
+    "transitFactor": 1,
+    "planetSky": [
+     -423532402.4,
+     -13165382660
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -6.810026461e-8,
+     -34633103850
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.005729706,
+    "transitFactor": 1,
+    "planetSky": [
+     423532402.4,
+     -13165382660
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003937466,
+    "transitFactor": 1,
+    "planetSky": [
+     173443375.3,
+     18914422440
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-8-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     12805577730
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001376191,
+    "transitFactor": 1,
+    "planetSky": [
+     -247092355.9,
+     12178828150
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000591887,
+    "transitFactor": 1,
+    "planetSky": [
+     -565407998.9,
+     9054910851
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000300155,
+    "transitFactor": 1,
+    "planetSky": [
+     -799607660.4,
+     7.84115489e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -9.792369619e-8,
+     -12805577730
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006288447,
+    "transitFactor": 1,
+    "planetSky": [
+     799607660.4,
+     7.84115489e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003226675,
+    "transitFactor": 1,
+    "planetSky": [
+     247092355.9,
+     12178828150
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-8-c": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     7958606721
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001375973,
+    "transitFactor": 1,
+    "planetSky": [
+     -141569786.2,
+     7569084783
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000591575,
+    "transitFactor": 1,
+    "planetSky": [
+     -323946442.1,
+     5627584781
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.999566595,
+    "transitFactor": 0.9992664734,
+    "planetSky": [
+     -458129451.9,
+     4.873241123e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -5.610467668e-8,
+     -7958606721
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006290172,
+    "transitFactor": 1,
+    "planetSky": [
+     458129451.9,
+     -0.000006581338628
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003227001,
+    "transitFactor": 1,
+    "planetSky": [
+     141569786.2,
+     7569084783
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:k2-9-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     13613406230
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001375203,
+    "transitFactor": 1,
+    "planetSky": [
+     -148061699.2,
+     12947118710
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000590472,
+    "transitFactor": 1,
+    "planetSky": [
+     -338801533.3,
+     9626131863
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000300028,
+    "transitFactor": 1,
+    "planetSky": [
+     -479137723.4,
+     8.335807185e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -5.867744793e-8,
+     -13613406230
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.00629631,
+    "transitFactor": 1,
+    "planetSky": [
+     479137723.4,
+     0.00001292471435
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003228156,
+    "transitFactor": 1,
+    "planetSky": [
+     148061699.2,
+     12947118710
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-1-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     7300376090
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001374903,
+    "transitFactor": 1,
+    "planetSky": [
+     -46851198.3,
+     6943070252
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000590043,
+    "transitFactor": 1,
+    "planetSky": [
+     -107207048.9,
+     5162145439
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.980598246,
+    "transitFactor": 0.9802982403,
+    "planetSky": [
+     -151613662.5,
+     4.470191106e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.856731865e-8,
+     -7300376090
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006298712,
+    "transitFactor": 1,
+    "planetSky": [
+     151613662.5,
+     4.470191106e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003228605,
+    "transitFactor": 1,
+    "planetSky": [
+     46851198.3,
+     6943070252
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-3-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     5192741805
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.000887589,
+    "transitFactor": 1,
+    "planetSky": [
+     -318886977.9,
+     4534964611
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000318068,
+    "transitFactor": 1,
+    "planetSky": [
+     -652360493.1,
+     1736311120
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1.000398595,
+    "transitFactor": 1,
+    "planetSky": [
+     -736339723.6,
+     -3925161501
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.245997145e-7,
+     -9213533143
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.005537633,
+    "transitFactor": 1,
+    "planetSky": [
+     736339723.6,
+     -3925161501
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.004090598,
+    "transitFactor": 1,
+    "planetSky": [
+     318886977.9,
+     4534964611
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-4-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     8263786377
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001374906,
+    "transitFactor": 1,
+    "planetSky": [
+     -53479619.51,
+     7859327884
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000590047,
+    "transitFactor": 1,
+    "planetSky": [
+     -122374504.6,
+     5843379386
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9914230971,
+    "transitFactor": 0.9911230913,
+    "planetSky": [
+     -173063684.1,
+     5.060109768e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -2.119418868e-8,
+     -8263786377
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.00629869,
+    "transitFactor": 1,
+    "planetSky": [
+     173063684.1,
+     5.060109768e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003228601,
+    "transitFactor": 1,
+    "planetSky": [
+     53479619.51,
+     7859327884
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-5-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     7704290341
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.0013759,
+    "transitFactor": 1,
+    "planetSky": [
+     -132897418.9,
+     7327215532
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.00059147,
+    "transitFactor": 1,
+    "planetSky": [
+     -304101935.7,
+     5447755944
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9889828409,
+    "transitFactor": 0.98868273,
+    "planetSky": [
+     -430065081.7,
+     4.717517253e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -5.266778258e-8,
+     -7704290341
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006290755,
+    "transitFactor": 1,
+    "planetSky": [
+     430065081.7,
+     -0.000006371032695
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003227111,
+    "transitFactor": 1,
+    "planetSky": [
+     132897418.9,
+     7327215532
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-6-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     12192226460
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001376551,
+    "transitFactor": 1,
+    "planetSky": [
+     -262814851.5,
+     11595496420
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000592402,
+    "transitFactor": 1,
+    "planetSky": [
+     -601384930.6,
+     8621206009
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9877593315,
+    "transitFactor": 0.987459115,
+    "planetSky": [
+     -850486725.1,
+     7.465585556e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -8.5953854e-7,
+     -12192226460
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006285601,
+    "transitFactor": 1,
+    "planetSky": [
+     850486725.1,
+     -0.00001008231388
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003226136,
+    "transitFactor": 1,
+    "planetSky": [
+     262814851.5,
+     11595496420
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:xo-7-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     6362400433
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001324497,
+    "transitFactor": 1,
+    "planetSky": [
+     -241679762,
+     6013338700
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000541356,
+    "transitFactor": 1,
+    "planetSky": [
+     -547585112.8,
+     4294440425
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9926682834,
+    "transitFactor": 0.9923666443,
+    "planetSky": [
+     -753340396.1,
+     -502401341.2
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -9.590172799e-8,
+     -6865043294
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006245302,
+    "transitFactor": 1,
+    "planetSky": [
+     753340396.1,
+     -502401341.2
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003305338,
+    "transitFactor": 1,
+    "planetSky": [
+     241679762,
+     6013338700
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "real:gpx-1-b": {
+  "mode": "general-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     5056408030
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001386259,
+    "transitFactor": 1,
+    "planetSky": [
+     -274013317.4,
+     4808929806
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000606412,
+    "transitFactor": 1,
+    "planetSky": [
+     -627009771,
+     3575420406
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9919454374,
+    "transitFactor": 0.991641961,
+    "planetSky": [
+     -886725721.9,
+     3.096156954e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002209859,
+    "transitFactor": 1,
+    "planetSky": [
+     -1.085925817e-7,
+     -5056408030
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.006210495,
+    "transitFactor": 1,
+    "planetSky": [
+     886725721.9,
+     3.096156954e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.003211629,
+    "transitFactor": 1,
+    "planetSky": [
+     274013317.4,
+     4808929806
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "binary:default": {
+  "mode": "detached-binary-lab",
+  "statusMessage": null,
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2358487153
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -7631968.327,
+     2243054576
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -17463818.03,
+     1667702259
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -24697568.31,
+     1.444156872e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.024579798e-9,
+     -2358487153
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     24697568.31,
+     1.444156872e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1,
+    "transitFactor": 1,
+    "planetSky": [
+     7631968.327,
+     2243054576
+    ],
+    "warnings": []
+   }
+  ]
+ },
+ "reference:default": {
+  "mode": "general-lab",
+  "statusMessage": "Reference mode runs on the in-thread deterministic runtime; the worker handoff has been retired.",
+  "steps": [
+   {
+    "fraction": 0,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     0,
+     2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.05,
+    "fluxTotal": 1.001883532,
+    "transitFactor": 1,
+    "planetSky": [
+     -7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.125,
+    "fluxTotal": 1.000822798,
+    "transitFactor": 1,
+    "planetSky": [
+     -17771206.94,
+     1697056275
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.25,
+    "fluxTotal": 0.9393125927,
+    "transitFactor": 0.9388623949,
+    "planetSky": [
+     -25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.5,
+    "fluxTotal": 1.002996479,
+    "transitFactor": 1,
+    "planetSky": [
+     -3.077816856e-9,
+     -2400000000
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.75,
+    "fluxTotal": 1.008440467,
+    "transitFactor": 1,
+    "planetSky": [
+     25132281.88,
+     1.469576159e-7
+    ],
+    "warnings": []
+   },
+   {
+    "fraction": 0.95,
+    "fluxTotal": 1.004340088,
+    "transitFactor": 1,
+    "planetSky": [
+     7766302.208,
+     2282535639
+    ],
+    "warnings": []
+   }
+  ]
+ }
+}

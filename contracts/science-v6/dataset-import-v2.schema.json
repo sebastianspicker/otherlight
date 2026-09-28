@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/otherlight/science-v6/dataset-import-v2.schema.json",
+  "title": "Scientific V2 in-memory dataset import",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "units"],
+  "properties": {
+    "schemaVersion": { "const": "science-dataset-v2" },
+    "kind": {
+      "enum": [
+        "passband-response",
+        "stellar-intensity-grid",
+        "atmospheric-profile",
+        "scattering-phase-function",
+        "stellar-variability-psd"
+      ]
+    },
+    "units": { "type": "object" },
+    "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+    "response": { "$ref": "#/$defs/unitIntervalSamples" },
+    "mu": { "$ref": "#/$defs/unitIntervalAxis" },
+    "intensityWm3Sr": { "$ref": "#/$defs/intensityGrid" },
+    "representation": { "enum": ["transmission", "effective-radius"] },
+    "transmission": { "$ref": "#/$defs/unitIntervalSamples" },
+    "effectiveRadiusM": { "$ref": "#/$defs/positiveSamples" },
+    "scatteringAngleRad": { "$ref": "#/$defs/scatteringAngleAxis" },
+    "phaseFunctionSrInv": { "$ref": "#/$defs/nonNegativeSamples" },
+    "frequencyHz": { "$ref": "#/$defs/frequencyAxis" },
+    "powerSpectralDensityPerHz": { "$ref": "#/$defs/nonNegativeSamples" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "passband-response" } }, "required": ["kind"] },
+      "then": {
+        "required": ["schemaVersion", "kind", "units", "wavelengthM", "response"],
+        "properties": {
+          "schemaVersion": { "const": "science-dataset-v2" },
+          "kind": { "const": "passband-response" },
+          "units": {
+            "type": "object",
+            "required": ["wavelengthM", "response"],
+            "properties": { "wavelengthM": { "const": "m" }, "response": { "const": "1" } },
+            "additionalProperties": false
+          },
+          "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+          "response": { "$ref": "#/$defs/unitIntervalSamples" }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "stellar-intensity-grid" } }, "required": ["kind"] },
+      "then": {
+        "required": ["schemaVersion", "kind", "units", "wavelengthM", "mu", "intensityWm3Sr"],
+        "properties": {
+          "schemaVersion": { "const": "science-dataset-v2" },
+          "kind": { "const": "stellar-intensity-grid" },
+          "units": {
+            "type": "object",
+            "required": ["wavelengthM", "mu", "intensityWm3Sr"],
+            "properties": {
+              "wavelengthM": { "const": "m" },
+              "mu": { "const": "1" },
+              "intensityWm3Sr": { "const": "W m^-3 sr^-1" }
+            },
+            "additionalProperties": false
+          },
+          "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+          "mu": { "$ref": "#/$defs/unitIntervalAxis" },
+          "intensityWm3Sr": { "$ref": "#/$defs/intensityGrid" }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "atmospheric-profile" } }, "required": ["kind"] },
+      "then": {
+        "required": ["schemaVersion", "kind", "units", "representation", "wavelengthM"],
+        "properties": {
+          "schemaVersion": { "const": "science-dataset-v2" },
+          "kind": { "const": "atmospheric-profile" },
+          "units": { "type": "object" },
+          "representation": { "enum": ["transmission", "effective-radius"] },
+          "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+          "transmission": { "$ref": "#/$defs/unitIntervalSamples" },
+          "effectiveRadiusM": { "$ref": "#/$defs/positiveSamples" }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": { "representation": { "const": "transmission" } },
+              "required": ["representation"]
+            },
+            "then": {
+              "required": ["schemaVersion", "kind", "units", "representation", "wavelengthM", "transmission"],
+              "properties": {
+                "schemaVersion": { "const": "science-dataset-v2" },
+                "kind": { "const": "atmospheric-profile" },
+                "units": {
+                  "type": "object",
+                  "required": ["wavelengthM", "transmission"],
+                  "properties": { "wavelengthM": { "const": "m" }, "transmission": { "const": "1" } },
+                  "additionalProperties": false
+                },
+                "representation": { "const": "transmission" },
+                "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+                "transmission": { "$ref": "#/$defs/unitIntervalSamples" }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "if": {
+              "properties": { "representation": { "const": "effective-radius" } },
+              "required": ["representation"]
+            },
+            "then": {
+              "required": [
+                "schemaVersion",
+                "kind",
+                "units",
+                "representation",
+                "wavelengthM",
+                "effectiveRadiusM"
+              ],
+              "properties": {
+                "schemaVersion": { "const": "science-dataset-v2" },
+                "kind": { "const": "atmospheric-profile" },
+                "units": {
+                  "type": "object",
+                  "required": ["wavelengthM", "effectiveRadiusM"],
+                  "properties": { "wavelengthM": { "const": "m" }, "effectiveRadiusM": { "const": "m" } },
+                  "additionalProperties": false
+                },
+                "representation": { "const": "effective-radius" },
+                "wavelengthM": { "$ref": "#/$defs/wavelengthAxis" },
+                "effectiveRadiusM": { "$ref": "#/$defs/positiveSamples" }
+              },
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "scattering-phase-function" } }, "required": ["kind"] },
+      "then": {
+        "required": ["schemaVersion", "kind", "units", "scatteringAngleRad", "phaseFunctionSrInv"],
+        "properties": {
+          "schemaVersion": { "const": "science-dataset-v2" },
+          "kind": { "const": "scattering-phase-function" },
+          "units": {
+            "type": "object",
+            "required": ["scatteringAngleRad", "phaseFunctionSrInv"],
+            "properties": {
+              "scatteringAngleRad": { "const": "rad" },
+              "phaseFunctionSrInv": { "const": "sr^-1" }
+            },
+            "additionalProperties": false
+          },
+          "scatteringAngleRad": { "$ref": "#/$defs/scatteringAngleAxis" },
+          "phaseFunctionSrInv": { "$ref": "#/$defs/nonNegativeSamples" }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "stellar-variability-psd" } }, "required": ["kind"] },
+      "then": {
+        "required": ["schemaVersion", "kind", "units", "frequencyHz", "powerSpectralDensityPerHz"],
+        "properties": {
+          "schemaVersion": { "const": "science-dataset-v2" },
+          "kind": { "const": "stellar-variability-psd" },
+          "units": {
+            "type": "object",
+            "required": ["frequencyHz", "powerSpectralDensityPerHz"],
+            "properties": {
+              "frequencyHz": { "const": "Hz" },
+              "powerSpectralDensityPerHz": { "const": "Hz^-1" }
+            },
+            "additionalProperties": false
+          },
+          "frequencyHz": { "$ref": "#/$defs/frequencyAxis" },
+          "powerSpectralDensityPerHz": { "$ref": "#/$defs/nonNegativeSamples" }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "$defs": {
+    "wavelengthAxis": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000 }
+    },
+    "unitIntervalAxis": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "scatteringAngleAxis": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "minimum": 0, "maximum": 3.141592653589793 }
+    },
+    "frequencyAxis": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 1e30 }
+    },
+    "unitIntervalSamples": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "positiveSamples": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 1e30 }
+    },
+    "nonNegativeSamples": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": { "type": "number", "minimum": 0, "maximum": 1e30 }
+    },
+    "intensityGrid": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100000,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 100000,
+        "items": { "type": "number", "minimum": 0, "maximum": 1e30 }
+      }
+    }
+  }
+}

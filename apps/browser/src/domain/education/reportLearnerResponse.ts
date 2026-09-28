@@ -1,5 +1,5 @@
 /**
- * Owns report Learner Response support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Appends a learner's response to the lesson report.
  */
 export function appendLearnerResponse(lines: string[], label: string, response: string | undefined): void {
   if (!response) return;

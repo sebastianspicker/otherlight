@@ -1,51 +1,18 @@
 # Release status
 
-## Evidence cutoff
+**No Otherlight revision is release-qualified yet.** The project is pre-release
+alpha software; the version strings in the manifests identify build inputs, not
+a shipped release.
 
-This document describes repository capabilities as of 2026-08-27. It is not a
-release qualification record.
+That is not a claim that nothing works. The individual pieces — the Browser
+Education app, the loopback science service, the Apple packages, and the
+serialized contracts — each have their own automated checks. What is missing is
+a single dated qualification that covers one exact revision across all of them
+at once, including the lanes this repository cannot run (signing, notarization,
+device testing, and live deployment).
 
-## Verdict
-
-Not release-qualified. The Browser, Apple app, service, contracts, and docs
-now have documented current locations, but a release claim requires fresh
-results from the applicable local and external lanes.
-
-## Candidate identity
-
-No candidate tag, signed artifact, deployment, or published release is claimed
-by this document.
-
-## Required local evidence
-
-```bash
-pnpm hygiene:public
-pnpm hygiene:docs
-pnpm hygiene:swift-docs
-pnpm architecture:check
-pnpm physics-registry
-pnpm ci:verify
-pnpm science:backend:check
-pnpm science:backend:test
-pnpm native:core:test
-pnpm native:science:test
-```
-
-Run the service and Apple lanes only in environments with their declared
-toolchains and dependencies. Record their exact results, platform, and revision
-before promotion.
-
-## Open blockers
-
-- No current consolidated Browser, service, and Apple qualification evidence is
-  recorded here.
-- A loopback science result does not establish remote-service, multi-user, or
-  research-validation claims.
-- Signing, notarization, hosted deployment, device testing, and remote CI are
-  separate owner-controlled evidence lanes.
-
-## Next gate
-
-Run the checks above on the intended candidate revision, inspect the resulting
-contracts and artifacts, then update this document with dated evidence and any
-remaining external blockers.
+To qualify an intended revision, follow the
+[alpha release procedure](docs/alpha-release.md) and replace this page with
+dated, revision-specific evidence. Record every omitted or externally controlled
+lane explicitly. Do not treat the presence of a workflow, a build artifact, or a
+green test run as qualification on its own.

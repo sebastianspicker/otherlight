@@ -1,5 +1,5 @@
 /**
- * Owns orbit Sanitizer support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Validates and repairs static orbits.
  */
 import type { OrbitElements } from "../../model/types";
 

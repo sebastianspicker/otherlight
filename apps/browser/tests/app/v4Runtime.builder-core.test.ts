@@ -2,11 +2,12 @@
 
 import { expect, it } from "vitest";
 
-import { buildBinaryLabParams } from "../../src/application/binaryLab";
+import { buildBinaryLabParams } from "../../src/application/catalog/binaryLab";
 import { toEducationScenarioV4 } from "../../src/application/browserScenarioAdapter";
-import { cloneParams, SCENARIO_DEFAULTS } from "../../src/application/scenario";
+import { cloneParams } from "../../src/domain/model/clone";
+import { SCENARIO_DEFAULTS } from "../../src/application/catalog/defaults";
 import { createSimulationV4, ScientificBrowserRuntimeError } from "../../src/domain/simulation/v4";
-import { createSimulationRuntimeV4FromParams } from "../../src/application/v4Runtime";
+import { createSimulationRuntimeV4FromParams } from "../../src/application/runtime/v4Runtime";
 
 function disableExcludedScientificPhotometry(system: ReturnType<typeof buildBinaryLabParams>): void {
   system.star.photometry = {

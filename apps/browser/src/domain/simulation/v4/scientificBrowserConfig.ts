@@ -1,5 +1,5 @@
 /**
- * Owns scientific Browser Config support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Asserts that a scenario satisfies the scientific Browser configuration.
  */
 import { hasExplicitLimbDarkeningBandLaw } from "../../photometry/limbDarkening";
 import {

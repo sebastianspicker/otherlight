@@ -1,10 +1,10 @@
 /**
- * Owns labs support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ * Defines the lab system catalog and its lookups.
  */
 import type { LessonSimMode } from "./typesDidactics";
 
 export type LabSystemId = "transit-exomoon" | "binary-stars";
-export type LabControlValue = Exclude<LessonSimMode, "either">;
+type LabControlValue = Exclude<LessonSimMode, "either">;
 
 export type LabSystemDefinition = {
   id: LabSystemId;

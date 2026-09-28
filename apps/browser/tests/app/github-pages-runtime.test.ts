@@ -1,11 +1,12 @@
 /** Covers base-aware presentation assets and the GitHub Pages scientific-runtime boundary. */
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { wireScienceWorkspace } from "../../src/presentation/controllers/scienceWorkspace";
-import { isGitHubPagesMode, runtimeAssetUrl } from "../../src/presentation/runtime/deployment";
-import { createAppDocumentHtml } from "../../src/presentation/ui/appShell";
-import { renderSidebarTemplate } from "../../src/presentation/ui/templates/sidebar";
-import { renderScientificWorkspace } from "../../src/presentation/ui/templates/scientificWorkspace";
+import type { CapabilityManifest } from "../../src/infrastructure/science/types";
+import { wireScienceWorkspace } from "../../src/presentation/science/scienceWorkspace";
+import { isGitHubPagesMode, runtimeAssetUrl } from "../../src/application/deployment";
+import { createAppDocumentHtml } from "../../src/presentation/shell/appShell";
+import { renderSidebarTemplate } from "../../src/presentation/shell/templates/sidebar";
+import { renderScientificWorkspace } from "../../src/presentation/science/templates/scientificWorkspace";
 
 type DomGlobals = {
   window: typeof window;
@@ -24,8 +25,10 @@ let restoreDomGlobals: (() => void) | undefined;
 
 afterEach(() => restoreDomGlobals?.());
 
-function installScientificWorkspaceDom(): void {
-  const dom = new JSDOM(`<!doctype html><body>${renderScientificWorkspace()}</body>`);
+function installScientificWorkspaceDom(isGitHubPages = false): void {
+  const dom = new JSDOM(
+    ["<!doctype html><body>", renderScientificWorkspace(isGitHubPages), "</body>"].join(""),
+  );
   const previous: DomGlobals = {
     window: globalThis.window,
     document: globalThis.document,
@@ -66,7 +69,7 @@ function scienceWorkspaceArgs() {
 }
 
 describe("GitHub Pages runtime presentation", () => {
-  it("uses the runtime base URL for the generated favicon and brand asset", () => {
+  it("uses the runtime base URL for assets and an inline orbit brand mark", () => {
     expect(runtimeAssetUrl("favicon.svg", "/")).toBe("/favicon.svg");
     expect(runtimeAssetUrl("/brand/otherlight-signal-eclipse.svg", "/otherlight/")).toBe(
       "/otherlight/brand/otherlight-signal-eclipse.svg",
@@ -76,11 +79,11 @@ describe("GitHub Pages runtime presentation", () => {
 
     const localDocument = createAppDocumentHtml("/");
     expect(localDocument).toContain('href="/favicon.svg"');
-    expect(localDocument).toContain('src="/brand/otherlight-signal-eclipse.svg"');
+    expect(localDocument).toContain('<svg class="brand-mark"');
 
     const pagesDocument = createAppDocumentHtml("/otherlight/");
     expect(pagesDocument).toContain('href="/otherlight/favicon.svg"');
-    expect(pagesDocument).toContain('src="/otherlight/brand/otherlight-signal-eclipse.svg"');
+    expect(pagesDocument).toContain('<svg class="brand-mark"');
     expect(renderScientificWorkspace()).toContain(
       'href="https://github.com/sebastianspicker/otherlight/blob/main/docs/physics/model-status.md"',
     );
@@ -90,7 +93,7 @@ describe("GitHub Pages runtime presentation", () => {
   });
 
   it("keeps authoring controls available while blocking all scientific network actions on GitHub Pages", async () => {
-    installScientificWorkspaceDom();
+    installScientificWorkspaceDom(true);
     const client = {
       getCapabilities: vi.fn(),
       submitJob: vi.fn(),
@@ -115,24 +118,44 @@ describe("GitHub Pages runtime presentation", () => {
     expect(client.getResult).not.toHaveBeenCalled();
     expect(client.cancelJob).not.toHaveBeenCalled();
     expect(document.getElementById("scienceCapabilityStatus")?.textContent).toBe(
-      "Unavailable on GitHub Pages",
+      "Fixture replay only (GitHub Pages)",
     );
-    expect(document.getElementById("scienceRunStatus")?.textContent).toContain("pnpm science:backend:serve");
+    expect(document.getElementById("scienceRunStatus")?.textContent).toContain("Fixture/replay only");
+    expect(document.getElementById("scienceRunStatus")?.textContent).toContain("no V5 execution");
+    expect(document.getElementById("scienceRunStatus")?.textContent).toContain(
+      "not a completed local or scientific run",
+    );
+    expect(document.getElementById("scienceRunStatus")?.textContent).toContain("do not affect this fixture");
     expect((document.getElementById("scienceRefreshBtn") as HTMLButtonElement).disabled).toBe(true);
     expect((document.getElementById("scienceRunBtn") as HTMLButtonElement).disabled).toBe(true);
     expect((document.getElementById("scienceCancelBtn") as HTMLButtonElement).disabled).toBe(true);
     expect((document.getElementById("scienceArtifactLink") as HTMLAnchorElement).hidden).toBe(true);
+    expect((document.getElementById("scienceArtifactLink") as HTMLAnchorElement).hasAttribute("href")).toBe(
+      false,
+    );
     expect((document.getElementById("scienceDurationHours") as HTMLInputElement).disabled).toBe(false);
+    expect(document.getElementById("scienceDatasetWorkspace")).toBeNull();
+    expect((document.getElementById("scienceContractReplay") as HTMLElement).hidden).toBe(false);
+    expect(document.getElementById("scienceReplaySource")?.textContent).toBe(
+      "contracts/science-v5/contract-cases.json#validForwardResult",
+    );
+    expect(document.getElementById("scienceReplayMetadata")?.textContent).toContain(
+      '"fixtureRunId": "job-shared-fixture"',
+    );
   });
 
   it("continues to check the injected loopback client outside GitHub Pages", async () => {
     installScientificWorkspaceDom();
     const client = {
-      getCapabilities: vi.fn(async () => ({
-        serviceVersion: "5.0.0",
-        supportedJobKinds: ["forward"],
-        supportedOutputs: ["radial-velocity"],
-      })),
+      // A deliberately partial manifest: the controller must not need the rest.
+      getCapabilities: vi.fn(
+        async () =>
+          ({
+            serviceVersion: "5.0.0",
+            supportedJobKinds: ["forward"],
+            supportedOutputs: ["radial-velocity"],
+          }) as unknown as CapabilityManifest,
+      ),
       submitJob: vi.fn(),
       pollJob: vi.fn(),
       getResult: vi.fn(),

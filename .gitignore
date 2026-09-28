@@ -1,7 +1,10 @@
 # Dependencies and local environments
 node_modules/
 .pnpm-store/
+.yarn/
+.pnp.*
 .venv/
+venv/
 services/science/*.egg-info/
 
 # Build and package output
@@ -27,6 +30,7 @@ DerivedData/
 *.tsbuildinfo
 
 # Test, coverage, and generated analysis output
+/output/
 /coverage/
 /htmlcov/
 /.coverage
@@ -77,9 +81,13 @@ __pycache__/
 *.pid
 *.bak
 *.orig
+*.rej
 *.swp
 *.swo
 *.tmp
+*.heapsnapshot
+*.cpuprofile
+*.trace
 .cache/
 .eslintcache
 
@@ -96,42 +104,41 @@ Desktop.ini
 .codegraph/
 .impeccable/
 .kilo/
-.repowise/
 .serena/
 /.mcp.json
 
 # Agent and development-assistant state
-.agent/
-.agents/
-.ai/
-.claude/
-.codex/
-.continue/
-.cursor/
-.gemini/
-.windsurf/
-/.cursorrules
-/AGENT.md
-/AGENTS.md
-/agent.md
-/agents.md
-/CLAUDE.md
-/CODEX.md
-/GEMINI.md
+**/.agent/
+**/.agents/
+**/.ai/
+**/.claude/
+**/.codex/
+**/.continue/
+**/.cursor/
+**/.gemini/
+**/.windsurf/
+**/.cursorrules
+**/AGENT.md
+**/AGENTS.md
+**/agent.md
+**/agents.md
+**/CLAUDE.md
+**/CODEX.md
+**/GEMINI.md
 /.github/codex/
 /.github/instructions/
 /.github/prompts/
 /.github/copilot-instructions.md
 /.github/workflows/codex.yml
-/agent-context*
-/agent-memory*
-/agent-notes*
-/agent-output*
-/agent-report*
-/AI_AUDIT*
-/AI_NOTES*
-/AI_REPORT*
-/AI_SUMMARY*
+**/agent-context*
+**/agent-memory*
+**/agent-notes*
+**/agent-output*
+**/agent-report*
+**/AI_AUDIT*
+**/AI_NOTES*
+**/AI_REPORT*
+**/AI_SUMMARY*
 
 # Private maintenance notes and process records
 /AUDIT.md
@@ -182,13 +189,21 @@ credentials.local.*
 secrets.local.*
 credentials.json
 secrets.json
+service-account.json
 .secret*
 *.secret
 *.secrets
+id_rsa
+id_ed25519
+.pypirc
+.aws/credentials
+.docker/config.json
 *.pem
 *.key
 *.crt
 *.csr
+*.der
+*.p8
 *.p12
 *.pfx
 *.jks

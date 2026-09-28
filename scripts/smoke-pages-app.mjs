@@ -1,7 +1,7 @@
 /** Builds and HTTP-smokes the real Browser app at its GitHub Pages repository base. */
 
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
 
 const host = process.env.SMOKE_PAGES_HOST ?? "127.0.0.1";
@@ -16,17 +16,11 @@ if (!Number.isInteger(port) || port < 1 || port > 65_535) {
 }
 
 function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: "inherit", ...options });
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`${command} ${args.join(" ")} exited with ${signal ?? `code ${code}`}`));
-    });
-  });
+  const result = spawnSync(command, args, { stdio: "inherit", ...options });
+  if (result.error) throw result.error;
+  if (result.status === 0) return;
+  const outcome = result.signal ?? `code ${result.status}`;
+  throw new Error(`${command} ${args.join(" ")} exited with ${outcome}`);
 }
 
 function startPreview() {
@@ -130,14 +124,7 @@ function assertContentType(response, expected, label) {
   );
 }
 
-await run("pnpm", ["build:pages"]);
-
-const { child: server, logs } = startPreview();
-try {
-  const indexResponse = await fetchUntilReady(server, logs);
-  const html = await indexResponse.text();
-  assert.match(html, /id="appShellRoot"/, "Pages shell is missing its application mount point");
-  assertNoOriginRootAssetReference(html, "Pages HTML");
+function assertPagesCsp(html) {
   const cspMetaTag = [...html.matchAll(/<meta\b[^>]*>/gi)]
     .map((match) => match[0])
     .find((tag) => /http-equiv="Content-Security-Policy"/i.test(tag));
@@ -157,11 +144,15 @@ try {
     "Pages CSP must restrict connections to self",
   );
   assert.doesNotMatch(pagesCsp, /127\.0\.0\.1|localhost|\bws:/i, "Pages CSP must not permit loopback or HMR");
+}
 
+function inspectPageDocument(html) {
+  assert.match(html, /id="appShellRoot"/, "Pages shell is missing its application mount point");
+  assertNoOriginRootAssetReference(html, "Pages HTML");
+  assertPagesCsp(html);
   const scriptPaths = findAssetPaths(html, "src").filter((pathname) => pathname.endsWith(".js"));
   const stylePaths = findAssetPaths(html, "href").filter((pathname) => pathname.endsWith(".css"));
   const faviconPath = findAssetPaths(html, "href").find((pathname) => pathname.endsWith("favicon.svg"));
-
   assert.ok(scriptPaths.length > 0, "Pages HTML does not reference a Browser JavaScript chunk");
   assert.ok(stylePaths.length > 0, "Pages HTML does not reference a Browser stylesheet");
   assert.equal(
@@ -169,7 +160,10 @@ try {
     `${basePath}favicon.svg`,
     "Pages HTML must resolve the favicon below the repository base",
   );
+  return { scriptPaths, stylePaths, faviconPath };
+}
 
+async function fetchPageAssets({ scriptPaths, stylePaths, faviconPath }) {
   const chunkSources = await Promise.all(
     scriptPaths.map(async (pathname) => {
       const response = await fetchAsset(pathname, "Browser JavaScript chunk");
@@ -186,22 +180,55 @@ try {
   );
   const faviconResponse = await fetchAsset(faviconPath, "Browser favicon");
   assertContentType(faviconResponse, /image\/svg\+xml/i, "Browser favicon");
+  return { chunkSources, styleSources };
+}
 
-  for (const source of chunkSources) {
-    assertNoOriginRootAssetReference(source, "Browser JavaScript chunk");
-  }
-  for (const source of styleSources) {
-    assertNoOriginRootAssetReference(source, "Browser stylesheet");
-  }
-
-  assert.match(
-    chunkSources.join("\n"),
-    /brand\/otherlight-signal-eclipse\.svg/,
-    "Browser chunks do not reference the brand asset",
-  );
+async function assertPageAssetReferences(chunkSources, styleSources) {
+  for (const source of chunkSources) assertNoOriginRootAssetReference(source, "Browser JavaScript chunk");
+  for (const source of styleSources) assertNoOriginRootAssetReference(source, "Browser stylesheet");
+  // The shell renders an inline brand mark, so the shipped brand file is verified
+  // by availability rather than by a bundle reference.
   const brandPath = `${basePath}brand/otherlight-signal-eclipse.svg`;
   const brandResponse = await fetchAsset(brandPath, "Browser brand");
   assertContentType(brandResponse, /image\/svg\+xml/i, "Browser brand");
+}
+
+const TOUR_IMAGES = ["01-education-simulation.png", "02-guided-lab.png", "03-scientific-replay.png"];
+
+async function assertScreenshotTour() {
+  const tourUrl = `${pagesUrl}demo/`;
+  const response = await globalThis.fetch(tourUrl);
+  assert.equal(response.status, 200, `Screenshot tour did not resolve: ${tourUrl}`);
+  assertContentType(response, /text\/html/i, "Screenshot tour");
+  const html = await response.text();
+  assert.match(html, /Screenshot tour/, "Screenshot tour is missing its heading");
+  assertNoOriginRootAssetReference(html, "Screenshot tour HTML");
+  assert.ok(
+    html.includes("./assets/otherlight-signal-eclipse.svg"),
+    "Screenshot tour does not reference the brand asset",
+  );
+  for (const image of TOUR_IMAGES) {
+    assert.ok(html.includes(`./assets/${image}`), `Screenshot tour does not reference ${image}`);
+    const imageResponse = await fetchAsset(`${basePath}demo/assets/${image}`, `Tour image ${image}`);
+    assertContentType(imageResponse, /image\/png/i, `Tour image ${image}`);
+  }
+}
+
+async function runSmokeTransaction(server, logs) {
+  const indexResponse = await fetchUntilReady(server, logs);
+  const html = await indexResponse.text();
+  const assets = inspectPageDocument(html);
+  const { chunkSources, styleSources } = await fetchPageAssets(assets);
+  await assertPageAssetReferences(chunkSources, styleSources);
+  await assertScreenshotTour();
+  run("node", ["scripts/check-worker-asset.mjs", pagesUrl]);
+}
+
+run("pnpm", ["build:pages:site"]);
+
+const { child: server, logs } = startPreview();
+try {
+  await runSmokeTransaction(server, logs);
 } finally {
   await stopPreview(server);
 }

@@ -1,5 +1,5 @@
 /**
- * Owns hill Radius support within the physics layer. Keeps numerical and frame conventions centralized for all consumers.
+ * Computes Hill radii and the Domingos stability limits for moons.
  */
 import { clamp } from "../model/units";
 
@@ -70,18 +70,6 @@ export function maxStableProgradeMoonAxisDomingos(hillR: number, ePlanet = 0, eS
 
   if (!Number.isFinite(aCrit)) return 0;
   return clamp(aCrit, 0, hillR);
-}
-
-/**
- * Retrograde satellites can remain stable farther out than prograde.
- * A conservative rule-of-thumb is ~0.67 R_H for retrograde.
- */
-export function maxStableRetrogradeMoonAxisRuleOfThumb(hillR: number, fraction = 0.67): number {
-  assertFinitePositive(hillR, "hillR");
-  if (!Number.isFinite(fraction) || fraction <= 0 || fraction >= 1) {
-    throw new Error("fraction must be in (0, 1).");
-  }
-  return hillR * fraction;
 }
 
 /**

@@ -4,7 +4,6 @@ import {
   MAX_FORWARD_SAMPLES,
   MAX_INTEGRATOR_STEPS,
   type ForwardRunRequest,
-  type InferenceRequest,
   type PriorV5,
   type ScienceJobRequest,
 } from "./types";
@@ -23,7 +22,7 @@ import {
 } from "./validationPrimitives";
 import { assertScientificScenarioV5 } from "./validationScenario";
 
-export function assertPrior(value: unknown, path: string): asserts value is PriorV5 {
+function assertPrior(value: unknown, path: string): asserts value is PriorV5 {
   const prior = assertRecord(value, path);
   const distribution = assertEnum(prior.distribution, `${path}.distribution`, [
     "uniform",
@@ -56,7 +55,7 @@ export function assertPrior(value: unknown, path: string): asserts value is Prio
   lowerUpper();
 }
 
-export function assertForwardSampleGrid(request: UnknownRecord): readonly [number, number] {
+function assertForwardSampleGrid(request: UnknownRecord): readonly [number, number] {
   const start = assertFinite(request.startOffsetSec, "request.startOffsetSec");
   const end = assertFinite(request.endOffsetSec, "request.endOffsetSec");
   if (end <= start) fail("request.endOffsetSec", "greater than request.startOffsetSec");
@@ -77,11 +76,7 @@ export function assertForwardSampleGrid(request: UnknownRecord): readonly [numbe
   return [start, end];
 }
 
-export function assertForwardIntegratorBudget(
-  forwardScenario: UnknownRecord,
-  start: number,
-  end: number,
-): void {
+function assertForwardIntegratorBudget(forwardScenario: UnknownRecord, start: number, end: number): void {
   const integrator = assertRecord(forwardScenario.integrator, "request.scenario.integrator");
   const maxStepSec = assertPositive(integrator.maxStepSec, "request.scenario.integrator.maxStepSec");
   const minimumStepCount =
@@ -94,7 +89,7 @@ export function assertForwardIntegratorBudget(
   }
 }
 
-export function assertForwardRequest(request: UnknownRecord): void {
+function assertForwardRequest(request: UnknownRecord): void {
   assertExactKeys(request, "request", [
     "kind",
     "scenario",
@@ -119,7 +114,7 @@ export function assertForwardRequest(request: UnknownRecord): void {
   assertInteger(request.seed, "request.seed");
 }
 
-export function assertInferenceJobRequest(request: UnknownRecord): void {
+function assertInferenceJobRequest(request: UnknownRecord): void {
   assertExactKeys(request, "request", [
     "kind",
     "scenario",
@@ -168,9 +163,4 @@ export function assertScienceJobRequest(value: unknown): asserts value is Scienc
 export function assertForwardRunRequest(value: unknown): asserts value is ForwardRunRequest {
   assertScienceJobRequest(value);
   if (value.kind !== "forward") fail("request.kind", "exactly 'forward'");
-}
-
-export function assertInferenceRequest(value: unknown): asserts value is InferenceRequest {
-  assertScienceJobRequest(value);
-  if (value.kind !== "inference") fail("request.kind", "exactly 'inference'");
 }

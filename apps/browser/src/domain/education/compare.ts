@@ -1,5 +1,5 @@
 /**
- * Owns compare support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Compares two scenarios at a time and interprets the result for teaching.
  */
 import type { BrowserScenarioDraft } from "../model/types";
 import { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } from "../simulation/v4";

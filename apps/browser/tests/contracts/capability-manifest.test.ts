@@ -5,9 +5,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { readTimeSpeed } from "../../src/presentation/controllers/actions";
-import { PRESETS } from "../../src/application/presets";
-import { REAL_SYSTEMS_OPTIONS } from "../../src/application/realSystems";
+import { readTimeSpeed } from "../../src/presentation/playback/actions";
+import { PRESETS } from "../../src/application/catalog/presets";
+import { REAL_SYSTEMS_OPTIONS } from "../../src/application/catalog/realSystems";
 import {
   createInstrumentNoiseState,
   applyInstrumentNoiseAndSystematics,
@@ -16,9 +16,9 @@ import {
   createLightCurveHistoryState,
   clearLightCurveHistory,
   pushLightCurveSample,
-} from "../../src/presentation/render/lightCurvePlotBuffer";
+} from "../../src/presentation/render/lightCurve/lightCurvePlotBuffer";
 import { createReferenceSimulationV4 } from "../../src/domain/simulation/v4/referenceRuntime";
-import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/application/binaryLab";
+import { DEFAULT_BINARY_LAB_CONFIG_V4 } from "../../src/application/catalog/binaryLab";
 import {
   atmosphereOpacityForOcculter,
   circleOverlapArea,
@@ -30,7 +30,7 @@ import {
   revealSky,
   setHypothesis,
 } from "../../src/domain/education/binaryLab";
-import { getParamUiMeta } from "../../src/presentation/ui/paramValidation";
+import { getParamUiMeta } from "../../src/presentation/scenario/paramValidation";
 import {
   DEFAULT_PRODUCT_VIEW_STATE,
   parseProductViewState,
@@ -65,11 +65,8 @@ const manifest = JSON.parse(
 };
 
 const appleUnimplementedCapabilityIds = new Set([
-  "education.runtime-reference",
-  "education.binary-photometry",
   "education.atmosphere-photometry",
   "education.measurement-noise",
-  "labs.binary-black-box",
 ]);
 
 describe("cross-platform capability manifest", () => {

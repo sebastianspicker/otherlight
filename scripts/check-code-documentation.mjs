@@ -3,25 +3,16 @@
  * before implementation details, keeping the documentation standard durable.
  */
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { repositoryFiles } from "./lib/repository-files.mjs";
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const rootExecutableFiles = new Set(["eslint.config.js"]);
 const executableExtensions = new Set([".css", ".html", ".js", ".mjs", ".py", ".sh", ".swift", ".ts"]);
-
-function candidatePaths() {
-  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  })
-    .split("\0")
-    .filter(Boolean)
-    .filter((path) => existsSync(resolve(repoRoot, path)));
-}
 
 function isAuthoredExecutable(path) {
   if (rootExecutableFiles.has(path)) return true;
@@ -97,7 +88,7 @@ function hasModuleDocumentation(path) {
   );
 }
 
-const candidates = candidatePaths().filter(isAuthoredExecutable).sort();
+const candidates = repositoryFiles(repoRoot).filter(isAuthoredExecutable).sort();
 const missing = candidates.filter((path) => !hasModuleDocumentation(path));
 
 if (missing.length > 0) {

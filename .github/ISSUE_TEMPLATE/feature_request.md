@@ -7,11 +7,12 @@ labels: enhancement
 
 ## Problem statement
 
-What user/science/didactic problem does this solve?
+What user, scientific, or teaching problem does this solve? Concrete examples
+help.
 
 ## Proposed change
 
-Describe the desired behavior and UI/API impact.
+Describe the behavior you want and the UI or API impact.
 
 ## Runtime contract
 
@@ -32,4 +33,4 @@ Describe the desired behavior and UI/API impact.
 
 ## Acceptance criteria
 
-List measurable criteria that define “done”.
+List the measurable criteria that would define “done”.

@@ -1,5 +1,5 @@
 /**
- * Owns warnings support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Collects parameter warnings from the active scenario.
  */
 import type { OrbitElements, BrowserScenarioDraft } from "../../model/types";
 import { validateSystemParamsPhysics } from "../../orbits/hill";

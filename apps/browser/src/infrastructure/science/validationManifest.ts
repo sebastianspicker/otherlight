@@ -55,7 +55,7 @@ export function assertCapabilityManifest(value: unknown): asserts value is Capab
   assertUniqueStrings(unavailable, "capabilities.unavailableModelIds");
 }
 
-export function assertRunManifestHeader(manifest: UnknownRecord): void {
+function assertRunManifestHeader(manifest: UnknownRecord): void {
   const commonKeys = [
     "schemaVersion",
     "runId",
@@ -91,7 +91,7 @@ export function assertRunManifestHeader(manifest: UnknownRecord): void {
   if (manifest.scientificResult !== true) fail("runManifest.scientificResult", "exactly true");
 }
 
-export function assertRunManifestV1Versions(manifest: UnknownRecord): void {
+function assertRunManifestV1Versions(manifest: UnknownRecord): void {
   const versions = assertRecord(manifest.softwareVersions, "runManifest.softwareVersions");
   assertExactKeys(versions, "runManifest.softwareVersions", [
     "backend",
@@ -105,14 +105,14 @@ export function assertRunManifestV1Versions(manifest: UnknownRecord): void {
   }
 }
 
-export function assertNamedVersion(value: unknown, path: string): void {
+function assertNamedVersion(value: unknown, path: string): void {
   const record = assertRecord(value, path);
   assertExactKeys(record, path, ["name", "version"]);
   assertString(record.name, `${path}.name`);
   assertString(record.version, `${path}.version`);
 }
 
-export function assertRunManifestV2Implementation(manifest: UnknownRecord): void {
+function assertRunManifestV2Implementation(manifest: UnknownRecord): void {
   const implementation = assertRecord(manifest.implementation, "runManifest.implementation");
   assertExactKeys(implementation, "runManifest.implementation", [
     "application",
@@ -154,7 +154,7 @@ export function assertRunManifestV2Implementation(manifest: UnknownRecord): void
   }
 }
 
-export function assertRunManifestTimingAndModels(manifest: UnknownRecord): void {
+function assertRunManifestTimingAndModels(manifest: UnknownRecord): void {
   assertPositive(manifest.gravitationalConstantM3KgS2, "runManifest.gravitationalConstantM3KgS2");
   assertPositive(manifest.epochJdTdb, "runManifest.epochJdTdb");
   assertTimestamp(manifest.startedAt, "runManifest.startedAt");
@@ -173,7 +173,7 @@ export function assertRunManifestTimingAndModels(manifest: UnknownRecord): void 
   assertUniqueStrings(modelIds, "runManifest.modelVersions");
 }
 
-export function assertRunManifestTolerances(manifest: UnknownRecord): void {
+function assertRunManifestTolerances(manifest: UnknownRecord): void {
   const tolerances = assertRecord(manifest.numericalTolerances, "runManifest.numericalTolerances");
   const toleranceKeys = [
     "requestedPositionToleranceM",
@@ -206,7 +206,7 @@ export function assertRunManifestTolerances(manifest: UnknownRecord): void {
   }
 }
 
-export function assertRunManifestLists(manifest: UnknownRecord): void {
+function assertRunManifestLists(manifest: UnknownRecord): void {
   const datasets = assertArray(manifest.datasets, "runManifest.datasets");
   const datasetIds: string[] = [];
   for (let index = 0; index < datasets.length; index++) {

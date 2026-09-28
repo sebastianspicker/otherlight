@@ -1,5 +1,5 @@
 /**
- * Owns engine Support support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Builds hints, misconceptions, interpretations, and rubric checks for lesson steps.
  */
 import type {
   AssessmentRubricV2,
@@ -165,7 +165,7 @@ function failedCheckStatus(rule: LessonCheckRule, observed: number, expected: st
   return `This check still fails. Compare observed=${Number.isFinite(observed) ? observed.toFixed(3) : "n/a"} with ${expected}.`;
 }
 
-export function buildCheckStatusText(
+function buildCheckStatusText(
   rule: LessonCheckRule,
   passed: boolean,
   observed: number,

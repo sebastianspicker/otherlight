@@ -117,11 +117,29 @@ jobs:
           uv run --project services/science ruff format --check services/science
           uv run --project services/science ruff check services/science
 
+      - name: Complexity check
+        run: bash scripts/check-complexity.sh
+
       - name: Pyright
         run: uv run --project services/science pyright services/science
 
       - name: Backend tests
         run: uv run --project services/science pytest -q services/science/tests
+
+      - name: Benchmark imports and scientific retention
+        run: |
+          mkdir -p "$RUNNER_TEMP/benchmarks"
+          for mode in latency memory; do
+            uv run --project services/science --locked --extra dev python services/science/benchmarks/benchmark_dataset_import.py --mode "$mode" --output "$RUNNER_TEMP/benchmarks/dataset-$mode.json"
+            uv run --project services/science --locked --extra dev python services/science/benchmarks/benchmark_forward_collectors.py --mode "$mode" --output "$RUNNER_TEMP/benchmarks/forward-$mode.json"
+          done
+      - name: Upload Python benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-benchmarks
+          path: ${{ runner.temp }}/benchmarks/*.json
+          if-no-files-found: warn
 
       - name: Build wheel
         run: uv build --project services/science --wheel --out-dir "$RUNNER_TEMP/wheels"
@@ -171,6 +189,17 @@ jobs:
 
       - name: Run tests
         run: pnpm ci:test
+
+      - name: Benchmark Browser preview and bands
+        run: pnpm benchmark:browser
+
+      - name: Upload Browser benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-benchmarks-node-${{ matrix.node }}
+          path: test-results/browser-benchmark.json
+          if-no-files-found: warn
 
   build:
     name: build

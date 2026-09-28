@@ -147,14 +147,22 @@ struct OtherlightWorkspacePayload: Codable, Equatable, Sendable {
     }
   }
 
-  /// Narrows general workspace validity to the interactive native education session contract.
+  /// Narrows general workspace validity to the native education session contract.
   func validateForEducationSession() throws {
     try validate()
+    let runtime = educationRuntimeConfiguration()
+    let expectedRuntime: ProductContext.Runtime =
+      runtime.mode == .reference ? .reference : .interactive
     guard productContext.profile == .education,
-      productContext.runtime == .interactive,
-      education.scenario.mode == "general-lab",
+      EducationScenarioMode(rawValue: education.scenario.mode) != nil,
+      productContext.runtime == expectedRuntime,
       scientific == nil
     else { throw WorkspaceDocumentError.unsupportedProductContext }
+  }
+
+  /// Reads the V4 runtime metadata preserved alongside the workspace product context.
+  func educationRuntimeConfiguration() -> EducationRuntimeConfiguration {
+    BrowserV4Import.runtimeConfiguration(from: education.scenario)
   }
 
   /// Imports the browser-parity scenario using the stable workspace scenario identifier.
@@ -345,6 +353,23 @@ private enum WorkspaceJSONShapeValidator {
       required: ["version", "mode", "runtime", "bodies", "orbits"],
       optional: ["observer", "photometry", "dynamics", "didactics", "binaryLab", "baselineFlux"],
       path: "education.scenario")
+    if let binaryLabValue = scenario["binaryLab"] {
+      let binaryLab = try object(binaryLabValue, path: "education.scenario.binaryLab")
+      try exact(
+        binaryLab,
+        required: [
+          "enabled", "hideSkyUntilReveal", "requireHypothesis", "lockParamsUntilHypothesis",
+        ],
+        path: "education.scenario.binaryLab")
+      for key in [
+        "enabled", "hideSkyUntilReveal", "requireHypothesis", "lockParamsUntilHypothesis",
+      ] {
+        guard binaryLab[key] is Bool else {
+          throw WorkspaceDocumentError.invalidJSON(
+            "education.scenario.binaryLab.\(key) must be a boolean.")
+        }
+      }
+    }
     if let guidedValue = education["guidedLab"] {
       let guided = try object(guidedValue, path: "education.guidedLab")
       try exact(

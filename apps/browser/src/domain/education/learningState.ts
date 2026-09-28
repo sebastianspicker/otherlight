@@ -1,5 +1,5 @@
 /**
- * Owns learning State support within the didactics layer. Keeps learning-flow behavior independent of simulation execution.
+ * Resolves the active lesson phase from learning state and signals.
  */
 import type { LearningState, BrowserScenarioDraft } from "../model/types";
 import { clampIndex, currentStepPhases } from "./engineSupport";

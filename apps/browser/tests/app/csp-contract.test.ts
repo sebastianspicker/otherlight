@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { appCspForMode, appCspMetaForMode, appSecurityHeadersForMode } from "../../vite.config";
-import { renderComparisonControls } from "../../src/presentation/ui/templates/sidebarDidacticsControls";
+import { renderComparisonControls } from "../../src/presentation/labs/templates/sidebarDidacticsControls";
 
 describe("app CSP contract", () => {
   it("allows Vite dev styling and HMR connections in serve mode", () => {

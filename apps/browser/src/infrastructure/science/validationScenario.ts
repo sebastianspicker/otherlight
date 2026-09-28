@@ -31,7 +31,7 @@ type ValidatedBodyState = {
   velocityMps: Vector3;
 };
 
-export function assertBarycentricState(bodies: readonly ValidatedBodyState[]): void {
+function assertBarycentricState(bodies: readonly ValidatedBodyState[]): void {
   const totalMass = bodies.reduce((sum, body) => sum + body.massKg, 0);
   if (!Number.isFinite(totalMass)) fail("scenario.bodies", "a system with finite total mass");
   const weighted = (field: "positionM" | "velocityMps"): Vector3 =>
@@ -61,7 +61,7 @@ export function assertBarycentricState(bodies: readonly ValidatedBodyState[]): v
   }
 }
 
-export function assertNoInitialOverlaps(bodies: readonly ValidatedBodyState[]): void {
+function assertNoInitialOverlaps(bodies: readonly ValidatedBodyState[]): void {
   for (let left = 0; left < bodies.length; left++) {
     for (let right = left + 1; right < bodies.length; right++) {
       const first = bodies[left];
@@ -81,7 +81,7 @@ export function assertNoInitialOverlaps(bodies: readonly ValidatedBodyState[]): 
   }
 }
 
-export function assertScenarioHeader(scenario: UnknownRecord): void {
+function assertScenarioHeader(scenario: UnknownRecord): void {
   assertExactKeys(scenario, "scenario", [
     "schemaVersion",
     "id",
@@ -99,7 +99,7 @@ export function assertScenarioHeader(scenario: UnknownRecord): void {
   if (scenario.timeScale !== "TDB") fail("scenario.timeScale", "exactly 'TDB'");
 }
 
-export function assertScenarioBodies(scenario: UnknownRecord): string[] {
+function assertScenarioBodies(scenario: UnknownRecord): string[] {
   const bodies = assertArray(scenario.bodies, "scenario.bodies");
   if (bodies.length < 2) fail("scenario.bodies", "an array with at least two bodies");
   const bodyIds: string[] = [];
@@ -125,7 +125,7 @@ export function assertScenarioBodies(scenario: UnknownRecord): string[] {
   return bodyIds;
 }
 
-export function assertScenarioObserver(scenario: UnknownRecord, bodyIds: readonly string[]): void {
+function assertScenarioObserver(scenario: UnknownRecord, bodyIds: readonly string[]): void {
   const observer = assertRecord(scenario.observer, "scenario.observer");
   assertExactKeys(observer, "scenario.observer", ["lineOfSight", "targetBodyId", "distanceM"]);
   const lineOfSight = assertVector3(observer.lineOfSight, "scenario.observer.lineOfSight");
@@ -137,7 +137,7 @@ export function assertScenarioObserver(scenario: UnknownRecord, bodyIds: readonl
   if (!bodyIds.includes(targetBodyId)) fail("scenario.observer.targetBodyId", "the id of a scenario body");
 }
 
-export function assertScenarioIntegrator(scenario: UnknownRecord): void {
+function assertScenarioIntegrator(scenario: UnknownRecord): void {
   const integrator = assertRecord(scenario.integrator, "scenario.integrator");
   assertExactKeys(integrator, "scenario.integrator", [
     "method",

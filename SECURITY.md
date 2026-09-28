@@ -1,36 +1,63 @@
 # Security policy
 
-## Reporting
+## Reporting a vulnerability
 
-Please report suspected vulnerabilities privately through the repository
-security-advisory channel or the maintainer contact listed on the project
-page. Include affected revision, reproduction steps, impact, and any proposed
-mitigation. Do not publish a proof of concept containing personal data,
-credentials, or active service targets.
+Please use GitHub private vulnerability reporting from the repository's
+**Security** tab when it is available, and include the affected revision,
+reproduction steps, impact, and any proposed mitigation. Keep exploit details,
+credentials, and personal data out of public issues.
 
-## Supported boundaries
+If private reporting is unavailable, open a minimal issue asking for a private
+contact channel without describing the problem itself. Ordinary, non-sensitive
+bugs belong in the
+[public issue tracker](https://github.com/sebastianspicker/otherlight/issues).
 
-The Browser is a local static application. Its scientific integration is
-restricted to `http://127.0.0.1:8765` and `http://localhost:8765` by its CSP.
-The Python service is intended for loopback use only and has no authentication
-or authorization model. Do not expose it on a network interface without a
-separate authenticated deployment design and security review.
+## What is in scope
+
+The Browser is a static local application. Ordinary development and production
+builds permit scientific requests only to `http://127.0.0.1:8765` and
+`http://localhost:8765`; the GitHub Pages build removes those origins from its
+Content Security Policy and performs no V5 execution. Its checked-in fixture
+replay is display-only and is not a trusted runtime result.
+
+The Python service is intended for one-host loopback use and has no
+authentication, authorization, tenancy, or remote network trust model. Do not
+bind it to a network interface without a separate authenticated deployment
+design and security review. CORS is not an access-control mechanism.
 
 The service validates strict V5 requests, applies bounded execution limits,
-and writes content-addressed artifacts. Treat all incoming payloads, imported
-workspaces, and artifact paths as untrusted. Do not weaken exact-field,
-identifier, or path validation to accept malformed data.
+and writes content-addressed artifacts. Its V6 dataset boundary streams at
+most 8 MiB before strict duplicate-safe JSON parsing, enforces dataset and
+memory quotas, and retains imports only for the process lifetime. Treat request
+bodies, imported workspaces, identifiers, and artifact paths as untrusted. Do
+not weaken exact field, schema-version, identifier, URL, or path validation to
+accept malformed data.
 
-`.otherlight` workspaces are local documents. They hold accepted scenario and
-learning state, not credentials or results. Parsers reject unknown schema
-versions and unsupported fields.
+All service routes require a loopback `Host`; browser requests also require an
+approved local `Origin`. Responses are non-cacheable and opt out of content
+sniffing. Artifact reads use no-follow descriptor-relative opening and verify
+file type, size, link count, and SHA-256 before serving the same descriptor.
+These controls do not authenticate mutually hostile processes running as the
+same local user. Non-loopback exposure still requires a separate authenticated
+design.
 
-The Apple app uses sandboxed user-selected file access. Its privacy policy is
-at [apps/apple/PRIVACY.md](apps/apple/PRIVACY.md).
+`.otherlight` workspaces are local documents. They contain accepted scenario
+and learning state, not credentials or computed artifacts. Readers reject
+unknown versions and fields before mutating the active session.
 
-## Dependency and disclosure practice
+The Apple app uses sandboxed, user-selected file access and has no runtime
+network client. Its data-handling policy is in
+[apps/apple/PRIVACY.md](apps/apple/PRIVACY.md).
 
-Use the lockfile for Browser dependencies and the service package metadata for
-Python dependencies. Run `pnpm audit --audit-level=moderate` when network
-access is available. Security fixes should include a focused regression test
-where practical and should preserve the documented loopback boundary.
+## Dependency and disclosure checks
+
+Use the checked-in lock and package metadata. When network access is available,
+run:
+
+```bash
+pnpm audit --audit-level=moderate
+```
+
+CI also runs CodeQL and Gitleaks. A security fix should include focused
+regression coverage where practical and preserve the loopback and strict-parsing
+boundaries.

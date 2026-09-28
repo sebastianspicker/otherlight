@@ -58,7 +58,7 @@ async function main() {
     server: { middlewareMode: true },
   });
   try {
-    const { PRESETS } = await vite.ssrLoadModule("/src/application/presets.ts");
+    const { PRESETS } = await vite.ssrLoadModule("/src/application/catalog/presets.ts");
     const { createSimulationV4, mapBrowserScenarioDraftToEducationScenarioV4 } = await vite.ssrLoadModule(
       "/src/domain/simulation/v4/index.ts",
     );

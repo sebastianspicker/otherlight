@@ -37,9 +37,6 @@ export const AU_M = 149_597_870_700;
 /** Julian day in seconds. */
 export const DAY_S = 86_400;
 
-/** Julian year in seconds (365.25 days). */
-export const JULIAN_YEAR_S = 365.25 * DAY_S;
-
 /** Conventional solar-mass estimate in kg; measured/rounded, not exact or IAU nominal. */
 export const SOLAR_MASS_KG = 1.98847e30;
 
@@ -58,40 +55,8 @@ export const JUPITER_MASS_KG = 1.89813e27;
 /** Conventional mean Jupiter radius in meters; rounded, not an IAU nominal equatorial radius. */
 export const JUPITER_RADIUS_M = 6.9911e7;
 
-export function auToM(au: number): number {
-  return au * AU_M;
-}
-
-export function mToAu(m: number): number {
-  return m / AU_M;
-}
-
-export function dayToSec(days: number): number {
-  return days * DAY_S;
-}
-
-export function secToDay(sec: number): number {
-  return sec / DAY_S;
-}
-
-export function yearToSec(years: number): number {
-  return years * JULIAN_YEAR_S;
-}
-
-export function secToYear(sec: number): number {
-  return sec / JULIAN_YEAR_S;
-}
-
-export function solarMassToKg(mSolar: number): number {
-  return mSolar * SOLAR_MASS_KG;
-}
-
-export function kgToSolarMass(kg: number): number {
-  return kg / SOLAR_MASS_KG;
-}
-
 // Canonical names (readable).
-export const TWO_PI = 2 * Math.PI;
+const TWO_PI = 2 * Math.PI;
 
 // Practical upper bound used for UI sanitization (strictly < 1 for elliptic orbits).
 export const ECC_MAX = 0.999;
@@ -169,16 +134,6 @@ export function wrapToPi(rad: number): number {
   return x;
 }
 
-/** Convert degrees to radians. */
-export function degToRad(deg: number): number {
-  return deg * DEG2RAD;
-}
-
-/** Convert radians to degrees. */
-export function radToDeg(rad: number): number {
-  return rad * RAD2DEG;
-}
-
 /**
  * Convert unknown input to a finite number, else fallback.
  *
@@ -217,25 +172,6 @@ export function toFinitePositiveOr(v: unknown, fallback: number): number {
 
   if (Number.isFinite(n) && n > 0) return n;
   return Number.isFinite(fb) && fb > 0 ? fb : 1e-12;
-}
-
-/**
- * Convert unknown input to a finite number, clamped to > 0 by epsilon.
- * Useful for dt, tau, denominators, etc.
- */
-export function toFinitePos(v: unknown, fallback: number, eps = 1e-12): number {
-  const x = toFiniteNumber(v, fallback);
-  const fb = Number.isFinite(fallback) ? fallback : eps;
-  const val = Number.isFinite(x) ? x : fb;
-  return Math.max(eps, val);
-}
-
-/**
- * Normalize a "finite difference dt" (seconds) used in numerical derivatives.
- * - Ensures finite and >= 1e-6 seconds to avoid dt=0 degeneracy.
- */
-export function normalizeFiniteDiffDtSec(v: unknown, fallback: number): number {
-  return toFinitePos(v, fallback, 1e-6);
 }
 
 // ---------------------------

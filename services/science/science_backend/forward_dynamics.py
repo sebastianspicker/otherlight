@@ -8,9 +8,11 @@ from typing import cast
 
 from .contracts import G_SI, Body, ForwardRunRequest, Vector3
 from .errors import CapabilityUnavailableError, CollisionDomainError
-from .forward_observables import norm, observable_sample, subtract
+from .forward_collectors import compact_sample, rich_sample
+from .forward_observables import norm, subtract
 from .forward_types import (
     CancellationCheck,
+    CompactForwardSample,
     ForwardSample,
     OdeSolution,
     SciPyEvent,
@@ -18,6 +20,11 @@ from .forward_types import (
     finite_state,
     raise_if_cancelled,
 )
+
+CollectedSample = ForwardSample | CompactForwardSample
+SampleCollector = Callable[
+    [ForwardRunRequest, tuple[Body, ...], float, Sequence[float]], CollectedSample
+]
 
 
 class ContactEvent:
@@ -45,13 +52,35 @@ def scipy_propagate(
     request: ForwardRunRequest,
     cancel_requested: CancellationCheck | None = None,
 ) -> tuple[ForwardSample, ...]:
+    return cast(
+        tuple[ForwardSample, ...],
+        _scipy_propagate(request, cancel_requested, rich_sample),
+    )
+
+
+def scipy_propagate_compact(
+    request: ForwardRunRequest,
+    cancel_requested: CancellationCheck | None = None,
+) -> tuple[CompactForwardSample, ...]:
+    return cast(
+        tuple[CompactForwardSample, ...],
+        _scipy_propagate(request, cancel_requested, compact_sample),
+    )
+
+
+def _scipy_propagate(
+    request: ForwardRunRequest,
+    cancel_requested: CancellationCheck | None,
+    collector: SampleCollector,
+) -> tuple[CollectedSample, ...]:
     solve_ivp = scipy_functions()
     budget = WorkBudget.start()
     bodies = tuple(request.bodies)
-    states: dict[float, tuple[dict[str, Vector3], dict[str, Vector3]]] = {}
     initial = initial_state(bodies)
-    if 0.0 in request.sample_times_s:
-        record_state(states, bodies, 0.0, initial)
+    samples: list[CollectedSample | None] = [None] * len(request.sample_times_s)
+    sample_indices = {time: index for index, time in enumerate(request.sample_times_s)}
+    if 0.0 in sample_indices:
+        samples[sample_indices[0.0]] = collector(request, bodies, 0.0, initial)
     pairs = [
         (left, right)
         for left in range(len(bodies))
@@ -72,7 +101,9 @@ def scipy_propagate(
         pairs,
         events,
         solve_ivp,
-        states,
+        samples,
+        sample_indices,
+        collector,
         cancel_requested,
         budget,
     )
@@ -85,14 +116,15 @@ def scipy_propagate(
         pairs,
         events,
         solve_ivp,
-        states,
+        samples,
+        sample_indices,
+        collector,
         cancel_requested,
         budget,
     )
-    return tuple(
-        observable_sample(request, time, *states[time])
-        for time in request.sample_times_s
-    )
+    if any(sample is None for sample in samples):
+        raise CapabilityUnavailableError("DOP853 did not return every requested sample")
+    return cast(tuple[CollectedSample, ...], tuple(samples))
 
 
 def scipy_functions() -> Callable[..., OdeSolution]:
@@ -162,22 +194,6 @@ def acceleration(
     return cast(Vector3, tuple(acceleration_value))
 
 
-def record_state(
-    states: dict[float, tuple[dict[str, Vector3], dict[str, Vector3]]],
-    bodies: tuple[Body, ...],
-    time: float,
-    state: Sequence[float],
-) -> None:
-    finite_state(state, "DOP853 produced a non-finite state")
-    positions = {
-        body.id: state_vector(state, index * 6) for index, body in enumerate(bodies)
-    }
-    velocities = {
-        body.id: state_vector(state, index * 6 + 3) for index, body in enumerate(bodies)
-    }
-    states[time] = positions, velocities
-
-
 def absolute_tolerances(request: ForwardRunRequest, body_count: int) -> list[float]:
     return [
         value
@@ -202,7 +218,9 @@ def integrate_sample_times(
     pairs: list[tuple[int, int]],
     events: Sequence[SciPyEvent],
     solve_ivp: Callable[..., OdeSolution],
-    states: dict[float, tuple[dict[str, Vector3], dict[str, Vector3]]],
+    samples: list[CollectedSample | None],
+    sample_indices: dict[float, int],
+    collector: SampleCollector,
     cancel_requested: CancellationCheck | None,
     budget: WorkBudget,
 ) -> None:
@@ -233,7 +251,9 @@ def integrate_sample_times(
     for time in times:
         raise_if_cancelled(cancel_requested)
         budget.check_elapsed()
-        record_state(states, bodies, float(time), solution.sol(time))
+        state = solution.sol(time)
+        finite_state(state, "DOP853 produced a non-finite state")
+        samples[sample_indices[time]] = collector(request, bodies, float(time), state)
 
 
 def raise_for_contact_events(

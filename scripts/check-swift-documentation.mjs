@@ -3,11 +3,12 @@
  * remains understandable without reconstructing intent from implementation.
  */
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+import { repositoryFiles } from "./lib/repository-files.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const declarationKinds = new Set([
@@ -170,13 +171,8 @@ export function findUndocumentedSwiftDeclarations(source, path = "<source>") {
 
 /** Returns tracked and visible untracked Swift sources in the native application tree. */
 function swiftSourcePaths() {
-  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  })
-    .split("\0")
+  return repositoryFiles(repoRoot)
     .filter((path) => path.startsWith("apps/apple/") && path.endsWith(".swift"))
-    .filter((path) => existsSync(resolve(repoRoot, path)))
     .sort();
 }
 

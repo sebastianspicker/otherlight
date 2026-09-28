@@ -1,7 +1,7 @@
 /**
- * Owns types Photometry Surface support within the core layer. Keeps shared domain contracts independent of application and simulation orchestration.
+ * Defines stellar surface, brightness patch, and variability parameters.
  */
-export type BrightnessPatchShape = "circle" | "ellipse";
+type BrightnessPatchShape = "circle" | "ellipse";
 
 export type BrightnessPatch = {
   shape: BrightnessPatchShape;

@@ -1,5 +1,5 @@
 /**
- * Owns runtime Aggregation support within the sim layer. Keeps simulation state and numerical execution separate from UI coordination.
+ * Averages numeric fields across runtime samples.
  */
 function addNumericFields(
   item: Record<string, unknown>,

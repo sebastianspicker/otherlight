@@ -67,7 +67,7 @@ export type LimbDarkeningLawQuadratic = {
  * Three-parameter nonlinear law (reduced Claret-like form):
  * I(mu) = 1 - a1(1-mu^(1/2)) - a2(1-mu) - a3(1-mu^(3/2))
  */
-export type LimbDarkeningLawThreeParameter = {
+type LimbDarkeningLawThreeParameter = {
   kind: "three-parameter";
   a1: number;
   a2: number;
@@ -78,7 +78,7 @@ export type LimbDarkeningLawThreeParameter = {
  * Four-parameter Claret law:
  * I(mu) = 1 - a1(1-mu^(1/2)) - a2(1-mu) - a3(1-mu^(3/2)) - a4(1-mu^2)
  */
-export type LimbDarkeningLawFourParameter = {
+type LimbDarkeningLawFourParameter = {
   kind: "four-parameter";
   a1: number;
   a2: number;
