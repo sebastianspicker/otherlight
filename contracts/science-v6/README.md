@@ -7,8 +7,8 @@ physical model available.
 `dataset-import-v2.schema.json` defines five exact-field, SI-declared input
 families: passband response, stellar-intensity grid, atmospheric transmission or
 effective radius, scattering phase function, and stellar-variability power
-spectral density. On top of JSON Schema, the contract checker enforces strictly
-increasing axes, paired shapes, grid shapes, and a 100,000-sample ceiling.
+spectral density. The Python service enforces strictly increasing axes, paired
+shapes, grid shapes, and a 100,000-sample ceiling.
 
 Dataset identity is `ds-<contentSha256>`, where `contentSha256` hashes canonical
 JSON, and `sourceByteSha256` hashes the exact accepted upload. The service accepts
@@ -21,15 +21,6 @@ idempotent and returns the existing descriptor; its `sourceByteSha256` keeps the
 provenance of the first accepted byte representation.
 
 The job, artifact, and run-manifest schemas establish the future V6 result
-boundary. The transit-timing request, result, and ordered Arrow descriptor fix the
-explicit-ephemeris, dense-event, bounded-work, numerical-error, and provenance
-contract described by
-[ADR 0003](../../docs/decisions/0003-v6-transit-timing.md). They are fixtures and
-validation contracts only: no V6 job route or scientific result producer is
-currently advertised.
-
-Run the contract checks from the repository root:
-
-```bash
-pnpm contracts:check
-```
+boundary. The transit-timing request, result, and ordered Arrow descriptor define
+the ephemeris, event, work, numerical-error, and provenance fields. These schemas
+do not advertise a V6 job route or scientific result producer.

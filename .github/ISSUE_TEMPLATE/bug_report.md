@@ -36,7 +36,7 @@ makes the issue much easier to reproduce.
 - Native app version/build, if applicable:
 - Apple platform/device and OS, if applicable:
 - Mac architecture and Gatekeeper result, if applicable:
-- Install/review source (local build or internal TestFlight), if applicable:
+- Install source (local build, release archive, or package), if applicable:
 
 ## Scenario details
 

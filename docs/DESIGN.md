@@ -11,9 +11,6 @@ and inward ticks. Everything else is paper, ink and rules, set like the methods
 section of a paper. A running head under the masthead always states which kind
 of evidence is on screen.
 
-The reasoning, the alternatives considered, and the assumptions behind this
-direction are in [`DESIGN_BRIEF.md`](../DESIGN_BRIEF.md).
-
 ## Foundations
 
 Tokens live in `apps/browser/src/presentation/styles/plate-figure/tokens.css`.

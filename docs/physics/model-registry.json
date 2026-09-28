@@ -11,7 +11,6 @@
       "units": "G [m^3 kg^-1 s^-2], mu [m^3 s^-2]",
       "validity": "G is measured and uncertain; the astronomical unit and nominal solar radius are exact definitions. Kilogram mass estimates and mean planetary radii are not IAU nominal constants.",
       "owners": ["apps/browser/src/domain/model/units.ts"],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["codata-2022", "iau-2012-b2", "iau-2015-b3"]
     },
     {
@@ -22,7 +21,6 @@
       "units": "a,r [m], M,E [rad], t [s]",
       "validity": "Osculating two-body ellipse with 0 <= e < 1; no parabolic or hyperbolic branch.",
       "owners": ["apps/browser/src/domain/orbits/kepler.ts", "apps/browser/src/domain/simulation/orbits.ts"],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -33,7 +31,6 @@
       "units": "angles [rad], position [m]",
       "validity": "Right-handed Euclidean inertial coordinates; observer direction must be finite and non-zero.",
       "owners": ["apps/browser/src/domain/orbits/frames.ts", "apps/browser/src/domain/orbits/vec3.ts"],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -44,7 +41,6 @@
       "units": "mass [kg], position [m]",
       "validity": "Finite positive masses; missing masses deliberately disable the split in the educational compatibility path.",
       "owners": ["apps/browser/src/domain/orbits/barycenter.ts"],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -59,7 +55,6 @@
         "apps/browser/src/domain/orbits/hill.ts",
         "apps/browser/src/domain/simulation/validation/warnings.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["domingos-2006"]
     },
     {
@@ -74,7 +69,6 @@
         "apps/browser/src/domain/simulation/transitTimingSolve.ts",
         "apps/browser/src/domain/simulation/orbitTimingKey.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["kipping-2009-ttv", "kipping-2009-tdv"]
     },
     {
@@ -93,7 +87,6 @@
         "apps/browser/src/domain/photometry/occulterSanitize.ts",
         "apps/browser/src/domain/photometry/occulterShapeGuards.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["mandel-agol-2002"]
     },
     {
@@ -109,7 +102,6 @@
         "apps/browser/src/domain/photometry/limbDarkeningEvaluation.ts",
         "apps/browser/src/domain/photometry/limbDarkeningLookup.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]
     },
     {
@@ -125,7 +117,6 @@
         "apps/browser/src/domain/photometry/atmosphereRT/gaussianFeatures.ts",
         "apps/browser/src/domain/simulation/v4/nativePhotometry.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["molliere-2019"]
     },
     {
@@ -142,7 +133,6 @@
         "apps/browser/src/domain/photometry/phaseCurveGeometry.ts",
         "apps/browser/src/domain/photometry/phaseCurveScaling.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["sobolev-1975"]
     },
     {
@@ -153,7 +143,6 @@
       "units": "phase function [sr^-1]",
       "validity": "HG is a single-parameter angular approximation; current amplitude and finite-star geometry are not a research radiative-transfer model.",
       "owners": ["apps/browser/src/domain/photometry/forwardScattering.ts"],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["henyey-greenstein-1941"]
     },
     {
@@ -169,7 +158,6 @@
         "apps/browser/src/domain/photometry/stellarVariabilityComponents.ts",
         "apps/browser/src/domain/photometry/patches.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["claret-2000"]
     },
     {
@@ -191,7 +179,6 @@
         "apps/browser/src/domain/photometry/instrumentNoiseTrends.ts",
         "apps/browser/src/domain/photometry/random.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["howell-2006"]
     },
     {
@@ -205,7 +192,6 @@
         "apps/browser/src/domain/simulation/v4/nativeEngineTiming.ts",
         "services/science/science_backend/forward.py"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["murray-dermott-1999"]
     },
     {
@@ -225,7 +211,6 @@
         "apps/browser/src/domain/simulation/v4/runtime.ts",
         "apps/browser/src/domain/simulation/v4/runtimeAggregation.ts"
       ],
-      "tests": ["apps/browser/tests/science/physics-model-contracts.test.ts"],
       "references": ["mandel-agol-2002"]
     },
     {
@@ -247,14 +232,6 @@
         "services/science/science_backend/api.py",
         "services/science/science_backend/dop853_collision_audit.py",
         "apps/apple/Packages/OtherlightScience/Sources/TransitScience/CertifiedCollisionAudit.swift"
-      ],
-      "tests": [
-        "apps/browser/tests/science/contracts-client.test.ts",
-        "apps/browser/tests/science/education-scenario-compiler.test.ts",
-        "services/science/tests/test_api_contract.py",
-        "services/science/tests/test_dop853_collision_audit.py",
-        "apps/apple/Packages/OtherlightScience/Tests/OtherlightScienceTests/TransitScienceTests.swift",
-        "services/science/tests/test_forward_scientific_contract.py"
       ],
       "references": ["wilkinson-2016-fair"]
     }

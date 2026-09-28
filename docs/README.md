@@ -4,9 +4,7 @@ New here? Start with the [root README](../README.md) for what Otherlight is and
 how to run it, then read [Architecture](ARCHITECTURE.md) before you move Browser
 code or change a serialized contract.
 
-Each maintained document has one audience and one subject. Generated output, the
-ignored historical material under `docs/archive/`, and tool-specific local state
-are not part of this set.
+Each document below has one audience and one subject.
 
 ## Start here
 
@@ -20,15 +18,14 @@ are not part of this set.
 | [Security policy](../SECURITY.md)      | How to report a problem and which trust boundaries apply                          |
 | [Release status](../RELEASE_STATUS.md) | Whether any revision is release-qualified                                         |
 | [Product](PRODUCT.md)                  | Users, purpose, voice, principles, and accessibility commitments                  |
-| [Design system](DESIGN.md)             | The Signal & Ink visual language and cross-platform interaction rules             |
+| [Design system](DESIGN.md)             | The Plate & Figure visual language and cross-platform interaction rules           |
 
 ## Product and contract references
 
 | Document                                                    | Purpose                                                                   |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
 | [Browser interface guide](frontend.md)                      | Interaction, accessibility, rendering, and Browser checks                 |
-| [Export and type discovery](dead-code.md)                   | The dead-code gate and its few exact allowances                           |
-| [Performance validation](performance.md)                    | Reproducible workloads, deterministic work bounds, and manual profiling   |
+| [Performance validation](performance.md)                    | Manual responsiveness and retained-memory profiling                       |
 | [Validation boundaries](validation.md)                      | What authoring, V4, V5, and workspace validation each own                 |
 | [Adding an Education body](ADDING_BODY.md)                  | Cross-layer and cross-contract checklist for a new body                   |
 | [Physics overview](physics/overview.md)                     | Education and V5 model scopes by topic                                    |
@@ -36,7 +33,6 @@ are not part of this set.
 | [V5 scientific contract](physics/v5-scientific-contract.md) | Request, execution, output, and fixture semantics for the scientific lane |
 | [V6 contract boundary](../contracts/science-v6/README.md)   | Dataset imports plus strict pending timing and result shapes              |
 | [Alpha release procedure](alpha-release.md)                 | How to qualify a specific revision and what evidence to record            |
-| [Architecture decisions](decisions/)                        | Accepted boundary decisions, including explicitly pending work            |
 
 Component setup and interfaces are documented beside the component:
 

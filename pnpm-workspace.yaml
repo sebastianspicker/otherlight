@@ -13,5 +13,4 @@ allowBuilds:
 strictPeerDependencies: true
 
 minimumReleaseAgeExclude:
-  - knip@6.27.0
   - stylelint@17.15.0

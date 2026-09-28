@@ -32,7 +32,7 @@ Core workflows target WCAG 2.2 AA.
 - Announce meaningful state changes, not animation frames.
 - Keep unavailable scientific actions explicit. Education output and checked-in
   fixtures are not fallbacks for V5 execution.
-- Preserve the stable control and element identifiers that tests, labels, focus
+- Preserve the stable control and element identifiers that labels, focus
   management, and live regions rely on.
 - Reach for native controls and semantic landmarks first. Keep reading, focus,
   and interaction order logical at narrow widths and at 200% zoom.
@@ -114,10 +114,8 @@ The maintained visual rules are in the [design system](DESIGN.md).
 pnpm lint
 pnpm typecheck
 pnpm typecheck:compat
-pnpm test
-pnpm architecture:check
 pnpm build
 ```
 
-Run `pnpm smoke:pages` whenever you change deployment mode, asset paths, the
+Preview the Pages build when you change deployment mode, asset paths, the
 Content Security Policy, or hosted Scientific behavior.

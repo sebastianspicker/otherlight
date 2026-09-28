@@ -18,10 +18,9 @@ candidate includes:
 
 ## Gather the evidence
 
-Run the Browser and serialized-contract gates from the repository root:
+Run the Browser gate from the repository root:
 
 ```bash
-pnpm contracts:check
 pnpm ci:verify
 ```
 
@@ -29,20 +28,18 @@ Then run every independent lane the candidate includes:
 
 ```bash
 pnpm science:backend:check
-pnpm science:backend:test
-pnpm native:core:test
-pnpm native:science:test
+pnpm native:core:build
+pnpm native:science:build
 ```
 
 When you claim CI-equivalent service or Apple evidence, use the locked wheel
-checks and the Xcode destination matrix described in
-[Continuous integration](ci.md). Run `pnpm smoke:pages` for a Pages candidate. A
+and Xcode build checks described in [Continuous integration](ci.md). A
 macOS distribution also needs the signed archive, DMG, notarization, and
 verification procedure in the [Apple guide](../apps/apple/README.md).
 
 Check capability and model claims against
 `contracts/capabilities-v1/manifest.json` and
-`docs/physics/model-registry.json`. Passing tests do not promote scientific
+`docs/physics/model-registry.json`. A successful build does not promote scientific
 evidence status.
 
 ## Record the qualification

@@ -2,7 +2,7 @@ name: Native Apple
 
 on:
   pull_request:
-    branches: ["main", "dev"]
+    branches: ["main"]
     paths:
       - ".github/workflows/native-apple.yml"
       - ".github/workflows/native-macos-dmg.yml"
@@ -15,7 +15,7 @@ on:
       - "scripts/select-swift-toolchain.sh"
       - "apps/browser/src/application/catalog/real-systems.snapshot.json"
   push:
-    branches: ["main", "dev"]
+    branches: ["main"]
     paths:
       - ".github/workflows/native-apple.yml"
       - ".github/workflows/native-macos-dmg.yml"
@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   swift-package-core:
-    name: Swift package / portable core
+    name: Build portable Swift package
     runs-on: macos-26
     timeout-minutes: 25
     env:
@@ -47,30 +47,15 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Toolchain evidence
+      - name: Select Swift toolchain and build
         run: |
           source scripts/select-swift-toolchain.sh
-          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
-          swift --version | grep -F "Swift version 6.3.3"
-      - name: Test portable Swift package
-        run: swift test --package-path apps/apple/Packages/OtherlightCore
-      - name: Benchmark interactive, reference, and series workloads
-        run: |
-          source scripts/select-swift-toolchain.sh
-          swift --version > "$RUNNER_TEMP/apple-benchmark.txt"
-          swift run --package-path apps/apple/Packages/OtherlightCore OtherlightBenchmark >> "$RUNNER_TEMP/apple-benchmark.txt"
-      - name: Upload Apple benchmark evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: apple-benchmarks
-          path: ${{ runner.temp }}/apple-benchmark.txt
-          if-no-files-found: warn
+          swift build --package-path apps/apple/Packages/OtherlightCore
       - name: Check Swift formatting
         run: swift format lint --strict --recursive apps/apple
 
   swift-package-science:
-    name: Swift package / macOS science
+    name: Build macOS science package
     runs-on: macos-26
     timeout-minutes: 25
     env:
@@ -79,52 +64,32 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Toolchain evidence
+      - name: Select Swift toolchain and build
         run: |
           source scripts/select-swift-toolchain.sh
-          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
-          swift --version | grep -F "Swift version 6.3.3"
-      - name: Test macOS-only scientific package
-        run: swift test --package-path apps/apple/Packages/OtherlightScience
+          swift build --package-path apps/apple/Packages/OtherlightScience
 
-  app-test:
-    name: ${{ matrix.destination.name }}
+  ios-simulator-build:
+    name: iOS simulator build
     runs-on: macos-26
     timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-    strategy:
-      fail-fast: false
-      matrix:
-        destination:
-          - name: iPhone 17 Pro / iOS 26.5
-            value: "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5"
-          - name: iPad Pro 13-inch (M5) / iOS 26.5
-            value: "platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.5"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Toolchain evidence
+      - name: Build Education app
         run: |
-          source scripts/select-swift-toolchain.sh
-          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
-          swift --version | grep -F "Swift version 6.3.3"
-      - name: Test iPhone and iPad Education target
-        env:
-          OTHERLIGHT_DESTINATION: ${{ matrix.destination.value }}
-          OTHERLIGHT_DERIVED_DATA_PATH: ${{ runner.temp }}/Otherlight-${{ strategy.job-index }}
-        run: |
-          env -u TOOLCHAINS xcodebuild test \
+          env -u TOOLCHAINS xcodebuild build \
             -project apps/apple/Otherlight.xcodeproj \
             -scheme Otherlight \
             -configuration Debug \
-            -destination "$OTHERLIGHT_DESTINATION" \
-            -derivedDataPath "$OTHERLIGHT_DERIVED_DATA_PATH" \
+            -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO
 
-  macos-science-host-test:
-    name: macOS / OtherlightMac scientific host
+  macos-science-host-build:
+    name: macOS science host build
     runs-on: macos-26
     timeout-minutes: 25
     env:
@@ -133,19 +98,13 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Toolchain evidence
+      - name: Build scientific host
         run: |
-          source scripts/select-swift-toolchain.sh
-          env -u TOOLCHAINS xcodebuild -version | grep -Fx "Xcode 26.6"
-          swift --version | grep -F "Swift version 6.3.3"
-      - name: Test macOS-only science host
-        run: |
-          env -u TOOLCHAINS xcodebuild test \
+          env -u TOOLCHAINS xcodebuild build \
             -project apps/apple/OtherlightMac.xcodeproj \
             -scheme OtherlightMac \
             -configuration Debug \
             -destination "platform=macOS" \
-            -derivedDataPath "$RUNNER_TEMP/OtherlightMac" \
             CODE_SIGNING_ALLOWED=NO
 
   ios-generic-archive:

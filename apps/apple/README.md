@@ -44,55 +44,29 @@ The Education app has no remote backend client, accounts, synchronization, live
 catalog requests, scientific job execution, or scientific-result fallback, and
 the Education session rejects Scientific-profile workspaces.
 
-## Build, test, and run
+## Build and run
 
 Run commands from the repository root. The toolchain selector prefers
 `/Applications/Xcode-26.6.0.app/Contents/Developer`, clears any inherited
-`TOOLCHAINS`, and verifies Swift 6.3.3. Repository-owned `xcodebuild` calls also
-clear `TOOLCHAINS` explicitly.
+`TOOLCHAINS`, and verifies Swift 6.3.3.
 
 ```bash
 source scripts/select-swift-toolchain.sh
-swift test --package-path apps/apple/Packages/OtherlightCore
-swift test --package-path apps/apple/Packages/OtherlightScience
+swift build --package-path apps/apple/Packages/OtherlightCore
+swift build --package-path apps/apple/Packages/OtherlightScience
 swift format lint --strict --recursive apps/apple
 ```
 
-On a host where the SwiftPM process sandbox is unavailable, retry just the
-package tests with `--disable-sandbox`.
-
-CI runs the dedicated Mac host and the mobile Education target on these review
-destinations:
+Build the macOS host or iOS simulator app without signing:
 
 ```bash
-xcodebuild test \
-  -project apps/apple/OtherlightMac.xcodeproj \
-  -scheme OtherlightMac \
-  -configuration Debug \
-  -destination 'platform=macOS' \
+env -u TOOLCHAINS xcodebuild build -project apps/apple/OtherlightMac.xcodeproj \
+  -scheme OtherlightMac -configuration Debug -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO
-
-xcodebuild test \
-  -project apps/apple/Otherlight.xcodeproj \
-  -scheme Otherlight \
-  -configuration Debug \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
-  CODE_SIGNING_ALLOWED=NO
-
-xcodebuild test \
-  -project apps/apple/Otherlight.xcodeproj \
-  -scheme Otherlight \
-  -configuration Debug \
-  -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.5' \
+env -u TOOLCHAINS xcodebuild build -project apps/apple/Otherlight.xcodeproj \
+  -scheme Otherlight -configuration Debug -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO
 ```
-
-For local testing, run `xcodebuild -showdestinations` against
-`apps/apple/Otherlight.xcodeproj -scheme Otherlight` for mobile or
-`apps/apple/OtherlightMac.xcodeproj -scheme OtherlightMac` for macOS. If the
-exact CI simulator names or OS are not installed, substitute an available
-destination and say so in your notes; do not present it as CI-equivalent
-evidence.
 
 Build or launch an unsigned local macOS bundle:
 
@@ -159,7 +133,7 @@ outputs. Move existing outputs aside before a new attempt.
 | Symptom                                          | Check                                                                                                                                                        |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Toolchain selector fails                         | Install Xcode 26.6 at `/Applications/Xcode-26.6.0.app` or set `DEVELOPER_DIR` to another Xcode 26.6 developer directory.                                     |
-| Package tests cannot start the sandbox           | Retry the package command with `--disable-sandbox`.                                                                                                          |
+| Package builds cannot start the sandbox          | Retry the package command with `--disable-sandbox`.                                                                                                          |
 | `build-run-macos.sh` cannot find the app bundle  | Check `DERIVED_DATA_PATH` and the `OtherlightMac` scheme build output.                                                                                       |
 | Debug cannot resolve local packages for `x86_64` | Keep Debug builds on the active architecture. Universal `arm64 x86_64` output is a separate Release archive contract.                                        |
 | Simulator destination is unavailable             | Install iOS 26.5 and use the exact iPhone 17 Pro or iPad Pro 13-inch (M5) destination names.                                                                 |
@@ -182,16 +156,5 @@ coalescing keep their existing contracts. The native V5 publisher uses the same
 certified propagation as the public full-state API but retains only sample times,
 radial velocities, and work metadata for Arrow and manifest publication.
 
-Run the portable benchmark from the repository root:
-
-```bash
-source scripts/select-swift-toolchain.sh
-swift --version
-swift run --package-path apps/apple/Packages/OtherlightCore OtherlightBenchmark
-```
-
-It reports interactive, reference, and series latency distributions plus a
-separate resident-memory pass. Timing stays informational; sample/work and
-retention assertions are required. See
-[performance validation](../../docs/performance.md) for repeatable runs and
-manual Instruments retained-history profiling.
+See [performance validation](../../docs/performance.md) for manual
+Instruments retained-history profiling.

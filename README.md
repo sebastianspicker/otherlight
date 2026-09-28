@@ -32,8 +32,7 @@ interface labels them differently everywhere:
 - a **scientific execution result** — output from the validated model, or a
   clearly labelled replay of a checked-in fixture.
 
-A green test suite does not turn the first into the second. The authoritative
-status lives in
+The authoritative status lives in
 [`contracts/capabilities-v1/manifest.json`](contracts/capabilities-v1/manifest.json)
 and [`docs/physics/model-status.md`](docs/physics/model-status.md).
 
@@ -79,6 +78,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
+Node 25 and later do not bundle Corepack. On those versions, skip the two
+Corepack commands and run each pnpm command as `npx pnpm@11.4.0 <command>`.
+
 Open the Vite URL printed in the terminal. Education runs entirely in the
 browser and needs no service. To check the production bundle:
 
@@ -97,7 +99,7 @@ pnpm preview
 | `apps/apple/Packages/OtherlightScience/` | Experimental macOS DOP853 and Arrow runtime                                              | SwiftPM                 | [Package](apps/apple/Packages/OtherlightScience/README.md) |
 | `services/science/`                      | Optional loopback radial-velocity service                                                | Python 3.14             | [Service](services/science/README.md)                      |
 | `apps/demo/`                             | Static screenshot tour                                                                   | HTML, CSS, JavaScript   | [Tour](apps/demo/README.md)                                |
-| `contracts/`                             | Versioned cross-language schemas, fixtures, and the capability registry                  | JSON                    | [Architecture](docs/ARCHITECTURE.md)                       |
+| `contracts/`                             | Versioned cross-language schemas, a replay example, and the capability registry          | JSON                    | [Architecture](docs/ARCHITECTURE.md)                       |
 
 This is one pnpm project, not a JavaScript package monorepo, and the Browser is
 a modular monolith rather than a set of published packages. See
@@ -125,26 +127,22 @@ capability gating, limits, cache behavior, and error semantics.
 
 ## Verifying changes
 
-The ordinary Browser gate is:
+The Browser build gate is:
 
 ```bash
-pnpm contracts:check
 pnpm ci:verify
 ```
 
-`ci:verify` runs the public-surface and documentation hygiene checks, the Browser
-architecture and physics-registry checks, lint and format checks, TypeScript 7
-and TypeScript 6 compatibility, tests, and the production build.
-`contracts:check` is a separate command in the CI workflow.
+`ci:verify` runs lint and format checks, TypeScript 7 and TypeScript 6
+compatibility checks, and the production build.
 
 Run the independent lane when its code or contracts change:
 
 ```bash
 pnpm science:backend:check
-pnpm science:backend:test
-pnpm native:core:test
-pnpm native:science:test
-pnpm smoke:pages
+pnpm native:core:build
+pnpm native:science:build
+pnpm build:pages:site
 ```
 
 Exact CI lanes, Apple packaging, and maintenance commands live in

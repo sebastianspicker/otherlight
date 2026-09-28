@@ -1,11 +1,7 @@
 node_modules/
 dist/
 pages-dist/
-coverage/
-test-results/
 services/science/.venv/
-services/science/.pytest_cache/
-services/science/.ruff_cache/
 apps/apple/Packages/*/.build/
 .codegraph/
 .codacy/
@@ -17,4 +13,3 @@ pnpm-lock.yaml
 .npmrc
 *.sarif
 *.sarif.zip
-apps/browser/tests/**/__snapshots__/

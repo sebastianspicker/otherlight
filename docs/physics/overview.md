@@ -8,7 +8,7 @@ Otherlight keeps two model families deliberately apart:
   propagation for radial velocity.
 
 The machine-readable [`model-registry.json`](model-registry.json) is
-authoritative for model status, source owners, tests, citations, and capability
+authoritative for model status, source owners, citations, and capability
 evidence. [Model status](model-status.md) is its human-readable companion.
 Agreeing with the same implementation at another resolution, or passing
 validation, does not promote a model to research-validated.

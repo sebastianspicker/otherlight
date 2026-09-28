@@ -1,4 +1,4 @@
-/** Defines shared TypeScript lint policy while allowing deliberate test and migration coercions. */
+/** Defines shared TypeScript lint policy for the Browser and migration script. */
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
@@ -33,13 +33,6 @@ export default tseslint.config(
           ],
         },
       ],
-    },
-  },
-  {
-    // Tests and scripts may use `any` for mocking, type coercion, and migration helpers.
-    files: ["apps/browser/tests/**/*.ts", "scripts/**/*.ts"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
     },
   },
   {

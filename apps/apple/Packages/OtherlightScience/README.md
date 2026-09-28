@@ -10,10 +10,10 @@ from the repository root:
 
 ```bash
 source scripts/select-swift-toolchain.sh
-swift test --package-path apps/apple/Packages/OtherlightScience
+swift build --package-path apps/apple/Packages/OtherlightScience
 ```
 
-If the host cannot start the SwiftPM process sandbox, retry just the test command
+If the host cannot start the SwiftPM process sandbox, retry the build command
 with `--disable-sandbox`.
 
 This package is not linked into the mobile `Otherlight` SwiftUI app. It is linked
@@ -27,7 +27,7 @@ SwiftPM products under `.build/` and `.swiftpm/` are generated and should not be
 committed.
 
 The public `NativeDOP853ForwardPropagator.propagate` path retains full sampled
-states for compatibility and parity tests. Native artifact publication shares its
+states for compatibility. Native artifact publication shares its
 integration, cancellation, work-budget, and collision-certification path but
 retains only time/RV arrays and work metadata, so Arrow columns and run manifests
 are unchanged.

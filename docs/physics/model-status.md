@@ -2,7 +2,7 @@
 
 This is the human-readable companion to
 [`model-registry.json`](model-registry.json). The registry is authoritative for
-capability status and automated coverage, and
+capability status and source ownership, and
 [`../references.bib`](../references.bib) holds the cited bibliography.
 
 ## What the status labels mean
@@ -50,7 +50,7 @@ table, or published-system benchmark with a physically justified tolerance.
 
 Status describes evidential maturity, not whether an equation is written
 correctly. Kepler, frame rotation, and the barycentric split are physically
-defined and tested within their stated domains, but this alpha deliberately does
+defined within their stated domains, but this alpha deliberately does
 not call those implementations independently research-validated yet.
 
 ## Runtime retention and scheduling
@@ -58,6 +58,5 @@ not call those implementations independently research-validated yet.
 Fixed-preview caching, asynchronous chromatic Education sampling, and compact V5
 time/RV publication change how much work is repeated and how much memory is
 retained. They do not change model status, integrators, sample counts, collision
-certificates, serialized contracts, or numerical tolerances. Full-state parity
-oracles remain in place, and worker output and compact publication are checked
-against the existing sampling and propagation paths.
+certificates, serialized contracts, or numerical tolerances. Worker output and
+compact publication use the existing sampling and propagation paths.

@@ -12,9 +12,5 @@ the experimental DOP853 runtime, the result and provenance contracts, and the
 pinned Arrow IPC writer. Neither package is an automatic fallback for the Browser
 or the backend.
 
-The package tests read the checked-in TypeScript oracle at
-`contracts/education-v4/fixtures/scoped-parity.json` and compare all 12 scoped
-rows — orbit geometry, five flux components, interactive transit timing, event
-metadata, and warnings — using the manifest's absolute and relative tolerances.
-Contract tests also validate strict Scientific V5 request decoding and stable
-canonical fingerprints. The package never regenerates the TypeScript oracle.
+Build this package from the repository root with
+`swift build --package-path apps/apple/Packages/OtherlightCore`.

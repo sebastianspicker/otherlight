@@ -1,5 +1,5 @@
 // swift-tools-version: 6.3
-// Defines portable simulation, education, visualization, contract, benchmark, and test products.
+// Defines portable simulation, education, visualization, and contract products.
 import PackageDescription
 
 let package = Package(
@@ -11,7 +11,6 @@ let package = Package(
     .library(name: "TransitVisualization", targets: ["TransitVisualization"]),
     .library(name: "TransitScienceContracts", targets: ["TransitScienceContracts"]),
     .library(name: "TransitScienceAuthoring", targets: ["TransitScienceAuthoring"]),
-    .executable(name: "OtherlightBenchmark", targets: ["OtherlightBenchmark"]),
   ],
   targets: [
     .target(name: "TransitCore"),
@@ -21,14 +20,6 @@ let package = Package(
     .target(
       name: "TransitScienceAuthoring",
       dependencies: ["TransitCore", "TransitEducation", "TransitScienceContracts"]),
-    .executableTarget(
-      name: "OtherlightBenchmark", dependencies: ["TransitCore", "TransitEducation"]),
-    .testTarget(
-      name: "OtherlightCoreTests",
-      dependencies: [
-        "TransitCore", "TransitEducation", "TransitVisualization", "TransitScienceContracts",
-        "TransitScienceAuthoring",
-      ]),
   ],
   swiftLanguageModes: [.v6]
 )

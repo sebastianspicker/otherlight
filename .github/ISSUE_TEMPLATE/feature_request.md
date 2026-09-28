@@ -28,7 +28,7 @@ Describe the behavior you want and the UI or API impact.
 ## Implementation hints
 
 - Code anchors:
-- Validation/tests:
+- Validation approach:
 - Documentation updates required:
 
 ## Acceptance criteria

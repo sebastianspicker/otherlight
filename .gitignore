@@ -30,6 +30,26 @@ DerivedData/
 *.tsbuildinfo
 
 # Test, coverage, and generated analysis output
+**/tests/
+**/__tests__/
+**/Tests/
+**/*Tests/
+**/*UITests/
+**/fixtures/
+**/__snapshots__/
+**/test-results/
+**/benchmarks/
+*.test.ts
+*.spec.ts
+*.test.js
+*.spec.js
+*.xctestplan
+pytest.ini
+conftest.py
+playwright.config.*
+tsconfig.test.json
+vitest.config.*
+jest.config.*
 /output/
 /coverage/
 /htmlcov/
@@ -100,11 +120,18 @@ Desktop.ini
 .vscode/
 
 # Local repository and development-tool state
+/.worktrees/
+/worktrees/
+**/.worktrees/
+**/worktrees/
 /.codacy/
+.repowise/
 .codegraph/
 .impeccable/
 .kilo/
 .serena/
+.aider*/
+/.history/
 /.mcp.json
 
 # Agent and development-assistant state
@@ -141,6 +168,26 @@ Desktop.ini
 **/AI_SUMMARY*
 
 # Private maintenance notes and process records
+/scripts/assemble-*-screenshot-tour.mjs
+/scripts/audit-*
+/scripts/capture-*
+/scripts/check-*.mjs
+/scripts/check-*.sh
+/scripts/ci-local.sh
+/scripts/deadcode-*
+/scripts/smoke-*
+/scripts/fetch-*.mjs
+/scripts/export-*.mjs
+/scripts/find-*-window-id.swift
+/scripts/lib/
+/scripts/source-line-limits.config.mjs
+/scripts/topology_*
+/docs/decisions/
+/docs/agent/
+/docs/source-audit/
+/docs/*plan*.md
+/docs/*roadmap*.md
+/docs/*draft*.md
 /AUDIT.md
 /AUDIT_LEDGER.md
 /DECISIONS.md

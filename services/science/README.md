@@ -9,23 +9,22 @@ simulation.
 ## Requirements and installation
 
 The package requires Python `>=3.14.6,<3.15`. From the repository root, create an
-environment and install the development set:
+environment and install the runtime dependencies:
 
 ```bash
 python3.14 -m venv services/science/.venv
 source services/science/.venv/bin/activate
-python -m pip install -e './services/science[dev]'
+python -m pip install -e './services/science[integrator,service,artifacts]'
 ```
 
 The dependency sets are intentionally separate:
 
-| Extra        | Packages                      | Purpose                    |
-| ------------ | ----------------------------- | -------------------------- |
-| `integrator` | SciPy                         | DOP853 forward integration |
-| `service`    | FastAPI, Uvicorn              | HTTP transport             |
-| `artifacts`  | PyArrow                       | Arrow IPC artifacts        |
-| `test`       | pytest, HTTPX2, Ruff, Pyright | Local checks               |
-| `dev`        | All of the above plus `build` | Development environment    |
+| Extra        | Packages                    | Purpose                    |
+| ------------ | --------------------------- | -------------------------- |
+| `integrator` | SciPy                       | DOP853 forward integration |
+| `service`    | FastAPI, Uvicorn            | HTTP transport             |
+| `artifacts`  | PyArrow                     | Arrow IPC artifacts        |
+| `dev`        | Runtime extras plus `build` | Wheel development          |
 
 To install only the HTTP execution dependencies:
 
@@ -53,7 +52,7 @@ footprint.
 Job state exists only in memory, so terminal records are bounded and do not
 survive a restart. Artifacts have no automatic expiry or backup. The service does
 not fetch external data or start any non-loopback network service. CORS permits
-only the local Vite development, preview, and Pages smoke-test origins on ports
+only the local Vite development, preview, and alternate preview origins on ports
 `5173`, `4173`, and `4174` for `localhost` and `127.0.0.1`.
 
 ## V1 execution contract
@@ -148,24 +147,12 @@ descriptor.
 
 ## Checks
 
-From the repository root with the development environment active:
+From the repository root with the service environment active:
 
 ```bash
-python -m ruff format --check services/science
-python -m ruff check services/science
-python -m pyright --pythonpath "$VIRTUAL_ENV/bin/python" services/science
-PYTHONPATH=services/science python -m pytest services/science/tests
-```
-
-Run latency and traced-memory measurements separately. The benchmark reports
-include interpreter and platform metadata, warmup and repeat counts, complete
-sample distributions, and correctness assertions:
-
-```bash
-PYTHONPATH=services/science python services/science/benchmarks/benchmark_dataset_import.py --mode latency
-PYTHONPATH=services/science python services/science/benchmarks/benchmark_dataset_import.py --mode memory
-PYTHONPATH=services/science python services/science/benchmarks/benchmark_forward_collectors.py --mode latency
-PYTHONPATH=services/science python services/science/benchmarks/benchmark_forward_collectors.py --mode memory
+pnpm science:backend:check
+python -m pip install build
+python -m build --wheel services/science
 ```
 
 Inspect offline cache usage with the local module CLI. Cleanup is a dry run by

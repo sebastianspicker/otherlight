@@ -1,18 +1,8 @@
 # Education V4 contract
 
 This directory owns the canonical Education scenario shared by Browser
-workspaces and native parity checks.
+workspaces and native consumers.
 
 - `scenario.schema.json` describes the complete canonical V4 scenario envelope.
 - `step.schema.json` describes the deterministic output subset compared across
   TypeScript and Swift.
-- `fixture-manifest.schema.json` describes a complete fixture file.
-- `pnpm native:fixtures` writes `fixtures/scoped-parity.json`.
-
-TypeScript is the fixture oracle for the `0.3.0-alpha.1` candidate, and the
-scoped parity contract is green. Changing oracle ownership is a future-version
-decision.
-
-Do not edit fixture values by hand. Floating-point comparisons use the per-field
-`absolute` and `relative` tolerances in the manifest; identifiers, enums,
-booleans, array order, and warning codes compare exactly.

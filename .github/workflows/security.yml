@@ -2,9 +2,9 @@ name: Security
 
 on:
   pull_request:
-    branches: ["main", "dev"]
+    branches: ["main"]
   push:
-    branches: ["main", "dev"]
+    branches: ["main"]
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
@@ -28,4 +28,5 @@ jobs:
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

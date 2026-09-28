@@ -12,12 +12,9 @@ authoring conversion is in
 `apps/browser/src/application/browserScenarioAdapter.ts`. Education output stays
 a teaching preview within the model registry's stated limits.
 
-Presentation tests cover browsing sources without committing a model change,
-reselection of teaching defaults after a catalog model, restored source
-selection, and canceled context changes. Rendered checks also exercise playback,
-live sliders, Clear/Undo, history, workspace files, Guided Labs, and
-advanced-edit recovery. None of these interface checks establish scientific
-model accuracy.
+Presentation state keeps source selection, playback, Clear/Undo, history,
+workspace files, Guided Labs, and advanced-edit recovery distinct from
+scientific model accuracy.
 
 ## Strict science V5
 
@@ -33,9 +30,8 @@ execution limits, result publication, and provenance. See the
 
 ## Additive science V6 datasets
 
-`science-v5` stays unchanged. The V6 contract corpus defines exact dataset
-families plus future job, multi-artifact, and provenance V3 descriptors. The
-contract checker enforces schema shape and cross-array semantics, and the Python
+`science-v5` stays unchanged. The V6 schemas define exact dataset families plus
+future job, multi-artifact, and provenance V3 descriptors. The Python
 service independently enforces the same field, unit, range, monotonicity, and
 sample rules after bounded byte streaming and duplicate-safe JSON parsing.
 
@@ -56,18 +52,13 @@ model classification and evidence status are in the
 
 ## Performance invariants
 
-The Browser preview and chromatic tests assert fixed-preview reuse, explicit
-invalidation, failed-preview invalidity, Undo metadata, worker/synchronous
-sample equality, 100 ms scheduling, bounded pending work, obsolete-generation
-rejection, and worker-failure isolation. These are deterministic requirements;
-benchmark timing is informational.
+The Browser preview and chromatic worker are designed for fixed-preview reuse,
+explicit invalidation, 100 ms scheduling, bounded pending work,
+obsolete-generation rejection, and worker-failure isolation.
 
-Python and Swift compare compact publication with full-state propagation,
-including RV values, work counters, manifests, and Arrow data. Full-state physics
-parity remains a separate oracle. Python dataset tests cover canonical
-duplicates, immutable retained accounting, quotas, and lifecycle races, and
-artifact-cache tests use disposable directories to cover retained capacity,
-writer ownership, temporary bounds, and explicit offline cleanup.
+Python and Swift have full-state propagation and compact publication paths.
+The intended compact output retains RV values, work counters, manifests, and
+Arrow data while avoiding full sampled-state retention.
 
-See [performance validation](performance.md) for reproducible benchmarks,
-measurement limits, and the manual Browser and Apple profiling procedures.
+See [performance validation](performance.md) for manual Browser and Apple
+profiling procedures.

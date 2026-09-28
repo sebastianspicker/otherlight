@@ -1,7 +1,7 @@
 # Adding an Education body
 
 Adding a body changes the canonical Education model, and it can ripple into V4
-serialization, workspace restoration, fixtures, rendering, and the V5 compiler.
+serialization, workspace restoration, rendering, and the V5 compiler.
 Start by deciding whether the body belongs to the supported Education model, the
 V5 science subset, or both. Never let a UI control make an unsupported scientific
 feature look available.
@@ -17,7 +17,7 @@ feature look available.
 
 The V4 authoring boundary is
 `apps/browser/src/application/browserScenarioAdapter.ts`. When the serialized
-shape changes on purpose, update the V4 schemas and fixtures under
+shape changes on purpose, update the V4 schemas under
 `contracts/education-v4/` in the same change.
 
 ## Can it run scientifically?
@@ -31,9 +31,7 @@ validation. Otherwise reject the feature at compilation time.
 
 ```bash
 pnpm typecheck
-pnpm test
-pnpm architecture:check
-pnpm physics-registry
+pnpm ci:verify
 ```
 
 Run the service checks as well if you touched V5 contracts or the compiler. See

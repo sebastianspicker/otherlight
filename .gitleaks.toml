@@ -1,0 +1,14 @@
+title = "Otherlight source and history scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Typed Shapiro convergence diagnostic, not a credential"
+condition = "AND"
+paths = ['''(^|/)src/sim/v3/types\.ts$''']
+regexTarget = "line"
+regexes = ['''^\s*shapiroConvergence:\s*ConvergenceDiagnosticsV3;\s*$''']

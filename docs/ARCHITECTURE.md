@@ -44,10 +44,10 @@ live app at `/otherlight/`.
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `apps/browser/`                          | Scenario authoring, Education runtime, Guided Labs, visualization, workspace handling, and Scientific-profile UI | One Vite bundle in `dist/`                            |
 | `apps/apple/`                            | Shared SwiftUI Education sources, mobile app, and macOS native V5 host                                           | Isolated mobile and macOS Xcode project graphs        |
-| `apps/apple/Packages/OtherlightCore/`    | Portable models, Education, visualization, strict V5 contracts and authoring, and benchmark                      | Independent SwiftPM package                           |
+| `apps/apple/Packages/OtherlightCore/`    | Portable models, Education, visualization, strict V5 contracts and authoring                                     | Independent SwiftPM package                           |
 | `apps/apple/Packages/OtherlightScience/` | Experimental macOS DOP853 execution and Arrow IPC writing                                                        | Independent SwiftPM package; Mac target only          |
 | `services/science/`                      | Strict V5 jobs plus bounded V6 process-memory dataset imports                                                    | Installable Python package and loopback process       |
-| `contracts/`                             | Schemas, shared fixtures, and platform capability evidence                                                       | Serialized compatibility boundary                     |
+| `contracts/`                             | Schemas, a hosted replay example, and platform capability evidence                                               | Serialized compatibility boundary                     |
 | `apps/demo/`                             | Non-executing static screenshot tour                                                                             | Copied into the Pages artifact at `/otherlight/demo/` |
 
 ## Browser modular monolith
@@ -70,8 +70,7 @@ import infrastructure, presentation, or composition; infrastructure cannot impor
 presentation or composition; and `composition/` is the only startup wiring layer.
 Inside presentation, `render/` may import only `domain/` and `render/`, so canvas
 drawing stays a pure projection of simulation output.
-`scripts/check-architecture.mjs` enforces these imports and rejects relative
-TypeScript cycles.
+Keep relative TypeScript imports acyclic.
 
 ### Where new Browser code belongs
 
@@ -216,24 +215,23 @@ server-side state.
 
 ## Contracts and cross-runtime dependencies
 
-- `contracts/education-v4/` owns canonical Education scenarios and parity fixtures.
-- `contracts/science-v5/` owns strict requests, run manifests, canonical JSON
-  cases, and shared service/client fixtures.
+- `contracts/education-v4/` owns canonical Education scenario schemas.
+- `contracts/science-v5/` owns strict requests, run manifests, and a hosted
+  replay example.
 - `contracts/science-v6/` owns strict dataset imports and the additive timing
   request, job, artifact, and provenance V3 shapes. Timing remains a contract, not
   an available execution path, and V6 does not revise V5.
 - `contracts/workspace-v1/` owns `.otherlight` documents.
 - `contracts/capabilities-v1/manifest.json` is the platform capability and
-  automated-evidence registry.
+  implementation-evidence registry.
 
 TypeScript, Python, and Swift validate these shapes independently: they share no
 implementation code and never infer one another's data structures. An intentional
-serialized change must update the schema, fixtures, validators, consumers, and
+serialized change must update the schema, validators, consumers, and
 compatibility evidence together.
 
-The Apple app bundles the Browser-owned checked-in real-system snapshot, and the
-portable Swift package reads checked-in Education and V5 fixtures for parity. Those
-are explicit data dependencies, not runtime service calls.
+The Apple app bundles the Browser-owned checked-in real-system snapshot. This is
+an explicit data dependency, not a runtime service call.
 
 ## External and security boundaries
 
@@ -247,9 +245,8 @@ processes.
 
 Neither Apple target has a runtime network client or an outbound-network
 entitlement. `OtherlightMac` alone resolves and links the pinned Arrow-backed
-science package, and mobile dependency checks reject it. The maintainer-triggered
-real-system catalog refresh reads NASA TAP and rewrites a checked-in snapshot;
-normal Browser, Apple, and service operation never fetches that catalog.
+science package. Normal Browser, Apple, and service operation use the checked-in
+catalog snapshot and do not fetch it.
 
 ## Build and deployment boundaries
 
@@ -262,7 +259,7 @@ normal Browser, Apple, and service operation never fetches that catalog.
 - `pnpm build:demo` builds the tour on its own into `pages-dist/` for local review.
 - The Python package can be built as a wheel, but no remote service deployment is
   defined.
-- Apple CI builds and tests unsigned artifacts. Developer ID signing,
+- Apple CI builds unsigned artifacts. Developer ID signing,
   notarization, and release verification are explicit manual operations.
 
 ## Invariants and non-goals
@@ -284,21 +281,10 @@ For the operational and scientific details, see the
 [operations runbook](RUNBOOK.md), [validation boundaries](validation.md), and
 [physics overview](physics/overview.md).
 
-## Decision records and planned boundaries
+## Planned boundaries
 
-Accepted architectural direction is recorded separately from current
-implementation:
-
-- [ADR 0001](decisions/0001-apple-target-split.md) defines the implemented split
-  between portable mobile Education and a macOS-only scientific host.
-- [ADR 0002](decisions/0002-science-v6-boundary.md) keeps V5 frozen and makes V6 an
-  additive contract and route family.
-- [ADR 0003](decisions/0003-v6-transit-timing.md) fixes the dense-trajectory event
-  geometry, ephemeris, numerical, and artifact boundaries for timing.
-
-The V6 dataset portion of ADR 0002 is now implemented in the Python service and
-Browser product surface; its job, model, and Swift portions remain pending. The
-ADR 0001 target split, the portable V5 authoring compiler, the session
-coordinator, and the explicit Mac exports are implemented. Live Mac visual and
-accessibility review and the mobile archive gate remain before the scientific
-boundary can be presented as available.
+The V6 dataset boundary is implemented in the Python service and Browser
+product surface; its job, model, and Swift portions remain pending. Portable
+mobile Education and a macOS-only scientific host use separate Apple targets.
+The Mac host provides explicit Arrow and manifest exports. Live Mac visual and
+accessibility review remains before this boundary can be presented as available.

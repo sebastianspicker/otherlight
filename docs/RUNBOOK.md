@@ -21,9 +21,7 @@ pnpm build
 pnpm preview
 ```
 
-Prefer `pnpm smoke:served` when you want the automated served-build check: it
-rebuilds, starts a preview on `127.0.0.1:4173`, and probes the served application.
-`SMOKE_HOST` and `SMOKE_PORT` override that test endpoint.
+Open the preview URL printed by Vite and check the application in a browser.
 
 ## GitHub Pages mode
 
@@ -42,10 +40,6 @@ shows a deterministic projection of
 fixture replay: no V5 execution or network request happens, and changing the
 visible form inputs does not change the fixture.
 
-`pnpm smoke:pages` rebuilds the whole artifact and probes a preview on
-`127.0.0.1:4174` by default; `SMOKE_PAGES_HOST` and `SMOKE_PAGES_PORT` override
-that endpoint.
-
 The workflow in `.github/workflows/pages.yml` publishes `dist/` only from `main`.
 A passing workflow does not guarantee the deployed site is current, so load the
 published URL before treating a revision as live. To build the tour on its own
@@ -60,7 +54,6 @@ python3.14 -m venv services/science/.venv
 source services/science/.venv/bin/activate
 python -m pip install -e './services/science[dev]'
 pnpm science:backend:check
-pnpm science:backend:test
 pnpm science:backend:serve
 ```
 
@@ -103,12 +96,11 @@ Routes, limits, error codes, and troubleshooting live in the
 
 ## Apple application
 
-Use Xcode 26.6 and Swift 6.3.3. The portable and scientific packages have separate
-test lanes:
+Use Xcode 26.6 and Swift 6.3.3. Build the portable and scientific packages:
 
 ```bash
-pnpm native:core:test
-pnpm native:science:test
+pnpm native:core:build
+pnpm native:science:build
 ```
 
 Use the [Apple guide](../apps/apple/README.md) for Xcode destinations, local macOS
@@ -121,13 +113,11 @@ exports, and cancelling or replacing a run prevents stale publication.
 ## Verification
 
 ```bash
-pnpm contracts:check
 pnpm ci:verify
 ```
 
-`ci:verify` is the Browser gate. It does not include contract validation, Python
-checks, Apple tests, or Pages smoke, so run those independent lanes when their
-paths or shared contracts change. See [Continuous integration](ci.md).
+`ci:verify` is the Browser lint, typecheck, and build gate. It does not include
+Python or Apple builds. See [Continuous integration](ci.md).
 
 ## Maintainer operations
 
@@ -137,18 +127,10 @@ Build the static screenshot tour on its own into the ignored `pages-dist/`:
 pnpm build:demo
 ```
 
-Refresh the checked-in NASA-derived Browser catalog only with network access:
-
-```bash
-pnpm data:real-systems:refresh
-```
-
-Review the source metadata and the complete JSON diff before retaining a refresh.
 Migrate a legacy Browser draft from standard input to standard output:
 
 ```bash
 pnpm migrate:v4 < input.json > output.json
 ```
 
-Validate migrated output before importing it. `pnpm native:fixtures` rewrites a
-tracked Education parity fixture and is reserved for intentional contract updates.
+Validate migrated output before importing it.

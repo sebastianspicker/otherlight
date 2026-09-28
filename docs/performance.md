@@ -1,39 +1,8 @@
 # Performance validation
 
 Performance changes must preserve Education V4, science V5/V6, workspace-v1, the
-capability manifests, Arrow columns, and the checked-in parity fixtures. Timing
-is informational; work counts, queue bounds, equality checks, and compact
-retention are correctness requirements.
-
-## Reproducible runs
-
-Run from the repository root with the documented toolchains, and avoid
-concurrent builds or profiling while you compare latency. Keep the workload
-version, seed, warmup count, repetition count, release/debug configuration, and
-machine the same, and retain both raw reports. Run latency and memory passes
-separately. Heap and RSS deltas include allocator and garbage-collection effects
-and are not exact allocation counts.
-
-```bash
-pnpm benchmark:browser
-source scripts/select-swift-toolchain.sh
-swift --version
-swift run --package-path apps/apple/Packages/OtherlightCore OtherlightBenchmark
-```
-
-The Browser harness uses four fixed frames, 256 preview points, and three bands
-at 450/550/700 nm with 96 samples over -10,000 to 10,000 seconds. It records
-Node and platform details, the seed, two warmups, nine repetitions, raw latency
-samples, work counts, and a separate heap/RSS pass, then checks retained-runtime
-band values against fresh-runtime values. For maximum-size imports and
-rich/compact forward output, run the service benchmark documented in the
-[science README](../services/science/README.md).
-
-The Apple harness reports its fixed workload version, seed, toolchain, warmups,
-repetitions, sample count, min/median/p95/max latency, and separate
-resident-memory measurements for the interactive, reference, and series
-workloads. Public full-state and compact publication tests establish scientific
-equality independently of those Education measurements.
+capability manifests, Arrow columns, and runtime contracts. Work bounds and compact retention are correctness
+requirements.
 
 ## Browser responsiveness and worker lifecycle
 
@@ -60,8 +29,7 @@ command; Pages uses `/otherlight/`. Then, in a real browser:
 6. Block the worker asset in developer tools and reload. Confirm the primary
    simulation still plays and an overlay-specific warning appears.
 
-HTTP and unit checks do not establish visual responsiveness or browser CSP
-execution, so record any browser check you could not run.
+Record the browser and CSP checks you could not run.
 
 ## Apple retained-history profiling
 
@@ -74,5 +42,4 @@ a fixed duration, after reset, and after closing the document. Inspect retained
 engines and history buffers; only the selected engine should exist. Compare
 series requests and native V5 publication against identical samples. Public
 full-state propagation intentionally retains sample states, so publication should
-retain only the time/RV arrays and metadata. Restructuring history is outside
-this change.
+retain only the time/RV arrays and metadata.
