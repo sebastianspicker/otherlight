@@ -206,12 +206,33 @@ function matchesSupportedPattern(pattern, value) {
     case "^job-[a-z0-9][a-z0-9-]{0,126}$":
       return /^job-[a-z0-9][a-z0-9-]{0,126}$/u.test(value);
     case "^[a-z0-9]+(?:[.-][a-z0-9]+)*$":
-      return /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/u.test(value);
+      return matchesSeparatedIdentifier(value, true);
     case "^[a-z0-9]+(?:-[a-z0-9]+)*$":
-      return /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value);
+      return matchesSeparatedIdentifier(value, false);
     default:
       throw new Error(`Unsupported JSON Schema pattern: ${pattern}`);
   }
+}
+
+function matchesSeparatedIdentifier(value, allowPeriod) {
+  let requiresAlphanumeric = true;
+  for (const character of value) {
+    if (isLowercaseAsciiAlphanumeric(character)) {
+      requiresAlphanumeric = false;
+      continue;
+    }
+    if ((character === "-" || (allowPeriod && character === ".")) && !requiresAlphanumeric) {
+      requiresAlphanumeric = true;
+      continue;
+    }
+    return false;
+  }
+  return !requiresAlphanumeric;
+}
+
+function isLowercaseAsciiAlphanumeric(character) {
+  const code = character.charCodeAt(0);
+  return (code >= 48 && code <= 57) || (code >= 97 && code <= 122);
 }
 
 function validateDateTime(validator, schema, value, location) {

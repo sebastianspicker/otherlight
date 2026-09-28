@@ -100,6 +100,29 @@ describe("contract validator hardening", () => {
       "Unsupported JSON Schema pattern: (a+)+$",
     );
   });
+
+  it("matches separated identifiers without ambiguous backtracking", () => {
+    const cases = [
+      {
+        pattern: "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+        accepted: "science.v6-dataset",
+        rejected: "science..v6",
+      },
+      {
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        accepted: "workspace-v1",
+        rejected: "workspace--v1",
+      },
+    ];
+
+    for (const { pattern, accepted, rejected } of cases) {
+      const schema = { $schema: draft, $id: schemaId, type: "string", pattern };
+      const validator = new ContractValidator(new Map([["schema", schema]]));
+      expect(validator.validate(schema, accepted, schemaId), accepted).toBe(true);
+      validator.errors = [];
+      expect(validator.validate(schema, rejected, schemaId), rejected).toBe(false);
+    }
+  });
 });
 
 describe("serialized V4 contracts", () => {
