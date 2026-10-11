@@ -18,7 +18,7 @@ test = [
   "pytest==9.1.1",
   "httpx2==2.12.0",
   "ruff==0.15.20",
-  "pyright==1.1.411",
+  "pyright==1.1.414",
   "lizard==1.24.0",
 ]
 dev = [
@@ -29,7 +29,7 @@ dev = [
   "pytest==9.1.1",
   "httpx2==2.12.0",
   "ruff==0.15.20",
-  "pyright==1.1.411",
+  "pyright==1.1.414",
   "lizard==1.24.0",
   "build==1.4.0",
 ]
