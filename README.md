@@ -46,13 +46,13 @@ match what you can click through yourself.
 and watch the transit depth follow. Sky view, light curve, and the depth formula
 stay in step, so the arithmetic is visible next to the picture.
 
-![Otherlight Education workspace with a sky-plane observer view, a relative-starlight plot, and planet radius controls comparing model A with model B.](docs/screenshots/web/01-education-simulation.png)
+![Otherlight Education workspace with a sky-plane observer view, a relative-starlight plot, planet radius controls comparing model A with model B, and the radius-to-depth panel.](docs/screenshots/web/01-education-simulation.png)
 
 **2 · Guided Lab — move from prediction to evidence.** Lessons advance one phase
 at a time, keeping the prompt, the evidence, and a learner's written responses
 together so a session can be resumed later.
 
-![Otherlight Guided Lab workspace: the sky plate beside the active prediction phase, a written response, phase navigation, and a lesson report action.](docs/screenshots/web/02-guided-lab.png)
+![Otherlight Guided Lab workspace: the sky plate and relative-starlight plot above the Guided Lab panel, which shows the active prediction phase, a written response, phase navigation, and a lesson report action.](docs/screenshots/web/02-guided-lab.png)
 
 **3 · Scientific — keep the execution boundary explicit.** The Scientific
 profile validates inputs and shows run provenance. On the hosted build it

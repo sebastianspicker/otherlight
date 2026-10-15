@@ -136,7 +136,7 @@ function wireLessonSelection(context: DidacticsWireContext): void {
         state.t,
         currentLessonSimMode(),
       );
-      renderDidacticSignals(refs, state.didacticsRuntime);
+      renderAfterLessonMove(context);
       announceDidacticResult(
         `Lesson changed. ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "First phase"}.`,
       );
@@ -232,23 +232,37 @@ function wireAssessmentControls(context: DidacticsWireContext): void {
   wireCheckButton(context);
 }
 
+/**
+ * Rebuilds lesson signals for the current phase at the current time. The frame loop only
+ * resamples while time advances, so paused navigation must refresh signals itself.
+ */
+function refreshLessonSignals(context: DidacticsWireContext): void {
+  const { state, getSimulation } = context;
+  // Grade against the live lesson/step in app state; the runtime's didactics
+  // config is a build-time clone that lesson navigation does not update.
+  const frame = getSimulation().step(state.t);
+  state.didacticsRuntime = onDidacticSignals(
+    state.params,
+    state.didacticsRuntime,
+    currentDidacticSignals(state.params, frame),
+    frame.timing,
+    state.t,
+  );
+}
+
+function renderAfterLessonMove(context: DidacticsWireContext): void {
+  runWithErrorHandling(() => refreshLessonSignals(context), { statusEl: context.warnEl });
+  renderDidacticSignals(context.refs, context.state.didacticsRuntime);
+}
+
 function wireCheckButton(context: DidacticsWireContext): void {
-  const { refs, state, getSimulation, warnEl, getSuccessMessage, listenerOptions } = context;
+  const { refs, state, warnEl, getSuccessMessage, listenerOptions } = context;
   refs.didCheckBtn?.addEventListener(
     "click",
     () => {
       runWithErrorHandling(
         () => {
-          // Grade against the live lesson/step in app state; the runtime's didactics
-          // config is a build-time clone that lesson navigation does not update.
-          const frame = getSimulation().step(state.t);
-          state.didacticsRuntime = onDidacticSignals(
-            state.params,
-            state.didacticsRuntime,
-            currentDidacticSignals(state.params, frame),
-            frame.timing,
-            state.t,
-          );
+          refreshLessonSignals(context);
           renderDidacticSignals(refs, state.didacticsRuntime);
           const checks = state.didacticsRuntime.latestSignals?.checks ?? [];
           const passed = checks.filter((check) => check.passed).length;
@@ -267,7 +281,7 @@ function wireLessonNavigation(context: DidacticsWireContext): void {
     "click",
     () => {
       state.didacticsRuntime = retreatLessonFlow(state.params, state.didacticsRuntime, state.t);
-      renderDidacticSignals(refs, state.didacticsRuntime);
+      renderAfterLessonMove(context);
       announceDidacticResult(
         `Moved to ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "the previous phase"}.`,
       );
@@ -279,7 +293,7 @@ function wireLessonNavigation(context: DidacticsWireContext): void {
     "click",
     () => {
       state.didacticsRuntime = advanceLessonFlow(state.params, state.didacticsRuntime, state.t);
-      renderDidacticSignals(refs, state.didacticsRuntime);
+      renderAfterLessonMove(context);
       announceDidacticResult(
         `Moved to ${state.didacticsRuntime.latestSignals?.phaseTitle ?? "the next phase"}.`,
       );
