@@ -36,11 +36,11 @@ struct SkyCanvas: View {
         let body = Path(
           ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
         // Bodies are silhouettes cut from the starlight, outlined so they stay visible off the disc.
-        context.fill(body, with: .color(point.body == "planet" ? PlateFigure.plate : SkyInk.moon))
-        context.stroke(body, with: .color(PlateFigure.plateInk.opacity(0.7)), lineWidth: 1)
+        context.fill(body, with: .color(point.body == "planet" ? DeepField.plate : SkyInk.moon))
+        context.stroke(body, with: .color(DeepField.plateInk.opacity(0.7)), lineWidth: 1)
       }
     }
-    .background(PlateFigure.plate)
+    .background(DeepField.plate)
     .accessibilityHidden(true)
   }
 }
@@ -52,7 +52,7 @@ private enum SkyInk {
   static let moon = Color(red: 0.56, green: 0.55, blue: 0.51)
 }
 
-/// Draws a closed journal-figure frame with inward ticks on all four sides.
+/// Draws a closed figure frame with inward ticks on all four sides, in the figure-frame hairline.
 private func drawFigureFrame(_ context: GraphicsContext, in bounds: CGRect, ticks: Int = 5) {
   var frame = Path(bounds)
   let tick: CGFloat = 5
@@ -69,7 +69,7 @@ private func drawFigureFrame(_ context: GraphicsContext, in bounds: CGRect, tick
     frame.move(to: CGPoint(x: bounds.maxX, y: y))
     frame.addLine(to: CGPoint(x: bounds.maxX - tick, y: y))
   }
-  context.stroke(frame, with: .color(PlateFigure.ink), lineWidth: 1)
+  context.stroke(frame, with: .color(DeepField.figureFrame), lineWidth: 1)
 }
 
 /// Draws the residual figure's frame and its dotted zero line.
@@ -79,7 +79,7 @@ private func drawResidualAxes(_ context: GraphicsContext, in plot: CGRect) {
     Path {
       $0.move(to: CGPoint(x: plot.minX, y: plot.midY))
       $0.addLine(to: CGPoint(x: plot.maxX, y: plot.midY))
-    }, with: .color(PlateFigure.ink3), style: StrokeStyle(lineWidth: 1, dash: [1, 3]))
+    }, with: .color(DeepField.ink3), style: StrokeStyle(lineWidth: 1, dash: [1, 3]))
 }
 
 /// Displays observed-minus-calculated residuals recorded for one transiting body.
@@ -105,14 +105,14 @@ struct TransitOCChart: View {
           let y = middle - residual.milliseconds / maximumMagnitude * plot.height * 0.42
           context.fill(
             Path(ellipseIn: CGRect(x: x - 3, y: y - 3, width: 6, height: 6)),
-            with: .color(PlateFigure.pencil))
+            with: .color(DeepField.accent))
         }
       }
       .accessibilityHidden(true)
       if residuals.count < 2 {
         Text("Collect at least two \(transitBody.rawValue) transit events to calculate O-C.")
           .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(DeepField.ink3)
           .multilineTextAlignment(.center)
           .padding()
       }
@@ -157,7 +157,7 @@ private struct AcceptedLightCurveHistoryCanvas: View {
         }
         context.fill(
           Path(ellipseIn: CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)),
-          with: .color(PlateFigure.pencil.opacity(0.8)))
+          with: .color(DeepField.traceB.opacity(0.8)))
       }
     }
   }
@@ -182,7 +182,8 @@ private struct StaticLightCurveCanvas: View, Equatable {
         size: size)
       drawFigureFrame(context, in: drawing.bounds)
       guard let path = drawing.curvePath else { return }
-      context.stroke(path, with: .color(PlateFigure.ink), lineWidth: 1.5)
+      // The model curve is trace A, as the Browser draws its single light-curve series.
+      context.stroke(path, with: .color(DeepField.traceA), lineWidth: 1.5)
     }
   }
 }
@@ -206,11 +207,11 @@ private struct LightCurveMarkerCanvas: View {
       markerLine.addLine(to: CGPoint(x: marker.x, y: bounds.maxY))
       context.stroke(
         markerLine,
-        with: .color(PlateFigure.pencil),
+        with: .color(DeepField.accent),
         style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
       context.fill(
         Path(ellipseIn: CGRect(x: marker.x - 4, y: marker.y - 4, width: 8, height: 8)),
-        with: .color(PlateFigure.pencil))
+        with: .color(DeepField.accent))
     }
   }
 }
@@ -257,7 +258,7 @@ private struct StaticOCChart: View, Equatable {
         let y = middle - point.residual / 120 * plot.height * 0.45
         context.fill(
           Path(ellipseIn: CGRect(x: x - 3, y: y - 3, width: 6, height: 6)),
-          with: .color(PlateFigure.pencil))
+          with: .color(DeepField.accent))
       }
     }
   }

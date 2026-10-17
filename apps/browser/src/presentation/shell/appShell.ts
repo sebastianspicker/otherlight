@@ -12,7 +12,7 @@ import {
 } from "../observatory/templates/observatory";
 import { renderFieldGuide } from "../observatory/templates/fieldGuide";
 import { renderScientificWorkspace } from "../science/templates/scientificWorkspace";
-import { runtimeAssetUrl } from "../../application/deployment";
+import { buildIdentity, runtimeAssetUrl } from "../../application/deployment";
 
 export function renderAppShell(root: HTMLElement | null = null): void {
   if (typeof document === "undefined") return;
@@ -67,6 +67,9 @@ function appShellInnerHtml(baseUrl = import.meta.env.BASE_URL): string {
           ${renderObservatoryFooter()}
         </div>
         ${renderScientificWorkspace()}
+        <footer class="app-colophon">
+          <p>Otherlight <span id="buildIdentity">${buildIdentity()}</span></p>
+        </footer>
         <noscript><p class="help">JavaScript is required to run the simulation.</p></noscript>
       </main>
     </div>

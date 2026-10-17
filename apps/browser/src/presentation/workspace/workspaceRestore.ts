@@ -148,7 +148,11 @@ async function applyRestoredScenario(
   );
 }
 
-export async function restoreWorkspace(args: RestoreWorkspaceArgs, text: string): Promise<void> {
+/**
+ * Restores a workspace document; resolves to whether it carried Guided Lab state, because
+ * without it the learner's in-memory responses stay and are still unsaved.
+ */
+export async function restoreWorkspace(args: RestoreWorkspaceArgs, text: string): Promise<boolean> {
   // Parse and convert before changing controls or runtime state so malformed or
   // unrepresentable files leave the live workspace intact.
   const workspace = parseWorkspaceDocumentJson(text);
@@ -186,4 +190,5 @@ export async function restoreWorkspace(args: RestoreWorkspaceArgs, text: string)
     }
     args.writeProductHistory("replace");
   });
+  return workspace.education.guidedLab !== undefined;
 }

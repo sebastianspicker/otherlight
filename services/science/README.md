@@ -155,6 +155,11 @@ artifacts return `404`, a result requested before completion returns `409`, and
 unexpected service failures return `500`. Cancellation is authoritative: a
 cancelled job cannot later publish a successful artifact.
 
+A `500` keeps the CORS and loopback headers, so the Browser shows its message,
+and the message ends with a request id. The service logs the same id with a
+timestamp and traceback on stderr; unexpected job failures are logged with the
+job id. Include that log excerpt in bug reports.
+
 Every route rejects a non-loopback `Host` or an unapproved browser `Origin`.
 Responses use `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
 Artifact reads open without following links, verify a bounded regular file

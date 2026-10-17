@@ -71,7 +71,7 @@ final class OtherlightMacTests: XCTestCase {
         runId: "test-run", inputHashSha256: try ScienceCanonicalJSON.requestFingerprint(request)),
       execution: .init(
         implementation: .init(
-          application: .init(name: "OtherlightMac", version: "0.3.0", build: "1"),
+          application: .init(name: "OtherlightMac", version: "0.2.0-alpha.1", build: "1"),
           engine: .init(kind: "swift-native", name: "DOP853", version: "test"),
           runtime: .init(name: "Swift", version: "6.3.3"),
           artifactWriter: .init(name: "test", version: "1"),
@@ -79,7 +79,7 @@ final class OtherlightMacTests: XCTestCase {
         gravitationalConstantM3KgS2: ScienceLimits.gravitationalConstant,
         epochJdTdb: request.scenario.epochJdTdb,
         startedAt: "2026-09-04T12:00:00.000Z", completedAt: "2026-09-04T12:00:01.000Z",
-        capabilityManifestVersion: "0.3.0"),
+        capabilityManifestVersion: "0.2.0-alpha.1"),
       provenance: .init(
         modelVersions: [.init(id: "dynamics", version: "test")],
         numericalTolerances: [

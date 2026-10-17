@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/education-v4/scenario-fixtures.schema.json",
+  "$id": "https://example.invalid/otherlight/education-v4/scenario-fixtures.schema.json",
   "title": "Canonical Education V4 scenario samples",
   "description": "Shared sample scenarios that TypeScript and Swift decode; they carry no expected output.",
   "type": "object",

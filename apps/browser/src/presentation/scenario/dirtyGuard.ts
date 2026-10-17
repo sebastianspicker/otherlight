@@ -15,6 +15,7 @@ type BootstrapDirtyGuardDeps = {
 
 export type BootstrapDirtyGuard = {
   setDirty: (next: boolean) => void;
+  isDirty: () => boolean;
   requestContextChange: (action: () => void) => void;
   guardContextSelect: (select: HTMLSelectElement | null) => void;
 };
@@ -115,5 +116,5 @@ export function createBootstrapDirtyGuard(deps: BootstrapDirtyGuardDeps): Bootst
     );
   };
 
-  return { setDirty, requestContextChange, guardContextSelect };
+  return { setDirty, isDirty: () => dirty, requestContextChange, guardContextSelect };
 }

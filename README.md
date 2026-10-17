@@ -79,8 +79,13 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open the Vite URL printed in the terminal. Education runs entirely in the
-browser and needs no service. To check the production bundle:
+Open <http://localhost:5173>. Education runs entirely in the browser and needs
+no service. The dev server refuses to start when port 5173 is busy instead of
+moving to another port, because the loopback science service accepts requests
+only from the local origins on ports 5173 (`pnpm dev`), 4173 (`pnpm preview`)
+and 4174 (the Pages smoke test); stop the other process rather than changing
+the port. The page footer shows the version and build commit; please include
+it in bug reports. To check the production bundle:
 
 ```bash
 pnpm build
@@ -118,6 +123,11 @@ python -m pip install -e './services/science[dev]'
 pnpm science:backend:serve
 ```
 
+With the service running, open the Scientific profile in `pnpm dev` or
+`pnpm preview` and choose **Check backend**. If the page says the service could
+not be reached, check that it is still running and that the page is on one of
+the approved origins above.
+
 Supported output today is barycentric radial velocity only. Photometry,
 time-scale conversion, relativity, atmosphere retrieval, and inference are not
 implemented. The [service guide](services/science/README.md) covers routes,
@@ -145,6 +155,13 @@ pnpm native:core:build
 pnpm native:science:build
 pnpm smoke:pages
 ```
+
+The unit and regression suites for the Browser (Vitest), the service (pytest)
+and the Swift packages (XCTest) are maintained outside the public tree and are
+not part of a source release; only the Apple app test targets are published.
+In a public checkout `pnpm test` says so and exits with an error. GitHub CI runs
+the gates above and the Apple app tests, but not those suites, so each release
+qualification records which local suite runs were made for that revision.
 
 Exact CI lanes, Apple packaging, and maintenance commands live in
 [Continuous integration](docs/ci.md), the [operations runbook](docs/RUNBOOK.md),

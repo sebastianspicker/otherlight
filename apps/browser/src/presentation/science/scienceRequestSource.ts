@@ -57,10 +57,8 @@ function inputNumber(
 ): number {
   const value = input.valueAsNumber;
   if (isInvalidNumber(value, options)) {
-    const qualifier = options.integer ? "integer " : "";
-    throw new Error(
-      `${label} must be a finite ${qualifier}between ${options.minimum} and ${options.maximum}.`,
-    );
+    const kind = options.integer ? "an integer" : "a finite number";
+    throw new Error(`${label} must be ${kind} between ${options.minimum} and ${options.maximum}.`);
   }
   return value;
 }

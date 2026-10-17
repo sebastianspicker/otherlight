@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -136,15 +137,56 @@ def register_error_handlers(app: Any, validation_type: Any) -> None:
     async def validation_error(_: Any, _details: Any):
         return error("invalid-contract", "request body is invalid", 422)
 
-    @app.exception_handler(Exception)
-    async def unexpected_error(_: Any, failure: Exception):
-        LOGGER.error(
-            "unexpected HTTP scientific backend failure",
-            exc_info=(type(failure), failure, failure.__traceback__),
-        )
-        return error(
-            "internal-scientific-error", "an internal scientific error occurred", 500
-        )
+
+def register_unexpected_error_boundary(app: Any) -> None:
+    """Answers unexpected failures with the JSON error envelope.
+
+    An ``Exception`` handler would run in Starlette's outermost middleware and
+    skip CORS and the loopback headers, so the Browser would only see a CORS
+    failure. This middleware must be added before CORS so it sits inside it.
+    The request id ties the Browser's message to the service log.
+    """
+
+    @app.middleware("http")
+    async def unexpected_error_boundary(request: Any, call_next: Any):
+        try:
+            return await call_next(request)
+        except Exception as failure:
+            request_id = uuid.uuid4().hex[:12]
+            LOGGER.error(
+                "unexpected HTTP scientific backend failure (request %s, %s %r)",
+                request_id,
+                request.method,
+                request.url.path,
+                exc_info=(type(failure), failure, failure.__traceback__),
+            )
+            return error(
+                "internal-scientific-error",
+                f"an internal scientific error occurred (request id {request_id})",
+                500,
+            )
+
+
+def configure_service_logging() -> None:
+    """Gives backend log records timestamps when nothing else configured logging.
+
+    Uvicorn's default config covers only its own loggers, so without this the
+    error records reach stderr through Python's last-resort handler with no
+    time or level. An embedding application that configures logging before
+    calling ``create_app`` keeps its own handlers; one that configures logging
+    later must attach to the ``science_backend`` logger, which then no longer
+    propagates to the root logger.
+    """
+    package_logger = logging.getLogger("science_backend")
+    if package_logger.handlers or logging.getLogger().handlers:
+        return
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
+    package_logger.addHandler(handler)
+    package_logger.setLevel(logging.INFO)
+    package_logger.propagate = False
 
 
 def require_json_content_type(raw_headers: Any) -> None:
@@ -251,11 +293,13 @@ def create_app(
     datasets = (
         dataset_registry if dataset_registry is not None else dataset_registry_factory()
     )
+    configure_service_logging()
     app = fastapi(
         title="Otherlight local science backend",
         version=__version__,
         lifespan=lifespan(jobs, owns_service, datasets, owns_datasets),
     )
+    register_unexpected_error_boundary(app)
     app.add_middleware(
         cors_middleware,
         allow_origins=list(BROWSER_CORS_ORIGINS),

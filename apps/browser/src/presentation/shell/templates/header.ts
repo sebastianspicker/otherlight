@@ -63,6 +63,7 @@ export function renderHeaderTemplate(
           <em>Scientific workspace</em> — a strict V5 boundary for loopback execution or a labelled hosted fixture replay. Never an Education substitute.
         </span>
       </p>
+      <p id="workspaceStatus" class="workspace-status" data-product-profile="scientific" role="status" aria-live="polite" aria-atomic="true" hidden></p>
     </header>
   `;
 }
@@ -72,7 +73,7 @@ export function renderHeaderTemplate(
  */
 export function renderWorkspaceActions(): string {
   return `
-      <div class="workspace-actions" data-product-profile="education">
+      <div class="workspace-actions">
         <button id="workspaceOpenBtn" type="button" aria-controls="workspaceFileInput">Open…</button>
         <button id="workspaceSaveBtn" type="button">Save workspace</button>
         <input id="workspaceFileInput" type="file" accept="${WORKSPACE_FILE_ACCEPT}" hidden />

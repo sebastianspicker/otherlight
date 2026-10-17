@@ -8,7 +8,7 @@ PROJECT="$ROOT/apps/apple/OtherlightMac.xcodeproj"
 SCHEME="OtherlightMac"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT/artifacts/OtherlightMac.xcarchive}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/private/tmp/otherlight-release-derived-data}"
-MARKETING_VERSION="${MARKETING_VERSION:-0.3.0}"
+MARKETING_VERSION="${MARKETING_VERSION:-0.2.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 SIGNING_IDENTITY="${SIGNING_IDENTITY:-Developer ID Application}"
 

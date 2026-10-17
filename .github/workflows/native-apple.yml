@@ -186,7 +186,7 @@ jobs:
           plutil -lint "$app/Info.plist"
           plutil -lint "$app/PrivacyInfo.xcprivacy"
           test "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = "com.sebastianspicker.Otherlight"
-          test "$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")" = "0.3.0"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")" = "0.2.0"
           test "$(plutil -extract CFBundleVersion raw "$app/Info.plist")" = "1"
           if find "$app" -iname '*arrow*' -o -iname '*transitscience*' | grep -q .; then
             echo "Arrow and TransitScience must not be embedded in the mobile app" >&2

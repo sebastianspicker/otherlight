@@ -62,6 +62,8 @@ __pycache__/
 .pyright/
 .ruff_cache/
 /.science-cache/
+# The service creates its cache relative to its working directory.
+/services/science/.science-cache/
 *.arrow
 *.feather
 *.ipc

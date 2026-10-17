@@ -61,6 +61,7 @@ function normalizedObserverDirection(observerDir: Vec3): Vec3 | undefined {
   try {
     return vNormalizeOrThrow(observerDir, 1e-15, "observerDir must be non-zero.");
   } catch {
+    // Fail-open: no direction means no forward-scattering term; the caller skips it.
     return undefined;
   }
 }
@@ -118,6 +119,7 @@ function normalizedBodyDirection(rBody: Vec3): Vec3 | undefined {
   try {
     return vNormalizeOrThrow(rBody, 1e-15, "rBody must be non-zero for scattering angle.");
   } catch {
+    // Fail-open: a body at the origin has no scattering angle; the caller skips the term.
     return undefined;
   }
 }

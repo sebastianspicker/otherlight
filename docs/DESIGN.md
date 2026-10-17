@@ -128,16 +128,31 @@ distinctions while using platform-native navigation, controls, Dynamic Type,
 focus behaviour and accessibility APIs. Matching the Browser pixel for pixel is
 not a goal; matching it in behaviour and information is.
 
-The Apple app has not been moved to Deep Field yet. It still uses the earlier
-Plate & Figure roles:
+The Apple app (`apps/apple/App`, shared by the iOS, iPadOS and macOS targets and
+by the `OtherlightMac` host) uses Deep Field too:
 
-- Colour roles are named colour sets in `apps/apple/App/Assets.xcassets/PlateFigure/`
-  with light and dark values. Porting means replacing those values with the
-  Deep Field roles above and making the dark appearance the default.
-- The system serif (New York) stands in for STIX Two, and SF and SF Mono stand
-  in for Atkinson Hyperlegible Next and Mono. All three scale with Dynamic Type.
-- `apps/apple/App/Views/PlateFigureStyle.swift` holds the shared surfaces: the
-  running head, Plate 1's dark frame with registration marks, numbered figure
-  sections, ruled margin notes, ruled text fields, and the button used for one
-  primary action per screen.
+- Colour roles are named colour sets in `apps/apple/App/Assets.xcassets/DeepField/`,
+  one universal value each because the interface is dark only: Space, Surface,
+  Surface2, Surface3, Plate, Well, Ink, Ink2, Ink3, OnAccent, Rule, RuleStrong,
+  PlateRule, FieldBorder, FigureFrame, Accent, AccentStrong, Starlight, Caution,
+  CautionWash, Fault, FaultWash, Pass, PlateInk and PlateInk3. Values match
+  `tokens.css` and `figureInk.ts`; change all three together. Both app scenes
+  apply `.preferredColorScheme(.dark)`.
+- The system serif (New York) stands in for STIX Two for display titles and
+  equations, and SF and SF Mono stand in for Atkinson Hyperlegible Next and
+  Mono. All three scale with Dynamic Type.
+- `apps/apple/App/Views/PlateFigureStyle.swift` (named before the port) holds
+  the `DeepField` roles and the shared surfaces: the evidence line with its
+  accent or starlight marker, the accent kicker and serif screen title, panels
+  (Surface, 1 pt hairline, 14 pt radius), Plate 1 on the Plate ground with
+  registration marks and an envelope line, numbered figure sections, margin
+  notes (a 3 pt left rule on a neutral, caution or fault wash), inset-well text
+  fields with a field border and accent focus ring, the accent primary button
+  (one per surface, dark text) and the raised Surface 2 default button.
+- Figures draw the model curve in ink (trace A) and accepted samples, the
+  current-time marker and O-C points in the accent (trace B), inside a
+  figure-frame hairline with inward ticks.
+- The field guide's six concept cards follow the Education dashboard and the
+  detached-binary lab, with the same copy as the Browser; each relation is set
+  as serif text with a spoken accessibility label.
 - Navigation stays native: split views, inspectors, tab bars, and system forms.

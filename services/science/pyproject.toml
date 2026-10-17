@@ -11,7 +11,7 @@ license = { text = "MIT" }
 dependencies = []
 
 [project.optional-dependencies]
-integrator = ["scipy==1.18.0"]
+integrator = ["scipy==1.18.0", "numpy==2.5.2"]
 service = ["fastapi==0.139.0", "uvicorn==0.51.0"]
 artifacts = ["pyarrow==25.0.0"]
 test = [
@@ -23,6 +23,7 @@ test = [
 ]
 dev = [
   "scipy==1.18.0",
+  "numpy==2.5.2",
   "fastapi==0.139.0",
   "uvicorn==0.51.0",
   "pyarrow==25.0.0",

@@ -257,6 +257,7 @@ const computeHillRadius = (inputs: HillMassInputs, usePeriapsis: boolean): numbe
   try {
     return hillRadius(inputs.aP, inputs.eP, inputs.mPlanet, inputs.mStar, { usePeriapsis });
   } catch {
+    // Fail-open: invalid masses or orbit give NaN, which the caller reports as HILL_COMPUTE_FAILED.
     return Number.NaN;
   }
 };

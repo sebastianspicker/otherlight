@@ -85,6 +85,8 @@ export function transitCenteredPhaseRadFromBodyPos(rBody: Vec3, observerDir: Vec
   try {
     return Math.PI - phaseAngleRadFromBodyPos(rBody, observerDir);
   } catch {
+    // Fail-open: a zero-length or non-finite body or observer vector has no phase; treat it as
+    // transit centre. Validated scenarios never reach this (positions and observerDir are finite, non-zero).
     return 0;
   }
 }

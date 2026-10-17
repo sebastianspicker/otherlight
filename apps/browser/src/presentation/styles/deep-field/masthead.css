@@ -10,6 +10,8 @@
 .field-guide,
 .command-strip,
 .observatory-footer,
+.workspace-status,
+.app-colophon,
 .fatal-error {
   width: min(100% - 2 * var(--gutter), var(--page-max) - 2 * var(--gutter));
   margin-inline: auto;
@@ -426,6 +428,30 @@
 }
 
 .observatory-footer p {
+  margin: 0;
+}
+
+/* Save and open results in the Scientific profile, whose page has no Education status line. */
+.workspace-status {
+  margin-block: var(--s-2) 0;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.workspace-status:empty {
+  display: none;
+}
+
+/* Version and build commit for bug reports, shown in both profiles. */
+.app-colophon {
+  margin-top: var(--s-4);
+  margin-bottom: var(--s-6);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+}
+
+.app-colophon p {
   margin: 0;
 }
 

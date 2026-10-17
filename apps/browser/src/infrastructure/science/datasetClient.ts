@@ -1,6 +1,6 @@
 /** Implements the strict loopback-only V6 dataset client; this family deliberately has no job API. */
 import { isGitHubPagesRuntime } from "../../application/deployment";
-import { ScienceBackendError, type ScienceFetch } from "./client";
+import { ScienceBackendError, unreachableBackendMessage, type ScienceFetch } from "./client";
 import {
   MAX_SCIENCE_DATASET_RESPONSE_BYTES,
   MAX_SCIENCE_DATASET_SOURCE_BYTES,
@@ -102,7 +102,10 @@ export class ScienceDatasetClient {
       });
     } catch (error) {
       if (init.signal?.aborted) throw abortError();
-      throw new ScienceBackendError("V6 dataset backend request failed.", { cause: error });
+      throw new ScienceBackendError(
+        unreachableBackendMessage("The V6 dataset backend", this.baseUrl, error),
+        { code: "transport", cause: error },
+      );
     }
     assertResponseHeaders(response);
     const payload = await readBoundedJson(response);

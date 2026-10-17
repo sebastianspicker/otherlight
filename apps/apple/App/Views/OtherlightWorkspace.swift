@@ -8,20 +8,14 @@ import UniformTypeIdentifiers
 /// Describes deterministic launch state used only by the maintained screenshot tour.
 private struct ScreenshotConfiguration {
   let scenario: String
-  let appearance: ColorScheme?
 
   /// Reads explicit capture state without changing ordinary app launches or persisted preferences.
   static var current: ScreenshotConfiguration? {
     let environment = ProcessInfo.processInfo.environment
     guard environment["OTHERLIGHT_SCREENSHOT_MODE"] == "1" else { return nil }
     let scenario = environment["OTHERLIGHT_SCREENSHOT_SCENARIO"] ?? "simulation"
-    let appearance: ColorScheme? =
-      switch environment["OTHERLIGHT_SCREENSHOT_APPEARANCE"] {
-      case "dark": ColorScheme.dark
-      case "light": ColorScheme.light
-      default: nil
-      }
-    return ScreenshotConfiguration(scenario: scenario, appearance: appearance)
+    // The interface is dark only, so captures no longer choose an appearance.
+    return ScreenshotConfiguration(scenario: scenario)
   }
 
   /// Maps capture scenarios to the same primary destinations a user selects in the interface.
@@ -47,7 +41,7 @@ struct OtherlightWorkspace: View {
 
   /// Builds the scene-aware workspace and routes document import/export results to session state.
   var body: some View {
-    documentPresentation.preferredColorScheme(screenshotConfiguration?.appearance)
+    documentPresentation
   }
 
   /// Selects the shared workspace shell while keeping desktop command routing platform-specific.

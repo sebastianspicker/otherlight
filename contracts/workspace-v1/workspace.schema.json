@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/workspace-v1/workspace.schema.json",
+  "$id": "https://example.invalid/otherlight/workspace-v1/workspace.schema.json",
   "title": "Otherlight workspace document",
   "type": "object",
   "required": ["schemaVersion", "productContext", "education"],

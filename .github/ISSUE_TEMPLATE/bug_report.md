@@ -29,6 +29,7 @@ makes the issue much easier to reproduce.
 ## Environment
 
 - Product surface (browser, Scientific backend, or native Apple):
+- Otherlight build (Browser: shown in the page footer, for example `0.2.0-alpha.1 · build 1a2b3c4d5e6f`):
 - OS:
 - Node (`node -v`):
 - pnpm (`pnpm -v`):

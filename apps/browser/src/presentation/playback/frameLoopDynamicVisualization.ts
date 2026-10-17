@@ -48,12 +48,14 @@ export function buildEpochGhosts(
   try {
     periodSec = finitePositive(resolveOrbitElements(params.planet.orbit, tSec, "planet.orbit").period);
   } catch {
+    // Fail-open: no resolvable period means no next-epoch ghost; the main frame still renders.
     periodSec = undefined;
   }
   if (!(periodSec && periodSec > 0)) return [];
   try {
     return [createGhostGeometry("next epoch", simulation.step(tSec + periodSec), "rgba(255,255,255,0.26)")];
   } catch {
+    // Fail-open: the ghost is a decoration; a failed look-ahead step must not break the frame.
     return [];
   }
 }

@@ -316,7 +316,8 @@ class V5ApiService:
             message = str(error)
         else:
             LOGGER.error(
-                "unexpected scientific worker failure",
+                "unexpected scientific worker failure (job %s)",
+                job_id,
                 exc_info=(type(error), error, error.__traceback__),
             )
             code, message = (

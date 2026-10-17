@@ -2,7 +2,7 @@
 
 from typing import Any
 
-BASE = "https://example.invalid/transit-light-curve-lab/"
+BASE = "https://example.invalid/otherlight/"
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 

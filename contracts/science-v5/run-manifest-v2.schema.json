@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/science-v5/run-manifest-v2.schema.json",
+  "$id": "https://example.invalid/otherlight/science-v5/run-manifest-v2.schema.json",
   "title": "Engine-neutral Scientific run manifest V2",
   "type": "object",
   "required": [

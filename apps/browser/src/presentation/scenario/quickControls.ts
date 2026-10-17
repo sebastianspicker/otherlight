@@ -48,6 +48,7 @@ function safeMuFromOrbit(aInput: HTMLInputElement, periodInput: HTMLInputElement
   try {
     return muFromPeriodAndA(period, a);
   } catch {
+    // Fail-open: the quick-control readout stays empty until the inputs describe an orbit.
     return undefined;
   }
 }

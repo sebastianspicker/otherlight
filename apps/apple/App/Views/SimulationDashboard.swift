@@ -18,7 +18,7 @@ struct SimulationDashboard: View {
             kicker: "Transit experiment", title: "Simulation",
             subtitle: "Watch the geometry, read the light, and time each transit.")
           Spacer()
-          Text(session.calculationStatus).font(.callout).foregroundStyle(PlateFigure.ink2)
+          Text(session.calculationStatus).font(.callout).foregroundStyle(DeepField.ink2)
         }
         if let frame = session.frame {
           SimulationPlotRow(frame: frame, session: session)
@@ -26,7 +26,6 @@ struct SimulationDashboard: View {
             TransitOCChart(
               history: session.transitEventHistory, transitBody: session.selectedTransitBody
             )
-            .background(PlateFigure.paper)
             .frame(height: 170)
           }
           TimingHistoryControls(session: session)
@@ -48,10 +47,12 @@ struct SimulationDashboard: View {
           ContentUnavailableView("No simulation frame", systemImage: "waveform.path")
             .frame(minHeight: 500)
         }
+        FieldGuide()
       }
       .padding(24)
+      .buttonStyle(RaisedButtonStyle())
     }
-    .paperGround()
+    .spaceGround()
     .accessibilityIdentifier("simulation-dashboard")
   }
 
@@ -87,10 +88,12 @@ struct DetachedBinaryLabView: View {
           )
           .frame(maxWidth: .infinity, minHeight: 360)
         }
+        FieldGuide()
       }
       .padding(24)
+      .buttonStyle(RaisedButtonStyle())
     }
-    .paperGround()
+    .spaceGround()
     .accessibilityIdentifier("detached-binary-lab")
   }
 
@@ -101,7 +104,7 @@ struct DetachedBinaryLabView: View {
         kicker: "Detached binary lab", title: "Read the light of two stars",
         subtitle: "Two-star barycentric geometry and luminous-disk overlap.")
       Spacer()
-      Text(session.calculationStatus).font(.callout).foregroundStyle(PlateFigure.ink2)
+      Text(session.calculationStatus).font(.callout).foregroundStyle(DeepField.ink2)
     }
   }
 
@@ -127,11 +130,11 @@ struct DetachedBinaryLabView: View {
 
         if session.isBinaryLabSkyVisible {
           Label("Sky view revealed", systemImage: "eye")
-            .foregroundStyle(PlateFigure.ink2)
+            .foregroundStyle(DeepField.ink2)
         } else {
           Text("The sky view remains hidden until the V4 reveal condition is satisfied.")
             .font(.footnote)
-            .foregroundStyle(PlateFigure.ink2)
+            .foregroundStyle(DeepField.ink2)
           Button("Reveal sky view") { session.revealBinaryLabSky() }
             .disabled(!session.canRevealBinaryLabSky)
             .accessibilityIdentifier("binary-lab-reveal")
@@ -143,7 +146,7 @@ struct DetachedBinaryLabView: View {
           systemImage: session.isParameterEditingLocked ? "lock.fill" : "lock.open"
         )
         .font(.footnote)
-        .foregroundStyle(PlateFigure.ink2)
+        .foregroundStyle(DeepField.ink2)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -269,7 +272,7 @@ private struct SimulationFrameSummary: View, Equatable {
       if let timingSummary { Text(timingSummary) }
     }
     .font(.caption)
-    .foregroundStyle(PlateFigure.ink2)
+    .foregroundStyle(DeepField.ink2)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilitySummary)
   }
@@ -334,7 +337,7 @@ private struct TimingHistoryControls: View {
         Text(
           "\(session.selectedTransitEventCount) \(session.selectedTransitBody.rawValue) events · \(session.lightCurveHistory.samples.count) accepted frames"
         )
-        .foregroundStyle(PlateFigure.ink2)
+        .foregroundStyle(DeepField.ink2)
       }
       GridRow {
         Text("Latest O-C")
@@ -379,7 +382,7 @@ private struct TimingHistoryControls: View {
         Text(
           "\(session.selectedTransitEventCount) \(session.selectedTransitBody.rawValue) events · \(session.lightCurveHistory.samples.count) accepted frames"
         )
-        .foregroundStyle(PlateFigure.ink2)
+        .foregroundStyle(DeepField.ink2)
         LabeledContent(
           "Latest O-C", value: formatted(session.selectedTransitLatestResidualMilliseconds))
         LabeledContent("RMS O-C", value: formatted(session.selectedTransitRMSMilliseconds))
@@ -402,7 +405,7 @@ private struct TimingHistoryControls: View {
   }
 }
 
-/// Sets a plot as a numbered journal figure on paper, with a serif title and no card chrome.
+/// Sets a plot as a numbered figure panel on the surface ground, with an instrument-label number.
 private struct FigureCard<Content: View>: View {
   let number: String
   let title: String
@@ -411,13 +414,14 @@ private struct FigureCard<Content: View>: View {
   /// Builds the figure number, title, and caller-supplied plot content.
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text(number).font(.plateCaption).foregroundStyle(PlateFigure.ink2)
-      Text(title).font(.plateHeading).foregroundStyle(PlateFigure.ink)
+      Text(number).instrumentLabel()
+      Text(title).font(.deepFieldTitle).foregroundStyle(DeepField.ink)
         .accessibilityAddTraits(.isHeader)
       content
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
+    .deepFieldPanel(padding: 12)
   }
 }
 

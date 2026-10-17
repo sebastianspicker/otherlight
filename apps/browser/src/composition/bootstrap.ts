@@ -412,6 +412,7 @@ export async function initApp(): Promise<void> {
     applyActive,
     setAppStatus,
     writeProductHistory,
+    hasUnappliedEdits: dirtyGuard.isDirty,
     warnEl: warnVal,
     signal: teardownController.signal,
   });

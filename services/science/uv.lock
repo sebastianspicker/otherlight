@@ -212,6 +212,7 @@ dev = [
     { name = "fastapi" },
     { name = "httpx2" },
     { name = "lizard" },
+    { name = "numpy" },
     { name = "pyarrow" },
     { name = "pyright" },
     { name = "pytest" },
@@ -220,6 +221,7 @@ dev = [
     { name = "uvicorn" },
 ]
 integrator = [
+    { name = "numpy" },
     { name = "scipy" },
 ]
 service = [
@@ -243,6 +245,8 @@ requires-dist = [
     { name = "httpx2", marker = "extra == 'test'", specifier = "==2.12.0" },
     { name = "lizard", marker = "extra == 'dev'", specifier = "==1.24.0" },
     { name = "lizard", marker = "extra == 'test'", specifier = "==1.24.0" },
+    { name = "numpy", marker = "extra == 'dev'", specifier = "==2.5.2" },
+    { name = "numpy", marker = "extra == 'integrator'", specifier = "==2.5.2" },
     { name = "pyarrow", marker = "extra == 'artifacts'", specifier = "==25.0.0" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = "==25.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = "==1.1.411" },

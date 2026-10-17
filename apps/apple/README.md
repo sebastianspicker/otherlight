@@ -23,12 +23,15 @@ extension and the `com.sebastianspicker.Otherlight.workspace` UTI; existing
 `.transitlab` documents using
 `com.sebastianspicker.TransitLightCurveLab.workspace` stay import-compatible.
 
-The SwiftUI surfaces follow the shared Plate & Figure design system
-([docs/DESIGN.md](../../docs/DESIGN.md)). Colour roles are named colour sets
-under `App/Assets.xcassets/PlateFigure/` with light and dark variants, and
-`App/Views/PlateFigureStyle.swift` provides the running head, plate frame,
-numbered figure sections, margin notes, and the ink button style. Type uses the
-system serif, sans and monospaced designs so that Dynamic Type keeps working.
+The SwiftUI surfaces follow the shared dark-only Deep Field design system
+([docs/DESIGN.md](../../docs/DESIGN.md)), the same one the Browser uses. Colour
+roles are named colour sets under `App/Assets.xcassets/DeepField/`, each with a
+single universal value, and both app scenes prefer the dark appearance.
+`App/Views/PlateFigureStyle.swift` (the file name predates the port) provides
+the `DeepField` roles, the evidence line, panels, Plate 1, numbered figure
+sections, margin notes, inset-well fields, and the primary and raised button
+styles. The Education dashboard ends with the six-card field guide. Type uses
+the system serif, sans and monospaced designs so that Dynamic Type keeps working.
 
 `Packages/OtherlightCore` holds the portable simulation, Education,
 visualization, strict scientific-contract types, and the V4-to-V5 authoring
@@ -117,7 +120,7 @@ Store Connect, TestFlight, a release host, or another distribution service.
 required. The script accepts `ARCHIVE_PATH`, `DERIVED_DATA_PATH`,
 `MARKETING_VERSION`, `BUILD_NUMBER`, and `SIGNING_IDENTITY`; the defaults are
 `artifacts/OtherlightMac.xcarchive`,
-`/private/tmp/otherlight-release-derived-data`, `0.3.0`, `1`, and
+`/private/tmp/otherlight-release-derived-data`, `0.2.0`, `1`, and
 `Developer ID Application`.
 
 ```bash
@@ -128,14 +131,14 @@ bash scripts/archive-macos.sh
 
 **2. Package** the signed app. The script verifies the app signature and bundle
 identifier before creating the DMG. It accepts an optional output path and uses
-`artifacts/OtherlightMac-0.3.0-alpha.1.dmg` by default. `EXPECTED_BUNDLE_ID`
+`artifacts/OtherlightMac-0.2.0-alpha.1.dmg` by default. `EXPECTED_BUNDLE_ID`
 defaults to `com.sebastianspicker.OtherlightMac`; set `SIGNING_IDENTITY` to sign
 the DMG itself.
 
 ```bash
 bash scripts/package-macos-dmg.sh \
   artifacts/OtherlightMac.xcarchive/Products/Applications/OtherlightMac.app \
-  artifacts/OtherlightMac-0.3.0-alpha.1.dmg
+  artifacts/OtherlightMac-0.2.0-alpha.1.dmg
 ```
 
 **3. Notarize, staple, and verify** the DMG. `NOTARY_PROFILE` is required and
@@ -143,11 +146,11 @@ names a `notarytool` keychain profile; `NOTARY_KEYCHAIN` is optional. The
 verification script requires `EXPECTED_TEAM_ID`, and also accepts
 `EXPECTED_BUNDLE_ID`, `EXPECTED_MARKETING_VERSION`, `EXPECTED_BUILD_NUMBER`, and
 `EXPECTED_EXECUTABLE`, with defaults `com.sebastianspicker.OtherlightMac`,
-`0.3.0`, `1`, and `OtherlightMac`.
+`0.2.0`, `1`, and `OtherlightMac`.
 
 ```bash
-NOTARY_PROFILE=otherlight-notary bash scripts/notarize-macos.sh artifacts/OtherlightMac-0.3.0-alpha.1.dmg
-EXPECTED_TEAM_ID=YOUR_TEAM_ID bash scripts/verify-macos-release.sh artifacts/OtherlightMac-0.3.0-alpha.1.dmg
+NOTARY_PROFILE=otherlight-notary bash scripts/notarize-macos.sh artifacts/OtherlightMac-0.2.0-alpha.1.dmg
+EXPECTED_TEAM_ID=YOUR_TEAM_ID bash scripts/verify-macos-release.sh artifacts/OtherlightMac-0.2.0-alpha.1.dmg
 ```
 
 The archive, package, notarization, and verification scripts reject symlink

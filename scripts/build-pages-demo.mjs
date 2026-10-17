@@ -4,11 +4,14 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { assertNoSymlinkBelowRoot, resolveDisposableOutput } from "./lib/disposable-output.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outputDirectory = path.resolve(repositoryRoot, process.argv[2] ?? "pages-dist");
+// The directory is deleted recursively below, so only allowlisted build outputs are accepted.
+const outputDirectory = resolveDisposableOutput(repositoryRoot, process.argv[2] ?? "pages-dist");
 const assetDirectory = path.join(outputDirectory, "assets");
 
+await assertNoSymlinkBelowRoot(repositoryRoot, outputDirectory);
 await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(assetDirectory, { recursive: true });
 

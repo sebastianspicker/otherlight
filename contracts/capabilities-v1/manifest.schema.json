@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/capabilities-v1/manifest.schema.json",
+  "$id": "https://example.invalid/otherlight/capabilities-v1/manifest.schema.json",
   "title": "Cross-platform capability manifest",
   "type": "object",
   "required": ["schemaVersion", "oracle", "capabilities"],

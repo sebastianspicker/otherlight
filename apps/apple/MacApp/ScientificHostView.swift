@@ -44,7 +44,7 @@ struct OtherlightMacHostView: View {
       session.setSceneActive(phase == .active)
       if phase != .active { scientificRun.cancel() }
     }
-    .tint(PlateFigure.pencil)
+    .tint(DeepField.accent)
   }
 }
 
@@ -104,19 +104,19 @@ private struct ScientificProfileView: View {
             Button("Run Scientific V5") {
               scientificRun.start(scenario: scenario)
             }
-            .buttonStyle(InkButtonStyle())
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(scientificRun.state == .running)
             Button("Cancel") { scientificRun.cancel() }
               .disabled(scientificRun.state != .running)
           }
           if let publication = scientificRun.publication {
-            Divider()
+            Rectangle().fill(DeepField.rule).frame(height: 1)
             LabeledContent("Arrow SHA-256", value: publication.result.arrowArtifactId)
-              .font(.plateReadout)
+              .font(.deepFieldReadout)
               .textSelection(.enabled)
             LabeledContent("Samples", value: "\(publication.result.runManifest.artifact.rowCount)")
             LabeledContent("Run ID", value: publication.result.runManifest.runId)
-              .font(.plateReadout)
+              .font(.deepFieldReadout)
               .textSelection(.enabled)
             HStack {
               Button("Export Arrow…") { prepareArrowExport() }
@@ -128,8 +128,9 @@ private struct ScientificProfileView: View {
       Spacer()
     }
     .padding(24)
+    .buttonStyle(RaisedButtonStyle())
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .paperGround()
+    .spaceGround()
     .navigationTitle("Scientific")
     .fileExporter(
       isPresented: $showsArrowExporter,

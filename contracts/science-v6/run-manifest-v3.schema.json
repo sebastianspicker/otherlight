@@ -34,7 +34,7 @@
     "inputHashSha256": { "$ref": "#/$defs/sha256" },
     "scientificResult": { "const": true },
     "implementation": {
-      "$ref": "https://example.invalid/transit-light-curve-lab/science-v5/run-manifest-v2.schema.json#/$defs/implementation"
+      "$ref": "https://example.invalid/otherlight/science-v5/run-manifest-v2.schema.json#/$defs/implementation"
     },
     "gravitationalConstantM3KgS2": { "const": 6.6743e-11 },
     "coordinateSystem": { "const": "barycentric-si" },

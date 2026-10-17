@@ -18,7 +18,7 @@ export class ScienceBackendError extends Error {
   readonly code?: string;
 
   constructor(message: string, options: { status?: number; code?: string; cause?: unknown } = {}) {
-    super(message);
+    super(message, { cause: options.cause });
     this.name = "ScienceBackendError";
     this.status = options.status;
     this.code = options.code;
@@ -39,6 +39,8 @@ export type PollScienceJobOptions = {
 };
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8765";
+/** Page origins the loopback service accepts (`BROWSER_CORS_ORIGINS` in `api_http.py`). */
+const APPROVED_PAGE_ORIGINS = "http://localhost:5173, http://localhost:4173 or http://localhost:4174";
 const JSON_MEDIA_TYPE = "application/json";
 /** V5 job status, capability, and result bodies share the V6 one-MiB response cap. */
 const MAX_RESPONSE_BYTES = MAX_SCIENCE_DATASET_RESPONSE_BYTES;
@@ -57,6 +59,21 @@ function normalizeLocalBaseUrl(value: string): URL {
     throw new ScienceBackendError("V5 backend URL must not include credentials, query, or fragment.");
   }
   return new URL(url.pathname.endsWith("/") ? url.href : `${url.href}/`);
+}
+
+/**
+ * Explains a transport failure. Browsers hide the reason (service down, CORS
+ * rejection and wrong port all surface as the same TypeError), so the message
+ * names the likely causes and how to fix them.
+ */
+export function unreachableBackendMessage(service: string, baseUrl: string, cause: unknown): string {
+  const detail = cause instanceof Error && cause.message ? ` (${cause.message})` : "";
+  return (
+    `${service} at ${baseUrl} could not be reached or answered with a redirect${detail}. ` +
+    "Start the loopback science service with pnpm science:backend:serve, " +
+    `and open Otherlight from ${APPROVED_PAGE_ORIGINS} (127.0.0.1 also works); ` +
+    "the service rejects requests from any other page origin or port."
+  );
 }
 
 function abortError(): DOMException {
@@ -168,7 +185,10 @@ export class ScienceBackendClient {
       });
     } catch (error) {
       if (init.signal?.aborted) throw abortError();
-      throw new ScienceBackendError("V5 backend request failed.", { cause: error });
+      throw new ScienceBackendError(unreachableBackendMessage("The V5 backend", this.baseUrl, error), {
+        code: "transport",
+        cause: error,
+      });
     }
     assertResponseHeaders(response);
     const payload = await readBoundedJson(response);

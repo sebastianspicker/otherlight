@@ -14,7 +14,7 @@ if [[ -L "$1" ]]; then
   exit 66
 fi
 APP_PATH="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
-OUTPUT_PATH_INPUT="${2:-$ROOT/artifacts/OtherlightMac-0.3.0-alpha.1.dmg}"
+OUTPUT_PATH_INPUT="${2:-$ROOT/artifacts/OtherlightMac-0.2.0-alpha.1.dmg}"
 VOLUME_NAME="OtherlightMac"
 EXPECTED_BUNDLE_ID="${EXPECTED_BUNDLE_ID:-com.sebastianspicker.OtherlightMac}"
 

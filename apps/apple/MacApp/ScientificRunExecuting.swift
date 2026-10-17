@@ -123,11 +123,11 @@ final class ScientificRunExecuting {
   /// Records the host implementation rather than claiming a service, cache, or fallback executor.
   nonisolated private static var nativeMetadata: NativeScienceRunMetadata {
     NativeScienceRunMetadata(
-      application: .init(name: "OtherlightMac", version: "0.3.0", build: "1"),
+      application: .init(name: "OtherlightMac", version: "0.2.0-alpha.1", build: "1"),
       runtime: .init(name: "Swift", version: "6.3.3"),
       platform: .init(
         os: ProcessInfo.processInfo.operatingSystemVersionString, architecture: architecture),
-      capabilityManifestVersion: "0.3.0")
+      capabilityManifestVersion: "0.2.0-alpha.1")
   }
 
   /// Identifies the compile target architecture in the manifest without consulting the network.

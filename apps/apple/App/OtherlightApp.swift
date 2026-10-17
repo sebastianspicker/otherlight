@@ -15,7 +15,8 @@ struct OtherlightApp: App {
   var body: some Scene {
     WindowGroup("Otherlight") {
       OtherlightWorkspace()
-        .tint(PlateFigure.pencil)
+        .tint(DeepField.accent)
+        .preferredColorScheme(.dark)
     }
     #if os(macOS)
       .defaultSize(width: 1_280, height: 760)

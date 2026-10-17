@@ -7,6 +7,7 @@ struct OtherlightMacApp: App {
   var body: some Scene {
     WindowGroup("OtherlightMac") {
       OtherlightMacHostView()
+        .preferredColorScheme(.dark)
     }
     .defaultSize(width: 1_280, height: 800)
     .windowResizability(.contentMinSize)

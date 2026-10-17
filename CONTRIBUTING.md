@@ -117,6 +117,11 @@ pnpm contracts:check
 pnpm ci:verify
 ```
 
+The Vitest, pytest and Swift package XCTest suites are maintained privately and
+are not in the public tree, so `pnpm test` only works in a maintainer checkout and CI does
+not run them (it does run the Apple app tests). Describe how you checked
+behaviour in the pull request.
+
 The GitHub workflows remain the source of truth for CI runner images,
 toolchain versions, and destination matrices. If you skip a lane or cannot run
 it locally, say so in the pull request rather than leaving it implied. Please

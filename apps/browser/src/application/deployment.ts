@@ -12,3 +12,10 @@ export function runtimeAssetUrl(path: string, baseUrl = import.meta.env.BASE_URL
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return `${normalizedBase}${path.replace(/^\/+/, "")}`;
 }
+
+/** Version and commit baked in at build time (see vite.config.ts); "dev" when run without Vite. */
+export function buildIdentity(): string {
+  const version = (import.meta.env.VITE_OTHERLIGHT_VERSION as string | undefined) ?? "dev";
+  const commit = import.meta.env.VITE_OTHERLIGHT_COMMIT as string | undefined;
+  return commit ? `${version} · build ${commit}` : version;
+}

@@ -91,8 +91,8 @@
     "smoke:pages": "node scripts/smoke-pages-app.mjs",
     "deadcode:report": "knip --include exports,types --reporter json --no-exit-code",
     "deadcode:exports": "node scripts/check-deadcode-exports.mjs",
-    "test": "vitest run --config apps/browser/vitest.config.ts",
-    "test:watch": "vitest --config apps/browser/vitest.config.ts"
+    "test": "node scripts/run-browser-tests.mjs run",
+    "test:watch": "node scripts/run-browser-tests.mjs watch"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -109,6 +109,6 @@
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.63.0",
     "vite": "8.0.16",
-    "vitest": "4.1.1"
+    "vitest": "4.1.12"
   }
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/science-v5/forward-request.schema.json",
+  "$id": "https://example.invalid/otherlight/science-v5/forward-request.schema.json",
   "title": "Scientific V5 forward radial-velocity request",
   "type": "object",
   "required": ["kind", "scenario", "startOffsetSec", "endOffsetSec", "sampleCadenceSec", "outputs", "seed"],

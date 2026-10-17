@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/transit-light-curve-lab/science-v7/resource-descriptor.schema.json",
+  "$id": "https://example.invalid/otherlight/science-v7/resource-descriptor.schema.json",
   "type": "object",
   "properties": {
     "schemaVersion": {

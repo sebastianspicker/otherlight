@@ -18,7 +18,9 @@ import { createScienceRequestSource, type ScienceRequestSource } from "./science
 type ScienceWorkspaceClient = Pick<
   ReturnType<typeof createScienceBackendClient>,
   "getCapabilities" | "submitJob" | "getJob" | "getResult" | "cancelJob"
->;
+> & { readonly baseUrl?: string };
+
+const DEFAULT_ARTIFACT_BASE_URL = "http://127.0.0.1:8765";
 
 type ScienceWorkspaceArgs = {
   getSystem: () => BrowserScenarioDraft;
@@ -178,11 +180,12 @@ function renderGitHubPagesReplay(elements: ScienceWorkspaceElements): void {
 
 function renderCompletedRun(
   elements: ScienceWorkspaceElements,
+  baseUrl: string,
   jobId: string,
   result: ScienceJobResult,
 ): void {
   elements.result.textContent = renderResult(result);
-  elements.artifactLink.href = `http://127.0.0.1:8765/v1/artifacts/${encodeURIComponent(result.arrowArtifactId)}`;
+  elements.artifactLink.href = `${baseUrl}/v1/artifacts/${encodeURIComponent(result.arrowArtifactId)}`;
   elements.artifactLink.hidden = false;
   elements.runStatus.textContent = `Scientific job ${jobId} completed; provenance is shown below.`;
 }
@@ -307,7 +310,7 @@ async function runScienceJob(context: ScienceWorkspaceContext): Promise<void> {
       throw new Error(outcome.status.error?.message ?? `V5 job ended in state '${outcome.status.state}'.`);
     }
     const result = await client.getResult(submitted.id, signal);
-    renderCompletedRun(elements, submitted.id, result);
+    renderCompletedRun(elements, client.baseUrl ?? DEFAULT_ARTIFACT_BASE_URL, submitted.id, result);
   } catch (error) {
     elements.runStatus.textContent = `Scientific run failed: ${errorMessage(error)}`;
   } finally {
